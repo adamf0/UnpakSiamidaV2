@@ -1,0 +1,98 @@
+package application
+
+import (
+	"context"
+	"strconv"
+	"strings"
+
+	domain "UnpakSiamida/modules/user/domain"
+	"github.com/google/uuid"
+)
+
+type UpdateUserCommandHandler struct {
+	Repo domain.IUserRepository
+}
+
+func (h *UpdateUserCommandHandler) Handle(
+	ctx context.Context,
+	cmd UpdateUserCommand,
+) (string, error) {
+
+	// -------------------------
+	// VALIDATE UUID
+	// -------------------------
+	userUUID, err := uuid.Parse(cmd.Uuid)
+	if err != nil {
+		return "", domain.InvalidUuid()
+	}
+
+	// -------------------------
+	// GET EXISTING USER
+	// -------------------------
+	existingUser, err := h.Repo.GetByUuid(ctx, userUUID) // ← memastikan pakai nama interface yg benar
+	if err != nil {
+		return "", err
+	}
+	if existingUser == nil {
+		return "", domain.NotFound(cmd.Uuid)
+	}
+
+	// -------------------------
+	// HANDLE PASSWORD
+	// -------------------------
+	var password *string = nil
+
+	if cmd.Password != nil { // ← FIX: sebelumnya cmd.password (typo)
+		raw := strings.TrimSpace(*cmd.Password)
+		if raw != "" {
+			password = &raw
+		}
+	}
+
+	// -------------------------
+	// HANDLE FakultasUnit (string → int pointer)
+	// -------------------------
+	var fakultasUnit *int = nil
+
+	if cmd.FakultasUnit != nil {
+		raw := strings.TrimSpace(*cmd.FakultasUnit)
+
+		if raw != "" {
+			parsed, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				return "", err
+			}
+
+			v := int(parsed)
+			fakultasUnit = &v
+		}
+	}
+
+	// -------------------------
+	// AGGREGATE ROOT LOGIC
+	// -------------------------
+	result := domain.UpdateUser(
+		existingUser,
+		userUUID,
+		cmd.Username,
+		password,
+		cmd.Name,
+		cmd.Email,
+		fakultasUnit,
+	)
+
+	if !result.IsSuccess {
+		return "", result.Error
+	}
+
+	updatedUser := result.Value
+
+	// -------------------------
+	// SAVE TO REPOSITORY
+	// -------------------------
+	if err := h.Repo.Update(ctx, updatedUser); err != nil {
+		return "", err
+	}
+
+	return updatedUser.UUID.String(), nil
+}

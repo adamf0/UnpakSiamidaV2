@@ -1,0 +1,94 @@
+package domain
+
+import (
+	"time"
+
+	common "UnpakSiamida/common/domain"
+	helper "UnpakSiamida/common/helper"
+
+	"github.com/google/uuid"
+)
+
+type User struct {
+	common.Entity
+	ID           uint       `gorm:"primaryKey;autoIncrement"`
+	UUID         uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
+	Username     string     `gorm:"column:nidn_username;size:100;not null"`
+	Password 	 string     `gorm:"type:longtext;not null"`
+	Name         string     `gorm:"size:255;not null"`
+	Email        string     `gorm:"size:255;"`
+	FakultasUnit *int       `gorm:"column:fakultas_unit;"`
+}
+func (User) TableName() string {
+	return "users"
+}
+
+
+// === CREATE ===
+func NewUser(username, password, name, email string, fakultasunit *int) common.ResultValue[*User] {
+
+	if !helper.IsValidUnpakEmail(email) {
+		return common.FailureValue[*User](InvalidEmail())
+	}
+
+	user := &User{
+		UUID:         uuid.New(),
+		Username:     username,
+		Password:     password,
+		Name:         name,
+		Email:        email,
+		FakultasUnit: fakultasunit,
+	}
+
+	user.Raise(UserCreatedEvent{
+		EventID:    uuid.New(),
+		OccurredOn: time.Now().UTC(),
+		UserUUID:   user.UUID,
+	})
+
+	return common.SuccessValue(user)
+}
+
+// === UPDATE ===
+func UpdateUser(
+	prev *User, 
+	uid uuid.UUID,
+	username string,
+	password *string,
+	name string,
+	email string,
+	fakultasunit *int,
+) common.ResultValue[*User] {
+
+	if prev == nil {
+		return common.FailureValue[*User](EmptyData())
+	}
+
+	if prev.UUID != uid {
+		return common.FailureValue[*User](InvalidData())
+	}
+
+	// check email
+	if !helper.IsValidUnpakEmail(email) {
+		return common.FailureValue[*User](InvalidEmail())
+	}
+
+	// update opsional
+	if password != nil {
+		prev.Password = *password
+	}
+	prev.Name = name
+	prev.Email = email
+
+	if fakultasunit != nil {
+		prev.FakultasUnit = fakultasunit
+	}
+
+	prev.Raise(UserUpdatedEvent{
+		EventID:   	uuid.New(),
+		OccurredOn: time.Now().UTC(),
+		UserUUID:   prev.UUID,
+	})
+
+	return common.SuccessValue(prev)
+}
