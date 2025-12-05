@@ -2,8 +2,6 @@ package presentation
 
 import (
     "context"
-    "fmt"
-
     "github.com/gofiber/fiber/v2"
     "github.com/mehdihadeli/go-mediatr"
     "strings"
@@ -138,23 +136,21 @@ func ModuleUser(app *fiber.App) {
     // Get All USER
     // ------------------------------------------------------
     app.Get("/users", func(c *fiber.Ctx) error {
+        mode := c.Query("mode", "paging") // default mode = paging
         page := c.QueryInt("page", 1)
         limit := c.QueryInt("limit", 10)
         search := c.Query("search", "")
 
+        // Parse filters
         filtersRaw := c.Query("filters", "")
         var filters []commondomain.SearchFilter
-
         if filtersRaw != "" {
-            // Pisah antar filter pakai semicolon agar value bisa mengandung koma
             parts := strings.Split(filtersRaw, ";")
-
             for _, p := range parts {
                 tokens := strings.SplitN(p, ":", 3)
                 if len(tokens) != 3 {
                     continue
                 }
-
                 field := strings.TrimSpace(tokens[0])
                 op := strings.TrimSpace(tokens[1])
                 rawValue := strings.TrimSpace(tokens[2])
@@ -162,14 +158,7 @@ func ModuleUser(app *fiber.App) {
                 var valuePtr *string
                 if rawValue != "" && rawValue != "null" {
                     valuePtr = &rawValue
-                } else {
-                    valuePtr = nil
                 }
-
-                fmt.Println("field:", field)
-                fmt.Println("op:", op)
-                fmt.Println("value:", rawValue)
-
                 filters = append(filters, commondomain.SearchFilter{
                     Field:    field,
                     Operator: op,
@@ -181,20 +170,30 @@ func ModuleUser(app *fiber.App) {
         query := GetAllUsers.GetAllUsersQuery{
             Search:        search,
             SearchFilters: filters,
-            Page:          &page,
-            Limit:         &limit,
         }
 
-        users, err := mediatr.Send[
-            GetAllUsers.GetAllUsersQuery,
-            domain.PagedUsers,
-        ](context.Background(), query)
+        // Pilih adapter sesuai mode
+        var adapter OutputAdapter
+        switch mode {
+        case "all":
+            adapter = &AllAdapter{}
+        case "ndjson":
+            adapter = &NDJSONAdapter{}
+        case "sse":
+            adapter = &SSEAdapter{}
+        default:
+            query.Page = &page
+            query.Limit = &limit
+            adapter = &PagingAdapter{}
+        }
 
+        // Ambil data
+        users, err := mediatr.Send[GetAllUsers.GetAllUsersQuery, domain.PagedUsers](context.Background(), query)
         if err != nil {
             return commoninfra.HandleError(c, err)
         }
 
-        return c.JSON(users)
+        return adapter.Send(c, users)
     })
 }
 
