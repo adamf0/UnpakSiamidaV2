@@ -55,9 +55,12 @@ func (a *SSEAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
     c.Set("Cache-Control", "no-cache")
     c.Set("Connection", "keep-alive")
 
+    totalCount := len(users.Data)
+	c.Context().Write([]byte(fmt.Sprintf("total: %d\n\n", totalCount)))
+
     // Start event
     c.Context().Write([]byte("data: start\n\n"))
-
+    
     for _, u := range users.Data {
         line, _ := json.Marshal(u)
         c.Context().Write([]byte("data: " + string(line) + "\n\n"))
