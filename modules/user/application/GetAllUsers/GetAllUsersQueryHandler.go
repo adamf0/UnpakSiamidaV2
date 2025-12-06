@@ -2,17 +2,17 @@ package application
 
 import (
     "context"
-    "UnpakSiamida/modules/user/domain"
+    domainuser "UnpakSiamida/modules/user/domain"
 )
 
 type GetAllUsersQueryHandler struct {
-    Repo domain.IUserRepository
+    Repo domainuser.IUserRepository
 }
 
 func (h *GetAllUsersQueryHandler) Handle(
     ctx context.Context,
     q GetAllUsersQuery,
-) (domain.PagedUsers, error) {
+) (domainuser.PagedUsers, error) {
 
     users, total, err := h.Repo.GetAll(
         ctx,
@@ -22,7 +22,7 @@ func (h *GetAllUsersQueryHandler) Handle(
         q.Limit,
     )
     if err != nil {
-        return domain.PagedUsers{}, err
+        return domainuser.PagedUsers{}, err
     }
 
     currentPage := 1
@@ -35,7 +35,7 @@ func (h *GetAllUsersQueryHandler) Handle(
         totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
     }
 
-    return domain.PagedUsers{
+    return domainuser.PagedUsers{
         Data:  users,
         Total: total,
         CurrentPage: currentPage,

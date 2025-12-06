@@ -4,13 +4,13 @@ import (
     "fmt"
     "encoding/json"
     "github.com/gofiber/fiber/v2"
-    domain "UnpakSiamida/modules/user/domain"
+    domainuser "UnpakSiamida/modules/user/domain"
 )
 // -----------------
 // Adapter Interface
 // -----------------
 type OutputAdapter interface {
-    Send(c *fiber.Ctx, users domain.PagedUsers) error
+    Send(c *fiber.Ctx, users domainuser.PagedUsers) error
 }
 
 // -----------------
@@ -18,7 +18,7 @@ type OutputAdapter interface {
 // -----------------
 type PagingAdapter struct{}
 
-func (a *PagingAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
+func (a *PagingAdapter) Send(c *fiber.Ctx, users domainuser.PagedUsers) error {
     return c.JSON(users)
 }
 
@@ -27,7 +27,7 @@ func (a *PagingAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
 // -----------------
 type AllAdapter struct{}
 
-func (a *AllAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
+func (a *AllAdapter) Send(c *fiber.Ctx, users domainuser.PagedUsers) error {
     return c.JSON(users.Data)
 }
 
@@ -36,7 +36,7 @@ func (a *AllAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
 // -----------------
 type NDJSONAdapter struct{}
 
-func (a *NDJSONAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
+func (a *NDJSONAdapter) Send(c *fiber.Ctx, users domainuser.PagedUsers) error {
     c.Set("Content-Type", "application/x-ndjson")
     for _, u := range users.Data {
         line, _ := json.Marshal(u)
@@ -50,7 +50,7 @@ func (a *NDJSONAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
 // -----------------
 type SSEAdapter struct{}
 
-func (a *SSEAdapter) Send(c *fiber.Ctx, users domain.PagedUsers) error {
+func (a *SSEAdapter) Send(c *fiber.Ctx, users domainuser.PagedUsers) error {
     c.Set("Content-Type", "text/event-stream")
     c.Set("Cache-Control", "no-cache")
     c.Set("Connection", "keep-alive")

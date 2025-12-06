@@ -3,8 +3,8 @@ package infrastructure
 import (
 	"context"
 	"errors"
-	commonDomain "UnpakSiamida/common/domain"
-	"UnpakSiamida/modules/user/domain"
+	commondomainuser "UnpakSiamida/common/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"strings"
@@ -15,15 +15,15 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) domain.IUserRepository {
+func NewUserRepository(db *gorm.DB) domainuser.IUserRepository {
 	return &UserRepository{db: db}
 }
 
 // ------------------------
 // GET BY UUID
 // ------------------------
-func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domain.User, error) {
-	var user domain.User
+func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.User, error) {
+	var user domainuser.User
 
 	err := r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
@@ -56,14 +56,14 @@ var allowedSearchColumns = map[string]string{
 func (r *UserRepository) GetAll(
 	ctx context.Context,
 	search string,
-	searchFilters []commonDomain.SearchFilter,
+	searchFilters []commondomainuser.SearchFilter,
 	page, limit *int,
-) ([]domain.User, int64, error) {
+) ([]domainuser.User, int64, error) {
 
-	var users []domain.User
+	var users []domainuser.User
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&domain.User{})
+	db := r.db.WithContext(ctx).Model(&domainuser.User{})
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -167,14 +167,14 @@ func (r *UserRepository) GetAll(
 // ------------------------
 // CREATE
 // ------------------------
-func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
+func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
 // ------------------------
 // UPDATE
 // ------------------------
-func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
+func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
 
@@ -184,5 +184,5 @@ func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *UserRepository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
-		Delete(&domain.User{}).Error
+		Delete(&domainuser.User{}).Error
 }

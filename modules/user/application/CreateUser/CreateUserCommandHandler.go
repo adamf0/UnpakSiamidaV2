@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	domain "UnpakSiamida/modules/user/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 )
 
 type CreateUserCommandHandler struct{
-	Repo domain.IUserRepository
+	Repo domainuser.IUserRepository
 }
 
 func (h *CreateUserCommandHandler) Handle(
@@ -33,7 +33,7 @@ func (h *CreateUserCommandHandler) Handle(
 		}
 	}
 
-	result := domain.NewUser(
+	result := domainuser.NewUser(
 		cmd.Username,
 		cmd.Password,
 		cmd.Name,

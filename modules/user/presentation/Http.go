@@ -9,7 +9,7 @@ import (
     // "UnpakSiamida/common/domain"
     commoninfra "UnpakSiamida/common/infrastructure"
     commondomain "UnpakSiamida/common/domain"
-    domain "UnpakSiamida/modules/user/domain"
+    userdomain "UnpakSiamida/modules/user/domain"
     CreateUser "UnpakSiamida/modules/user/application/CreateUser"
     UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
     DeleteUser "UnpakSiamida/modules/user/application/DeleteUser"
@@ -124,7 +124,7 @@ func ModuleUser(app *fiber.App) {
             Uuid: uuid,
         }
 
-        user, err := mediatr.Send[GetUser.GetUserByUuidQuery, *domain.User](context.Background(), query)
+        user, err := mediatr.Send[GetUser.GetUserByUuidQuery, *userdomain.User](context.Background(), query)
         if err != nil {
             return commoninfra.HandleError(c, err)
         }
@@ -192,7 +192,7 @@ func ModuleUser(app *fiber.App) {
         }
 
         // Ambil data
-        users, err := mediatr.Send[GetAllUsers.GetAllUsersQuery, domain.PagedUsers](context.Background(), query)
+        users, err := mediatr.Send[GetAllUsers.GetAllUsersQuery, userdomain.PagedUsers](context.Background(), query)
         if err != nil {
             return commoninfra.HandleError(c, err)
         }

@@ -3,12 +3,12 @@ package application
 import (
 	"context"
 
-	domain "UnpakSiamida/modules/user/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
 )
 
 type DeleteUserCommandHandler struct {
-	Repo domain.IUserRepository
+	Repo domainuser.IUserRepository
 }
 
 func (h *DeleteUserCommandHandler) Handle(
@@ -19,7 +19,7 @@ func (h *DeleteUserCommandHandler) Handle(
 	// Validate UUID
 	userUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {
-		return "", domain.InvalidUuid()
+		return "", domainuser.InvalidUuid()
 	}
 
 	// Get existing user
@@ -28,7 +28,7 @@ func (h *DeleteUserCommandHandler) Handle(
 		return "", err
 	}
 	if existingUser == nil {
-		return "", domain.NotFound(cmd.Uuid)
+		return "", domainuser.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

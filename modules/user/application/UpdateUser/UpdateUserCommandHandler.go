@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	domain "UnpakSiamida/modules/user/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
 )
 
 type UpdateUserCommandHandler struct {
-	Repo domain.IUserRepository
+	Repo domainuser.IUserRepository
 }
 
 func (h *UpdateUserCommandHandler) Handle(
@@ -23,7 +23,7 @@ func (h *UpdateUserCommandHandler) Handle(
 	// -------------------------
 	userUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {
-		return "", domain.InvalidUuid()
+		return "", domainuser.InvalidUuid()
 	}
 
 	// -------------------------
@@ -34,7 +34,7 @@ func (h *UpdateUserCommandHandler) Handle(
 		return "", err
 	}
 	if existingUser == nil {
-		return "", domain.NotFound(cmd.Uuid)
+		return "", domainuser.NotFound(cmd.Uuid)
 	}
 
 	// -------------------------
@@ -71,7 +71,7 @@ func (h *UpdateUserCommandHandler) Handle(
 	// -------------------------
 	// AGGREGATE ROOT LOGIC
 	// -------------------------
-	result := domain.UpdateUser(
+	result := domainuser.UpdateUser(
 		existingUser,
 		userUUID,
 		cmd.Username,
