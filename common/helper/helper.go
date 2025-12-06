@@ -136,6 +136,41 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 	return nil
 }
 
+func ValidateParent(value interface{}) error { //[PR] bukan int tapi uuid
+	var s string
+
+	switch v := value.(type) {
+		case string:
+			s = strings.TrimSpace(v)
+
+		case *string:
+			if v != nil {
+				s = strings.TrimSpace(*v)
+			}
+
+		case nil:
+			return nil
+
+		default:
+			return fmt.Errorf("Parent invalid type")
+	}
+
+	if s == "" {
+		return nil
+	}
+
+	val, err := ParseInt64(s)
+	if err != nil {
+		return err
+	}
+
+	if val < 1 {
+		return fmt.Errorf("Parent invalid value")
+	}
+
+	return nil
+}
+
 func ValidateLevel(value interface{}) error {
 	val, ok := value.(string)
 	if !ok {

@@ -12,7 +12,7 @@ type StandarRenstra struct {
 	common.Entity
 	ID           uint       `gorm:"primaryKey;autoIncrement"`
 	UUID         uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	Nama         string     `gorm:"size:255;not null"`
+	Nama         string     `gorm:"type:longtext;not null"`
 }
 func (StandarRenstra) TableName() string {
 	return "master_standar_renstra"

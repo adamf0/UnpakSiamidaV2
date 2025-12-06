@@ -6,6 +6,9 @@ import (
 
 	standarrenstraInfrastructure "UnpakSiamida/modules/standarrenstra/infrastructure"
 	standarrenstraPresentation "UnpakSiamida/modules/standarrenstra/presentation"
+
+	indikatorrenstraInfrastructure "UnpakSiamida/modules/indikatorrenstra/infrastructure"
+	indikatorrenstraPresentation "UnpakSiamida/modules/indikatorrenstra/presentation"
 	
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -14,6 +17,10 @@ import (
 	createStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
 	updateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/UpdateStandarRenstra"
 	deleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
+
+	createIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
+	updateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
+	deleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
 
 	"github.com/gofiber/fiber/v2"
 	"context"
@@ -34,13 +41,16 @@ func main() {
 	})
 	app.Use(commonpresentation.LoggerMiddleware)
 
+	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
+
 	userInfrastructure.RegisterModuleUser()
 	userPresentation.ModuleUser(app)
 
-	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
-
 	standarrenstraInfrastructure.RegisterModuleStandarRenstra()
 	standarrenstraPresentation.ModuleStandarRenstra(app)
+
+	indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra()
+	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
 
 	app.Listen(":3000")
 }
@@ -84,6 +94,19 @@ func (b *ValidationBehavior) Handle(
 		case deleteStandarRenstra.DeleteStandarRenstraCommand:
 			if err := deleteStandarRenstra.DeleteStandarRenstraCommandValidation(cmd); err != nil {
 				return nil, wrapValidationError("StandarRenstra.Validation", err)
+			}
+		// === IndikatorRenstra Commands ===
+		case createIndikatorRenstra.CreateIndikatorRenstraCommand:
+			if err := createIndikatorRenstra.CreateIndikatorRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+			}
+		case updateIndikatorRenstra.UpdateIndikatorRenstraCommand:
+			if err := updateIndikatorRenstra.UpdateIndikatorRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+			}
+		case deleteIndikatorRenstra.DeleteIndikatorRenstraCommand:
+			if err := deleteIndikatorRenstra.DeleteIndikatorRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
 			}
 
 		// default:
