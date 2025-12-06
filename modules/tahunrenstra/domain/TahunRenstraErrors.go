@@ -10,5 +10,5 @@ func EmptyData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("TahunRenstra.NotFound", fmt.Sprintf("TahunRenstra with identifier %d not found", id) )
+	return domain.NotFoundError("TahunRenstra.NotFound", fmt.Sprintf("TahunRenstra with identifier %s not found", id) )
 }

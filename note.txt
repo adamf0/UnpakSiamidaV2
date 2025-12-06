@@ -1,3 +1,9 @@
 CompileDaemon --build="go build -o app" --command="./app"
 
 http://localhost:3000/users?page=1&limit=2&search=Verifikator&filters=email:eq:dummy@gmail.com;fakultas_unit:neq:;
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/standarrenstra/domain \
+  -coverprofile=StandarRenstra.out \
+  ./modules/standarrenstra/domaintest \
+&& go tool cover -html=StandarRenstra.out -o StandarRenstra.html

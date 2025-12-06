@@ -22,5 +22,5 @@ func InvalidEmail() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("User.NotFound", fmt.Sprintf("User with identifier %d not found", id) )
+	return domain.NotFoundError("User.NotFound", fmt.Sprintf("User with identifier %s not found", id) )
 }
