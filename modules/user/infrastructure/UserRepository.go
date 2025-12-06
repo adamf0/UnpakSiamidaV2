@@ -46,6 +46,7 @@ var allowedSearchColumns = map[string]string{
     "name":          "name",
     "username":      "nidn_username",
     "email":         "email",
+	"level":         "level",
     "fakultas_unit":  "fakultas_unit",
 }
 

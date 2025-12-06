@@ -17,6 +17,7 @@ type User struct {
 	Password 	 string     `gorm:"type:longtext;not null"`
 	Name         string     `gorm:"size:255;not null"`
 	Email        string     `gorm:"size:255;"`
+	Level        string     `gorm:"size:255;"`
 	FakultasUnit *int       `gorm:"column:fakultas_unit;"`
 }
 func (User) TableName() string {
@@ -25,7 +26,7 @@ func (User) TableName() string {
 
 
 // === CREATE ===
-func NewUser(username, password, name, email string, fakultasunit *int) common.ResultValue[*User] {
+func NewUser(username string, password string, name string, email string, level string, fakultasunit *int) common.ResultValue[*User] {
 
 	if !helper.IsValidUnpakEmail(email) {
 		return common.FailureValue[*User](InvalidEmail())
@@ -37,6 +38,7 @@ func NewUser(username, password, name, email string, fakultasunit *int) common.R
 		Password:     password,
 		Name:         name,
 		Email:        email,
+		Level: 		  level,
 		FakultasUnit: fakultasunit,
 	}
 
@@ -57,6 +59,7 @@ func UpdateUser(
 	password *string,
 	name string,
 	email string,
+	level string,
 	fakultasunit *int,
 ) common.ResultValue[*User] {
 
@@ -79,6 +82,7 @@ func UpdateUser(
 	}
 	prev.Name = name
 	prev.Email = email
+	prev.Level = level
 
 	if fakultasunit != nil {
 		prev.FakultasUnit = fakultasunit

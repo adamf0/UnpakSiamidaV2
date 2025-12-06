@@ -38,6 +38,7 @@ func (h *CreateUserCommandHandler) Handle(
 		cmd.Password,
 		cmd.Name,
 		cmd.Email,
+		cmd.Level,
 		fu,
 	)
 

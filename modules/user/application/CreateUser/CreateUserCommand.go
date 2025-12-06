@@ -5,5 +5,6 @@ type CreateUserCommand struct {
 	Username     string
 	Password     string
 	Email        string
+	Level 		 string
 	FakultasUnit *string
 }

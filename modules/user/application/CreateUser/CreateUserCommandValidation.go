@@ -1,10 +1,6 @@
 package application
 
 import (
-	"fmt"
-	"strings"
-	"strconv"
-
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	helper "UnpakSiamida/common/helper"
 )
@@ -28,55 +24,15 @@ func CreateUserCommandValidation(cmd CreateUserCommand) error {
 			validation.By(helper.ValidateUnpakEmail),
 		),
 
+		validation.Field(&cmd.Level,
+			validation.Required.Error("Level cannot be blank"),
+			validation.By(helper.ValidateLevel),
+		),
+
 		validation.Field(&cmd.FakultasUnit,
-			validation.By(validateFakultasUnit),
+			validation.By(func(value interface{}) error {
+				return helper.ValidateFakultasUnit(value, cmd.Level)
+			}),
 		),
 	)
-}
-
-func validateFakultasUnit(value interface{}) error {
-	if value == nil {
-		return nil // fakultas boleh null
-	}
-
-	ptr, ok := value.(*string)
-	if !ok {
-		return fmt.Errorf("FakultasUnit invalid type")
-	}
-
-	if ptr == nil {
-		return nil
-	}
-
-	s := strings.TrimSpace(*ptr)
-	if s == "" {
-		return fmt.Errorf("FakultasUnit cannot be blank")
-	}
-
-	val, err := parseInt64(s)
-	if err != nil {
-		return err
-	}
-
-	if val < 1 {
-		return fmt.Errorf("FakultasUnit invalid value")
-	}
-
-	return nil
-}
-
-func parseInt64(s string) (int64, error) {
-	val, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		if numErr, ok := err.(*strconv.NumError); ok {
-			switch numErr.Err {
-			case strconv.ErrRange:
-				return 0, fmt.Errorf("Number out of range")
-			case strconv.ErrSyntax:
-				return 0, fmt.Errorf("Must be a number")
-			}
-		}
-		return 0, fmt.Errorf("Invalid number")
-	}
-	return val, nil
 }

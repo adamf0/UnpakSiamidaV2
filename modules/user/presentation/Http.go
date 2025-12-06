@@ -28,6 +28,7 @@ func ModuleUser(app *fiber.App) {
         username := c.FormValue("username")
         password := c.FormValue("password")
         email := c.FormValue("email")
+        level := c.FormValue("level")
         fakultasUnit := c.FormValue("FakultasUnit") // opsional
 
         var fakultasUnitPtr *string
@@ -40,6 +41,7 @@ func ModuleUser(app *fiber.App) {
             Username:     username,
             Password:     password,
             Email:        email,
+            Level:        level,
             FakultasUnit: fakultasUnitPtr,
         }
 
@@ -62,6 +64,7 @@ func ModuleUser(app *fiber.App) {
         username := c.FormValue("username")
         password := c.FormValue("password")
         email := c.FormValue("email")
+        level := c.FormValue("level")
         fakultasUnit := c.FormValue("FakultasUnit")
 
         var passwordPtr *string
@@ -80,6 +83,7 @@ func ModuleUser(app *fiber.App) {
             Username:     username,
             Password:     passwordPtr,
             Email:        email,
+            Level:        level,
             FakultasUnit: fakultasUnitPtr,
         }
 

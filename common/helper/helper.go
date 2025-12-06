@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"strconv"
 )
 
 func IsValidUnpakEmail(email string) bool {
@@ -65,7 +66,6 @@ func ValidateUnpakEmail(value interface{}) error {
 	return nil
 }
 
-
 func ValidateUUIDv4(value interface{}) error {
 	s, ok := value.(string)
 	if !ok {
@@ -88,4 +88,85 @@ func ValidateUUIDv4(value interface{}) error {
 	}
 
 	return nil
+}
+
+func ValidateFakultasUnit(value interface{}, level interface{}) error {
+	levelStr, ok := level.(string)
+	if !ok {
+		return fmt.Errorf("level invalid type")
+	}
+
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = strings.TrimSpace(v)
+	case *string:
+		if v != nil {
+			s = strings.TrimSpace(*v)
+		}
+	case nil:
+		s = ""
+	default:
+		return fmt.Errorf("FakultasUnit invalid type")
+	}
+
+	// fmt.Println("levelStr:", levelStr)
+	// fmt.Println("FakultasUnit:", s)
+
+	if levelStr == "fakultas" && s == "" {
+		return fmt.Errorf("FakultasUnit cannot be blank")
+	}
+	if (levelStr == "admin" || levelStr == "user") && s != "" {
+		return fmt.Errorf("FakultasUnit required to be blank")
+	}
+
+	if s == "" {
+		return nil
+	}
+
+	val, err := ParseInt64(s)
+	if err != nil {
+		return err
+	}
+
+	if val < 1 {
+		return fmt.Errorf("FakultasUnit invalid value")
+	}
+
+	return nil
+}
+
+func ValidateLevel(value interface{}) error {
+	val, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("level invalid type")
+	}
+
+	validLevels := map[string]struct{}{
+		"admin":    {},
+		"user":     {},
+		"fakultas": {},
+	}
+
+	if _, exists := validLevels[val]; !exists {
+		return fmt.Errorf("level not exist")
+	}
+
+	return nil
+}
+
+func ParseInt64(s string) (int64, error) {
+	val, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		if numErr, ok := err.(*strconv.NumError); ok {
+			switch numErr.Err {
+			case strconv.ErrRange:
+				return 0, fmt.Errorf("Number out of range")
+			case strconv.ErrSyntax:
+				return 0, fmt.Errorf("Must be a number")
+			}
+		}
+		return 0, fmt.Errorf("Invalid number")
+	}
+	return val, nil
 }

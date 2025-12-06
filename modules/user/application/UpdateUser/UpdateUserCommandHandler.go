@@ -78,6 +78,7 @@ func (h *UpdateUserCommandHandler) Handle(
 		password,
 		cmd.Name,
 		cmd.Email,
+		cmd.Level,
 		fakultasUnit,
 	)
 
