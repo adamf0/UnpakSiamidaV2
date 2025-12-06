@@ -9,6 +9,9 @@ import (
 
 	indikatorrenstraInfrastructure "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 	indikatorrenstraPresentation "UnpakSiamida/modules/indikatorrenstra/presentation"
+
+	tahunrenstraInfrastructure "UnpakSiamida/modules/tahunrenstra/infrastructure"
+	tahunrenstraPresentation "UnpakSiamida/modules/tahunrenstra/presentation"
 	
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -51,6 +54,9 @@ func main() {
 
 	indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra()
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
+
+	tahunrenstraInfrastructure.RegisterModuleTahunRenstra()
+	tahunrenstraPresentation.ModuleTahunRenstra(app)
 
 	app.Listen(":3000")
 }
