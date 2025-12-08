@@ -10,14 +10,16 @@ import (
     "github.com/mehdihadeli/go-mediatr"
     "gorm.io/driver/mysql"
 	"gorm.io/gorm"
+    "fmt"
 )
 
-func RegisterModuleIndikatorRenstra() {
+func RegisterModuleIndikatorRenstra() error{
     dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
+		// panic(err)
 	}
 
     repoIndikatorRenstra := NewIndikatorRenstraRepository(db)
@@ -64,5 +66,5 @@ func RegisterModuleIndikatorRenstra() {
         Repo: repoIndikatorRenstra,
     })
 
-
+    return nil
 }

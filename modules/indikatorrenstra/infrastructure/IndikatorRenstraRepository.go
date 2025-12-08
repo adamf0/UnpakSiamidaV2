@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"context"
-	"errors"
 	commondomainindikatorrenstra "UnpakSiamida/common/domain"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	"github.com/google/uuid"
@@ -50,9 +49,9 @@ func (r *IndikatorRenstraRepository) GetByUuid(ctx context.Context, uid uuid.UUI
 		Where("uuid = ?", uid).
 		First(&indikatorrenstra).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
+	// if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	return nil, nil
+	// }
 
 	if err != nil {
 		return nil, err

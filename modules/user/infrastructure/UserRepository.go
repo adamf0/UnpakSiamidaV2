@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"context"
-	"errors"
 	commondomainuser "UnpakSiamida/common/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
@@ -29,9 +28,9 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 		Where("uuid = ?", uid).
 		First(&user).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
+	// if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	return nil, domainuser.NotFound(uid.String())
+	// }
 
 	if err != nil {
 		return nil, err

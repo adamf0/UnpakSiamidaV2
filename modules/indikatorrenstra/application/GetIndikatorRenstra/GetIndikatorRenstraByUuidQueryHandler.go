@@ -5,6 +5,8 @@ import (
 
     domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
     "github.com/google/uuid"
+	"errors"
+    "gorm.io/gorm"
 )
 
 type GetIndikatorRenstraByUuidQueryHandler struct {
@@ -17,9 +19,17 @@ func (h *GetIndikatorRenstraByUuidQueryHandler) Handle(
 ) (*domainindikatorrenstra.IndikatorRenstra, error) {
 
     parsed, err := uuid.Parse(q.Uuid)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, domainindikatorrenstra.NotFound(q.Uuid)
+	}
 
-    return h.Repo.GetByUuid(ctx, parsed)
+    inindikatorrenstra, err := h.Repo.GetByUuid(ctx, parsed)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainindikatorrenstra.NotFound(q.Uuid)
+		}
+		return nil, err
+	}
+
+    return inindikatorrenstra, nil
 }

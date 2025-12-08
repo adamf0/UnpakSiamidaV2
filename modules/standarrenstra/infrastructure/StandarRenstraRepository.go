@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"context"
-	"errors"
 	commondomainstandarrenstra "UnpakSiamida/common/domain"
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
 	"github.com/google/uuid"
@@ -29,9 +28,9 @@ func (r *StandarRenstraRepository) GetByUuid(ctx context.Context, uid uuid.UUID)
 		Where("uuid = ?", uid).
 		First(&standarrenstra).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
+	// if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	return nil, nil
+	// }
 
 	if err != nil {
 		return nil, err

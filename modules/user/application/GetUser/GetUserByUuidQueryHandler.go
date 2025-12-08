@@ -5,6 +5,8 @@ import (
 
     domainuser "UnpakSiamida/modules/user/domain"
     "github.com/google/uuid"
+    "errors"
+    "gorm.io/gorm"
 )
 
 type GetUserByUuidQueryHandler struct {
@@ -17,9 +19,17 @@ func (h *GetUserByUuidQueryHandler) Handle(
 ) (*domainuser.User, error) {
 
     parsed, err := uuid.Parse(q.Uuid)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, domainuser.NotFound(q.Uuid)
+	}
 
-    return h.Repo.GetByUuid(ctx, parsed)
+    user, err := h.Repo.GetByUuid(ctx, parsed)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainuser.NotFound(q.Uuid)
+		}
+		return nil, err
+	}
+
+    return user, nil
 }

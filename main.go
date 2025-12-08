@@ -34,8 +34,24 @@ import (
 	commonpresentation "UnpakSiamida/common/presentation"
 )
 
+var startupErrors []fiber.Map
+
+func mustStart(name string, fn func() error) {
+    if err := fn(); err != nil {
+        startupErrors = append(startupErrors, fiber.Map{
+            "module": name,
+            "error":  err.Error(),
+        })
+    }
+}
+
 func main() {
+	cfg := commonpresentation.DefaultHeaderSecurityConfig()
+	cfg.ResolveAndCheck = false
+
 	app := fiber.New(fiber.Config{
+		// DisableStartupMessage: true,
+		ReadBufferSize: 16 * 1024,
 		Prefork:      true, // gunakan semua CPU cores
 		ServerHeader: "Fiber",
 		// ReadTimeout: 10 * time.Second,
@@ -43,19 +59,29 @@ func main() {
 		// IdleTimeout: 10 * time.Second
 	})
 	app.Use(commonpresentation.LoggerMiddleware)
+	// app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
 
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 
-	userInfrastructure.RegisterModuleUser()
+	//berlaku untuk startup bukan hot reload
+	mustStart("User Module", userInfrastructure.RegisterModuleUser)
+	mustStart("Standar Renstra Module", standarrenstraInfrastructure.RegisterModuleStandarRenstra)
+	mustStart("Indikator Renstra Module", indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra)
+	mustStart("Tahun Renstra Module", tahunrenstraInfrastructure.RegisterModuleTahunRenstra)
+
+	if len(startupErrors) > 0 {
+		app.Use(func(c *fiber.Ctx) error {
+			return c.Status(500).JSON(fiber.Map{
+					"Code":    "INTERNAL_SERVER_ERROR",
+					"Message": "Startup module failed",
+					"Trace": startupErrors,
+			})
+		})
+	}
+	
 	userPresentation.ModuleUser(app)
-
-	standarrenstraInfrastructure.RegisterModuleStandarRenstra()
 	standarrenstraPresentation.ModuleStandarRenstra(app)
-
-	indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra()
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
-
-	tahunrenstraInfrastructure.RegisterModuleTahunRenstra()
 	tahunrenstraPresentation.ModuleTahunRenstra(app)
 
 	app.Listen(":3000")
@@ -115,8 +141,8 @@ func (b *ValidationBehavior) Handle(
 				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
 			}
 
-		// default:
-		// 	// request lain → skip validation
+		default:
+			// request lain → skip validation
 	}
 
 	return next(ctx)

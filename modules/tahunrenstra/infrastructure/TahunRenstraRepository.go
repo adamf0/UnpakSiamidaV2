@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"context"
-	"errors"
 	commondomainTahunRenstra "UnpakSiamida/common/domain"
 	domainTahunRenstra "UnpakSiamida/modules/tahunrenstra/domain"
 	"gorm.io/gorm"
@@ -33,9 +32,9 @@ func (r *TahunRenstraRepository) GetActive(ctx context.Context) (*domainTahunRen
 		Order("tahun DESC").
 		First(&TahunRenstra).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
+	// if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 	return nil, nil
+	// }
 
 	if err != nil {
 		return nil, err

@@ -5,6 +5,8 @@ import (
 
     domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
     "github.com/google/uuid"
+	"errors"
+    "gorm.io/gorm"
 )
 
 type GetStandarRenstraByUuidQueryHandler struct {
@@ -17,9 +19,17 @@ func (h *GetStandarRenstraByUuidQueryHandler) Handle(
 ) (*domainstandarrenstra.StandarRenstra, error) {
 
     parsed, err := uuid.Parse(q.Uuid)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, domainstandarrenstra.NotFound(q.Uuid)
+	}
 
-    return h.Repo.GetByUuid(ctx, parsed)
+    standarrenstra, err := h.Repo.GetByUuid(ctx, parsed)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainstandarrenstra.NotFound(q.Uuid)
+		}
+		return nil, err
+	}
+
+    return standarrenstra, nil
 }
