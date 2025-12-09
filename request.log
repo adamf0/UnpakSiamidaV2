@@ -1,10 +1,40 @@
-================ 2025-12-08T13:01:55+07:00 ================
-IP: 0.0.0.0
-Took: 23.583µs
+================ 2025-12-09T10:55:43+07:00 ================
+IP: 127.0.0.1
+Took: 5.625792ms
 
-GET / HTTP/1.1
-Host: example.com
-X-A: evil.com
+POST /templatedokumentambahan HTTP/1.1
+Host: localhost:3000
+Content-Length: 769
+Content-Type: multipart/form-data; boundary=--------------------------512bded7596acca3ed806302
+User-Agent: Thunder Client (https://www.thunderclient.com)
+Accept-Encoding: gzip, deflate, br
+Accept: */*
+Connection: close
 
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="pertanyaan"
+
+beta tester
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="klasifikasi"
+
+minor
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="kategori"
+
+numerik
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="tugas"
+
+auditor2
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="tahun"
+
+2026
+----------------------------512bded7596acca3ed806302
+Content-Disposition: form-data; name="jenisFile"
+
+53f8d6a0-0e22-4833-8501-748a0238d92a
+----------------------------512bded7596acca3ed806302--
 
 =============================================

@@ -124,7 +124,7 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 		return nil
 	}
 
-	val, err := ParseInt64(s)
+	val, err := ParseInt64(s) //[PR] bukan int tapi uuid
 	if err != nil {
 		return err
 	}

@@ -60,15 +60,63 @@ func (r *IndikatorRenstraRepository) GetByUuid(ctx context.Context, uid uuid.UUI
 	return &indikatorrenstra, nil
 }
 
+// ------------------------
+// GET DEFAULT BY UUID
+// ------------------------
+func (r *IndikatorRenstraRepository) GetDefaultByUuid(
+    ctx context.Context,
+    id uuid.UUID,
+) (*domainindikatorrenstra.IndikatorRenstraDefault, error) {
+
+    query := `
+        SELECT 
+            i.id,
+            i.uuid,
+            i.indikator,
+            i.id_master_standar AS standar,
+            ms.uuid AS uuid_standar,
+            i.parent,
+            p.uuid AS uuid_parent,
+            i.tahun,
+            i.tipe_target,
+            i.operator
+        FROM master_indikator_renstra i
+        LEFT JOIN master_standar_renstra ms ON i.id_master_standar = ms.id
+        LEFT JOIN master_indikator_renstra p ON i.parent = p.id
+        WHERE i.uuid = ?
+        LIMIT 1
+    `
+
+    var rowData domainindikatorrenstra.IndikatorRenstraDefault
+
+    row := r.db.WithContext(ctx).Raw(query, id).Row()
+    err := row.Scan(
+        &rowData.Id,
+        &rowData.Uuid,
+        &rowData.Indikator,
+        &rowData.Standar,
+        &rowData.UuidStandar,
+        &rowData.Parent,
+        &rowData.UuidParent,
+        &rowData.Tahun,
+        &rowData.TipeTarget,
+        &rowData.Operator,
+    )
+
+    if err != nil {
+		return nil, err
+	}
+
+	if rowData.Id == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+    return &rowData, nil
+}
+
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
     "nama":           	"nama",
-	"standar_renstra": 	"id_master_standar",
-	"indikator": 	  	"indikator",
-	"parent":		  	"parent",
-	"tahun": 		  	"tahun",
-	"tipe_target": 	  	"tipe_target",
-	"operator": 	  	"operator",
 }
 
 // ------------------------

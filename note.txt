@@ -7,3 +7,16 @@ go test -v \
   -coverprofile=StandarRenstra.out \
   ./modules/standarrenstra/domaintest \
 && go tool cover -html=StandarRenstra.out -o StandarRenstra.html
+
+go test -v \
+  -coverpkg=UnpakSiamida \
+  -coverprofile=main.out \
+  ./ \
+&& go tool cover -html=main.out -o main.html
+
+// lname := strings.ToLower(name)
+
+			// // 1) Blacklist name
+			// if cfg.BlacklistedHeaderNames[lname] {
+			// 	return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+0]", "blacklisted header name: "+name))
+			// }

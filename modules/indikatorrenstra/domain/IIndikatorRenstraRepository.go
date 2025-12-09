@@ -9,6 +9,7 @@ import (
 type IIndikatorRenstraRepository interface {
 	IsUniqueIndikator(ctx context.Context, idnikator string, tahun string) (bool, error)
 	GetByUuid(ctx context.Context, uid uuid.UUID) (*IndikatorRenstra, error)
+	GetDefaultByUuid(ctx context.Context, uid uuid.UUID) (*IndikatorRenstraDefault, error)
 	GetAll(
         ctx context.Context,
         search string,

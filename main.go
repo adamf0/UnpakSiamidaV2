@@ -12,6 +12,18 @@ import (
 
 	tahunrenstraInfrastructure "UnpakSiamida/modules/tahunrenstra/infrastructure"
 	tahunrenstraPresentation "UnpakSiamida/modules/tahunrenstra/presentation"
+
+	templaterenstraInfrastructure "UnpakSiamida/modules/templaterenstra/infrastructure"
+	templaterenstraPresentation "UnpakSiamida/modules/templaterenstra/presentation"
+
+	templatedokumentambahanInfrastructure "UnpakSiamida/modules/templatedokumentambahan/infrastructure"
+	templatedokumentambahanPresentation "UnpakSiamida/modules/templatedokumentambahan/presentation"
+
+	fakultasunitInfrastructure "UnpakSiamida/modules/fakultasunit/infrastructure"
+	fakultasunitPresentation "UnpakSiamida/modules/fakultasunit/presentation"
+
+	jenisfileInfrastructure "UnpakSiamida/modules/jenisfile/infrastructure"
+	jenisfilePresentation "UnpakSiamida/modules/jenisfile/presentation"
 	
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -24,6 +36,14 @@ import (
 	createIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
 	updateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
 	deleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
+
+	createTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
+	updateTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
+	deleteTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/DeleteTemplateRenstra"
+
+	createTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
+	updateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
+	deleteTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
 
 	"github.com/gofiber/fiber/v2"
 	"context"
@@ -68,6 +88,10 @@ func main() {
 	mustStart("Standar Renstra Module", standarrenstraInfrastructure.RegisterModuleStandarRenstra)
 	mustStart("Indikator Renstra Module", indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra)
 	mustStart("Tahun Renstra Module", tahunrenstraInfrastructure.RegisterModuleTahunRenstra)
+	mustStart("Template Renstra Module", templaterenstraInfrastructure.RegisterModuleTemplateRenstra)
+	mustStart("Template Dokumen Tambahan Module", templatedokumentambahanInfrastructure.RegisterModuleTemplateDokumenTambahan)
+	mustStart("Fakultas Unit Module", fakultasunitInfrastructure.RegisterModuleFakultasUnit)
+	mustStart("Jenis FIle Module", jenisfileInfrastructure.RegisterModuleJenisFile)
 
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
@@ -83,6 +107,10 @@ func main() {
 	standarrenstraPresentation.ModuleStandarRenstra(app)
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
 	tahunrenstraPresentation.ModuleTahunRenstra(app)
+	templaterenstraPresentation.ModuleTemplateRenstra(app)
+	templatedokumentambahanPresentation.ModuleTemplateDokumenTambahan(app)
+	fakultasunitPresentation.ModuleFakultasUnit(app)
+	jenisfilePresentation.ModuleJenisFile(app)
 
 	app.Listen(":3000")
 }
@@ -139,6 +167,32 @@ func (b *ValidationBehavior) Handle(
 		case deleteIndikatorRenstra.DeleteIndikatorRenstraCommand:
 			if err := deleteIndikatorRenstra.DeleteIndikatorRenstraCommandValidation(cmd); err != nil {
 				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+			}
+		// === TemplateRenstra Commands ===
+		case createTemplateRenstra.CreateTemplateRenstraCommand:
+			if err := createTemplateRenstra.CreateTemplateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+			}
+		case updateTemplateRenstra.UpdateTemplateRenstraCommand:
+			if err := updateTemplateRenstra.UpdateTemplateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+			}
+		case deleteTemplateRenstra.DeleteTemplateRenstraCommand:
+			if err := deleteTemplateRenstra.DeleteTemplateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+			}
+		// === TemplateDokumenTambahan Commands ===
+		case createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand:
+			if err := createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+			}
+		case updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand:
+			if err := updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+			}
+		case deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand:
+			if err := deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
 			}
 
 		default:
