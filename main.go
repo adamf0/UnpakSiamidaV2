@@ -24,6 +24,9 @@ import (
 
 	jenisfileInfrastructure "UnpakSiamida/modules/jenisfile/infrastructure"
 	jenisfilePresentation "UnpakSiamida/modules/jenisfile/presentation"
+
+	renstraInfrastructure "UnpakSiamida/modules/renstra/infrastructure"
+	renstraPresentation "UnpakSiamida/modules/renstra/presentation"
 	
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -44,6 +47,11 @@ import (
 	createTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
 	updateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
 	deleteTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
+
+	createRenstra "UnpakSiamida/modules/renstra/application/CreateRenstra"
+	updateRenstra "UnpakSiamida/modules/renstra/application/UpdateRenstra"
+	giveCodeRenstra "UnpakSiamida/modules/renstra/application/GiveCodeAccessRenstra"
+	deleteRenstra "UnpakSiamida/modules/renstra/application/DeleteRenstra"
 
 	"github.com/gofiber/fiber/v2"
 	"context"
@@ -91,7 +99,8 @@ func main() {
 	mustStart("Template Renstra Module", templaterenstraInfrastructure.RegisterModuleTemplateRenstra)
 	mustStart("Template Dokumen Tambahan Module", templatedokumentambahanInfrastructure.RegisterModuleTemplateDokumenTambahan)
 	mustStart("Fakultas Unit Module", fakultasunitInfrastructure.RegisterModuleFakultasUnit)
-	mustStart("Jenis FIle Module", jenisfileInfrastructure.RegisterModuleJenisFile)
+	mustStart("Jenis File Module", jenisfileInfrastructure.RegisterModuleJenisFile)
+	mustStart("Renstra Module", renstraInfrastructure.RegisterModuleRenstra)
 
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
@@ -111,6 +120,7 @@ func main() {
 	templatedokumentambahanPresentation.ModuleTemplateDokumenTambahan(app)
 	fakultasunitPresentation.ModuleFakultasUnit(app)
 	jenisfilePresentation.ModuleJenisFile(app)
+	renstraPresentation.ModuleRenstra(app)
 
 	app.Listen(":3000")
 }
@@ -193,6 +203,24 @@ func (b *ValidationBehavior) Handle(
 		case deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand:
 			if err := deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommandValidation(cmd); err != nil {
 				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+			}
+
+		// === Renstra Commands ===
+		case createRenstra.CreateRenstraCommand:
+			if err := createRenstra.CreateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("Renstra.Validation", err)
+			}
+		case updateRenstra.UpdateRenstraCommand:
+			if err := updateRenstra.UpdateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("Renstra.Validation", err)
+			}
+		case giveCodeRenstra.GiveCodeAccessRenstraCommand:
+			if err := giveCodeRenstra.GiveCodeAccessRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("Renstra.Validation", err)
+			}
+		case deleteRenstra.DeleteRenstraCommand:
+			if err := deleteRenstra.DeleteRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("Renstra.Validation", err)
 			}
 
 		default:
