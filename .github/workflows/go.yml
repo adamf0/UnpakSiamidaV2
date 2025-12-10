@@ -1,0 +1,57 @@
+name: Go Test & Coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.4'
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run tests and generate coverage
+        run: |
+          mkdir -p coverage
+
+          # Loop semua modul
+          for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
+              modulename=$(basename $(dirname "$module"))_$(basename "$module")
+              echo "Running tests for $module ..."
+              go test -v -coverpkg=$(dirname "$module")/domain \
+                -coverprofile=coverage/${modulename}.out $module || exit 1
+          done
+
+      - name: Merge coverage files
+        run: |
+          echo "mode: count" > coverage/coverage_all.out
+          tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
+
+      - name: Generate HTML coverage report
+        run: go tool cover -html=coverage/coverage_all.out -o coverage/coverage_all.html
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/coverage_all.html
+
+      # Optional: deploy to GitHub Pages
+      - name: Deploy coverage report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./coverage
+          publish_branch: gh-pages
