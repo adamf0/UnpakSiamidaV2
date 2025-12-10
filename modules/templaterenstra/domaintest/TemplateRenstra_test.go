@@ -10,84 +10,208 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//
-// ===============
-//  CREATE
-// ===============
-//
-
+// ===== CREATE =====
 func TestNewTemplateRenstra_Success(t *testing.T) {
-	nama := "Standar Penelitian"
+	tahun := "2025"
+	indikatorID := uint(1)
+	isPertanyaan := true
+	fakultasUnit := uint(1)
+	kategori := "C"
+	klasifikasi := "S1"
+	tugas := "Unit"
 
-	result := domain.NewTemplateRenstra(nama)
+	result := domain.NewTemplateRenstra(
+		tahun,
+		indikatorID,
+		isPertanyaan,
+		fakultasUnit,
+		kategori,
+		klasifikasi,
+		nil, // satuan
+		nil, // target
+		ptr("10"), // targetMin
+		ptr("20"), // targetMax
+		tugas,
+	)
 
 	require.True(t, result.IsSuccess)
 
 	v := result.Value
-	assert.Equal(t, nama, v.Nama)
+	assert.Equal(t, tahun, v.Tahun)
+	assert.Equal(t, indikatorID, v.IndikatorRenstraID)
 	assert.NotEqual(t, uuid.Nil, v.UUID)
 }
 
-//
-// ===================
-//  UPDATE (POSITIVE)
-// ===================
-//
+// ===== CREATE (NEGATIVE) ====
+func TestNewTemplateRenstra_NegativeCases(t *testing.T) {
+    tests := []struct {
+        name              string
+        tahun             string
+        indikatorID       uint
+        fakultasUnit      uint
+        target            *string
+        targetMin         *string
+        targetMax         *string
+        expectedErrDesc   string
+    }{
+        {
+            name: "Invalid target combination (Mode A fail)",
+            tahun: "2025", indikatorID: 1, fakultasUnit: 1,
+            target: ptr("10"), targetMin: ptr("5"), targetMax: nil,
+            expectedErrDesc: domain.InvalidValueTarget().Description,
+        },
+        {
+            name: "Invalid target combination (Mode B fail)",
+            tahun: "2025", indikatorID: 1, fakultasUnit: 1,
+            target: nil, targetMin: nil, targetMax: ptr("20"),
+            expectedErrDesc: domain.InvalidValueTarget().Description,
+        },
+        {
+            name: "Invalid indikatorRenstraID",
+            tahun: "2025", indikatorID: 0, fakultasUnit: 1,
+            target: ptr("10"), targetMin: nil, targetMax: nil,
+            expectedErrDesc: domain.IndikatorNotFound().Description,
+        },
+        {
+            name: "Invalid fakultasUnit",
+            tahun: "2025", indikatorID: 1, fakultasUnit: 0,
+            target: ptr("10"), targetMin: nil, targetMax: nil,
+            expectedErrDesc: domain.FakultasUnitNotFound().Description,
+        },
+    }
 
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            res := domain.NewTemplateRenstra(
+                tt.tahun,
+                tt.indikatorID,
+                true,
+                tt.fakultasUnit,
+                "kategori",
+                "klasifikasi",
+                nil,         // satuan
+                tt.target,
+                tt.targetMin,
+                tt.targetMax,
+                "tugas",
+            )
+            require.False(t, res.IsSuccess)
+            assert.Equal(t, tt.expectedErrDesc, res.Error.Description)
+        })
+    }
+}
+
+// ===== UPDATE (POSITIVE) =====
 func TestUpdateTemplateRenstra_Success(t *testing.T) {
-	namaAwal := "Standar Lama"
-	prev := domain.NewTemplateRenstra(namaAwal).Value
+	prev := domain.NewTemplateRenstra(
+		"2025", 1, true, 1, "C", "S1",
+		nil, nil, ptr("10"), ptr("20"), "Unit",
+	).Value
 
-	newNama := "Standar Baru"
+	newTahun := "2026"
+	newKategori := "D"
+	newKlasifikasi := "S2"
 
-	result := domain.UpdateTemplateRenstra(prev, prev.UUID, newNama)
+	result := domain.UpdateTemplateRenstra(
+		prev,
+		prev.UUID,
+		newTahun,
+		2,      // indikatorRenstraID baru
+		false,  // isPertanyaan
+		1,      // fakultasUnit
+		newKategori,
+		newKlasifikasi,
+		nil,         // satuan
+		nil,         // target
+		ptr("100"),  // targetMin
+		ptr("200"),  // targetMax
+		"Unit",
+	)
 
 	require.True(t, result.IsSuccess)
-
-	require.NotNil(t, result.Value)
-	assert.Equal(t, newNama, result.Value.Nama)
+	assert.Equal(t, newTahun, result.Value.Tahun)
+	assert.Equal(t, newKategori, result.Value.Kategori)
+	assert.Equal(t, newKlasifikasi, result.Value.Klasifikasi)
 }
 
-//
-// ====================
-//  UPDATE (NEGATIVE)
-//  THEORY TABLE TESTS
-// ====================
-//
-
+// ===== UPDATE (NEGATIVE) =====
 func TestUpdateTemplateRenstra_NegativeCases(t *testing.T) {
-	valid := domain.NewTemplateRenstra("X").Value
+    prev := domain.NewTemplateRenstra(
+        "2025", 1, true, 1, "C", "S1",
+        nil, nil, ptr("10"), ptr("20"), "Unit",
+    ).Value
 
-	tests := []struct {
-		name        string
-		prev        *domain.TemplateRenstra
-		uid         uuid.UUID
-		expectedErr string
-	}{
-		{
-			name:        "prev is nil → EmptyData",
-			prev:        nil,
-			uid:         uuid.New(),
-			expectedErr: domain.EmptyData().Description,
-		},
-		{
-			name:        "uuid mismatch → InvalidData",
-			prev:        valid,
-			uid:         uuid.New(), // beda UUID
-			expectedErr: domain.InvalidData().Description,
-		},
-	}
+    tests := []struct {
+        name            string
+        uid             uuid.UUID
+        target          *string
+        targetMin       *string
+        targetMax       *string
+        indikatorID     uint
+        fakultasUnit    uint
+        expectedErrDesc string
+    }{
+        {
+            name: "Invalid target combination",
+            uid: prev.UUID, target: ptr("10"), targetMin: ptr("5"), targetMax: nil,
+            indikatorID: 1, fakultasUnit: 1,
+            expectedErrDesc: domain.InvalidValueTarget().Description,
+        },
+        {
+            name: "Invalid indikatorRenstraID",
+            uid: prev.UUID, target: ptr("10"), targetMin: nil, targetMax: nil,
+            indikatorID: 0, fakultasUnit: 1,
+            expectedErrDesc: domain.IndikatorNotFound().Description,
+        },
+        {
+            name: "Invalid fakultasUnit",
+            uid: prev.UUID, target: ptr("10"), targetMin: nil, targetMax: nil,
+            indikatorID: 1, fakultasUnit: 0,
+            expectedErrDesc: domain.FakultasUnitNotFound().Description,
+        },
+        {
+            name: "UUID mismatch",
+            uid: uuid.New(), target: ptr("10"), targetMin: nil, targetMax: nil,
+            indikatorID: 1, fakultasUnit: 1,
+            expectedErrDesc: domain.InvalidData().Description,
+        },
+        {
+            name: "Prev is nil",
+            uid: uuid.New(), target: ptr("10"), targetMin: nil, targetMax: nil,
+            indikatorID: 1, fakultasUnit: 1,
+            expectedErrDesc: domain.EmptyData().Description,
+        },
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            var toUpdate *domain.TemplateRenstra
+            if tt.name != "Prev is nil" {
+                toUpdate = prev
+            } else {
+                toUpdate = nil
+            }
 
-			result := domain.UpdateTemplateRenstra(tt.prev, tt.uid, "abc")
-
-			// Failure → IsSuccess == false
-			require.False(t, result.IsSuccess)
-
-			// Error.Description dibanding string
-			assert.Equal(t, tt.expectedErr, result.Error.Description)
-		})
-	}
+            res := domain.UpdateTemplateRenstra(
+                toUpdate,
+                tt.uid,
+                "2026",
+                tt.indikatorID,
+                false,
+                tt.fakultasUnit,
+                "kategori",
+                "klasifikasi",
+                nil,      // satuan
+                tt.target,
+                tt.targetMin,
+                tt.targetMax,
+                "tugas",
+            )
+            require.False(t, res.IsSuccess)
+            assert.Equal(t, tt.expectedErrDesc, res.Error.Description)
+        })
+    }
 }
+
+// ===== HELPER =====
+func ptr(s string) *string { return &s }

@@ -30,6 +30,24 @@ func TestTemplateRenstraError(t *testing.T) {
 			expectedDesc: "uuid is invalid",
 		},
 		{
+			name:         "IndikatorNotFound",
+			err:          domain.IndikatorNotFound(),
+			expectedCode: "TemplateRenstra.IndikatorNotFound",
+			expectedDesc: "indikator not found",
+		},
+		{
+			name:         "FakultasUnitNotFound",
+			err:          domain.FakultasUnitNotFound(),
+			expectedCode: "TemplateRenstra.FakultasUnitNotFound",
+			expectedDesc: "fakultas unit not found",
+		},
+		{
+			name:         "InvalidValueTarget",
+			err:          domain.InvalidValueTarget(),
+			expectedCode: "TemplateRenstra.InvalidValueTarget",
+			expectedDesc: "invalid target combination, either provide Target only or provide both TargetMin and TargetMax",
+		},
+		{
 			name:         "InvalidData",
 			err:          domain.InvalidData(),
 			expectedCode: "TemplateRenstra.InvalidData",
