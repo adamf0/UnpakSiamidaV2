@@ -3,10 +3,66 @@ CompileDaemon --build="go build -o app" --command="./app"
 http://localhost:3000/users?page=1&limit=2&search=Verifikator&filters=email:eq:dummy@gmail.com;fakultas_unit:neq:;
 
 go test -v \
+  -coverpkg=UnpakSiamida/modules/fakultasunit/domain \
+  -coverprofile=FakultasUnitDomain.out \
+  ./modules/fakultasunit/domaintest \
+&& go tool cover -html=FakultasUnitDomain.out -o FakultasUnitDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/indikatorrenstra/domain \
+  -coverprofile=IndikatorRenstraDomain.out \
+  ./modules/indikatorrenstra/domaintest \
+&& go tool cover -html=IndikatorRenstraDomain.out -o IndikatorRenstraDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/jenisfile/domain \
+  -coverprofile=JenisFileDomain.out \
+  ./modules/jenisfile/domaintest \
+&& go tool cover -html=JenisFileDomain.out -o JenisFileDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/renstra/domain \
+  -coverprofile=RenstraDomain.out \
+  ./modules/renstra/domaintest \
+&& go tool cover -html=RenstraDomain.out -o RenstraDomain.html
+
+go test -v \
   -coverpkg=UnpakSiamida/modules/standarrenstra/domain \
-  -coverprofile=StandarRenstra.out \
+  -coverprofile=StandarRenstraDomain.out \
   ./modules/standarrenstra/domaintest \
-&& go tool cover -html=StandarRenstra.out -o StandarRenstra.html
+&& go tool cover -html=StandarRenstraDomain.out -o StandarRenstraDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/tahunrenstra/domain \
+  -coverprofile=TahunRenstraDomain.out \
+  ./modules/tahunrenstra/domaintest \
+&& go tool cover -html=TahunRenstraDomain.out -o TahunRenstraDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/templatedokumentambahan/domain \
+  -coverprofile=TemplateDokumenTambahanDomain.out \
+  ./modules/templatedokumentambahan/domaintest \
+&& go tool cover -html=TemplateDokumenTambahanDomain.out -o TemplateDokumenTambahanDomain.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/templaterenstra/domain \
+  -coverprofile=TemplateRenstra.out \
+  ./modules/templaterenstra/domaintest \
+&& go tool cover -html=TemplateRenstra.out -o TemplateRenstra.html
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/user/domain \
+  -coverprofile=User.out \
+  ./modules/user/domaintest \
+&& go tool cover -html=User.out -o User.html
+
+////////////
+
+go test -v \
+  -coverpkg=UnpakSiamida/modules/fakultasunit/application \
+  -coverprofile=FakultasUnit.out \
+  ./modules/fakultasunit/applicationtest \
+&& go tool cover -html=FakultasUnitApp.out -o FakultasUnitApp.html
 
 go test -v \
   -coverpkg=UnpakSiamida \

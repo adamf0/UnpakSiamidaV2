@@ -41,7 +41,9 @@ func (r *FakultasUnitRepository) GetDefaultByUuid(ctx context.Context, uid uuid.
 
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
-    "nama_fak_prod_unit":          "nama_fak_prod_unit",
+    "nama_fak_prod_unit":          	"nama_fak_prod_unit",
+	"jenjang":          			"jenjang",
+	"fakultas":          			"fakultas",
 }
 
 // ------------------------
