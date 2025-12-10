@@ -8,23 +8,27 @@ on:
 
 permissions:
   contents: write
-  
+
 jobs:
   test-and-coverage:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout kode
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2️⃣ Setup Go
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.25.4'
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: go mod tidy
 
+      # 4️⃣ Run tests & generate coverage
       - name: Run tests and generate coverage
         run: |
           mkdir -p coverage
@@ -37,23 +41,29 @@ jobs:
                 -coverprofile=coverage/${modulename}.out $module || exit 1
           done
 
+      # 5️⃣ Merge coverage files
       - name: Merge coverage files
         run: |
           echo "mode: count" > coverage/coverage_all.out
           tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
 
+      # 6️⃣ Generate HTML coverage report (index.html untuk GitHub Pages)
       - name: Generate HTML coverage report
-        run: go tool cover -html=coverage/coverage_all.out -o coverage/coverage_all.html
+        run: |
+          mkdir -p CoverageReport
+          go tool cover -html=coverage/coverage_all.out -o CoverageReport/index.html
 
+      # 7️⃣ Upload artifact (opsional, untuk download manual)
       - name: Upload coverage report artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/coverage_all.html
+          path: CoverageReport/index.html
 
-      # Optional: deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
+      # 8️⃣ Deploy coverage report ke GitHub Pages
+      - name: Deploy coverage report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./CoverageReport
+          publish_branch: gh-pages
