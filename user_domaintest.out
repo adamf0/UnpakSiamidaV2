@@ -1,0 +1,25 @@
+mode: set
+UnpakSiamida/modules/user/domain/User.go:23.32,25.2 1 0
+UnpakSiamida/modules/user/domain/User.go:29.134,31.38 1 1
+UnpakSiamida/modules/user/domain/User.go:31.38,33.3 1 1
+UnpakSiamida/modules/user/domain/User.go:35.2,51.34 3 1
+UnpakSiamida/modules/user/domain/User.go:64.29,66.17 1 1
+UnpakSiamida/modules/user/domain/User.go:66.17,68.3 1 1
+UnpakSiamida/modules/user/domain/User.go:70.2,70.22 1 1
+UnpakSiamida/modules/user/domain/User.go:70.22,72.3 1 1
+UnpakSiamida/modules/user/domain/User.go:75.2,75.38 1 1
+UnpakSiamida/modules/user/domain/User.go:75.38,77.3 1 1
+UnpakSiamida/modules/user/domain/User.go:80.2,80.21 1 1
+UnpakSiamida/modules/user/domain/User.go:80.21,82.3 1 1
+UnpakSiamida/modules/user/domain/User.go:83.2,87.25 4 1
+UnpakSiamida/modules/user/domain/User.go:87.25,89.3 1 1
+UnpakSiamida/modules/user/domain/User.go:91.2,97.34 2 1
+UnpakSiamida/modules/user/domain/UserCreatedEvent.go:15.39,17.2 1 0
+UnpakSiamida/modules/user/domain/UserCreatedEvent.go:19.53,21.2 1 0
+UnpakSiamida/modules/user/domain/UserErrors.go:8.31,10.2 1 1
+UnpakSiamida/modules/user/domain/UserErrors.go:12.33,14.2 1 1
+UnpakSiamida/modules/user/domain/UserErrors.go:16.33,18.2 1 1
+UnpakSiamida/modules/user/domain/UserErrors.go:20.34,22.2 1 1
+UnpakSiamida/modules/user/domain/UserErrors.go:24.39,26.2 1 1
+UnpakSiamida/modules/user/domain/UserUpdatedEvent.go:15.39,17.2 1 0
+UnpakSiamida/modules/user/domain/UserUpdatedEvent.go:19.53,21.2 1 0
