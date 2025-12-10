@@ -37,7 +37,17 @@ jobs:
           for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
               modulename=$(basename $(dirname "$module"))_$(basename "$module")
               echo "Running tests for $module ..."
-              go test -v -coverpkg=$(dirname "$module")/domain \
+
+              # Tentukan folder untuk coverage
+              if [[ "$module" == *applicationtest ]]; then
+                  # coverage untuk folder application
+                  coverpkg=$(dirname "$module")/application
+              else
+                  # coverage untuk folder domain
+                  coverpkg=$(dirname "$module")/domain
+              fi
+
+              go test -v -coverpkg=$coverpkg \
                 -coverprofile=coverage/${modulename}.out $module || exit 1
           done
 
