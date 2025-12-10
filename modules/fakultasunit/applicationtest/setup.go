@@ -2,22 +2,16 @@ package applicationtest
 
 import (
     "context"
-    "gorm.io/driver/mysql"
-    "gorm.io/gorm"
     "fmt"
     "testing"
     "time"
 
-    _ "github.com/go-sql-driver/mysql"
+    "gorm.io/driver/mysql"
+    "gorm.io/gorm"
+
     "github.com/testcontainers/testcontainers-go"
     "github.com/testcontainers/testcontainers-go/wait"
-
-    infra "UnpakSiamida/modules/fakultasunit/infrastructure"
 )
-
-type testRepo struct{
-    repo infra.FakultasUnitRepository
-}
 
 func setupMySQL(t *testing.T) (*gorm.DB, func()) {
     ctx := context.Background()
@@ -29,9 +23,8 @@ func setupMySQL(t *testing.T) (*gorm.DB, func()) {
             "MYSQL_DATABASE":      "testdb",
         },
         ExposedPorts: []string{"3306/tcp"},
-        WaitingFor: wait.ForLog("ready for connections").
-            WithOccurrence(2).
-            WithStartupTimeout(60 * time.Second),
+        WaitingFor: wait.ForListeningPort("3306/tcp").
+            WithStartupTimeout(90 * time.Second),
     }
 
     mysqlC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -45,15 +38,23 @@ func setupMySQL(t *testing.T) (*gorm.DB, func()) {
     host, _ := mysqlC.Host(ctx)
     port, _ := mysqlC.MappedPort(ctx, "3306")
 
-    dsn := fmt.Sprintf("root:pass@tcp(%s:%s)/testdb?parseTime=true", host, port.Port())
+    dsn := fmt.Sprintf("root:pass@tcp(%s:%s)/testdb?parseTime=true&multiStatements=true&allowNativePasswords=true", host, port.Port())
 
-    // --- 👉 INI FIX-NYA: gunakan GORM
-    gdb, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    var gdb *gorm.DB
+    // Retry connect 10x
+    for i := 0; i < 10; i++ {
+        gdb, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+        if err == nil {
+            break
+        }
+        t.Logf("retrying GORM connection: %v", err)
+        time.Sleep(1 * time.Second)
+    }
     if err != nil {
-        t.Fatalf("cannot connect via GORM: %v", err)
+        t.Fatalf("cannot connect via GORM after retries: %v", err)
     }
 
-    // migrate TABLE (walau nama-nya view)
+    // Buat table & data contoh
     err = gdb.Exec(`
         CREATE TABLE v_fakultas_unit (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
