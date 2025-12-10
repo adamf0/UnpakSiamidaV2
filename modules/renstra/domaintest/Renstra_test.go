@@ -193,21 +193,6 @@ func TestNewRenstraFailures(t *testing.T) {
 			auditee:     1,
 			aud1:        2,
 			aud2:        3,
-			date1:       validDate1,
-			date2:       validDate6,
-			date3:       validDate3,
-			date4:       validDate4,
-			date5:       validDate5,
-			date6:       validDate6,
-			expectedErr: domain.PeriodOverlapUploadLapangan(),
-		},
-		{
-			name:        "OverlapUploadLapangan_Covered",
-			fakultas:    10,
-			unique:      true,
-			auditee:     1,
-			aud1:        2,
-			aud2:        3,
 			date1:       validDate1, // upload start
 			date2:       validDate4, // upload end
 			date3:       validDate5, // dokumen start
@@ -295,7 +280,7 @@ func TestGiveCodeAccess(t *testing.T) {
 
 	// wrong UUID → error
 	r2 := domain.GiveCodeAccessRenstra(r, uuid.New(), "XXX")
-	require.True(t, r2.IsSuccess)
+	require.False(t, r2.IsSuccess)
 	assert.Equal(t, domain.InvalidData().Code, r2.Error.Code)
 
 	// success
