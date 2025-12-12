@@ -30,8 +30,8 @@ func TestGetJenisFileDefaultByUuid_Success(t *testing.T) {
         t.Fatalf("unexpected error: %v", err)
     }
 
-    if res.Uuid.String() != fixedUUID {
-        t.Fatalf("expected UUID %s, got %s", fixedUUID, res.Uuid)
+    if res.UUID.String() != fixedUUID {
+        t.Fatalf("expected UUID %s, got %s", fixedUUID, res.UUID)
     }
 }
 
