@@ -31,7 +31,7 @@ func TestGetAllUsersIntegration(t *testing.T) {
         expectedRows int
     }{
         {"No search, returns all", "", 10}, //aslinya 178, 10 kena paging
-        {"Search matching 'admin", 1},
+        {"Search matching 'admin", "admin", 1},
         {"Search not matching anything", "TidakAda", 0},
     }
 
