@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetAllUsersIntegration(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupUserMySQL(t)
     defer cleanup()
 
     // Use GORM wrapper repo constructor

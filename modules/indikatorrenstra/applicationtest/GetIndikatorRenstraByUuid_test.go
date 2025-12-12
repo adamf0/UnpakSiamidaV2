@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetIndikatorRenstraByUuid_Success(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupIndikatorRenstraMySQL(t)
     defer cleanup()
 
     repo := infra.NewIndikatorRenstraRepository(db)
@@ -32,7 +32,7 @@ func TestGetIndikatorRenstraByUuid_Success(t *testing.T) {
 }
 
 func TestGetIndikatorRenstraByUuid_Errors(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupIndikatorRenstraMySQL(t)
     defer cleanup()
 
     repo := infra.NewIndikatorRenstraRepository(db)

@@ -13,7 +13,7 @@ import (
     "github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupMySQL(t *testing.T) (*gorm.DB, func()) {
+func setupJenisFileMySQL(t *testing.T) (*gorm.DB, func()) {
     ctx := context.Background()
 
     req := testcontainers.ContainerRequest{

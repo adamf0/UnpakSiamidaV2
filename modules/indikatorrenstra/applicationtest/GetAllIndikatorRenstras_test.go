@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupIndikatorRenstraMySQL(t)
     defer cleanup()
 
     // Use GORM wrapper repo constructor

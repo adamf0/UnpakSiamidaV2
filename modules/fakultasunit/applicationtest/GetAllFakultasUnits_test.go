@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetAllFakultasUnitsIntegration(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupFakultasUnitMySQL(t)
     defer cleanup()
 
     // Use GORM wrapper repo constructor

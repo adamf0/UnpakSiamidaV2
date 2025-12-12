@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetFakultasUnitByUuid_Success(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupFakultasUnitMySQL(t)
     defer cleanup()
 
     repo := infra.NewFakultasUnitRepository(db)
@@ -32,7 +32,7 @@ func TestGetFakultasUnitByUuid_Success(t *testing.T) {
 }
 
 func TestGetFakultasUnitByUuid_Errors(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupFakultasUnitMySQL(t)
     defer cleanup()
 
     repo := infra.NewFakultasUnitRepository(db)

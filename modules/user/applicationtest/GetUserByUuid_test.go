@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetUserByUuid_Success(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupUserMySQL(t)
     defer cleanup()
 
     repo := infra.NewUserRepository(db)
@@ -32,7 +32,7 @@ func TestGetUserByUuid_Success(t *testing.T) {
 }
 
 func TestGetUserByUuid_Errors(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupUserMySQL(t)
     defer cleanup()
 
     repo := infra.NewUserRepository(db)

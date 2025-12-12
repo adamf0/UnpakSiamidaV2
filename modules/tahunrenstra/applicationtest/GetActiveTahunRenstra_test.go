@@ -10,7 +10,7 @@ import (
     )
 
 func TestGetActiveTahunRenstra_Success(t *testing.T) {
-        db, cleanup := setupMySQL(t)
+        db, cleanup := setupTahunRenstraMySQL(t)
         defer cleanup()
 
         repo := infra.NewTahunRenstraRepository(db)
@@ -33,7 +33,7 @@ func TestGetActiveTahunRenstra_Success(t *testing.T) {
 }
 
 func TestGetActiveTahunRenstra_NotFound(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupTahunRenstraMySQL(t)
     defer cleanup()
 
     _ = db.Exec("DELETE FROM v_tahun_renstra")

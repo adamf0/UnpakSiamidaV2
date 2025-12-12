@@ -14,13 +14,13 @@ import (
 // SUCCESS
 // ------------------------------
 func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
     repo := infra.NewIndikatorRenstraRepository(db)
     handler := app.GetIndikatorRenstraDefaultByUuidQueryHandler{Repo: repo}
 
-    // UUID fix yang kamu seed di setupMySQL
+    // UUID fix yang kamu seed di setupJenisFileMySQL
     fixedUUID := "186f2427-8bdd-42d9-a757-65808f364eeb"
 
     q := app.GetIndikatorRenstraDefaultByUuidQuery{Uuid: fixedUUID}
@@ -39,7 +39,7 @@ func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
 // ERROR CASES
 // ------------------------------
 func TestGetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
     repo := infra.NewIndikatorRenstraRepository(db)

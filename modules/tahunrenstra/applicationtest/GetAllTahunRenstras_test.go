@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetAllTahunRenstras_Basic(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupTahunRenstraMySQL(t)
     defer cleanup()
 
     repo := infra.NewTahunRenstraRepository(db)
@@ -41,7 +41,7 @@ func TestGetAllTahunRenstras_Basic(t *testing.T) {
 }
 
 func TestGetAllTahunRenstras_Filter(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupTahunRenstraMySQL(t)
     defer cleanup()
 
     repo := infra.NewTahunRenstraRepository(db)
@@ -100,7 +100,7 @@ func TestGetAllTahunRenstras_Filter(t *testing.T) {
 }
 
 func TestGetAllTahunRenstras_GlobalSearch(t *testing.T) {
-    db, cleanup := setupMySQL(t)
+    db, cleanup := setupTahunRenstraMySQL(t)
     defer cleanup()
 
     repo := infra.NewTahunRenstraRepository(db)
