@@ -41,7 +41,6 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
-    "nama":          "name",
     "name":          "name",
     "username":      "nidn_username",
     "email":         "email",
