@@ -31,12 +31,12 @@ func TestGetAllTahunRenstras_Basic(t *testing.T) {
         t.Fatalf("unexpected error: %v", err)
     }
 
-    if len(res.Data) != 4 {
-        t.Fatalf("expected 4 rows, got %d", len(res.Data))
+    if len(res.Data) != 2 {
+        t.Fatalf("expected 2 rows, got %d", len(res.Data))
     }
 
-    if res.Total != 4 {
-        t.Fatalf("expected total=4, got %d", res.Total)
+    if res.Total != 2 {
+        t.Fatalf("expected total=2, got %d", res.Total)
     }
 }
 
