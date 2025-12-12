@@ -117,7 +117,7 @@ func setupIndikatorRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL,
             PRIMARY KEY (id)
-        ) ENGINE=InnoDB AUTO_INCREMENT=477 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        );
 
         INSERT INTO master_indikator_renstra VALUES 
             (16,'186f2427-8bdd-42d9-a757-65808f364eeb',1,'Lulusan memiliki sertifikat kompetensi atau Bahasa asing',NULL,2024,'numerik',NULL,'2024-08-25 19:25:05','2024-09-21 07:18:42'),
