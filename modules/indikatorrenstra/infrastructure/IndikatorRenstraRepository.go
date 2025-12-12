@@ -89,27 +89,17 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
     var rowData domainindikatorrenstra.IndikatorRenstraDefault
 
-    row := r.db.WithContext(ctx).Raw(query, id).Row()
-    err := row.Scan(
-        &rowData.Id,
-        &rowData.Uuid,
-        &rowData.Indikator,
-        &rowData.Standar,
-        &rowData.UuidStandar,
-        &rowData.Parent,
-        &rowData.UuidParent,
-        &rowData.Tahun,
-        &rowData.TipeTarget,
-        &rowData.Operator,
-    )
+    res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
+    if res.Error != nil {
+        if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+            return nil, gorm.ErrRecordNotFound
+        }
+        return nil, res.Error
+    }
 
-    if err != nil {
-		return nil, err
-	}
-
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
+    if rowData.Id == 0 {
+        return nil, gorm.ErrRecordNotFound
+    }
 
     return &rowData, nil
 }

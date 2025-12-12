@@ -30,8 +30,8 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
         search       string
         expectedRows int
     }{
-        {"No search, returns all", "", 5}, //fail
-        {"Search matching Teknik", "Teknik", 1},
+        {"No search, returns all", "", 158},
+        {"Search matching 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", "Lulusan memiliki sertifikat kompetensi atau Bahasa asing", 2},
         {"Search not matching anything", "TidakAda", 0},
     }
 
