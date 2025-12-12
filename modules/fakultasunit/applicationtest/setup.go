@@ -71,7 +71,7 @@ func setupMySQL(t *testing.T) (*gorm.DB, func()) {
         VALUES
         (null, 'ERRROR_1', null, null, null, null, null),
         (null, 'ERRROR_2', null, null, null, 'Unit', null),
-        (UUID(), 'PUTIK', null, null, null, 'Unit', null),
+        (e76447c9-097a-4a1f-8c85-066058e0c299, 'PUTIK', null, null, null, 'Unit', null),
         (UUID(), 'Teknik', 'C', 'S1', '1', 'Prodi', 'VOKASI'),
         (UUID(), 'Ekonomi', 'A', 'S1', '1', 'Fakultas', 'EKONOMI DAN BISNIS');
     `).Error
