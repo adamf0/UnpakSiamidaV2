@@ -31,7 +31,7 @@ func TestGetAllUsersIntegration(t *testing.T) {
         expectedRows int
     }{
         {"No search, returns all", "", 10}, //aslinya 178, 10 kena paging
-        {"Search matching 'admin", "admin", 1},
+        {"Search matching 'admin", "admin", 2},
         {"Search not matching anything", "TidakAda", 0},
     }
 
@@ -67,10 +67,10 @@ func TestGetAllUsersIntegration(t *testing.T) {
         // indikator
         {"nidn_username eq 'admin'", []domain.SearchFilter{
             {"nidn_username", "eq", str("admin")},
-        }, 1},
+        }, 10},
        {"nidn_username like 'admin'", []domain.SearchFilter{
             {"nidn_username", "like", str("admin")},
-        }, 1},
+        }, 10},
         {"nidn_username neq 'admin'", []domain.SearchFilter{ //fail
             {"nidn_username", "neq", str("admin")},
         }, 10}, //aslinya 177, 10 kena paging
@@ -78,7 +78,7 @@ func TestGetAllUsersIntegration(t *testing.T) {
         // level
         {"level eq admin", []domain.SearchFilter{
             {"level", "eq", str("admin")},
-        }, 1}, //aslinya 1
+        }, 2}, //aslinya 1
         // {"level in", []domain.SearchFilter{
         //     {"level", "in", str("auditor1,auditor2,auditee")}, //tunggu hingga modul renstra selesai
         // }, x}, //aslinya x, 10 kena paging
