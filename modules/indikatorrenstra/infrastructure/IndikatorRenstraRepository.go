@@ -116,7 +116,8 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
-    "nama":           	"nama",
+    "indikator":        "indikator",
+	"tahun":           	"tahun",
 }
 
 // ------------------------

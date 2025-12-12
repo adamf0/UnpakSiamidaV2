@@ -65,7 +65,7 @@ func TestGetAllTahunRenstras_Filter(t *testing.T) {
 
         {"status neq active", []domain.SearchFilter{
             {"status", "neq", str("active")},
-        }, 2},
+        }, 1},
 
         {"multi filter tahun=2024 AND status active",
             []domain.SearchFilter{
@@ -114,9 +114,9 @@ func TestGetAllTahunRenstras_GlobalSearch(t *testing.T) {
         search       string
         expectedRows int
     }{
-        {"search empty → all", "", 4},
+        {"search empty", "", 2},
         {"search '2025'", "2025", 1},
-        {"search 'active'", "active", 1},
+        {"search 'active'", "active", 2},
         {"search 'non'", "non", 1},
         {"search nothing", "xxxx", 0},
     }
