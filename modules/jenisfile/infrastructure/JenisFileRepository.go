@@ -181,7 +181,7 @@ func (r *JenisFileRepository) GetAll(
 	// -------------------------------
 	// EXECUTE QUERY
 	// -------------------------------
-	if err := db.Order("created_at DESC").Find(&JenisFiles).Error; err != nil {
+	if err := db.Find(&JenisFiles).Error; err != nil {
 		return nil, 0, err
 	}
 
