@@ -63,6 +63,8 @@ func (r *TahunRenstraRepository) GetAll(
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainTahunRenstra.TahunRenstra{})
+	db = db.Where("status IN ('active', 'non-active')")
+    db = db.Where("tahun IS NOT NULL AND tahun != '0000'")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
