@@ -24,7 +24,7 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         },
         ExposedPorts: []string{"3306/tcp"},
         WaitingFor: wait.ForListeningPort("3306/tcp").
-            WithStartupTimeout(90 * time.Second),
+            WithStartupTimeout(10 * time.Minute),
     }
 
     mysqlC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
