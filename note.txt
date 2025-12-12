@@ -56,7 +56,7 @@ go test -v \
   ./modules/user/domaintest \
 && go tool cover -html=User.out -o User.html
 
-////////////
+//////////// 
 
 go test -v \
   -coverpkg=UnpakSiamida/modules/fakultasunit/application \
