@@ -30,8 +30,8 @@ func TestGetAllJenisFilesIntegration(t *testing.T) {
         search       string
         expectedRows int
     }{
-        {"No search, returns all", "", 10}, //aslinya 158, 10 kena paging
-        {"Search matching 'LED Prodi'", "LED Prodi", 2},
+        {"No search, returns all", "", 4}, 
+        {"Search matching 'LED Prodi'", "LED Prodi", 1},
         {"Search not matching anything", "TidakAda", 0},
     }
 

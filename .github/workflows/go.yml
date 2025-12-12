@@ -28,14 +28,8 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Disable parallel tests
-        run: echo "GOMAXPROCS=1" >> $GITHUB_ENV
-
       # 4️⃣ Run tests & generate coverage
       - name: Run tests and generate coverage
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: true
-          TESTCONTAINERS_CHECK_DUPLICATE: true
         run: |
           mkdir -p coverage
 
@@ -53,11 +47,8 @@ jobs:
                   coverpkg=$(dirname "$module")/domain
               fi
 
-              go test -v -p=1 -count=1 \
-                -coverpkg=$coverpkg \
+              go test -v -coverpkg=$coverpkg \
                 -coverprofile=coverage/${modulename}.out $module || exit 1
-
-              echo "=== DONE TEST $module ==="
           done
 
       # 5️⃣ Merge coverage files
