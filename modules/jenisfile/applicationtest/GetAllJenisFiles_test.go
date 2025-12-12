@@ -6,18 +6,18 @@ import (
     
     _ "github.com/go-sql-driver/mysql"
     
-    app "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
-    infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
+    app "UnpakSiamida/modules/jenisfile/application/GetAllJenisFiles"
+    infra "UnpakSiamida/modules/jenisfile/infrastructure"
     domain "UnpakSiamida/common/domain"
 )
 
-func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
+func TestGetAllJenisFilesIntegration(t *testing.T) {
     db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
     // Use GORM wrapper repo constructor
-    gormrepo := infra.NewIndikatorRenstraRepository(db)
-    handler := app.GetAllIndikatorRenstrasQueryHandler{Repo: gormrepo}
+    gormrepo := infra.NewJenisFileRepository(db)
+    handler := app.GetAllJenisFilesQueryHandler{Repo: gormrepo}
 
     page := 1
     limit := 10
@@ -31,14 +31,14 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
         expectedRows int
     }{
         {"No search, returns all", "", 10}, //aslinya 158, 10 kena paging
-        {"Search matching 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", "Lulusan memiliki sertifikat kompetensi atau Bahasa asing", 2},
+        {"Search matching 'LED Prodi'", "LED Prodi", 2},
         {"Search not matching anything", "TidakAda", 0},
     }
 
     for _, tt := range searchTests {
         t.Run("Search_"+tt.name, func(t *testing.T) {
 
-            q := app.GetAllIndikatorRenstrasQuery{
+            q := app.GetAllJenisFilesQuery{
                 Search:        tt.search,
                 SearchFilters: []domain.SearchFilter{},
                 Page:          &page,
@@ -64,46 +64,22 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
         filter       []domain.SearchFilter
         expectedRows int
     }{
-        // indikator
-        {"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{
-            {"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-        }, 2},
-       {"indikator like 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{
-            {"indikator", "like", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-        }, 2},
-        {"indikator neq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{ //fail
-            {"indikator", "neq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-        }, 10}, //aslinya 156, 10 kena paging
-
-        // tahun
-        {"tahun eq 2024", []domain.SearchFilter{
-            {"tahun", "eq", str("2024")},
-        }, 10}, //aslinya 80, 10 kena paging
-        {"tahun in", []domain.SearchFilter{
-            {"tahun", "in", str("2025,2024")},
-        }, 10}, //aslinya 158, 10 kena paging
-
-        // MULTI FILTERS (AND)
-        {"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing' AND tahun eq '2025'", //fail
-            []domain.SearchFilter{
-                {"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-                {"tahun", "eq", str("2025")},
-            },
-            1,
-        },
-        {"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing' AND tahun eq '2025'", //fail
-            []domain.SearchFilter{
-                {"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-                {"tahun", "eq", str("2023")},
-            },
-            0,
-        },
+        // nama
+        {"nama eq 'LED Prodi'", []domain.SearchFilter{
+            {"nama", "eq", str("LED Prodi")},
+        }, 1},
+       {"nama like 'LED Prodi'", []domain.SearchFilter{
+            {"nama", "like", str("LED Prodi")},
+        }, 1},
+        {"nama neq 'LED Prodi'", []domain.SearchFilter{
+            {"nama", "neq", str("LED Prodi")},
+        }, 3},
     }
 
     for _, tt := range filterTests {
         t.Run("Filter_"+tt.name, func(t *testing.T) {
 
-            q := app.GetAllIndikatorRenstrasQuery{
+            q := app.GetAllJenisFilesQuery{
                 Search:        "",
                 SearchFilters: tt.filter,
                 Page:          &page,

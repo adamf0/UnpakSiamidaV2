@@ -5,25 +5,25 @@ import (
     "strings"
     "testing"
 
-    app "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstraDefault"
-    infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
-    domain "UnpakSiamida/modules/indikatorrenstra/domain"
+    app "UnpakSiamida/modules/jenisfile/application/GetJenisFileDefault"
+    infra "UnpakSiamida/modules/jenisfile/infrastructure"
+    domain "UnpakSiamida/modules/jenisfile/domain"
 )
 
 // ------------------------------
 // SUCCESS
 // ------------------------------
-func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
+func TestGetJenisFileDefaultByUuid_Success(t *testing.T) {
     db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
-    repo := infra.NewIndikatorRenstraRepository(db)
-    handler := app.GetIndikatorRenstraDefaultByUuidQueryHandler{Repo: repo}
+    repo := infra.NewJenisFileRepository(db)
+    handler := app.GetJenisFileDefaultByUuidQueryHandler{Repo: repo}
 
     // UUID fix yang kamu seed di setupJenisFileMySQL
     fixedUUID := "186f2427-8bdd-42d9-a757-65808f364eeb"
 
-    q := app.GetIndikatorRenstraDefaultByUuidQuery{Uuid: fixedUUID}
+    q := app.GetJenisFileDefaultByUuidQuery{Uuid: fixedUUID}
 
     res, err := handler.Handle(context.Background(), q)
     if err != nil {
@@ -38,12 +38,12 @@ func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
 // ------------------------------
 // ERROR CASES
 // ------------------------------
-func TestGetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
+func TestGetJenisFileDefaultByUuid_Errors(t *testing.T) {
     db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
-    repo := infra.NewIndikatorRenstraRepository(db)
-    handler := app.GetIndikatorRenstraDefaultByUuidQueryHandler{Repo: repo}
+    repo := infra.NewJenisFileRepository(db)
+    handler := app.GetJenisFileDefaultByUuidQueryHandler{Repo: repo}
 
     tests := []struct {
         name   string
@@ -64,7 +64,7 @@ func TestGetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            q := app.GetIndikatorRenstraDefaultByUuidQuery{Uuid: tt.uuid}
+            q := app.GetJenisFileDefaultByUuidQuery{Uuid: tt.uuid}
 
             _, err := handler.Handle(context.Background(), q)
             if err == nil {

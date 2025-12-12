@@ -5,21 +5,21 @@ import (
     "testing"
     "strings"
 
-    app "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstra"
-    infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
+    app "UnpakSiamida/modules/jenisfile/application/GetJenisFile"
+    infra "UnpakSiamida/modules/jenisfile/infrastructure"
 )
 
-func TestGetIndikatorRenstraByUuid_Success(t *testing.T) {
+func TestGetJenisFileByUuid_Success(t *testing.T) {
     db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
-    repo := infra.NewIndikatorRenstraRepository(db)
-    handler := app.GetIndikatorRenstraByUuidQueryHandler{Repo: repo}
+    repo := infra.NewJenisFileRepository(db)
+    handler := app.GetJenisFileByUuidQueryHandler{Repo: repo}
 
     // UUID fix yang kamu tentukan
     fixedUUID := "186f2427-8bdd-42d9-a757-65808f364eeb"
 
-    q := app.GetIndikatorRenstraByUuidQuery{Uuid: fixedUUID}
+    q := app.GetJenisFileByUuidQuery{Uuid: fixedUUID}
 
     res, err := handler.Handle(context.Background(), q)
     if err != nil {
@@ -31,12 +31,12 @@ func TestGetIndikatorRenstraByUuid_Success(t *testing.T) {
     }
 }
 
-func TestGetIndikatorRenstraByUuid_Errors(t *testing.T) {
+func TestGetJenisFileByUuid_Errors(t *testing.T) {
     db, cleanup := setupJenisFileMySQL(t)
     defer cleanup()
 
-    repo := infra.NewIndikatorRenstraRepository(db)
-    handler := app.GetIndikatorRenstraByUuidQueryHandler{Repo: repo}
+    repo := infra.NewJenisFileRepository(db)
+    handler := app.GetJenisFileByUuidQueryHandler{Repo: repo}
 
     tests := []struct {
         name   string
@@ -58,7 +58,7 @@ func TestGetIndikatorRenstraByUuid_Errors(t *testing.T) {
     for _, tt := range tests {
         tt := tt
         t.Run(tt.name, func(t *testing.T) {
-            q := app.GetIndikatorRenstraByUuidQuery{Uuid: tt.uuid}
+            q := app.GetJenisFileByUuidQuery{Uuid: tt.uuid}
 
             _, err := handler.Handle(context.Background(), q)
             if err == nil {
