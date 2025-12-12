@@ -58,7 +58,7 @@ func setupMySQL(t *testing.T) (*gorm.DB, func()) {
     err = gdb.Exec(`
         CREATE TABLE v_tahun_renstra (
             tahun VARCHAR(255) NULL,
-            status VARCHAR(1) NULL
+            status VARCHAR(255) NULL
         );
 
         INSERT INTO v_tahun_renstra (tahun, status)
