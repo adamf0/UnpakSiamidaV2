@@ -58,8 +58,6 @@ func TestGetFakultasUnitByUuid_Errors(t *testing.T) {
     for _, tt := range tests {
         tt := tt
         t.Run(tt.name, func(t *testing.T) {
-            t.Parallel()
-
             q := app.GetFakultasUnitByUuidQuery{Uuid: tt.uuid}
 
             _, err := handler.Handle(context.Background(), q)
