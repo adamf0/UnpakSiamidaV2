@@ -3,8 +3,9 @@ package applicationtest
 import (
     "context"
     "testing"
+    "strings"
 
-    app "UnpakSiamida/modules/fakultasunit/application"
+    app "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
     infra "UnpakSiamida/modules/fakultasunit/infrastructure"
 )
 
