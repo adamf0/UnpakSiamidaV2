@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout kode
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
       # 2️⃣ Setup Go
       - name: Set up Go
-        uses: actions/setup-go@v4
+      uses:actions/setup-go@v4
         with:
           go-version: '1.25.4'
 
@@ -28,49 +28,58 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      # 4️⃣ Run tests & generate coverage
+      # 4️⃣ Disable Go's parallel test execution
+      # Agar semua testcontainer MySQL tidak tabrakan
+      - name: Disable parallel tests
+        run: echo "GOMAXPROCS=1" >> $GITHUB_ENV
+
+      # 5️⃣ Run tests & generate coverage
       - name: Run tests and generate coverage
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: true
+          TESTCONTAINERS_CHECK_DUPLICATE: true
         run: |
           mkdir -p coverage
 
-          # Loop semua modul
+          # Loop semua modul secara sequential
           for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
               modulename=$(basename $(dirname "$module"))_$(basename "$module")
               echo "Running tests for $module ..."
 
               # Tentukan folder untuk coverage
               if [[ "$module" == *applicationtest ]]; then
-                  # coverage untuk folder application
                   coverpkg=$(dirname "$module")/application
               else
-                  # coverage untuk folder domain
                   coverpkg=$(dirname "$module")/domain
               fi
 
-              go test -v -coverpkg=$coverpkg \
+              go test -v -p=1 -count=1 \
+                -coverpkg=$coverpkg \
                 -coverprofile=coverage/${modulename}.out $module || exit 1
+
+              echo "=== DONE TEST $module ==="
           done
 
-      # 5️⃣ Merge coverage files
+      # 6️⃣ Merge coverage files
       - name: Merge coverage files
         run: |
           echo "mode: count" > coverage/coverage_all.out
           tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
 
-      # 6️⃣ Generate HTML coverage report (index.html untuk GitHub Pages)
+      # 7️⃣ Generate HTML coverage report
       - name: Generate HTML coverage report
         run: |
           mkdir -p CoverageReport
           go tool cover -html=coverage/coverage_all.out -o CoverageReport/index.html
 
-      # 7️⃣ Upload artifact (opsional, untuk download manual)
+      # 8️⃣ Upload artifact
       - name: Upload coverage report artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: CoverageReport/index.html
 
-      # 8️⃣ Deploy coverage report ke GitHub Pages
+      # 9️⃣ Deploy to GitHub Pages
       - name: Deploy coverage report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
