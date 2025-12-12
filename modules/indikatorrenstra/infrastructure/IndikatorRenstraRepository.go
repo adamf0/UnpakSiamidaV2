@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	"strings"
 	"fmt"
+	"errors"
 )
 
 type IndikatorRenstraRepository struct {
