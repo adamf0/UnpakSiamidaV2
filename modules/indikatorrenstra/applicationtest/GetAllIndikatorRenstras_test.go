@@ -30,7 +30,7 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
         search       string
         expectedRows int
     }{
-        {"No search, returns all", "", 158},
+        {"No search, returns all", "", 10}, //aslinya 158, 10 kena paging
         {"Search matching 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", "Lulusan memiliki sertifikat kompetensi atau Bahasa asing", 2},
         {"Search not matching anything", "TidakAda", 0},
     }
@@ -73,15 +73,15 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
         }, 2},
         {"indikator neq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{ //fail
             {"indikator", "neq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-        }, 156},
+        }, 10}, //aslinya 156, 10 kena paging
 
         // tahun
         {"tahun eq 2024", []domain.SearchFilter{
             {"tahun", "eq", str("2024")},
-        }, 80},
+        }, 10}, //aslinya 80, 10 kena paging
         {"tahun in", []domain.SearchFilter{
             {"tahun", "in", str("2025,2024")},
-        }, 158},
+        }, 10}, //aslinya 158, 10 kena paging
 
         // MULTI FILTERS (AND)
         {"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing' AND tahun eq '2025'", //fail

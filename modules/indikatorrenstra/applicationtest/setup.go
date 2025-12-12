@@ -120,7 +120,7 @@ func setupMySQL(t *testing.T) (*gorm.DB, func()) {
         ) ENGINE=InnoDB AUTO_INCREMENT=477 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
         INSERT INTO master_indikator_renstra VALUES 
-            (16,UUID(),1,'Lulusan memiliki sertifikat kompetensi atau Bahasa asing',NULL,2024,'numerik',NULL,'2024-08-25 19:25:05','2024-09-21 07:18:42'),
+            (16,'186f2427-8bdd-42d9-a757-65808f364eeb',1,'Lulusan memiliki sertifikat kompetensi atau Bahasa asing',NULL,2024,'numerik',NULL,'2024-08-25 19:25:05','2024-09-21 07:18:42'),
             (79,UUID(),1,'Lulusan bekerja pada ruang lingkup nasional',NULL,2024,'numerik',NULL,'2024-09-08 10:45:01','2024-09-23 08:17:48'),
             (82,UUID(),4,'Jumlah mata kuliah yang mengintegrasikan hasil penelitian dan PKM ke dalam perkuliahan',NULL,2024,'numerik',NULL,'2024-09-08 10:45:21','2024-09-23 08:17:59'),
             (85,UUID(),4,'Persentase Prodi Vokasi dan S1 yang mengimplementasikan kurikulum MBKM',NULL,2024,'numerik',NULL,'2024-09-09 14:40:00','2024-10-18 12:35:42'),

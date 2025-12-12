@@ -7,6 +7,7 @@ import (
 
     app "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstraDefault"
     infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
+    domain "UnpakSiamida/modules/indikatorrenstra/domain"
 )
 
 // ------------------------------
@@ -52,12 +53,12 @@ func TestGetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
         {
             name:   "Invalid UUID format",
             uuid:   "not-a-valid-uuid",
-            expect: "invalid", // dari domain.NotFound()
+            expect: domain.NotFound("not-a-valid-uuid"), // dari domain.NotFound()
         },
         {
             name:   "UUID valid tapi tidak ada di database",
             uuid:   "11111111-1111-1111-1111-111111111111",
-            expect: "not found",
+            expect: domain.NotFound("11111111-1111-1111-1111-111111111111"),
         },
     }
 
