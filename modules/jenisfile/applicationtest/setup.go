@@ -62,7 +62,7 @@ func setupJenisFileMySQL(t *testing.T) (*gorm.DB, func()) {
             nama varchar(200) NOT NULL,
             PRIMARY KEY (id)
         );
-        INSERT INTO jenis_file VALUES 
+        INSERT INTO jenis_file_renstra VALUES 
             (1, '186f2427-8bdd-42d9-a757-65808f364eeb','LKPS'),
             (2, UUID(),'LED Prodi'),
             (3, UUID(),'Lainnya'),
