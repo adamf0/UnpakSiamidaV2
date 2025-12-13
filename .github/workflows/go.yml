@@ -39,29 +39,6 @@ jobs:
         run: go mod tidy
 
       # 4️⃣ Run tests & generate coverage
-      - name: Run tests and generate coverage
-        run: |
-          mkdir -p coverage
-
-          # Loop semua modul
-          for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
-              modulename=$(basename $(dirname "$module"))_$(basename "$module")
-              echo "Running tests for $module ..."
-
-              # Tentukan folder untuk coverage
-              if [[ "$module" == *applicationtest ]]; then
-                  # coverage untuk folder application
-                  coverpkg=$(dirname "$module")/application
-              else
-                  # coverage untuk folder domain
-                  coverpkg=$(dirname "$module")/domain
-              fi
-
-              go test -v -coverpkg=$coverpkg \
-                -coverprofile=coverage/${modulename}.out $module || exit 1
-          done
-
-      # 5️⃣ Merge coverage files
       - name: Run tests & generate coverage
         run: |
           mkdir -p coverage
