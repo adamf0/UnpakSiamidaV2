@@ -24,6 +24,16 @@ jobs:
         with:
           go-version: '1.25.4'
 
+      - name: Set up .NET (for ReportGenerator)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.0'
+
+      - name: Install tools
+        run: |
+          go install github.com/boumenot/gocover-cobertura@latest
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+
       # 3️⃣ Install dependencies
       - name: Install dependencies
         run: go mod tidy
@@ -52,26 +62,48 @@ jobs:
           done
 
       # 5️⃣ Merge coverage files
+      - name: Run tests & generate coverage
+        run: |
+          mkdir -p coverage
+
+          for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
+            modulename=$(basename $(dirname "$module"))_$(basename "$module")
+
+            if [[ "$module" == *applicationtest ]]; then
+              coverpkg=$(dirname "$module")/application
+            else
+              coverpkg=$(dirname "$module")/domain
+            fi
+
+            go test -covermode=count \
+              -coverpkg=$coverpkg \
+              -coverprofile=coverage/${modulename}.out \
+              $module || exit 1
+          done
+
       - name: Merge coverage files
         run: |
           echo "mode: count" > coverage/coverage_all.out
           tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
 
-      # 6️⃣ Generate HTML coverage report (index.html untuk GitHub Pages)
-      - name: Generate HTML coverage report
+      - name: Convert Go coverage → Cobertura XML
         run: |
-          mkdir -p CoverageReport
-          go tool cover -html=coverage/coverage_all.out -o CoverageReport/index.html
+          gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
 
-      # 7️⃣ Upload artifact (opsional, untuk download manual)
-      - name: Upload coverage report artifact
+      - name: Generate HTML report (ReportGenerator)
+        run: |
+          reportgenerator \
+            -reports:coverage/coverage.xml \
+            -targetdir:CoverageReport \
+            -reporttypes:HtmlSummary
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: CoverageReport/index.html
+          path: CoverageReport
 
-      # 8️⃣ Deploy coverage report ke GitHub Pages
-      - name: Deploy coverage report to GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
