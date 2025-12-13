@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout kode
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2️⃣ Setup Go
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.25.4'
 
@@ -34,34 +32,20 @@ jobs:
           go install github.com/boumenot/gocover-cobertura@latest
           dotnet tool install --global dotnet-reportgenerator-globaltool
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: go mod tidy
 
-      # 4️⃣ Run tests & generate coverage
+      # ✅ AUTO TEST SEMUA MODUL
       - name: Run tests & generate coverage
         run: |
           mkdir -p coverage
 
-          for module in $(find ./modules -type d \( -name "domaintest" -o -name "applicationtest" \)); do
-            modulename=$(basename $(dirname "$module"))_$(basename "$module")
+          PKGS=$(go list ./modules/... | tr '\n' ',')
 
-            if [[ "$module" == *applicationtest ]]; then
-              coverpkg=$(dirname "$module")/application
-            else
-              coverpkg=$(dirname "$module")/domain
-            fi
-
-            go test -covermode=count \
-              -coverpkg=$coverpkg \
-              -coverprofile=coverage/${modulename}.out \
-              $module || exit 1
-          done
-
-      - name: Merge coverage files
-        run: |
-          echo "mode: count" > coverage/coverage_all.out
-          tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
+          go test ./modules/... \
+            -covermode=count \
+            -coverpkg="$PKGS" \
+            -coverprofile=coverage/coverage_all.out
 
       - name: Convert Go coverage → Cobertura XML
         run: |
