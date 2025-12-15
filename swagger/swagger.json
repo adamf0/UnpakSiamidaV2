@@ -9,6 +9,86 @@
     "host": "localhost:3000",
     "basePath": "/",
     "paths": {
+        "/JenisFile/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "JenisFile"
+                ],
+                "summary": "Get JenisFile by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "JenisFile UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.JenisFile"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/JenisFiles": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "JenisFile"
+                ],
+                "summary": "Get all JenisFiles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedJenisFiles"
+                        }
+                    }
+                }
+            }
+        },
         "/fakultasunit/{uuid}": {
             "get": {
                 "produces": [
@@ -88,6 +168,1509 @@
                     }
                 }
             }
+        },
+        "/indikatorrenstra": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Create new IndikatorRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Standar Renstra ID",
+                        "name": "standar_renstra",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Indikator Name",
+                        "name": "indikator",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent ID",
+                        "name": "parent",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tipe Target",
+                        "name": "tipe_target",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operator",
+                        "name": "operator",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created IndikatorRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/indikatorrenstra/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Get IndikatorRenstra by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "IndikatorRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.IndikatorRenstra"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Update existing IndikatorRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "IndikatorRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Standar Renstra ID",
+                        "name": "standar_renstra",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Indikator Name",
+                        "name": "indikator",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent ID",
+                        "name": "parent",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tipe Target",
+                        "name": "tipe_target",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operator",
+                        "name": "operator",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated IndikatorRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Delete an IndikatorRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "IndikatorRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted IndikatorRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/indikatorrenstras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Get All IndikatorRenstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedIndikatorRenstras"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstra": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Create new Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit ID",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Upload Mulai",
+                        "name": "periode_upload_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Upload Akhir",
+                        "name": "periode_upload_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Dokumen Mulai",
+                        "name": "periode_assesment_dokumen_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Dokumen Akhir",
+                        "name": "periode_assesment_dokumen_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Lapangan Mulai",
+                        "name": "periode_assesment_lapangan_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Lapangan Akhir",
+                        "name": "periode_assesment_lapangan_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditee",
+                        "name": "auditee",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor 1",
+                        "name": "auditor1",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor 2",
+                        "name": "auditor2",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created Renstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstra/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Get Renstra by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RenstraDefault"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Update existing Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit ID",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Upload Mulai",
+                        "name": "periode_upload_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Upload Akhir",
+                        "name": "periode_upload_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Dokumen Mulai",
+                        "name": "periode_assesment_dokumen_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Dokumen Akhir",
+                        "name": "periode_assesment_dokumen_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Lapangan Mulai",
+                        "name": "periode_assesment_lapangan_mulai",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Periode Assesment Lapangan Akhir",
+                        "name": "periode_assesment_lapangan_akhir",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditee",
+                        "name": "auditee",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor 1",
+                        "name": "auditor1",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor 2",
+                        "name": "auditor2",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated Renstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Delete an Renstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted Renstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstra/{uuid}/code_access": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Update Renstra Kode Akses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kode Akses baru",
+                        "name": "kodeAkses",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated Renstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Get All Renstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedRenstras"
+                        }
+                    }
+                }
+            }
+        },
+        "/standarrenstra": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StandarRenstra"
+                ],
+                "summary": "Create new StandarRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nama StandarRenstra",
+                        "name": "nama",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created StandarRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/standarrenstra/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StandarRenstra"
+                ],
+                "summary": "Get StandarRenstra by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "StandarRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.StandarRenstra"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StandarRenstra"
+                ],
+                "summary": "Update existing StandarRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "StandarRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nama StandarRenstra",
+                        "name": "nama",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated StandarRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StandarRenstra"
+                ],
+                "summary": "Delete a StandarRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "StandarRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted StandarRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/standarrenstras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "StandarRenstra"
+                ],
+                "summary": "Get All StandarRenstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedStandarRenstras"
+                        }
+                    }
+                }
+            }
+        },
+        "/tahunrenstra/active": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TahunRenstra"
+                ],
+                "summary": "Get active TahunRenstra",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TahunRenstra"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tahunrenstras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TahunRenstra"
+                ],
+                "summary": "Get all TahunRenstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedTahunRenstras"
+                        }
+                    }
+                }
+            }
+        },
+        "/templatedokumentambahan": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateDokumenTambahan"
+                ],
+                "summary": "Create new TemplateDokumenTambahan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis File",
+                        "name": "jenisFile",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pertanyaan",
+                        "name": "pertanyaan",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Klasifikasi",
+                        "name": "klasifikasi",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kategori",
+                        "name": "kategori",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tugas",
+                        "name": "tugas",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created TemplateDokumenTambahan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/templatedokumentambahan/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateDokumenTambahan"
+                ],
+                "summary": "Get TemplateDokumenTambahan by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateDokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TemplateDokumenTambahan"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateDokumenTambahan"
+                ],
+                "summary": "Update existing TemplateDokumenTambahan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateDokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis File",
+                        "name": "jenisFile",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pertanyaan",
+                        "name": "pertanyaan",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Klasifikasi",
+                        "name": "klasifikasi",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kategori",
+                        "name": "kategori",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tugas",
+                        "name": "tugas",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated TemplateDokumenTambahan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateDokumenTambahan"
+                ],
+                "summary": "Delete a TemplateDokumenTambahan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateDokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted TemplateDokumenTambahan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/templatedokumentambahans": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateDokumenTambahan"
+                ],
+                "summary": "Get All TemplateDokumenTambahans",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedTemplateDokumenTambahans"
+                        }
+                    }
+                }
+            }
+        },
+        "/templaterenstra": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateRenstra"
+                ],
+                "summary": "Create new TemplateRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Indikator",
+                        "name": "indikator",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Is Pertanyaan",
+                        "name": "isPertanyaan",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas Unit",
+                        "name": "fakultasUnit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kategori",
+                        "name": "kategori",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Klasifikasi",
+                        "name": "klasifikasi",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Satuan",
+                        "name": "satuan",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target",
+                        "name": "target",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target Min",
+                        "name": "targetMin",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target Max",
+                        "name": "targetMax",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tugas",
+                        "name": "tugas",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created TemplateRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/templaterenstra/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateRenstra"
+                ],
+                "summary": "Get TemplateRenstra by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TemplateRenstra"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateRenstra"
+                ],
+                "summary": "Update existing TemplateRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Indikator",
+                        "name": "indikator",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Is Pertanyaan",
+                        "name": "isPertanyaan",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas Unit",
+                        "name": "fakultasUnit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Kategori",
+                        "name": "kategori",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Klasifikasi",
+                        "name": "klasifikasi",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Satuan",
+                        "name": "satuan",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target",
+                        "name": "target",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target Min",
+                        "name": "targetMin",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target Max",
+                        "name": "targetMax",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tugas",
+                        "name": "tugas",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated TemplateRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateRenstra"
+                ],
+                "summary": "Delete a TemplateRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "TemplateRenstra UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted TemplateRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/templaterenstras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TemplateRenstra"
+                ],
+                "summary": "Get All TemplateRenstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedTemplateRenstras"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -148,6 +1731,49 @@
                 }
             }
         },
+        "domain.IndikatorRenstra": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "operator": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "standarRenstra": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tipeTarget": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.JenisFile": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.PagedFakultasUnits": {
             "type": "object",
             "properties": {
@@ -165,6 +1791,322 @@
                 },
                 "total_pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.PagedIndikatorRenstras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.IndikatorRenstra"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedJenisFiles": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.JenisFile"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedRenstras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "description": "[]Renstra",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RenstraDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedStandarRenstras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.StandarRenstra"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedTahunRenstras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TahunRenstra"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedTemplateDokumenTambahans": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TemplateDokumenTambahan"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedTemplateRenstras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TemplateRenstra"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.RenstraDefault": {
+            "type": "object",
+            "properties": {
+                "auditee": {
+                    "type": "integer"
+                },
+                "auditor1": {
+                    "type": "integer"
+                },
+                "auditor2": {
+                    "type": "integer"
+                },
+                "catatan1": {
+                    "type": "string"
+                },
+                "catatan2": {
+                    "type": "string"
+                },
+                "fakultas": {
+                    "type": "string"
+                },
+                "fakultas_unit": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenjang": {
+                    "type": "string"
+                },
+                "kode_akses": {
+                    "type": "string"
+                },
+                "nama_auditee": {
+                    "type": "string"
+                },
+                "nama_auditor1": {
+                    "type": "string"
+                },
+                "nama_auditor2": {
+                    "type": "string"
+                },
+                "nama_fakultas_unit": {
+                    "type": "string"
+                },
+                "periode_assesment_dokumen_akhir": {
+                    "type": "string"
+                },
+                "periode_assesment_dokumen_mulai": {
+                    "type": "string"
+                },
+                "periode_assesment_lapangan_akhir": {
+                    "type": "string"
+                },
+                "periode_assesment_lapangan_mulai": {
+                    "type": "string"
+                },
+                "periode_upload_akhir": {
+                    "type": "string"
+                },
+                "periode_upload_mulai": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "uuid_fakultas_unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.StandarRenstra": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TahunRenstra": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TemplateDokumenTambahan": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "jenisFileID": {
+                    "type": "integer"
+                },
+                "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "pertanyaan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TemplateRenstra": {
+            "type": "object",
+            "properties": {
+                "fakultasUnit": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikatorRenstraID": {
+                    "type": "integer"
+                },
+                "isPertanyaan": {
+                    "type": "boolean"
+                },
+                "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "targetMax": {
+                    "type": "string"
+                },
+                "targetMin": {
+                    "type": "string"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
                 }
             }
         }
