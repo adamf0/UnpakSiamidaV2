@@ -59,7 +59,8 @@ jobs:
               $testdir
           done
 
-      - run: |
+      - name: Merge coverage
+        run: |
           echo "mode: count" > coverage/coverage_all.out
           tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
 
@@ -69,7 +70,7 @@ jobs:
           path: coverage
 
 # ==========================================================
-# SWAGGER + COVERAGE REPORT
+# SWAGGER + COVERAGE REPORT (HARUS SELESAI DULU)
 # ==========================================================
   report:
     name: Coverage & Swagger
@@ -134,10 +135,9 @@ jobs:
           name: go-coverage
           path: coverage
 
-      - run: |
+      - name: Generate Coverage HTML
+        run: |
           gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
-
-      - run: |
           reportgenerator \
             -reports:coverage/coverage.xml \
             -targetdir:public/coverage \
@@ -152,44 +152,42 @@ jobs:
           publish_branch: gh-pages
 
 # ==========================================================
-# DAST (ZAP) — REAL API, REAL DB
+# DAST (ZAP) — JALAN SETELAH SWAGGER SIAP
 # ==========================================================
   dast:
     name: ZAP DAST
     runs-on: ubuntu-latest
-    needs: build
+    needs: report   # 🔥 SERIAL, BUKAN PARALEL
 
     steps:
       - uses: actions/checkout@v4
 
-      # 🔥 START API + DB
       - name: Start Docker Compose (CI)
         run: |
           docker compose -f docker-compose.ci.yml up -d
           docker compose -f docker-compose.ci.yml ps
 
-      # ⏳ WAIT API READY
-      - name: Wait API
+      - name: Wait API (Swagger ready)
         run: |
-          until curl -s http://localhost:3000/health > /dev/null; do
+          echo "⏳ Waiting for Swagger..."
+          for i in {1..40}; do
+            if curl -s http://localhost:3000/swagger/swagger.json | grep -q '"openapi"'; then
+              echo "✅ Swagger is ready"
+              exit 0
+            fi
             sleep 3
           done
+          echo "❌ Swagger not ready"
+          exit 1
 
-      # 🔍 VERIFY SWAGGER
-      - name: Check Swagger
-        run: |
-          curl http://localhost:3000/swagger/swagger.json | head -n 20
-
-      # 🛡️ ZAP OPENAPI SCAN
       - name: ZAP DAST Scan
         uses: zaproxy/action-api-scan@v0.7.0
         with:
           target: http://localhost:3000/swagger/swagger.json
           format: openapi
-          fail_action: false     # ⚠️ WARN tidak bikin job gagal
+          fail_action: false
           cmd_options: "-a -m 5 -l WARN"
 
-      # 🧹 CLEANUP
       - name: Shutdown containers
         if: always()
         run: docker compose -f docker-compose.ci.yml down
