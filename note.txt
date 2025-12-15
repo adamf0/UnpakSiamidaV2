@@ -64,6 +64,10 @@ go test -v \
   ./modules/fakultasunit/applicationtest \
 && go tool cover -html=FakultasUnitApp.out -o FakultasUnitApp.html
 
+swag init --parseDependency --parseInternal -g main.go
+swag init -g main.go --parseDependency --parseInternal --dir ./modules,./common,./
+
+
 go test -v \
   -coverpkg=UnpakSiamida \
   -coverprofile=main.out \
