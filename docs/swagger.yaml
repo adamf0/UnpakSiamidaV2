@@ -1,0 +1,115 @@
+basePath: /
+definitions:
+  domain.Error:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      type:
+        $ref: '#/definitions/domain.ErrorType'
+    type: object
+  domain.ErrorType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    type: integer
+    x-enum-varnames:
+    - ErrorFailure
+    - Validation
+    - Problem
+    - NotFound
+    - Conflict
+  domain.FakultasUnit:
+    properties:
+      fakultas:
+        type: string
+      id:
+        type: integer
+      jenjang:
+        type: string
+      kodeJenjang:
+        type: string
+      nama:
+        type: string
+      type:
+        type: string
+      uuid:
+        type: string
+    type: object
+  domain.PagedFakultasUnits:
+    properties:
+      current_page:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/domain.FakultasUnit'
+        type: array
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: All Module Siamida
+  title: UnpakSiamidaV2 API
+  version: "1.0"
+paths:
+  /fakultasunit/{uuid}:
+    get:
+      parameters:
+      - description: FakultasUnit UUID
+        format: uuid
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.FakultasUnit'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Error'
+      summary: Get FakultasUnit by UUID
+      tags:
+      - FakultasUnit
+  /fakultasunits:
+    get:
+      parameters:
+      - description: paging | all | ndjson | sse
+        in: query
+        name: mode
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Search keyword
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PagedFakultasUnits'
+      summary: Get All FakultasUnit
+      tags:
+      - FakultasUnit
+swagger: "2.0"
