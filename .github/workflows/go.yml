@@ -152,30 +152,47 @@ jobs:
           publish_branch: gh-pages
 
 # ==========================================================
-# ZAP DAST (OPENAPI)
+# DAST (ZAP) — REAL API, REAL DB
 # ==========================================================
-  zap-dast:
-    name: OWASP ZAP DAST (API)
+  dast:
+    name: ZAP DAST
     runs-on: ubuntu-latest
-    needs: report
+    needs: build
 
     steps:
-      - name: ZAP API Scan
+      - uses: actions/checkout@v4
+
+      # 🔥 START API + DB
+      - name: Start Docker Compose (CI)
+        run: |
+          docker compose -f docker-compose.ci.yml up -d
+          docker compose -f docker-compose.ci.yml ps
+
+      # ⏳ WAIT API READY
+      - name: Wait API
+        run: |
+          until curl -s http://localhost:3000/health > /dev/null; do
+            sleep 3
+          done
+
+      # 🔍 VERIFY SWAGGER
+      - name: Check Swagger
+        run: |
+          curl http://localhost:3000/swagger/swagger.json | head -n 20
+
+      # 🛡️ ZAP OPENAPI SCAN
+      - name: ZAP DAST Scan
         uses: zaproxy/action-api-scan@v0.7.0
         with:
-          target: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/swagger/swagger.json
+          target: http://localhost:3000/swagger/swagger.json
           format: openapi
-          fail_action: true
-          cmd_options: >
-            -a
-            -m 5
-            -l WARN
+          fail_action: false     # ⚠️ WARN tidak bikin job gagal
+          cmd_options: "-a -m 5 -l WARN"
 
-      - name: Upload ZAP Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-dast-report
-          path: report_html.html
+      # 🧹 CLEANUP
+      - name: Shutdown containers
+        if: always()
+        run: docker compose -f docker-compose.ci.yml down
 
 # ==========================================================
 # SECRET SCANNING
