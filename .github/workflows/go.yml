@@ -2,13 +2,15 @@ name: Go Test & Coverage
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
 
 permissions:
   contents: write
 
+# ==========================================================
+# BUILD
+# ==========================================================
 jobs:
   build:
     name: Build
@@ -29,6 +31,9 @@ jobs:
       - name: Verify build
         run: go list ./...
 
+# ==========================================================
+# TEST + COVERAGE
+# ==========================================================
   test:
     name: Test & Coverage
     runs-on: ubuntu-latest
@@ -45,17 +50,28 @@ jobs:
 
       - name: Run tests & generate coverage
         run: |
+          set -e
           mkdir -p coverage
 
-          for testdir in $(find ./modules -type d -name "applicationtest"); do
-            modulename=$(basename "$(dirname "$testdir")")
+          for testdir in $(find ./modules -type d \( -name "applicationtest" -o -name "domaintest" \)); do
+            modulepath=$(dirname "$testdir")
+            modulename=$(basename "$modulepath")
+            testname=$(basename "$testdir")
 
-            echo "▶ Running application tests for module: $modulename"
+            if [[ "$testname" == "applicationtest" ]]; then
+              coverpkg="UnpakSiamida/modules/${modulename}/application/..."
+            else
+              coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
+            fi
+
+            echo "▶ Running $testname for module: $modulename"
+            echo "▶ Covering: $coverpkg"
 
             go test -v \
-              -coverpkg=UnpakSiamida/modules/${modulename}/application/... \
-              -coverprofile=coverage/${modulename}.out \
-              ./modules/${modulename}/applicationtest || exit 1
+              -covermode=count \
+              -coverpkg=$coverpkg \
+              -coverprofile=coverage/${modulename}_${testname}.out \
+              $testdir
           done
 
       - name: Merge coverage files
@@ -69,6 +85,9 @@ jobs:
           name: go-coverage
           path: coverage
 
+# ==========================================================
+# REPORT + PAGES
+# ==========================================================
   report:
     name: Coverage Report
     runs-on: ubuntu-latest
@@ -81,6 +100,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.4'
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -89,6 +113,8 @@ jobs:
       - name: Install tools
         run: |
           go install github.com/boumenot/gocover-cobertura@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
           dotnet tool install --global dotnet-reportgenerator-globaltool
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
@@ -102,7 +128,7 @@ jobs:
         run: |
           gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
 
-      - name: Generate HTML report
+      - name: Generate HTML coverage report
         run: |
           reportgenerator \
             -reports:coverage/coverage.xml \
@@ -120,5 +146,36 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./CoverageReport
+          publish_dir: CoverageReport
           publish_branch: gh-pages
+
+# ==========================================================
+# GITLEAKS
+# ==========================================================
+  gitleaks:
+    name: Scan secrets with Gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ==========================================================
+# TRUFFLEHOG
+# ==========================================================
+  trufflehog:
+    name: Scan secrets with Trufflehog
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Trufflehog scan
+        uses: edplato/trufflehog-actions-scan@master
