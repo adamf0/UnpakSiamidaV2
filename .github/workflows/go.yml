@@ -1,4 +1,4 @@
-name: Go Test & Coverage
+name: Go Test, Coverage, Swagger & DAST
 
 on:
   push:
@@ -15,21 +15,13 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: '1.25.4'
-
-      - name: Install dependencies
-        run: go mod tidy
-
-      - name: Verify build
-        run: go list ./...
+      - run: go mod tidy
+      - run: go list ./...
 
 # ==========================================================
 # TEST + COVERAGE
@@ -38,17 +30,13 @@ jobs:
     name: Test & Coverage
     runs-on: ubuntu-latest
     needs: build
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: '1.25.4'
 
-      - name: Run tests & generate coverage
+      - name: Run tests
         run: |
           set -e
           mkdir -p coverage
@@ -64,9 +52,6 @@ jobs:
               coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
             fi
 
-            echo "▶ Running $testname for module: $modulename"
-            echo "▶ Covering: $coverpkg"
-
             go test -v \
               -covermode=count \
               -coverpkg=$coverpkg \
@@ -74,108 +59,141 @@ jobs:
               $testdir
           done
 
-      - name: Merge coverage files
-        run: |
+      - run: |
           echo "mode: count" > coverage/coverage_all.out
           tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: go-coverage
           path: coverage
 
 # ==========================================================
-# REPORT + PAGES
+# SWAGGER + COVERAGE REPORT
 # ==========================================================
   report:
-    name: Coverage Report
+    name: Coverage & Swagger
     runs-on: ubuntu-latest
     needs: test
-
     permissions:
       contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: '1.25.4'
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
       - name: Install tools
         run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
           go install github.com/boumenot/gocover-cobertura@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
           dotnet tool install --global dotnet-reportgenerator-globaltool
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+      - name: Generate Swagger
+        run: |
+          swag init \
+            -g main.go \
+            --parseDependency \
+            --parseInternal
+
+      - name: Build Swagger UI
+        run: |
+          mkdir -p public/swagger
+          cp docs/swagger.json public/swagger/swagger.json
+
+          cat <<EOF > public/swagger/index.html
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>UnpakSiamida API</title>
+            <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css"/>
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+            <script>
+              SwaggerUIBundle({
+                url: "swagger.json",
+                dom_id: "#swagger-ui",
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - uses: actions/download-artifact@v4
         with:
           name: go-coverage
           path: coverage
 
-      - name: Convert Go coverage → Cobertura XML
-        run: |
+      - run: |
           gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
 
-      - name: Generate HTML coverage report
-        run: |
+      - run: |
           reportgenerator \
             -reports:coverage/coverage.xml \
-            -targetdir:CoverageReport \
+            -targetdir:public/coverage \
             -reporttypes:Html \
-            -sourcedirs:.
+            -sourcedirs:./modules
 
-      - name: Upload HTML report (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: CoverageReport
-
-      - name: Deploy to GitHub Pages
+      - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: CoverageReport
+          publish_dir: public
           publish_branch: gh-pages
 
 # ==========================================================
-# GITLEAKS
+# ZAP DAST (OPENAPI)
+# ==========================================================
+  zap-dast:
+    name: OWASP ZAP DAST (API)
+    runs-on: ubuntu-latest
+    needs: report
+
+    steps:
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/swagger/swagger.json
+          format: openapi
+          fail_action: true
+          cmd_options: >
+            -a
+            -m 5
+            -l WARN
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-report
+          path: report_html.html
+
+# ==========================================================
+# SECRET SCANNING
 # ==========================================================
   gitleaks:
-    name: Scan secrets with Gitleaks
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ==========================================================
-# TRUFFLEHOG
-# ==========================================================
   trufflehog:
-    name: Scan secrets with Trufflehog
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Trufflehog scan
-        uses: edplato/trufflehog-actions-scan@master
+      - uses: edplato/trufflehog-actions-scan@master

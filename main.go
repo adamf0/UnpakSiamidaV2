@@ -60,6 +60,10 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
+
+	"github.com/gofiber/swagger"      // ⬅️ INI WAJIB
+	_ "github.com/swaggo/files"       // ⬅️ swagger embed files
+	_ "UnpakSiamida/docs"              // ⬅️ hasil swag init
 )
 
 var startupErrors []fiber.Map
@@ -73,6 +77,11 @@ func mustStart(name string, fn func() error) {
     }
 }
 
+// @title UnpakSiamidaV2 API
+// @version 1.0
+// @description All Module Siamida
+// @host localhost:3000
+// @BasePath /
 func main() {
 	cfg := commonpresentation.DefaultHeaderSecurityConfig()
 	cfg.ResolveAndCheck = false
@@ -122,6 +131,7 @@ func main() {
 	jenisfilePresentation.ModuleJenisFile(app)
 	renstraPresentation.ModuleRenstra(app)
 
+	app.Get("/swagger/*", swagger.HandlerDefault)
 	app.Listen(":3000")
 }
 
