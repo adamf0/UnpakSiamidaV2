@@ -40,7 +40,6 @@ jobs:
         run: |
           set -e
           mkdir -p coverage
-
           for testdir in $(find ./modules -type d \( -name "applicationtest" -o -name "domaintest" \)); do
             modulepath=$(dirname "$testdir")
             modulename=$(basename "$modulepath")
@@ -70,7 +69,7 @@ jobs:
           path: coverage
 
 # ==========================================================
-# SWAGGER + COVERAGE REPORT (HARUS SELESAI DULU)
+# SWAGGER + COVERAGE REPORT (serial)
 # ==========================================================
   report:
     name: Coverage & Swagger
@@ -78,13 +77,11 @@ jobs:
     needs: test
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: '1.25.4'
-
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
@@ -94,22 +91,17 @@ jobs:
           go install github.com/swaggo/swag/cmd/swag@latest
           go install github.com/boumenot/gocover-cobertura@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
-
           dotnet tool install --global dotnet-reportgenerator-globaltool
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Generate Swagger
         run: |
-          swag init \
-            -g main.go \
-            --parseDependency \
-            --parseInternal
+          swag init -g main.go --parseDependency --parseInternal
 
       - name: Build Swagger UI
         run: |
           mkdir -p public/swagger
           cp docs/swagger.json public/swagger/swagger.json
-
           cat <<EOF > public/swagger/index.html
           <!DOCTYPE html>
           <html>
@@ -143,6 +135,13 @@ jobs:
             -targetdir:public/coverage \
             -reporttypes:Html \
             -sourcedirs:./modules
+          
+          # Pastikan index.html ada
+          if [ ! -f public/coverage/index.html ]; then
+            if [ -f public/coverage/index.htm ]; then
+              mv public/coverage/index.htm public/index.html
+            fi
+          fi
 
       - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -151,46 +150,45 @@ jobs:
           publish_dir: public
           publish_branch: gh-pages
 
-# # ==========================================================
-# # DAST (ZAP) — JALAN SETELAH SWAGGER SIAP
-# # ==========================================================
-#   dast:
-#     name: ZAP DAST
-#     runs-on: ubuntu-latest
-#     needs: report   # 🔥 SERIAL, BUKAN PARALEL
+# ==========================================================
+# DAST (ZAP) — JALAN SETELAH SWAGGER SIAP
+# ==========================================================
+  # dast:
+  #   name: ZAP DAST
+  #   runs-on: ubuntu-latest
+  #   needs: report
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-#     steps:
-#       - uses: actions/checkout@v4
+  #     - name: Start Docker Compose (CI)
+  #       run: |
+  #         docker compose -f docker-compose.ci.yml up -d
+  #         docker compose -f docker-compose.ci.yml ps
 
-#       - name: Start Docker Compose (CI)
-#         run: |
-#           docker compose -f docker-compose.ci.yml up -d
-#           docker compose -f docker-compose.ci.yml ps
+  #     - name: Wait Swagger ready
+  #       run: |
+  #         echo "⏳ Waiting for Swagger..."
+  #         for i in {1..40}; do
+  #           if curl -s https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json | grep -q '"openapi"'; then
+  #             echo "✅ Swagger ready"
+  #             exit 0
+  #           fi
+  #           sleep 3
+  #         done
+  #         echo "❌ Swagger not ready"
+  #         exit 1
 
-#       - name: Wait API (Swagger ready)
-#         run: |
-#           echo "⏳ Waiting for Swagger..."
-#           for i in {1..40}; do
-#             if curl -s https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json | grep -q '"openapi"'; then
-#               echo "✅ Swagger is ready"
-#               exit 0
-#             fi
-#             sleep 3
-#           done
-#           echo "❌ Swagger not ready"
-#           exit 1
+  #     - name: ZAP DAST Scan
+  #       uses: zaproxy/action-api-scan@v0.7.0
+  #       with:
+  #         target: https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json
+  #         format: openapi
+  #         fail_action: false
+  #         cmd_options: "-a -m 5 -l WARN"
 
-#       - name: ZAP DAST Scan
-#         uses: zaproxy/action-api-scan@v0.7.0
-#         with:
-#           target: https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json
-#           format: openapi
-#           fail_action: false
-#           cmd_options: "-a -m 5 -l WARN"
-
-#       - name: Shutdown containers
-#         if: always()
-#         run: docker compose -f docker-compose.ci.yml down
+  #     - name: Shutdown containers
+  #       if: always()
+  #       run: docker compose -f docker-compose.ci.yml down
 
 # ==========================================================
 # SECRET SCANNING
