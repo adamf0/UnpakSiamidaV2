@@ -139,7 +139,7 @@ jobs:
           # Pastikan index.html ada
           if [ ! -f public/coverage/index.html ]; then
             if [ -f public/coverage/index.htm ]; then
-              mv public/coverage/index.htm public/index.html
+              mv public/coverage/index.htm public/coverage/index.html
             fi
           fi
 

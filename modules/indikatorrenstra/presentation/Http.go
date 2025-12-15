@@ -17,188 +17,241 @@ import (
     GetAllIndikatorRenstras "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
 )
 
-func ModuleIndikatorRenstra(app *fiber.App) {
+// CreateIndikatorRenstraHandler godoc
+// @Summary Create new IndikatorRenstra
+// @Tags IndikatorRenstra
+// @Param standar_renstra formData string true "Standar Renstra ID"
+// @Param indikator formData string true "Indikator Name"
+// @Param parent formData string false "Parent ID"
+// @Param tahun formData string true "Tahun"
+// @Param tipe_target formData string true "Tipe Target"
+// @Param operator formData string false "Operator"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of created IndikatorRenstra"
+// @Failure 400 {object} commondomain.Error
+// @Router /indikatorrenstra [post]
+func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
+    standarRenstra := c.FormValue("standar_renstra")
+    indikator := c.FormValue("indikator")
+    parent := nullableString(c.FormValue("parent"))
+    tahun := c.FormValue("tahun")
+    tipeTarget := c.FormValue("tipe_target")
+    operator := nullableString(c.FormValue("operator"))
 
-    // ====================================================================
-    // CREATE (POST /indikatorrenstra)
-    // ====================================================================
-    app.Post("/indikatorrenstra", func(c *fiber.Ctx) error {
+    cmd := CreateIndikatorRenstra.CreateIndikatorRenstraCommand{
+        StandarRenstra: standarRenstra,
+        Indikator:      indikator,
+        Parent:         parent,
+        Tahun:          tahun,
+        TipeTarget:     tipeTarget,
+        Operator:       operator,
+    }
 
-        standarRenstra := c.FormValue("standar_renstra")
-        indikator := c.FormValue("indikator")
-        parent := nullableString(c.FormValue("parent"))
-        tahun := c.FormValue("tahun")
-        tipeTarget := c.FormValue("tipe_target")
-        operator := nullableString(c.FormValue("operator"))
+    uuid, err := mediatr.Send[
+        CreateIndikatorRenstra.CreateIndikatorRenstraCommand,
+        string,
+    ](context.Background(), cmd)
 
-        cmd := CreateIndikatorRenstra.CreateIndikatorRenstraCommand{
-            StandarRenstra: standarRenstra,
-            Indikator:      indikator,
-            Parent:         parent,
-            Tahun:          tahun,
-            TipeTarget:     tipeTarget,
-            Operator:       operator,
-        }
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        uuid, err := mediatr.Send[
-            CreateIndikatorRenstra.CreateIndikatorRenstraCommand,
-            string,
-        ](context.Background(), cmd)
+    return c.JSON(fiber.Map{"uuid": uuid})
+}
 
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+// =======================================================
+// PUT /indikatorrenstra/{uuid}
+// =======================================================
 
-        return c.JSON(fiber.Map{"uuid": uuid})
-    })
+// UpdateIndikatorRenstraHandler godoc
+// @Summary Update existing IndikatorRenstra
+// @Tags IndikatorRenstra
+// @Param uuid path string true "IndikatorRenstra UUID" format(uuid)
+// @Param standar_renstra formData string true "Standar Renstra ID"
+// @Param indikator formData string true "Indikator Name"
+// @Param parent formData string false "Parent ID"
+// @Param tahun formData string true "Tahun"
+// @Param tipe_target formData string true "Tipe Target"
+// @Param operator formData string false "Operator"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of updated IndikatorRenstra"
+// @Failure 400 {object} commondomain.Error
+// @Router /indikatorrenstra/{uuid} [put]
+func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
+    uuid := c.Params("uuid")
 
-    // ====================================================================
-    // UPDATE (PUT /indikatorrenstra/:uuid)
-    // ====================================================================
-    app.Put("/indikatorrenstra/:uuid", func(c *fiber.Ctx) error {
+    standarRenstra := c.FormValue("standar_renstra")
+    indikator := c.FormValue("indikator")
+    parent := nullableString(c.FormValue("parent"))
+    tahun := c.FormValue("tahun")
+    tipeTarget := c.FormValue("tipe_target")
+    operator := nullableString(c.FormValue("operator"))
 
-        uuid := c.Params("uuid")
+    cmd := UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand{
+        Uuid:           uuid,
+        StandarRenstra: standarRenstra,
+        Indikator:      indikator,
+        Parent:         parent,
+        Tahun:          tahun,
+        TipeTarget:     tipeTarget,
+        Operator:       operator,
+    }
 
-        standarRenstra := c.FormValue("standar_renstra")
-        indikator := c.FormValue("indikator")
-        parent := nullableString(c.FormValue("parent"))
-        tahun := c.FormValue("tahun")
-        tipeTarget := c.FormValue("tipe_target")
-        operator := nullableString(c.FormValue("operator"))
+    updatedID, err := mediatr.Send[
+        UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand,
+        string,
+    ](context.Background(), cmd)
 
-        cmd := UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand{
-            Uuid:           uuid,
-            StandarRenstra: standarRenstra,
-            Indikator:      indikator,
-            Parent:         parent,
-            Tahun:          tahun,
-            TipeTarget:     tipeTarget,
-            Operator:       operator,
-        }
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        updatedID, err := mediatr.Send[
-            UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand,
-            string,
-        ](context.Background(), cmd)
+    return c.JSON(fiber.Map{"uuid": updatedID})
+}
 
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+// =======================================================
+// DELETE /indikatorrenstra/{uuid}
+// =======================================================
 
-        return c.JSON(fiber.Map{"uuid": updatedID})
-    })
+// DeleteIndikatorRenstraHandler godoc
+// @Summary Delete an IndikatorRenstra
+// @Tags IndikatorRenstra
+// @Param uuid path string true "IndikatorRenstra UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of deleted IndikatorRenstra"
+// @Failure 404 {object} commondomain.Error
+// @Router /indikatorrenstra/{uuid} [delete]
+func DeleteIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
+    uuid := c.Params("uuid")
 
-    // ====================================================================
-    // DELETE (DELETE /indikatorrenstra/:uuid)
-    // ====================================================================
-    app.Delete("/indikatorrenstra/:uuid", func(c *fiber.Ctx) error {
-        uuid := c.Params("uuid")
+    cmd := DeleteIndikatorRenstra.DeleteIndikatorRenstraCommand{Uuid: uuid}
 
-        cmd := DeleteIndikatorRenstra.DeleteIndikatorRenstraCommand{Uuid: uuid}
+    deletedID, err := mediatr.Send[
+        DeleteIndikatorRenstra.DeleteIndikatorRenstraCommand,
+        string,
+    ](context.Background(), cmd)
 
-        deletedID, err := mediatr.Send[
-            DeleteIndikatorRenstra.DeleteIndikatorRenstraCommand,
-            string,
-        ](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    return c.JSON(fiber.Map{"uuid": deletedID})
+}
 
-        return c.JSON(fiber.Map{"uuid": deletedID})
-    })
+// =======================================================
+// GET /indikatorrenstra/{uuid}
+// =======================================================
 
-    // ====================================================================
-    // GET BY UUID
-    // ====================================================================
-    app.Get("/indikatorrenstra/:uuid", func(c *fiber.Ctx) error {
-        uuid := c.Params("uuid")
+// GetIndikatorRenstraHandler godoc
+// @Summary Get IndikatorRenstra by UUID
+// @Tags IndikatorRenstra
+// @Param uuid path string true "IndikatorRenstra UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} indikatorrenstradomain.IndikatorRenstra
+// @Failure 404 {object} commondomain.Error
+// @Router /indikatorrenstra/{uuid} [get]
+func GetIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
+    uuid := c.Params("uuid")
 
-        query := GetIndikatorRenstra.GetIndikatorRenstraByUuidQuery{Uuid: uuid}
+    query := GetIndikatorRenstra.GetIndikatorRenstraByUuidQuery{Uuid: uuid}
 
-        indikatorrenstra, err := mediatr.Send[
-            GetIndikatorRenstra.GetIndikatorRenstraByUuidQuery,
-            *indikatorrenstradomain.IndikatorRenstra,
-        ](context.Background(), query)
+    indikatorrenstra, err := mediatr.Send[
+        GetIndikatorRenstra.GetIndikatorRenstraByUuidQuery,
+        *indikatorrenstradomain.IndikatorRenstra,
+    ](context.Background(), query)
 
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        if indikatorrenstra == nil {
-            return c.Status(404).JSON(fiber.Map{"error": "IndikatorRenstra not found"})
-        }
+    if indikatorrenstra == nil {
+        return c.Status(404).JSON(fiber.Map{"error": "IndikatorRenstra not found"})
+    }
 
-        return c.JSON(indikatorrenstra)
-    })
+    return c.JSON(indikatorrenstra)
+}
 
-    // ====================================================================
-    // GET ALL
-    // ====================================================================
-    app.Get("/indikatorrenstras", func(c *fiber.Ctx) error {
-        mode := c.Query("mode", "paging")
-        page := c.QueryInt("page", 1)
-        limit := c.QueryInt("limit", 10)
-        search := c.Query("search", "")
+// GetAllIndikatorRenstrasHandler godoc
+// @Summary Get All IndikatorRenstras
+// @Tags IndikatorRenstra
+// @Param mode query string false "paging | all | ndjson | sse"
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit per page"
+// @Param search query string false "Search keyword"
+// @Produce json
+// @Success 200 {object} indikatorrenstradomain.PagedIndikatorRenstras
+// @Router /indikatorrenstras [get]
+func GetAllIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
+    mode := c.Query("mode", "paging")
+    page := c.QueryInt("page", 1)
+    limit := c.QueryInt("limit", 10)
+    search := c.Query("search", "")
 
-        filtersRaw := c.Query("filters", "")
-        var filters []commondomain.SearchFilter
+    filtersRaw := c.Query("filters", "")
+    var filters []commondomain.SearchFilter
 
-        if filtersRaw != "" {
-            parts := strings.Split(filtersRaw, ";")
-            for _, p := range parts {
-                tokens := strings.SplitN(p, ":", 3)
-                if len(tokens) != 3 {
-                    continue
-                }
-
-                field := strings.TrimSpace(tokens[0])
-                op := strings.TrimSpace(tokens[1])
-                rawValue := strings.TrimSpace(tokens[2])
-
-                var ptr *string
-                if rawValue != "" && rawValue != "null" {
-                    ptr = &rawValue
-                }
-
-                filters = append(filters, commondomain.SearchFilter{
-                    Field:    field,
-                    Operator: op,
-                    Value:    ptr,
-                })
+    if filtersRaw != "" {
+        parts := strings.Split(filtersRaw, ";")
+        for _, p := range parts {
+            tokens := strings.SplitN(p, ":", 3)
+            if len(tokens) != 3 {
+                continue
             }
+
+            field := strings.TrimSpace(tokens[0])
+            op := strings.TrimSpace(tokens[1])
+            rawValue := strings.TrimSpace(tokens[2])
+
+            var ptr *string
+            if rawValue != "" && rawValue != "null" {
+                ptr = &rawValue
+            }
+
+            filters = append(filters, commondomain.SearchFilter{
+                Field:    field,
+                Operator: op,
+                Value:    ptr,
+            })
         }
+    }
 
-        query := GetAllIndikatorRenstras.GetAllIndikatorRenstrasQuery{
-            Search:        search,
-            SearchFilters: filters,
-        }
+    query := GetAllIndikatorRenstras.GetAllIndikatorRenstrasQuery{
+        Search:        search,
+        SearchFilters: filters,
+    }
 
-        var adapter OutputAdapter
-        switch mode {
-        case "all":
-            adapter = &AllAdapter{}
-        case "ndjson":
-            adapter = &NDJSONAdapter{}
-        case "sse":
-            adapter = &SSEAdapter{}
-        default:
-            query.Page = &page
-            query.Limit = &limit
-            adapter = &PagingAdapter{}
-        }
+    var adapter OutputAdapter
+    switch mode {
+    case "all":
+        adapter = &AllAdapter{}
+    case "ndjson":
+        adapter = &NDJSONAdapter{}
+    case "sse":
+        adapter = &SSEAdapter{}
+    default:
+        query.Page = &page
+        query.Limit = &limit
+        adapter = &PagingAdapter{}
+    }
 
-        result, err := mediatr.Send[
-            GetAllIndikatorRenstras.GetAllIndikatorRenstrasQuery,
-            indikatorrenstradomain.PagedIndikatorRenstras,
-        ](context.Background(), query)
+    result, err := mediatr.Send[
+        GetAllIndikatorRenstras.GetAllIndikatorRenstrasQuery,
+        indikatorrenstradomain.PagedIndikatorRenstras,
+    ](context.Background(), query)
 
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        return adapter.Send(c, result)
-    })
+    return adapter.Send(c, result)
+}
+
+func ModuleIndikatorRenstra(app *fiber.App) {
+    app.Post("/indikatorrenstra", CreateIndikatorRenstraHandlerfunc)
+    app.Put("/indikatorrenstra/:uuid", UpdateIndikatorRenstraHandlerfunc)
+    app.Delete("/indikatorrenstra/:uuid", DeleteIndikatorRenstraHandlerfunc)
+    app.Get("/indikatorrenstra/:uuid", GetIndikatorRenstraHandlerfunc)
+    app.Get("/indikatorrenstras", GetAllIndikatorRenstrasHandlerfunc)
 }
 
 // ====================================================================

@@ -24,171 +24,234 @@ func strPtr(s string) *string {
     return &s
 }
 
-func ModuleTemplateDokumenTambahan(app *fiber.App) {
+// =======================================================
+// POST /templatedokumentambahan
+// =======================================================
 
-    // ------------------------------------------------------
-    // CREATE templatedokumentambahan (POST /templatedokumentambahan)
-    // ------------------------------------------------------
-    app.Post("/templatedokumentambahan", func(c *fiber.Ctx) error {
+// CreateTemplateDokumenTambahanHandler godoc
+// @Summary Create new TemplateDokumenTambahan
+// @Tags TemplateDokumenTambahan
+// @Param tahun formData string true "Tahun"
+// @Param jenisFile formData string true "Jenis File"
+// @Param pertanyaan formData string true "Pertanyaan"
+// @Param klasifikasi formData string true "Klasifikasi"
+// @Param kategori formData string true "Kategori"
+// @Param tugas formData string true "Tugas"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of created TemplateDokumenTambahan"
+// @Failure 400 {object} commondomain.Error
+// @Router /templatedokumentambahan [post]
+func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 
-        tahun := c.FormValue("tahun")
-        jenisFile := c.FormValue("jenisFile")
-        pertanyaan := c.FormValue("pertanyaan")
-        klasifikasi := c.FormValue("klasifikasi")
-        kategori := c.FormValue("kategori")
-        tugas := c.FormValue("tugas")
+    tahun := c.FormValue("tahun")
+    jenisFile := c.FormValue("jenisFile")
+    pertanyaan := c.FormValue("pertanyaan")
+    klasifikasi := c.FormValue("klasifikasi")
+    kategori := c.FormValue("kategori")
+    tugas := c.FormValue("tugas")
 
-        cmd := CreateTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand{
-            Tahun : tahun,
-            Pertanyaan : pertanyaan,
-            JenisFile : jenisFile,
-            Klasifikasi : klasifikasi,
-            Kategori : kategori,
-            Tugas : tugas,
-        }
+    cmd := CreateTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand{
+        Tahun : tahun,
+        Pertanyaan : pertanyaan,
+        JenisFile : jenisFile,
+        Klasifikasi : klasifikasi,
+        Kategori : kategori,
+        Tugas : tugas,
+    }
 
-        uuid, err := mediatr.Send[CreateTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    uuid, err := mediatr.Send[CreateTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        return c.JSON(fiber.Map{"uuid": uuid})
-    })
+    return c.JSON(fiber.Map{"uuid": uuid})
+}
 
-    // ------------------------------------------------------
-    // UPDATE templatedokumentambahan (PUT /templatedokumentambahan/:uuid)
-    // ------------------------------------------------------
-    app.Put("/templatedokumentambahan/:uuid", func(c *fiber.Ctx) error {
+// =======================================================
+// PUT /templatedokumentambahan/{uuid}
+// =======================================================
 
-        uuid := c.Params("uuid")
-        tahun := c.FormValue("tahun")
-        jenisFile := c.FormValue("jenisFile")
-        pertanyaan := c.FormValue("pertanyaan")
-        klasifikasi := c.FormValue("klasifikasi")
-        kategori := c.FormValue("kategori")
-        tugas := c.FormValue("tugas")
+// UpdateTemplateDokumenTambahanHandler godoc
+// @Summary Update existing TemplateDokumenTambahan
+// @Tags TemplateDokumenTambahan
+// @Param uuid path string true "TemplateDokumenTambahan UUID" format(uuid)
+// @Param tahun formData string true "Tahun"
+// @Param jenisFile formData string true "Jenis File"
+// @Param pertanyaan formData string true "Pertanyaan"
+// @Param klasifikasi formData string true "Klasifikasi"
+// @Param kategori formData string true "Kategori"
+// @Param tugas formData string true "Tugas"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of updated TemplateDokumenTambahan"
+// @Failure 400 {object} commondomain.Error
+// @Router /templatedokumentambahan/{uuid} [put]
+func UpdateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 
-        cmd := UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand{
-            Uuid:         uuid,
-            Tahun : tahun,
-            Pertanyaan : pertanyaan,
-            JenisFile : jenisFile,
-            Klasifikasi : klasifikasi,
-            Kategori : kategori,
-            Tugas : tugas,
-        }
+    uuid := c.Params("uuid")
+    tahun := c.FormValue("tahun")
+    jenisFile := c.FormValue("jenisFile")
+    pertanyaan := c.FormValue("pertanyaan")
+    klasifikasi := c.FormValue("klasifikasi")
+    kategori := c.FormValue("kategori")
+    tugas := c.FormValue("tugas")
 
-        updatedID, err := mediatr.Send[UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    cmd := UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand{
+        Uuid:         uuid,
+        Tahun : tahun,
+        Pertanyaan : pertanyaan,
+        JenisFile : jenisFile,
+        Klasifikasi : klasifikasi,
+        Kategori : kategori,
+        Tugas : tugas,
+    }
 
-        return c.JSON(fiber.Map{"uuid": updatedID})
-    })
+    updatedID, err := mediatr.Send[UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-    // ------------------------------------------------------ 
-    // DELETE templatedokumentambahan (DELETE /templatedokumentambahan/:uuid)
-    // ------------------------------------------------------
-    app.Delete("/templatedokumentambahan/:uuid", func(c *fiber.Ctx) error {
+    return c.JSON(fiber.Map{"uuid": updatedID})
+}
 
-        uuid := c.Params("uuid")
+// =======================================================
+// DELETE /templatedokumentambahan/{uuid}
+// =======================================================
 
-        cmd := DeleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand{
-            Uuid: uuid,
-        }
+// DeleteTemplateDokumenTambahanHandler godoc
+// @Summary Delete a TemplateDokumenTambahan
+// @Tags TemplateDokumenTambahan
+// @Param uuid path string true "TemplateDokumenTambahan UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of deleted TemplateDokumenTambahan"
+// @Failure 404 {object} commondomain.Error
+// @Router /templatedokumentambahan/{uuid} [delete]
+func DeleteTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 
-        deletedID, err := mediatr.Send[DeleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    uuid := c.Params("uuid")
 
-        return c.JSON(fiber.Map{"uuid": deletedID})
-    })
+    cmd := DeleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand{
+        Uuid: uuid,
+    }
 
-    // ------------------------------------------------------ 
-    // Get templatedokumentambahan
-    // ------------------------------------------------------
-    app.Get("/templatedokumentambahan/:uuid", func(c *fiber.Ctx) error {
-        uuid := c.Params("uuid")
+    deletedID, err := mediatr.Send[DeleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        query := GetTemplateDokumenTambahan.GetTemplateDokumenTambahanByUuidQuery{
-            Uuid: uuid,
-        }
+    return c.JSON(fiber.Map{"uuid": deletedID})
+}
 
-        templatedokumentambahan, err := mediatr.Send[GetTemplateDokumenTambahan.GetTemplateDokumenTambahanByUuidQuery, *templatedokumentambahandomain.TemplateDokumenTambahan](context.Background(), query)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+// =======================================================
+// GET /templatedokumentambahan/{uuid}
+// =======================================================
 
-        if templatedokumentambahan == nil {
-            return c.Status(404).JSON(fiber.Map{"error": "TemplateDokumenTambahan not found"})
-        }
+// GetTemplateDokumenTambahanHandler godoc
+// @Summary Get TemplateDokumenTambahan by UUID
+// @Tags TemplateDokumenTambahan
+// @Param uuid path string true "TemplateDokumenTambahan UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} templatedokumentambahandomain.TemplateDokumenTambahan
+// @Failure 404 {object} commondomain.Error
+// @Router /templatedokumentambahan/{uuid} [get]
+func GetTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
+    uuid := c.Params("uuid")
 
-        return c.JSON(templatedokumentambahan)
-    })
+    query := GetTemplateDokumenTambahan.GetTemplateDokumenTambahanByUuidQuery{
+        Uuid: uuid,
+    }
 
-    // ------------------------------------------------------ 
-    // Get All templatedokumentambahan
-    // ------------------------------------------------------
-    app.Get("/templatedokumentambahans", func(c *fiber.Ctx) error {
-        mode := c.Query("mode", "paging") // default mode = paging
-        page := c.QueryInt("page", 1)
-        limit := c.QueryInt("limit", 10)
-        search := c.Query("search", "")
+    templatedokumentambahan, err := mediatr.Send[GetTemplateDokumenTambahan.GetTemplateDokumenTambahanByUuidQuery, *templatedokumentambahandomain.TemplateDokumenTambahan](context.Background(), query)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        // Parse filters
-        filtersRaw := c.Query("filters", "")
-        var filters []commondomain.SearchFilter
-        if filtersRaw != "" {
-            parts := strings.Split(filtersRaw, ";")
-            for _, p := range parts {
-                tokens := strings.SplitN(p, ":", 3)
-                if len(tokens) != 3 {
-                    continue
-                }
-                field := strings.TrimSpace(tokens[0])
-                op := strings.TrimSpace(tokens[1])
-                rawValue := strings.TrimSpace(tokens[2])
+    if templatedokumentambahan == nil {
+        return c.Status(404).JSON(fiber.Map{"error": "TemplateDokumenTambahan not found"})
+    }
 
-                var valuePtr *string
-                if rawValue != "" && rawValue != "null" {
-                    valuePtr = &rawValue
-                }
-                filters = append(filters, commondomain.SearchFilter{
-                    Field:    field,
-                    Operator: op,
-                    Value:    valuePtr,
-                })
+    return c.JSON(templatedokumentambahan)
+}
+
+// =======================================================
+// GET /templatedokumentambahans
+// =======================================================
+
+// GetAllTemplateDokumenTambahansHandler godoc
+// @Summary Get All TemplateDokumenTambahans
+// @Tags TemplateDokumenTambahan
+// @Param mode query string false "paging | all | ndjson | sse"
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit per page"
+// @Param search query string false "Search keyword"
+// @Produce json
+// @Success 200 {object} templatedokumentambahandomain.PagedTemplateDokumenTambahans
+// @Router /templatedokumentambahans [get]
+func GetAllTemplateDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
+    mode := c.Query("mode", "paging") // default mode = paging
+    page := c.QueryInt("page", 1)
+    limit := c.QueryInt("limit", 10)
+    search := c.Query("search", "")
+
+    // Parse filters
+    filtersRaw := c.Query("filters", "")
+    var filters []commondomain.SearchFilter
+    if filtersRaw != "" {
+        parts := strings.Split(filtersRaw, ";")
+        for _, p := range parts {
+            tokens := strings.SplitN(p, ":", 3)
+            if len(tokens) != 3 {
+                continue
             }
-        }
+            field := strings.TrimSpace(tokens[0])
+            op := strings.TrimSpace(tokens[1])
+            rawValue := strings.TrimSpace(tokens[2])
 
-        query := GetAllTemplateDokumenTambahans.GetAllTemplateDokumenTambahansQuery{
-            Search:        search,
-            SearchFilters: filters,
+            var valuePtr *string
+            if rawValue != "" && rawValue != "null" {
+                valuePtr = &rawValue
+            }
+            filters = append(filters, commondomain.SearchFilter{
+                Field:    field,
+                Operator: op,
+                Value:    valuePtr,
+            })
         }
+    }
 
-        // Pilih adapter sesuai mode
-        var adapter OutputAdapter
-        switch mode {
-        case "all":
-            adapter = &AllAdapter{}
-        case "ndjson":
-            adapter = &NDJSONAdapter{}
-        case "sse":
-            adapter = &SSEAdapter{}
-        default:
-            query.Page = &page
-            query.Limit = &limit
-            adapter = &PagingAdapter{}
-        }
+    query := GetAllTemplateDokumenTambahans.GetAllTemplateDokumenTambahansQuery{
+        Search:        search,
+        SearchFilters: filters,
+    }
 
-        // Ambil data
-        templatedokumentambahans, err := mediatr.Send[GetAllTemplateDokumenTambahans.GetAllTemplateDokumenTambahansQuery, templatedokumentambahandomain.PagedTemplateDokumenTambahans](context.Background(), query)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    // Pilih adapter sesuai mode
+    var adapter OutputAdapter
+    switch mode {
+    case "all":
+        adapter = &AllAdapter{}
+    case "ndjson":
+        adapter = &NDJSONAdapter{}
+    case "sse":
+        adapter = &SSEAdapter{}
+    default:
+        query.Page = &page
+        query.Limit = &limit
+        adapter = &PagingAdapter{}
+    }
 
-        return adapter.Send(c, templatedokumentambahans)
-    })
+    // Ambil data
+    templatedokumentambahans, err := mediatr.Send[GetAllTemplateDokumenTambahans.GetAllTemplateDokumenTambahansQuery, templatedokumentambahandomain.PagedTemplateDokumenTambahans](context.Background(), query)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return adapter.Send(c, templatedokumentambahans)
+}
+
+func ModuleTemplateDokumenTambahan(app *fiber.App) {
+    app.Post("/templatedokumentambahan", CreateTemplateDokumenTambahanHandlerfunc)
+    app.Put("/templatedokumentambahan/:uuid", UpdateTemplateDokumenTambahanHandlerfunc)
+    app.Delete("/templatedokumentambahan/:uuid", DeleteTemplateDokumenTambahanHandlerfunc)
+    app.Get("/templatedokumentambahan/:uuid", GetTemplateDokumenTambahanHandlerfunc)
+    app.Get("/templatedokumentambahans", GetAllTemplateDokumenTambahansHandlerfunc)
 }
 

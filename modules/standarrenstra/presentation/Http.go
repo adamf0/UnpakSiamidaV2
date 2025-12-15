@@ -17,152 +17,205 @@ import (
     GetAllStandarRenstras "UnpakSiamida/modules/standarrenstra/application/GetAllStandarRenstras"
 )
 
-func ModuleStandarRenstra(app *fiber.App) {
+// =======================================================
+// POST /standarrenstra
+// =======================================================
 
-    // ------------------------------------------------------
-    // CREATE standarrenstra (POST /standarrenstra)
-    // ------------------------------------------------------
-    app.Post("/standarrenstra", func(c *fiber.Ctx) error {
+// CreateStandarRenstraHandler godoc
+// @Summary Create new StandarRenstra
+// @Tags StandarRenstra
+// @Param nama formData string true "Nama StandarRenstra"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of created StandarRenstra"
+// @Failure 400 {object} commondomain.Error
+// @Router /standarrenstra [post]
+func CreateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-        nama := c.FormValue("nama")
+    nama := c.FormValue("nama")
 
-        cmd := CreateStandarRenstra.CreateStandarRenstraCommand{
-            Nama:         nama,
-        }
+    cmd := CreateStandarRenstra.CreateStandarRenstraCommand{
+        Nama:         nama,
+    }
 
-        uuid, err := mediatr.Send[CreateStandarRenstra.CreateStandarRenstraCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    uuid, err := mediatr.Send[CreateStandarRenstra.CreateStandarRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        return c.JSON(fiber.Map{"uuid": uuid})
-    })
+    return c.JSON(fiber.Map{"uuid": uuid})
+}
 
-    // ------------------------------------------------------
-    // UPDATE standarrenstra (PUT /standarrenstra/:uuid)
-    // ------------------------------------------------------
-    app.Put("/standarrenstra/:uuid", func(c *fiber.Ctx) error {
+// =======================================================
+// PUT /standarrenstra/{uuid}
+// =======================================================
 
-        uuid := c.Params("uuid")
+// UpdateStandarRenstraHandler godoc
+// @Summary Update existing StandarRenstra
+// @Tags StandarRenstra
+// @Param uuid path string true "StandarRenstra UUID" format(uuid)
+// @Param nama formData string true "Nama StandarRenstra"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of updated StandarRenstra"
+// @Failure 400 {object} commondomain.Error
+// @Router /standarrenstra/{uuid} [put]
+func UpdateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-        nama := c.FormValue("nama")
+    uuid := c.Params("uuid")
 
-        cmd := UpdateStandarRenstra.UpdateStandarRenstraCommand{
-            Uuid:         uuid,
-            Nama:         nama,
-        }
+    nama := c.FormValue("nama")
 
-        updatedID, err := mediatr.Send[UpdateStandarRenstra.UpdateStandarRenstraCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    cmd := UpdateStandarRenstra.UpdateStandarRenstraCommand{
+        Uuid:         uuid,
+        Nama:         nama,
+    }
 
-        return c.JSON(fiber.Map{"uuid": updatedID})
-    })
+    updatedID, err := mediatr.Send[UpdateStandarRenstra.UpdateStandarRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-    // ------------------------------------------------------ 
-    // DELETE standarrenstra (DELETE /standarrenstra/:uuid)
-    // ------------------------------------------------------
-    app.Delete("/standarrenstra/:uuid", func(c *fiber.Ctx) error {
+    return c.JSON(fiber.Map{"uuid": updatedID})
+}
 
-        uuid := c.Params("uuid")
+// =======================================================
+// DELETE /standarrenstra/{uuid}
+// =======================================================
 
-        cmd := DeleteStandarRenstra.DeleteStandarRenstraCommand{
-            Uuid: uuid,
-        }
+// DeleteStandarRenstraHandler godoc
+// @Summary Delete a StandarRenstra
+// @Tags StandarRenstra
+// @Param uuid path string true "StandarRenstra UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of deleted StandarRenstra"
+// @Failure 404 {object} commondomain.Error
+// @Router /standarrenstra/{uuid} [delete]
+func DeleteStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-        deletedID, err := mediatr.Send[DeleteStandarRenstra.DeleteStandarRenstraCommand, string](context.Background(), cmd)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    uuid := c.Params("uuid")
 
-        return c.JSON(fiber.Map{"uuid": deletedID})
-    })
+    cmd := DeleteStandarRenstra.DeleteStandarRenstraCommand{
+        Uuid: uuid,
+    }
 
-    // ------------------------------------------------------ 
-    // Get standarrenstra
-    // ------------------------------------------------------
-    app.Get("/standarrenstra/:uuid", func(c *fiber.Ctx) error {
-        uuid := c.Params("uuid")
+    deletedID, err := mediatr.Send[DeleteStandarRenstra.DeleteStandarRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        query := GetStandarRenstra.GetStandarRenstraByUuidQuery{
-            Uuid: uuid,
-        }
+    return c.JSON(fiber.Map{"uuid": deletedID})
+}
 
-        standarrenstra, err := mediatr.Send[GetStandarRenstra.GetStandarRenstraByUuidQuery, *standarrenstradomain.StandarRenstra](context.Background(), query)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+// =======================================================
+// GET /standarrenstra/{uuid}
+// =======================================================
 
-        if standarrenstra == nil {
-            return c.Status(404).JSON(fiber.Map{"error": "StandarRenstra not found"})
-        }
+// GetStandarRenstraHandler godoc
+// @Summary Get StandarRenstra by UUID
+// @Tags StandarRenstra
+// @Param uuid path string true "StandarRenstra UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} standarrenstradomain.StandarRenstra
+// @Failure 404 {object} commondomain.Error
+// @Router /standarrenstra/{uuid} [get]
+func GetStandarRenstraHandlerfunc(c *fiber.Ctx) error {
+    uuid := c.Params("uuid")
 
-        return c.JSON(standarrenstra)
-    })
+    query := GetStandarRenstra.GetStandarRenstraByUuidQuery{
+        Uuid: uuid,
+    }
 
-    // ------------------------------------------------------ 
-    // Get All standarrenstra
-    // ------------------------------------------------------
-    app.Get("/standarrenstras", func(c *fiber.Ctx) error {
-        mode := c.Query("mode", "paging") // default mode = paging
-        page := c.QueryInt("page", 1)
-        limit := c.QueryInt("limit", 10)
-        search := c.Query("search", "")
+    standarrenstra, err := mediatr.Send[GetStandarRenstra.GetStandarRenstraByUuidQuery, *standarrenstradomain.StandarRenstra](context.Background(), query)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
 
-        // Parse filters
-        filtersRaw := c.Query("filters", "")
-        var filters []commondomain.SearchFilter
-        if filtersRaw != "" {
-            parts := strings.Split(filtersRaw, ";")
-            for _, p := range parts {
-                tokens := strings.SplitN(p, ":", 3)
-                if len(tokens) != 3 {
-                    continue
-                }
-                field := strings.TrimSpace(tokens[0])
-                op := strings.TrimSpace(tokens[1])
-                rawValue := strings.TrimSpace(tokens[2])
+    if standarrenstra == nil {
+        return c.Status(404).JSON(fiber.Map{"error": "StandarRenstra not found"})
+    }
 
-                var valuePtr *string
-                if rawValue != "" && rawValue != "null" {
-                    valuePtr = &rawValue
-                }
-                filters = append(filters, commondomain.SearchFilter{
-                    Field:    field,
-                    Operator: op,
-                    Value:    valuePtr,
-                })
+    return c.JSON(standarrenstra)
+}
+
+// =======================================================
+// GET /standarrenstras
+// =======================================================
+
+// GetAllStandarRenstrasHandler godoc
+// @Summary Get All StandarRenstras
+// @Tags StandarRenstra
+// @Param mode query string false "paging | all | ndjson | sse"
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit per page"
+// @Param search query string false "Search keyword"
+// @Produce json
+// @Success 200 {object} standarrenstradomain.PagedStandarRenstras
+// @Router /standarrenstras [get]
+func GetAllStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
+    mode := c.Query("mode", "paging") // default mode = paging
+    page := c.QueryInt("page", 1)
+    limit := c.QueryInt("limit", 10)
+    search := c.Query("search", "")
+
+    // Parse filters
+    filtersRaw := c.Query("filters", "")
+    var filters []commondomain.SearchFilter
+    if filtersRaw != "" {
+        parts := strings.Split(filtersRaw, ";")
+        for _, p := range parts {
+            tokens := strings.SplitN(p, ":", 3)
+            if len(tokens) != 3 {
+                continue
             }
-        }
+            field := strings.TrimSpace(tokens[0])
+            op := strings.TrimSpace(tokens[1])
+            rawValue := strings.TrimSpace(tokens[2])
 
-        query := GetAllStandarRenstras.GetAllStandarRenstrasQuery{
-            Search:        search,
-            SearchFilters: filters,
+            var valuePtr *string
+            if rawValue != "" && rawValue != "null" {
+                valuePtr = &rawValue
+            }
+            filters = append(filters, commondomain.SearchFilter{
+                Field:    field,
+                Operator: op,
+                Value:    valuePtr,
+            })
         }
+    }
 
-        // Pilih adapter sesuai mode
-        var adapter OutputAdapter
-        switch mode {
-        case "all":
-            adapter = &AllAdapter{}
-        case "ndjson":
-            adapter = &NDJSONAdapter{}
-        case "sse":
-            adapter = &SSEAdapter{}
-        default:
-            query.Page = &page
-            query.Limit = &limit
-            adapter = &PagingAdapter{}
-        }
+    query := GetAllStandarRenstras.GetAllStandarRenstrasQuery{
+        Search:        search,
+        SearchFilters: filters,
+    }
 
-        // Ambil data
-        standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, standarrenstradomain.PagedStandarRenstras](context.Background(), query)
-        if err != nil {
-            return commoninfra.HandleError(c, err)
-        }
+    // Pilih adapter sesuai mode
+    var adapter OutputAdapter
+    switch mode {
+    case "all":
+        adapter = &AllAdapter{}
+    case "ndjson":
+        adapter = &NDJSONAdapter{}
+    case "sse":
+        adapter = &SSEAdapter{}
+    default:
+        query.Page = &page
+        query.Limit = &limit
+        adapter = &PagingAdapter{}
+    }
 
-        return adapter.Send(c, standarrenstras)
-    })
+    // Ambil data
+    standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, standarrenstradomain.PagedStandarRenstras](context.Background(), query)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return adapter.Send(c, standarrenstras)
+}
+
+func ModuleStandarRenstra(app *fiber.App) {
+    app.Post("/standarrenstra", CreateStandarRenstraHandlerfunc)
+    app.Put("/standarrenstra/:uuid", UpdateStandarRenstraHandlerfunc)
+    app.Delete("/standarrenstra/:uuid", DeleteStandarRenstraHandlerfunc)
+    app.Get("/standarrenstra/:uuid", GetStandarRenstraHandlerfunc)
+    app.Get("/standarrenstras", GetAllStandarRenstrasHandlerfunc)
 }
 
