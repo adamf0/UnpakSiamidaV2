@@ -157,6 +157,97 @@ func (r *TemplateRenstraRepository) GetAll(
 	return templaterenstras, total, nil
 }
 
+// ------------------------
+// GET ALL BY Tahun & FakultasUnit
+// ------------------------
+func (r *TemplateRenstraRepository) GetAllByTahunFakUnit(
+	ctx context.Context,
+	tahun string,
+	fakultasUnit uint,
+) ([]domaintemplaterenstra.TemplateRenstra, error) {
+
+	var templaterenstras []domaintemplaterenstra.TemplateRenstra
+
+	err := r.db.WithContext(ctx).
+		Where("tahun = ? AND fakultas_unit = ?", tahun, fakultasUnit).
+		Find(&templaterenstras).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return templaterenstras, nil
+}
+
+// ------------------------
+// GET ALL BY Tahun & FakultasUnit (default)
+// ------------------------
+func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
+	ctx context.Context,
+	tahun string,
+	fakultasUnit uint,
+) ([]domaintemplaterenstra.TemplateRenstraDefault, error) {
+
+	query := `
+		SELECT
+			tr.id                     AS ID,
+			tr.uuid                   AS UUID,
+			tr.tahun                  AS Tahun,
+            i.uuid              	  AS IndikatorRenstraUuid,
+			tr.indikator              AS IndikatorRenstraID,
+			i.indikator               AS Indikator,
+			tr.pertanyaan          	  AS IsPertanyaan,
+			tr.fakultas_unit          AS FakultasUnit,
+			tr.kategori               AS Kategori,
+			tr.klasifikasi            AS Klasifikasi,
+			tr.satuan                 AS Satuan,
+			tr.target                 AS Target,
+			tr.target_min             AS TargetMin,
+			tr.target_max             AS TargetMax,
+			tr.tugas                  AS Tugas
+		FROM template_renstra tr
+		INNER JOIN master_indikator_renstra i ON tr.indikator = i.id 
+		WHERE tr.tahun = ?
+		  AND tr.fakultas_unit = ?
+	`
+
+	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasUnit).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]domaintemplaterenstra.TemplateRenstraDefault, 0)
+
+	for rows.Next() {
+		var item domaintemplaterenstra.TemplateRenstraDefault
+
+		err := rows.Scan(
+			&item.ID,
+			&item.UUID,
+			&item.Tahun,
+			&item.IndikatorRenstraUuid,
+			&item.IndikatorRenstraID,
+			&item.Indikator,
+			&item.IsPertanyaan,
+			&item.FakultasUnit,
+			&item.Kategori,
+			&item.Klasifikasi,
+			&item.Satuan,
+			&item.Target,
+			&item.TargetMin,
+			&item.TargetMax,
+			&item.Tugas,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, item)
+	}
+
+	return results, nil
+}
 
 // ------------------------
 // CREATE

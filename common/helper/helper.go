@@ -205,3 +205,23 @@ func ParseInt64(s string) (int64, error) {
 	}
 	return val, nil
 }
+
+func IsValidTugas(tugas string) bool {
+    switch tugas {
+    case
+        "auditor1",
+        "auditor2":
+        return true
+    }
+    return false
+}
+
+func IsValidTypeGenerate(tipe string) bool {
+    switch tipe {
+    case
+        "renstra",
+        "dokumen_tambahan":
+        return true
+    }
+    return false
+}

@@ -27,6 +27,12 @@ import (
 
 	renstraInfrastructure "UnpakSiamida/modules/renstra/infrastructure"
 	renstraPresentation "UnpakSiamida/modules/renstra/presentation"
+
+	generaterenstraInfrastructure "UnpakSiamida/modules/generaterenstra/infrastructure"
+	generaterenstraPresentation "UnpakSiamida/modules/generaterenstra/presentation"
+
+	previewtemplateInfrastructure "UnpakSiamida/modules/previewtemplate/infrastructure"
+	previewtemplatePresentation "UnpakSiamida/modules/previewtemplate/presentation"
 	
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -52,6 +58,9 @@ import (
 	updateRenstra "UnpakSiamida/modules/renstra/application/UpdateRenstra"
 	giveCodeRenstra "UnpakSiamida/modules/renstra/application/GiveCodeAccessRenstra"
 	deleteRenstra "UnpakSiamida/modules/renstra/application/DeleteRenstra"
+
+	generateRenstra "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
+	deleteGenerateRenstra "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
 
 	"github.com/gofiber/fiber/v2"
 	"context"
@@ -110,6 +119,8 @@ func main() {
 	mustStart("Fakultas Unit Module", fakultasunitInfrastructure.RegisterModuleFakultasUnit)
 	mustStart("Jenis File Module", jenisfileInfrastructure.RegisterModuleJenisFile)
 	mustStart("Renstra Module", renstraInfrastructure.RegisterModuleRenstra)
+	mustStart("Generate Renstra Module", generaterenstraInfrastructure.RegisterModuleGenerateRenstra)
+	mustStart("Preview Template Module", previewtemplateInfrastructure.RegisterModulePreviewTemplate)
 
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
@@ -130,6 +141,8 @@ func main() {
 	fakultasunitPresentation.ModuleFakultasUnit(app)
 	jenisfilePresentation.ModuleJenisFile(app)
 	renstraPresentation.ModuleRenstra(app)
+	generaterenstraPresentation.ModuleGenerateRenstra(app)
+	previewtemplatePresentation.ModulePreviewTemplate(app)
 
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	app.Listen(":3000")
@@ -151,87 +164,104 @@ func (b *ValidationBehavior) Handle(
 		// === User Commands ===
 		case createUser.CreateUserCommand:
 			if err := createUser.CreateUserCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("User.Validation", err)
+				return nil, wrapValidationError("UserCreate.Validation", err)
 			}
 		case updateUser.UpdateUserCommand:
 			if err := updateUser.UpdateUserCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("User.Validation", err)
+				return nil, wrapValidationError("UseUpdate.Validation", err)
 			}
 		case deleteUser.DeleteUserCommand:
 			if err := deleteUser.DeleteUserCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("User.Validation", err)
+				return nil, wrapValidationError("UserDelete.Validation", err)
 			}
 
 		// === StandarRenstra Commands ===
 		case createStandarRenstra.CreateStandarRenstraCommand:
 			if err := createStandarRenstra.CreateStandarRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("StandarRenstra.Validation", err)
+				return nil, wrapValidationError("StandarRenstraCreate.Validation", err)
 			}
 		case updateStandarRenstra.UpdateStandarRenstraCommand:
 			if err := updateStandarRenstra.UpdateStandarRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("StandarRenstra.Validation", err)
+				return nil, wrapValidationError("StandarRenstraUpdate.Validation", err)
 			}
 		case deleteStandarRenstra.DeleteStandarRenstraCommand:
 			if err := deleteStandarRenstra.DeleteStandarRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("StandarRenstra.Validation", err)
+				return nil, wrapValidationError("StandarRenstraDelete.Validation", err)
 			}
 		// === IndikatorRenstra Commands ===
 		case createIndikatorRenstra.CreateIndikatorRenstraCommand:
 			if err := createIndikatorRenstra.CreateIndikatorRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+				return nil, wrapValidationError("IndikatorRenstraCreate.Validation", err)
 			}
 		case updateIndikatorRenstra.UpdateIndikatorRenstraCommand:
 			if err := updateIndikatorRenstra.UpdateIndikatorRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+				return nil, wrapValidationError("IndikatorRenstraUpdate.Validation", err)
 			}
 		case deleteIndikatorRenstra.DeleteIndikatorRenstraCommand:
 			if err := deleteIndikatorRenstra.DeleteIndikatorRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("IndikatorRenstra.Validation", err)
+				return nil, wrapValidationError("IndikatorRenstraDelete.Validation", err)
 			}
 		// === TemplateRenstra Commands ===
 		case createTemplateRenstra.CreateTemplateRenstraCommand:
 			if err := createTemplateRenstra.CreateTemplateRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+				return nil, wrapValidationError("TemplateRenstraCreate.Validation", err)
 			}
 		case updateTemplateRenstra.UpdateTemplateRenstraCommand:
 			if err := updateTemplateRenstra.UpdateTemplateRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+				return nil, wrapValidationError("TemplateRenstraUpdate.Validation", err)
 			}
 		case deleteTemplateRenstra.DeleteTemplateRenstraCommand:
 			if err := deleteTemplateRenstra.DeleteTemplateRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateRenstra.Validation", err)
+				return nil, wrapValidationError("TemplateRenstraDelete.Validation", err)
 			}
 		// === TemplateDokumenTambahan Commands ===
 		case createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand:
 			if err := createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+				return nil, wrapValidationError("TemplateDokumenTambahanCreate.Validation", err)
 			}
 		case updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand:
 			if err := updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+				return nil, wrapValidationError("TemplateDokumenTambahanUpdate.Validation", err)
 			}
 		case deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand:
 			if err := deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("TemplateDokumenTambahan.Validation", err)
+				return nil, wrapValidationError("TemplateDokumenTambahanDelete.Validation", err)
 			}
 
 		// === Renstra Commands ===
 		case createRenstra.CreateRenstraCommand:
 			if err := createRenstra.CreateRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("Renstra.Validation", err)
+				return nil, wrapValidationError("RenstraCreate.Validation", err)
 			}
 		case updateRenstra.UpdateRenstraCommand:
 			if err := updateRenstra.UpdateRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("Renstra.Validation", err)
+				return nil, wrapValidationError("RenstraUpdate.Validation", err)
 			}
 		case giveCodeRenstra.GiveCodeAccessRenstraCommand:
 			if err := giveCodeRenstra.GiveCodeAccessRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("Renstra.Validation", err)
+				return nil, wrapValidationError("RenstraGiveCode.Validation", err)
 			}
 		case deleteRenstra.DeleteRenstraCommand:
 			if err := deleteRenstra.DeleteRenstraCommandValidation(cmd); err != nil {
-				return nil, wrapValidationError("Renstra.Validation", err)
+				return nil, wrapValidationError("RenstraDelete.Validation", err)
 			}
+
+		// === Generate Renstra Commands ===
+		case generateRenstra.GenerateRenstraCommand:
+			if err := generateRenstra.GenerateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("GenerateRenstra.Validation", err)
+			}
+
+		case deleteGenerateRenstra.DeleteGenerateRenstraCommand:
+			if err := deleteGenerateRenstra.DeleteGenerateRenstraCommandValidation(cmd); err != nil {
+				return nil, wrapValidationError("DeleteGenerateRenstra.Validation", err)
+			}
+
+		// === Preview Template Commands ===
+		// case previewTemplate.GetPreviewTemplateCommand:
+		// 	if err := previewTemplate.GetPreviewTemplateCommandValidation(cmd); err != nil {
+		// 		return nil, wrapValidationError("PreviewTemplate.Validation", err)
+		// 	}
 
 		default:
 			// request lain → skip validation

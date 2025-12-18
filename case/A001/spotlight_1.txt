@@ -1,0 +1,82 @@
+archiotecture/core/TraitMasterIndikator.php
+
+public static function loadDataMasterIndikator(){
+        $results = DB::table('master_indikator_renstra')
+        ->select(
+            'id',
+            DB::raw("
+                CASE 
+                    WHEN tahun != @curYear THEN @curRow := 1
+                    WHEN CONCAT(tahun, id_master_standar, id) = @curType THEN @curRow
+                    WHEN parent IS NULL THEN @curRow := @curRow + 1 
+                END AS poin
+            "),
+            DB::raw("
+                CASE 
+                    WHEN CONCAT(tahun, id_master_standar, id, parent) = @curTypeChild THEN @curRowChild
+                    WHEN parent IS NOT NULL 
+                         AND (
+                            SELECT x.id
+                            FROM (
+                                SELECT id, parent 
+                                FROM master_indikator_renstra 
+                                WHERE parent IS NOT NULL
+                            ) x 
+                            WHERE x.id = master_indikator_renstra.parent
+                         ) IS NULL 
+                    THEN @curRowChild := @curRowChild + 1 
+                END AS sub_poin
+            "),
+            'id_master_standar',
+            DB::raw('(SELECT nama FROM master_standar_renstra WHERE id = id_master_standar) AS standar_renstra'),
+            'indikator',
+            'parent',
+            'tahun',
+            'tipe_target',
+            'operator',
+            DB::raw("
+                (
+                    SELECT x.id
+                    FROM (
+                        SELECT id, parent 
+                        FROM master_indikator_renstra 
+                        WHERE parent IS NOT NULL
+                    ) x 
+                    WHERE x.id = master_indikator_renstra.parent
+                ) > 0 AS isNestedChild
+            "),
+            DB::raw("@curType := CONCAT(tahun, id_master_standar, id) AS parent_idx"),
+            DB::raw("@curTypeChild := CONCAT(tahun, id_master_standar, id, parent) AS child_idx"),
+            DB::raw("@curYear := tahun AS cur_year")
+        )
+        ->crossJoin(DB::raw('(SELECT @curRow := 0, @curRowChild := 0, @curType := "", @curTypeChild := "", @curYear := "") r'))
+        ->orderBy('tahun')
+        ->orderBy('id_master_standar')
+        ->orderBy('parent')
+        ->get();    
+        
+        foreach($results as $result){
+            $arr = [];
+
+            if(is_null($result->parent) && is_null($result->isNestedChild)){ //0 0
+                array_push($arr, $result->poin);
+            } else if(!is_null($result->parent) && is_null($result->isNestedChild)){ //1 0
+                array_push($arr, self::$mappedPoint[$result->parent]);
+                array_push($arr, $result->sub_poin);
+            } else if(!is_null($result->parent) && !is_null($result->isNestedChild)){ //1 1
+                self::$mappedIncNestedChild[$result->parent] = (self::$mappedIncNestedChild[$result->parent] ?? 0) + 1;
+                $point = self::point(self::$mappedPoint, [self::numberToAscii(self::$mappedIncNestedChild[$result->parent])], $result->parent);
+                array_push($arr, $point);
+            }
+
+            self::$mappedPoint[$result->id]     = implode(".",$arr);
+            self::$mappedIndicator[$result->id] = $result->indikator;
+        }
+
+        $results = $results->map(function($item){
+            $item->pointing = self::$mappedPoint[$item->id];
+            $item->nama_parent = !empty($item->parent)? self::$mappedIndicator[$item->parent]:null;
+            return $item;
+        });
+        return $results;
+    } tolong jadikan sql

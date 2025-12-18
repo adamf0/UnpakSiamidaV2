@@ -41,7 +41,10 @@ func (r *TemplateDokumenTambahanRepository) GetByUuid(ctx context.Context, uid u
 
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
-    "nama":          "nama",
+    "tahun":          				"tahun",
+	"pertanyaan":     				"pertanyaan",
+	"fakultas_prodi_unit":          "fakultas_prodi_unit",
+	"tugas":          				"tugas",
 }
 
 // ------------------------
@@ -157,6 +160,65 @@ func (r *TemplateDokumenTambahanRepository) GetAll(
 	return templatedokumentambahans, total, nil
 }
 
+// ------------------------
+// GET ALL BY Tahun & FakulktasProdiUnit
+// ------------------------
+func (r *TemplateDokumenTambahanRepository) GetAllByTahunFakUnitDefault(
+	ctx context.Context,
+	tahun string,
+	fakultasProdiUnit string,
+) ([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, error) {
+
+	query := `
+		SELECT
+			dt.id             		AS ID,
+			dt.uuid           		AS UUID,
+			dt.tahun          		AS Tahun,
+			jf.id             		AS JenisFileId,
+			jf.uuid           		AS JenisFileUuid,
+			jf.nama           		AS JenisFile,
+			dt.fakultas_prodi_unit 	AS FakultasProdiUnit,
+			dt.pertanyaan     		AS Pertanyaan,
+			dt.klasifikasi    		AS Klasifikasi,
+			dt.tugas    			AS Tugas
+		FROM template_dokumen_tambahan dt
+		INNER JOIN jenis_file_renstra jf ON jf.id = dt.jenis_file
+		WHERE dt.tahun = ?
+		  AND dt.fakultas_prodi_unit = ?
+	`
+
+	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasProdiUnit).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, 0)
+
+	for rows.Next() {
+		var item domaintemplatedokumentambahan.TemplateDokumenTambahanDefault
+
+		err := rows.Scan(
+			&item.ID,
+			&item.UUID,
+			&item.Tahun,
+			&item.JenisFileID,
+			&item.JenisFileUuid,
+			&item.JenisFile,
+			&item.FakultasProdiUnit,
+			&item.Pertanyaan,
+			&item.Klasifikasi,
+			&item.Tugas,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, item)
+	}
+
+	return results, nil
+}
 
 // ------------------------
 // CREATE

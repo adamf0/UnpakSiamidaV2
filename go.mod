@@ -28,6 +28,8 @@ require (
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/githubnemo/CompileDaemon v1.4.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -72,6 +74,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
+	github.com/radovskyb/watcher v1.0.7 // indirect
 	github.com/rakyll/gotest v0.0.6 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

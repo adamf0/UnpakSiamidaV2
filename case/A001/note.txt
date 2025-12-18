@@ -1,0 +1,64 @@
+jadi pada kode lama dalam membangun tree indikator itu mengunakan [spotlight_1.txt] jika di jadi sql menjadi [spotlight_2.txt] dengan hasil [existing.png].
+itu kan pernyataan indikatornya sama hanya target & operasinya berbeda, seharusnya secara pointing itu tetap nomor 10 namun secara urut data benar 11.
+
+jadi sql pada treeindikator seperti ini 
+```
+SELECT
+	i.id AS IndikatorId,
+	i.indikator AS Indikator,
+	i.parent AS ParentIndikatorId
+FROM master_indikator_renstra i
+WHERE i.tahun = ?
+ORDER BY i.id ASC
+```
+sedikit kurang tepat & pada [spotlight_2.txt] jika dioptimalkan dan di sesuikan dengan struct akan menjadi 
+```
+SELECT
+    q.id AS IndikatorId,
+    q.indikator AS Indikator,
+    q.parent AS ParentIndikatorId
+FROM (
+    SELECT
+        mir.id,
+        mir.indikator,
+        mir.parent,
+        mir.tahun,
+        CASE
+            WHEN mir.tahun <> @curYear THEN @curRow := 1
+            WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id) = @curType THEN @curRow
+            WHEN mir.parent IS NULL THEN @curRow := @curRow + 1
+        END AS poin,
+        CASE
+            WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) = @curTypeChild
+                THEN @curRowChild
+            WHEN mir.parent IS NOT NULL
+                AND (
+                    SELECT x.id
+                    FROM (
+                        SELECT id, parent
+                        FROM master_indikator_renstra
+                        WHERE parent IS NOT NULL
+                    ) x
+                    WHERE x.id = mir.parent
+                ) IS NULL
+                THEN @curRowChild := @curRowChild + 1
+        END AS sub_poin,
+        @curType := CONCAT(mir.tahun, mir.id_master_standar, mir.id) AS parent_idx,
+        @curTypeChild := CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) AS child_idx,
+        @curYear := mir.tahun AS cur_year
+    FROM master_indikator_renstra mir
+    CROSS JOIN (
+        SELECT
+            @curRow := 0,
+            @curRowChild := 0,
+            @curType := '',
+            @curTypeChild := '',
+            @curYear := ''
+    ) vars
+    ORDER BY
+        mir.tahun,
+        mir.id_master_standar,
+        mir.parent
+) q
+WHERE q.tahun = ?;
+```

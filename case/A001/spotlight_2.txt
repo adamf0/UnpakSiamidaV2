@@ -1,0 +1,89 @@
+SELECT
+    mir.id,
+
+    /* =========================
+       POIN (LEVEL 1)
+       ========================= */
+    CASE
+        WHEN mir.tahun <> @curYear THEN @curRow := 1
+        WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id) = @curType THEN @curRow
+        WHEN mir.parent IS NULL THEN @curRow := @curRow + 1
+    END AS poin,
+
+    /* =========================
+       SUB POIN (LEVEL 2)
+       ========================= */
+    CASE
+        WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) = @curTypeChild
+            THEN @curRowChild
+        WHEN mir.parent IS NOT NULL
+            AND (
+                SELECT x.id
+                FROM (
+                    SELECT id, parent
+                    FROM master_indikator_renstra
+                    WHERE parent IS NOT NULL
+                ) x
+                WHERE x.id = mir.parent
+            ) IS NULL
+            THEN @curRowChild := @curRowChild + 1
+    END AS sub_poin,
+
+    mir.id_master_standar,
+
+    /* =========================
+       NAMA STANDAR
+       ========================= */
+    (
+        SELECT msr.nama
+        FROM master_standar_renstra msr
+        WHERE msr.id = mir.id_master_standar
+    ) AS standar_renstra,
+
+    mir.indikator,
+    mir.parent,
+    mir.tahun,
+    mir.tipe_target,
+    mir.operator,
+
+    /* =========================
+       IS NESTED CHILD
+       ========================= */
+    (
+        SELECT x.id
+        FROM (
+            SELECT id, parent
+            FROM master_indikator_renstra
+            WHERE parent IS NOT NULL
+        ) x
+        WHERE x.id = mir.parent
+    ) > 0 AS isNestedChild,
+
+    /* =========================
+       VARIABLE TRACKING
+       ========================= */
+    @curType := CONCAT(mir.tahun, mir.id_master_standar, mir.id) AS parent_idx,
+    @curTypeChild := CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) AS child_idx,
+    @curYear := mir.tahun AS cur_year
+
+FROM master_indikator_renstra mir
+
+/* =========================
+   INIT USER VARIABLES
+   ========================= */
+CROSS JOIN (
+    SELECT
+        @curRow := 0,
+        @curRowChild := 0,
+        @curType := '',
+        @curTypeChild := '',
+        @curYear := ''
+) vars
+
+/* =========================
+   ORDERING (SANGAT PENTING)
+   ========================= */
+ORDER BY
+    mir.tahun,
+    mir.id_master_standar,
+    mir.parent;

@@ -21,6 +21,7 @@ func NewFakultasUnitRepository(db *gorm.DB) domainfakultasunit.IFakultasUnitRepo
 // ------------------------
 // GET BY UUID
 // ------------------------
+//[PR] ini bukan default
 func (r *FakultasUnitRepository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID) (*domainfakultasunit.FakultasUnit, error) {
 	var fakultasunit domainfakultasunit.FakultasUnit
 

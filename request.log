@@ -1,13 +1,12 @@
-================ 2025-12-09T16:08:51+07:00 ================
+================ 2025-12-18T17:49:47+07:00 ================
 IP: 127.0.0.1
-Took: 2.350542ms
+Took: 5.034917ms
 
-GET /renstra/57f66a0d-4099-45a7-9150-6835cfb3f05d HTTP/1.1
+GET /preview/audit/2024/36428f6e-778f-43ce-8b99-4a056ed3d384 HTTP/1.1
 Host: localhost:3000
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
 Connection: keep-alive
-Cache-Control: max-age=0
-Sec-Ch-Ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"
+Sec-Ch-Ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"
 Sec-Ch-Ua-Mobile: ?0
 Sec-Ch-Ua-Platform: "macOS"
 Dnt: 1
@@ -18,7 +17,7 @@ Sec-Fetch-Mode: navigate
 Sec-Fetch-User: ?1
 Sec-Fetch-Dest: document
 Accept-Encoding: gzip, deflate, br, zstd
-Accept-Language: id,en-US;q=0.9,en;q=0.8,ja;q=0.7,ms;q=0.6
+Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7
 
 
 =============================================

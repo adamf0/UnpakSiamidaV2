@@ -14,6 +14,8 @@ type ITemplateRenstraRepository interface {
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
     ) ([]TemplateRenstra, int64, error)
+	GetAllByTahunFakUnit(ctx context.Context, tahun string, fakultasUnit uint) ([]TemplateRenstra, error)
+	GetAllByTahunFakUnitDefault(ctx context.Context, tahun string, fakultasUnit uint) ([]TemplateRenstraDefault, error)
 	Create(ctx context.Context, templaterenstra *TemplateRenstra) error
 	Update(ctx context.Context, templaterenstra *TemplateRenstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
