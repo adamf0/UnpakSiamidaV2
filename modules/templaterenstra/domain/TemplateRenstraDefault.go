@@ -8,6 +8,9 @@ type TemplateRenstraDefault struct {
 	ID           	   		uint       
 	UUID         	   		uuid.UUID  
 	Tahun              		string	
+	StandarRenstraUuid    	uuid.UUID  
+	StandarRenstraID 		uint	
+	StandarRenstra          string
 	IndikatorRenstraUuid    uuid.UUID  
 	IndikatorRenstraID 		uint	
 	Indikator          		string	  

@@ -184,6 +184,7 @@ func (r *TemplateRenstraRepository) GetAll(
 		FROM template_renstra tr
 		INNER JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id
 		INNER JOIN master_indikator_renstra i ON tr.indikator = i.id
+		INNER JOIN master_standar_renstra s ON i.id_master_standar = s.id
 	`
 
 	// =====================================================
@@ -316,9 +317,15 @@ func (r *TemplateRenstraRepository) GetAll(
 			tr.id                     AS ID,
 			tr.uuid                   AS UUID,
 			tr.tahun                  AS Tahun,
+			
+			s.uuid                    AS StandarRenstraUuid,
+			s.id              		  AS StandarRenstraID,
+			s.nama               	  AS StandarRenstra,
+
 			i.uuid                    AS IndikatorRenstraUuid,
 			tr.indikator              AS IndikatorRenstraID,
 			i.indikator               AS Indikator,
+
 			tr.pertanyaan             AS IsPertanyaan,
 			tr.fakultas_unit          AS FakultasUnitID,
 			fu.nama_fak_prod_unit     AS FakultasUnit,
@@ -376,9 +383,15 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 			tr.id                     AS ID,
 			tr.uuid                   AS UUID,
 			tr.tahun                  AS Tahun,
-            i.uuid              	  AS IndikatorRenstraUuid,
+            
+			s.uuid                    AS StandarRenstraUuid,
+			s.id              		  AS StandarRenstraID,
+			s.nama               	  AS StandarRenstra,
+
+			i.uuid              	  AS IndikatorRenstraUuid,
 			tr.indikator              AS IndikatorRenstraID,
 			i.indikator               AS Indikator,
+
 			tr.pertanyaan          	  AS IsPertanyaan,
 			tr.fakultas_unit          AS FakultasUnitID,
 			fu.nama_fak_prod_unit     AS FakultasUnit,
@@ -392,6 +405,7 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 		FROM template_renstra tr
 		INNER JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id 
 		INNER JOIN master_indikator_renstra i ON tr.indikator = i.id 
+		INNER JOIN master_standar_renstra s ON i.id_master_standar = s.id
 		WHERE tr.tahun = ?
 		  AND tr.fakultas_unit = ?
 	`
@@ -411,9 +425,15 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 			&item.ID,
 			&item.UUID,
 			&item.Tahun,
+			
+			&item.StandarRenstraUuid,
+			&item.StandarRenstraID,
+			&item.StandarRenstra,
+
 			&item.IndikatorRenstraUuid,
 			&item.IndikatorRenstraID,
 			&item.Indikator,
+			
 			&item.IsPertanyaan,
 			&item.FakultasUnit,
 			&item.Kategori,

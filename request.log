@@ -1,16 +1,16 @@
-================ 2025-12-26T14:53:43+07:00 ================
+================ 2025-12-26T16:27:20+07:00 ================
 IP: 127.0.0.1
-Took: 1.352125ms
+Took: 109.793959ms
 
-GET /standarrenstras?mode=paging&page=1&limit=10&search= HTTP/1.1
+GET /templaterenstras?mode=sse&page=1&limit=10&search= HTTP/1.1
 Host: localhost:3000
 User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
 Connection: keep-alive
 Sec-Ch-Ua-Platform: "macOS"
+Accept: text/event-stream
 Sec-Ch-Ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"
 Dnt: 1
 Sec-Ch-Ua-Mobile: ?0
-Accept: */*
 Origin: http://localhost:5173
 Sec-Fetch-Site: same-site
 Sec-Fetch-Mode: cors
