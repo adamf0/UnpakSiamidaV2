@@ -225,3 +225,10 @@ func IsValidTypeGenerate(tipe string) bool {
     }
     return false
 }
+
+func StringValue(s *string) string {
+    if s == nil {
+        return ""
+    }
+    return *s
+}

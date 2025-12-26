@@ -21,6 +21,10 @@ func InvalidParent() domain.Error {
 	return domain.NotFoundError("IndikatorRenstra.InvalidParent", "parent is invalid")
 }
 
+func NotFoundParent(parent string) domain.Error {
+	return domain.NotFoundError("IndikatorRenstra.InvalidParent", fmt.Sprintf("Parent with identifier %s not found", parent))
+}
+
 func NotUniqueIndikator() domain.Error {
 	return domain.NotFoundError("IndikatorRenstra.NotUniqueIndikator", "indikator is not unique")
 }

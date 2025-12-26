@@ -2,13 +2,18 @@ package application
 
 import (
 	"context"
-	"strconv"
-	
+	// "strconv"
+	// "errors"
+    // "gorm.io/gorm"
+	"github.com/google/uuid"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+	// helper "UnpakSiamida/common/helper"
 )
 
 type CreateIndikatorRenstraCommandHandler struct{
 	Repo domainindikatorrenstra.IIndikatorRenstraRepository
+	RepoStandarRenstra domainstandarrenstra.IStandarRenstraRepository
 }
 
 func (h *CreateIndikatorRenstraCommandHandler) Handle(
@@ -16,24 +21,37 @@ func (h *CreateIndikatorRenstraCommandHandler) Handle(
 	cmd CreateIndikatorRenstraCommand,
 ) (string, error) {
 
-	var standar *uint
-	if cmd.StandarRenstra != "" {
-		val, err := strconv.ParseUint(cmd.StandarRenstra, 10, 64)
-		if err != nil {
-			return "", err
-		}
-		v := uint(val)
-		standar = &v
+	standarrenstraUUID, err := uuid.Parse(cmd.StandarRenstra)
+	if err != nil {
+		return "", domainindikatorrenstra.InvalidParent()
 	}
 
-	var parent *uint //[PR] untuk sekarang masih int seharusnya uuid yg diubaj jadi int. dimasukkan ke domain
+	var standar *uint
+	standarRenstra, err := h.RepoStandarRenstra.GetByUuid(ctx, standarrenstraUUID)
+	if err != nil {
+		standar = nil
+	} else {
+		standar = &standarRenstra.ID
+	}
+
+	var parentUUID uuid.UUID
 	if cmd.Parent != nil && *cmd.Parent != "" {
-		val, err := strconv.ParseUint(*cmd.Parent, 10, 64)
+		parsed, err := uuid.Parse(*cmd.Parent)
 		if err != nil {
-			return "", err
+			parentUUID = uuid.Nil
+		} else{
+			parentUUID = parsed
 		}
-		v := uint(val)
-		parent = &v
+	} else {
+		parentUUID = uuid.Nil
+	} 
+
+	var parent *uint
+	parentIndikator, err := h.Repo.GetDefaultByUuid(ctx, parentUUID)
+	if err != nil {
+		parent = nil
+	} else {
+		parent = &parentIndikator.Id
 	}
 
 	operator := cmd.Operator

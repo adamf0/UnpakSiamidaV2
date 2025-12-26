@@ -2,18 +2,18 @@ package domain
 
 import (
 	"github.com/google/uuid"
-	"database/sql"
 )
 
 type IndikatorRenstraDefault struct {
 		Id          uint
 		Uuid        uuid.UUID
 		Indikator   string
-		Standar     sql.NullInt64
-		UuidStandar sql.NullString
-		Parent      sql.NullInt64
-		UuidParent  sql.NullString
+		StandarID   *uint
+		Standar     *string
+		UuidStandar *string
+		Parent      *uint
+		UuidParent  *string
 		Tahun       string
 		TipeTarget  string
-		Operator    sql.NullString
+		Operator    *string
 }

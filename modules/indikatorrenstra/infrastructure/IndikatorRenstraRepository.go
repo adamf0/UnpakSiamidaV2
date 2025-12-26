@@ -71,16 +71,17 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
     query := `
         SELECT 
-            i.id,
-            i.uuid,
-            i.indikator,
-            i.id_master_standar AS standar,
-            ms.uuid AS uuid_standar,
-            i.parent,
-            p.uuid AS uuid_parent,
-            i.tahun,
-            i.tipe_target,
-            i.operator
+            i.id as Id,
+            i.uuid as Uuuid,
+            i.indikator as Indikator,
+            i.id_master_standar AS StandarID,
+            ms.uuid AS UuidStandar,
+			ms.nama AS Standar,
+            i.parent as Parent,
+            p.uuid AS UuidParent,
+            i.tahun as Tahun,
+            i.tipe_target as TipeTarget,
+            i.operator as Operator
         FROM master_indikator_renstra i
         LEFT JOIN master_standar_renstra ms ON i.id_master_standar = ms.id
         LEFT JOIN master_indikator_renstra p ON i.parent = p.id
@@ -107,121 +108,293 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
-    "indikator":        "indikator",
-	"tahun":           	"tahun",
+    "indikator":        "i.indikator",
+	"standar":   		"ms.nama ",
+	"tahun":           	"i.tahun",
 }
 
 // ------------------------
 // GET ALL
 // ------------------------
+// func (r *IndikatorRenstraRepository) GetAll(
+// 	ctx context.Context,
+// 	search string,
+// 	searchFilters []commondomainindikatorrenstra.SearchFilter,
+// 	page, limit *int,
+// ) ([]domainindikatorrenstra.IndikatorRenstra, int64, error) {
+
+// 	var indikatorrenstras []domainindikatorrenstra.IndikatorRenstra
+// 	var total int64
+
+// 	db := r.db.WithContext(ctx).Model(&domainindikatorrenstra.IndikatorRenstra{})
+
+// 	// -------------------------------
+// 	// SEARCH FILTERS (ADVANCED)
+// 	// -------------------------------
+// 	if len(searchFilters) > 0 {
+// 		for _, f := range searchFilters {
+// 			field := strings.TrimSpace(strings.ToLower(f.Field))
+// 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
+			
+// 			var value string
+// 			if f.Value != nil {
+// 				value = strings.TrimSpace(*f.Value)
+// 			} else {
+// 				value = "" // nil dianggap kosong
+// 			}
+
+// 			// if value == "" {
+// 			// 	continue
+// 			// }
+
+// 			// Validate allowed column
+// 			col, ok := allowedSearchColumns[field]
+// 			if !ok {
+// 				continue // skip unknown field
+// 			}
+
+// 			switch operator {
+// 			case "eq":
+// 				db = db.Where(fmt.Sprintf("%s = ?", col), value)
+// 			case "neq":
+// 				db = db.Where(fmt.Sprintf("%s <> ?", col), value)
+// 			case "like":
+// 				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
+// 			case "gt":
+// 				db = db.Where(fmt.Sprintf("%s > ?", col), value)
+// 			case "gte":
+// 				db = db.Where(fmt.Sprintf("%s >= ?", col), value)
+// 			case "lt":
+// 				db = db.Where(fmt.Sprintf("%s < ?", col), value)
+// 			case "lte":
+// 				db = db.Where(fmt.Sprintf("%s <= ?", col), value)
+// 			case "in":
+// 				db = db.Where(fmt.Sprintf("%s IN (?)", col), strings.Split(value, ","))
+// 			default:
+// 				// default fallback → LIKE
+// 				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
+// 			}
+// 		}
+
+// 	}
+// 	if strings.TrimSpace(search) != "" {
+
+// 		// -------------------------------
+// 		// GLOBAL SEARCH
+// 		// -------------------------------
+// 		like := "%" + search + "%"
+// 		var orParts []string
+// 		var params []interface{}
+
+// 		for _, col := range allowedSearchColumns {
+// 			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
+// 			params = append(params, like)
+// 		}
+
+// 		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+// 	}
+
+// 	// -------------------------------
+// 	// COUNT
+// 	// -------------------------------
+// 	if err := db.Count(&total).Error; err != nil {
+// 		return nil, 0, err
+// 	}
+
+// 	// -------------------------------
+// 	// PAGINATION
+// 	// -------------------------------
+// 	if page != nil && limit != nil && *limit > 0 {
+// 		p := *page
+// 		l := *limit
+
+// 		if p < 1 {
+// 			p = 1
+// 		}
+
+// 		offset := (p - 1) * l
+// 		db = db.Offset(offset).Limit(l)
+// 	}
+
+// 	// -------------------------------
+// 	// EXECUTE QUERY
+// 	// -------------------------------
+// 	if err := db.Order("created_at DESC").Find(&indikatorrenstras).Error; err != nil {
+// 		return nil, 0, err
+// 	}
+
+// 	return indikatorrenstras, total, nil
+// }
 func (r *IndikatorRenstraRepository) GetAll(
 	ctx context.Context,
 	search string,
 	searchFilters []commondomainindikatorrenstra.SearchFilter,
 	page, limit *int,
-) ([]domainindikatorrenstra.IndikatorRenstra, int64, error) {
+) ([]domainindikatorrenstra.IndikatorRenstraDefault, int64, error) {
 
-	var indikatorrenstras []domainindikatorrenstra.IndikatorRenstra
-	var total int64
+	var (
+		result     []domainindikatorrenstra.IndikatorRenstraDefault
+		total      int64
+		conditions []string
+		args       []interface{}
+	)
 
-	db := r.db.WithContext(ctx).Model(&domainindikatorrenstra.IndikatorRenstra{})
+	// =====================================================
+	// BASE FROM + JOIN (WAJIB PAKAI INI)
+	// =====================================================
+	baseFrom := `
+		FROM master_indikator_renstra i
+        LEFT JOIN master_standar_renstra ms ON i.id_master_standar = ms.id
+        LEFT JOIN master_indikator_renstra p ON i.parent = p.id
+	`
 
-	// -------------------------------
-	// SEARCH FILTERS (ADVANCED)
-	// -------------------------------
-	if len(searchFilters) > 0 {
-		for _, f := range searchFilters {
-			field := strings.TrimSpace(strings.ToLower(f.Field))
-			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
-			var value string
-			if f.Value != nil {
-				value = strings.TrimSpace(*f.Value)
-			} else {
-				value = "" // nil dianggap kosong
-			}
+	// =====================================================
+	// ADVANCED FILTERS
+	// =====================================================
+	for _, f := range searchFilters {
+		field := strings.TrimSpace(strings.ToLower(f.Field))
+		operator := strings.TrimSpace(strings.ToLower(f.Operator))
 
-			// if value == "" {
-			// 	continue
-			// }
-
-			// Validate allowed column
-			col, ok := allowedSearchColumns[field]
-			if !ok {
-				continue // skip unknown field
-			}
-
-			switch operator {
-			case "eq":
-				db = db.Where(fmt.Sprintf("%s = ?", col), value)
-			case "neq":
-				db = db.Where(fmt.Sprintf("%s <> ?", col), value)
-			case "like":
-				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-			case "gt":
-				db = db.Where(fmt.Sprintf("%s > ?", col), value)
-			case "gte":
-				db = db.Where(fmt.Sprintf("%s >= ?", col), value)
-			case "lt":
-				db = db.Where(fmt.Sprintf("%s < ?", col), value)
-			case "lte":
-				db = db.Where(fmt.Sprintf("%s <= ?", col), value)
-			case "in":
-				db = db.Where(fmt.Sprintf("%s IN (?)", col), strings.Split(value, ","))
-			default:
-				// default fallback → LIKE
-				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-			}
+		col, ok := allowedSearchColumns[field] // harus sudah pakai alias tr./i./fu.
+		if !ok {
+			continue
 		}
 
-	}
-	if strings.TrimSpace(search) != "" {
+		value := ""
+		if f.Value != nil {
+			value = strings.TrimSpace(*f.Value)
+		}
 
-		// -------------------------------
-		// GLOBAL SEARCH
-		// -------------------------------
-		like := "%" + search + "%"
+		switch operator {
+		case "eq":
+			conditions = append(conditions, fmt.Sprintf("%s = ?", col))
+			args = append(args, value)
+
+		case "neq":
+			conditions = append(conditions, fmt.Sprintf("%s <> ?", col))
+			args = append(args, value)
+
+		case "like":
+			conditions = append(conditions, fmt.Sprintf("%s LIKE ?", col))
+			args = append(args, "%"+value+"%")
+
+		case "gt":
+			conditions = append(conditions, fmt.Sprintf("%s > ?", col))
+			args = append(args, value)
+
+		case "gte":
+			conditions = append(conditions, fmt.Sprintf("%s >= ?", col))
+			args = append(args, value)
+
+		case "lt":
+			conditions = append(conditions, fmt.Sprintf("%s < ?", col))
+			args = append(args, value)
+
+		case "lte":
+			conditions = append(conditions, fmt.Sprintf("%s <= ?", col))
+			args = append(args, value)
+
+		case "in":
+			values := strings.Split(value, ",")
+			if len(values) > 0 {
+				placeholders := strings.TrimRight(strings.Repeat("?,", len(values)), ",")
+				conditions = append(
+					conditions,
+					fmt.Sprintf("%s IN (%s)", col, placeholders),
+				)
+				for _, v := range values {
+					args = append(args, strings.TrimSpace(v))
+				}
+			}
+
+		default:
+			conditions = append(conditions, fmt.Sprintf("%s LIKE ?", col))
+			args = append(args, "%"+value+"%")
+		}
+	}
+
+	// =====================================================
+	// GLOBAL SEARCH
+	// =====================================================
+	if strings.TrimSpace(search) != "" {
 		var orParts []string
-		var params []interface{}
+		like := "%" + search + "%"
 
 		for _, col := range allowedSearchColumns {
 			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
-			params = append(params, like)
+			args = append(args, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		conditions = append(
+			conditions,
+			"("+strings.Join(orParts, " OR ")+")",
+		)
 	}
 
-	// -------------------------------
-	// COUNT
-	// -------------------------------
-	if err := db.Count(&total).Error; err != nil {
+	// =====================================================
+	// WHERE CLAUSE
+	// =====================================================
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	// =====================================================
+	// COUNT QUERY (HARUS PAKAI JOIN JUGA)
+	// =====================================================
+	countQuery := `
+		SELECT COUNT(DISTINCT i.id)
+	` + baseFrom + whereClause
+
+	if err := r.db.WithContext(ctx).
+		Raw(countQuery, args...).
+		Scan(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// -------------------------------
+	// =====================================================
 	// PAGINATION
-	// -------------------------------
+	// =====================================================
+	pagination := ""
 	if page != nil && limit != nil && *limit > 0 {
 		p := *page
 		l := *limit
-
 		if p < 1 {
 			p = 1
 		}
 
 		offset := (p - 1) * l
-		db = db.Offset(offset).Limit(l)
+		pagination = " LIMIT ? OFFSET ?"
+		args = append(args, l, offset)
 	}
 
-	// -------------------------------
-	// EXECUTE QUERY
-	// -------------------------------
-	if err := db.Order("created_at DESC").Find(&indikatorrenstras).Error; err != nil {
+	orderBy := " ORDER BY i.tahun DESC, i.id DESC"
+
+	// =====================================================
+	// SELECT QUERY (INI YANG KAMU MINTA)
+	// =====================================================
+	selectQuery := `
+		SELECT
+			i.id as Id,
+            i.uuid as Uuid,
+            i.indikator as Indikator,
+            i.id_master_standar AS StandarID,
+            ms.uuid AS UuidStandar,
+			ms.nama AS Standar,
+            i.parent as Parent,
+            p.uuid AS UuidParent,
+            i.tahun as Tahun,
+            i.tipe_target as TipeTarget,
+            i.operator as Operator
+	` + baseFrom + whereClause + orderBy + pagination
+
+	if err := r.db.WithContext(ctx).
+		Raw(selectQuery, args...).
+		Scan(&result).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return indikatorrenstras, total, nil
+	return result, total, nil
 }
 
 
@@ -246,4 +419,189 @@ func (r *IndikatorRenstraRepository) Delete(ctx context.Context, uid uuid.UUID) 
 	return r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
 		Delete(&domainindikatorrenstra.IndikatorRenstra{}).Error
+}
+
+//[note] baca case nomor A001
+func (r *IndikatorRenstraRepository) GetIndikatorTree(
+	ctx context.Context,
+	tahun string,
+) ([]domainindikatorrenstra.IndikatorTree, error) {
+
+	var items []domainindikatorrenstra.IndikatorTree
+
+	sql := `
+		SELECT
+			q.id AS IndikatorId,
+			q.indikator AS Indikator,
+			q.parent AS ParentIndikatorId
+		FROM (
+			SELECT
+				mir.id,
+				mir.indikator,
+				mir.parent,
+				mir.tahun,
+				CASE
+					WHEN mir.tahun <> @curYear THEN @curRow := 1
+					WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id) = @curType THEN @curRow
+					WHEN mir.parent IS NULL THEN @curRow := @curRow + 1
+				END AS poin,
+				CASE
+					WHEN CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) = @curTypeChild
+						THEN @curRowChild
+					WHEN mir.parent IS NOT NULL
+						AND (
+							SELECT x.id
+							FROM (
+								SELECT id, parent
+								FROM master_indikator_renstra
+								WHERE parent IS NOT NULL
+							) x
+							WHERE x.id = mir.parent
+						) IS NULL
+						THEN @curRowChild := @curRowChild + 1
+				END AS sub_poin,
+				@curType := CONCAT(mir.tahun, mir.id_master_standar, mir.id) AS parent_idx,
+				@curTypeChild := CONCAT(mir.tahun, mir.id_master_standar, mir.id, mir.parent) AS child_idx,
+				@curYear := mir.tahun AS cur_year
+			FROM master_indikator_renstra mir
+			CROSS JOIN (
+				SELECT
+					@curRow := 0,
+					@curRowChild := 0,
+					@curType := '',
+					@curTypeChild := '',
+					@curYear := ''
+			) vars
+			ORDER BY
+				mir.tahun,
+				mir.id_master_standar,
+				mir.parent
+		) q
+		WHERE q.tahun = ?;
+	`
+
+	err := r.db.WithContext(ctx).
+		Raw(sql, tahun).
+		Scan(&items).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	applyIndikatorNumbering(items)
+
+	return items, nil
+}
+
+func applyIndikatorNumbering(items []domainindikatorrenstra.IndikatorTree) {
+
+	// index node
+	children := map[int][]*domainindikatorrenstra.IndikatorTree{}
+
+	for i := range items {
+		item := &items[i]
+
+		if item.ParentIndikatorId != nil {
+			children[*item.ParentIndikatorId] = append(
+				children[*item.ParentIndikatorId],
+				item,
+			)
+		}
+	}
+
+	// ambil root
+	var roots []*domainindikatorrenstra.IndikatorTree
+	for i := range items {
+		if items[i].ParentIndikatorId == nil {
+			roots = append(roots, &items[i])
+		}
+	}
+
+	// numbering root
+	counter := 0
+	for _, root := range roots {
+		counter++
+		root.Pointing = fmt.Sprintf("%d", counter)
+		numberDFS(root, children, []int{counter})
+	}
+}
+
+func numberDFS(
+	node *domainindikatorrenstra.IndikatorTree,
+	children map[int][]*domainindikatorrenstra.IndikatorTree,
+	path []int,
+) {
+
+	kids, ok := children[node.IndikatorId]
+	if !ok {
+		return
+	}
+
+	for i, child := range kids {
+		newPath := append(path, i+1)
+		child.Pointing = joinPath(newPath)
+		numberDFS(child, children, newPath)
+	}
+}
+
+func joinPath(path []int) string {
+	out := ""
+	for i, p := range path {
+		if i == 0 {
+			out = fmt.Sprintf("%d", p)
+		} else {
+			out = fmt.Sprintf("%s.%d", out, p)
+		}
+	}
+	return out
+}
+
+
+func (r *IndikatorRenstraRepository) SetupUuid(ctx context.Context) error {
+	const chunkSize = 500
+
+	var ids []uint
+	if err := r.db.WithContext(ctx).
+		Model(&domainindikatorrenstra.IndikatorRenstra{}).
+		Where("uuid IS NULL OR uuid = ''").
+		Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(ids); i += chunkSize {
+		end := i + chunkSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+
+		chunk := ids[i:end]
+
+		caseSQL := "CASE id "
+		args := make([]any, 0, len(chunk)*2+1)
+
+		for _, id := range chunk {
+			u := uuid.NewString()
+			caseSQL += "WHEN ? THEN ? "
+			args = append(args, id, u)
+		}
+
+		caseSQL += "END"
+		args = append(args, chunk)
+
+		query := fmt.Sprintf(
+			"UPDATE master_indikator_renstra SET uuid = %s WHERE id IN (?)",
+			caseSQL,
+		)
+
+		if err := r.db.WithContext(ctx).
+			Exec(query, args...).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

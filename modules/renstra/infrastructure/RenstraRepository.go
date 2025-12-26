@@ -292,7 +292,7 @@ func (r *RenstraRepository) GetAll(
 	// -------------------------------
 	// EXECUTE QUERY
 	// -------------------------------
-	if err := db.Order("r.tahun DESC").Find(&renstras).Error; err != nil {
+	if err := db.Order("r.tahun DESC").Order("r.id DESC").Find(&renstras).Error; err != nil {
 		return nil, 0, err
 	}
 

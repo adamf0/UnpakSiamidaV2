@@ -10,10 +10,12 @@ func GiveCodeAccessRenstraCommandValidation(cmd GiveCodeAccessRenstraCommand) er
 		validation.Field(&cmd.Uuid,
 			validation.Required.Error("UUID cannot be blank"),
 			validation.By(helper.ValidateUUIDv4),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
 		validation.Field(&cmd.KodeAkses,
 			validation.Required.Error("Kode Akses cannot be blank"),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)
 }

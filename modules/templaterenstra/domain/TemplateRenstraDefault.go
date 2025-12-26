@@ -12,7 +12,8 @@ type TemplateRenstraDefault struct {
 	IndikatorRenstraID 		uint	
 	Indikator          		string	  
 	IsPertanyaan       		bool 	  
-	FakultasUnit       		uint 	  
+	FakultasUnitID       	uint
+	FakultasUnit       		string 	  
 	Kategori           		string 	  
 	Klasifikasi        		string	  
 	Satuan             		*string	  

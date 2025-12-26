@@ -13,7 +13,7 @@ type ITemplateDokumenTambahanRepository interface {
         search string,
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
-    ) ([]TemplateDokumenTambahan, int64, error)
+    ) ([]TemplateDokumenTambahanDefault, int64, error)
 	GetAllByTahunFakUnitDefault(ctx context.Context, tahun string, fakultasProdiUnit string) ([]TemplateDokumenTambahanDefault, error)
 	Create(ctx context.Context, templatedokumentambahan *TemplateDokumenTambahan) error
 	Update(ctx context.Context, templatedokumentambahan *TemplateDokumenTambahan) error

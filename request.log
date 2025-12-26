@@ -1,21 +1,21 @@
-================ 2025-12-18T17:49:47+07:00 ================
+================ 2025-12-26T14:53:43+07:00 ================
 IP: 127.0.0.1
-Took: 5.034917ms
+Took: 1.352125ms
 
-GET /preview/audit/2024/36428f6e-778f-43ce-8b99-4a056ed3d384 HTTP/1.1
+GET /standarrenstras?mode=paging&page=1&limit=10&search= HTTP/1.1
 Host: localhost:3000
 User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
 Connection: keep-alive
-Sec-Ch-Ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"
-Sec-Ch-Ua-Mobile: ?0
 Sec-Ch-Ua-Platform: "macOS"
+Sec-Ch-Ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"
 Dnt: 1
-Upgrade-Insecure-Requests: 1
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
-Sec-Fetch-Site: none
-Sec-Fetch-Mode: navigate
-Sec-Fetch-User: ?1
-Sec-Fetch-Dest: document
+Sec-Ch-Ua-Mobile: ?0
+Accept: */*
+Origin: http://localhost:5173
+Sec-Fetch-Site: same-site
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://localhost:5173/
 Accept-Encoding: gzip, deflate, br, zstd
 Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7
 

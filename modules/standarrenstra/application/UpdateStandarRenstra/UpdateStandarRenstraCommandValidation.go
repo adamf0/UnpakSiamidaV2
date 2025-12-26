@@ -10,10 +10,12 @@ func UpdateStandarRenstraCommandValidation(cmd UpdateStandarRenstraCommand) erro
 		validation.Field(&cmd.Uuid,
 			validation.Required.Error("UUID cannot be blank"),
 			validation.By(helper.ValidateUUIDv4),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
 		validation.Field(&cmd.Nama,
 			validation.Required.Error("Nama cannot be blank"),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)
 }

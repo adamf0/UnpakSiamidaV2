@@ -17,4 +17,5 @@ type IStandarRenstraRepository interface {
 	Create(ctx context.Context, standarrenstra *StandarRenstra) error
 	Update(ctx context.Context, standarrenstra *StandarRenstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

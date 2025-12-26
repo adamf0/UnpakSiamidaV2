@@ -10,9 +10,101 @@ import (
     commondomain "UnpakSiamida/common/domain"
     JenisFiledomain "UnpakSiamida/modules/jenisfile/domain"
 
+    CreateJenisFile "UnpakSiamida/modules/jenisfile/application/CreateJenisFile"
+    UpdateJenisFile "UnpakSiamida/modules/jenisfile/application/UpdateJenisFile"
+    DeleteJenisFile "UnpakSiamida/modules/jenisfile/application/DeleteJenisFile"
     GetJenisFile "UnpakSiamida/modules/jenisfile/application/GetJenisFile"
     GetAllJenisFiles "UnpakSiamida/modules/jenisfile/application/GetAllJenisFiles"
+    SetupUuidJenisFile "UnpakSiamida/modules/jenisfile/application/SetupUuidJenisFile"
 )
+
+// =======================================================
+// POST /jenisfile
+// =======================================================
+
+// CreateJenisFileHandler godoc
+// @Summary Create new JenisFile
+// @Tags JenisFile
+// @Param nama formData string true "Nama JenisFile"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of created JenisFile"
+// @Failure 400 {object} commondomain.Error
+// @Router /jenisfile [post]
+func CreateJenisFileHandlerfunc(c *fiber.Ctx) error {
+
+    nama := c.FormValue("nama")
+
+    cmd := CreateJenisFile.CreateJenisFileCommand{
+        Nama:         nama,
+    }
+
+    uuid, err := mediatr.Send[CreateJenisFile.CreateJenisFileCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"uuid": uuid})
+}
+
+// =======================================================
+// PUT /jenisfile/{uuid}
+// =======================================================
+
+// UpdateJenisFileHandler godoc
+// @Summary Update existing JenisFile
+// @Tags JenisFile
+// @Param uuid path string true "JenisFile UUID" format(uuid)
+// @Param nama formData string true "Nama JenisFile"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of updated JenisFile"
+// @Failure 400 {object} commondomain.Error
+// @Router /jenisfile/{uuid} [put]
+func UpdateJenisFileHandlerfunc(c *fiber.Ctx) error {
+
+    uuid := c.Params("uuid")
+
+    nama := c.FormValue("nama")
+
+    cmd := UpdateJenisFile.UpdateJenisFileCommand{
+        Uuid:         uuid,
+        Nama:         nama,
+    }
+
+    updatedID, err := mediatr.Send[UpdateJenisFile.UpdateJenisFileCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"uuid": updatedID})
+}
+
+// =======================================================
+// DELETE /jenisfile/{uuid}
+// =======================================================
+
+// DeleteJenisFileHandler godoc
+// @Summary Delete a JenisFile
+// @Tags JenisFile
+// @Param uuid path string true "JenisFile UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of deleted JenisFile"
+// @Failure 404 {object} commondomain.Error
+// @Router /jenisfile/{uuid} [delete]
+func DeleteJenisFileHandlerfunc(c *fiber.Ctx) error {
+
+    uuid := c.Params("uuid")
+
+    cmd := DeleteJenisFile.DeleteJenisFileCommand{
+        Uuid: uuid,
+    }
+
+    deletedID, err := mediatr.Send[DeleteJenisFile.DeleteJenisFileCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"uuid": deletedID})
+}
 
 // =======================================================
 // GET /JenisFile/{uuid}
@@ -126,7 +218,23 @@ func GetAllJenisFilesHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, result)
 }
 
+func SetupUuidJenisFilesHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidJenisFile.SetupUuidJenisFileCommand{}
+
+    message, err := mediatr.Send[SetupUuidJenisFile.SetupUuidJenisFileCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleJenisFile(app *fiber.App) {
+    app.Get("/jenisfile/setupuuid", SetupUuidJenisFilesHandlerfunc)
+
+    app.Post("/jenisfile", CreateJenisFileHandlerfunc)
+    app.Put("/jenisfile/:uuid", UpdateJenisFileHandlerfunc)
+    app.Delete("/jenisfile/:uuid", DeleteJenisFileHandlerfunc)
     app.Get("/JenisFile/:uuid", GetJenisFileHandlerfunc)
     app.Get("/JenisFiles", GetAllJenisFilesHandlerfunc)
 }

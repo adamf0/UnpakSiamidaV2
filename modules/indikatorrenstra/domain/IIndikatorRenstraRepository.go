@@ -15,8 +15,10 @@ type IIndikatorRenstraRepository interface {
         search string,
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
-    ) ([]IndikatorRenstra, int64, error)
+    ) ([]IndikatorRenstraDefault, int64, error)
 	Create(ctx context.Context, indikatorrenstra *IndikatorRenstra) error
 	Update(ctx context.Context, indikatorrenstra *IndikatorRenstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	GetIndikatorTree(ctx context.Context, tahun string) ([]IndikatorTree, error)
+	SetupUuid(ctx context.Context) error
 }

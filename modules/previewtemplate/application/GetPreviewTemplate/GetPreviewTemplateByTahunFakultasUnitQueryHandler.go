@@ -4,6 +4,7 @@ import (
     "context"
 	"golang.org/x/sync/errgroup"
     domainpreviewtemplate "UnpakSiamida/modules/previewtemplate/domain"
+	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
     "errors"
     "gorm.io/gorm"
@@ -13,6 +14,7 @@ import (
 
 type GetPreviewTemplateByTahunFakultasUnitQueryHandler struct {
     Repo domainpreviewtemplate.IPreviewTemplateRepository
+	RepoIndikator domainindikatorrenstra.IIndikatorRenstraRepository
 	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository
 }
 
@@ -22,19 +24,19 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 ) ([]domainpreviewtemplate.PreviewTemplate, error) {
 	UuidFakultasUnit, err := uuid.Parse(q.FakultasUnit)
 	if err != nil {
-		return nil, domainfakultasunit.NotFound(q.FakultasUnit) //[PR] harus pindah ke preview error
+		return nil, domainpreviewtemplate.NotFoundFakultasUnit(q.FakultasUnit)
 	}
 
 	fakultasunit, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, UuidFakultasUnit)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, domainfakultasunit.NotFound(q.FakultasUnit)
+			return nil, domainpreviewtemplate.NotFoundFakultasUnit(q.FakultasUnit)
 		}
 		return nil, err
 	}
 
 	var (
-		tree    []domainpreviewtemplate.IndikatorTree
+		tree    []domainindikatorrenstra.IndikatorTree
 		preview []domainpreviewtemplate.PreviewTemplate
 	)
 
@@ -42,7 +44,7 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 
 	g.Go(func() error {
 		var err error
-		tree, err = h.Repo.GetIndikatorTree(ctx, q.Tahun)
+		tree, err = h.RepoIndikator.GetIndikatorTree(ctx, q.Tahun)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domainpreviewtemplate.NotFoundTreeIndikator()
@@ -73,7 +75,7 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 
 func mapPointing(
 	preview []domainpreviewtemplate.PreviewTemplate,
-	tree []domainpreviewtemplate.IndikatorTree,
+	tree []domainindikatorrenstra.IndikatorTree,
 ) []domainpreviewtemplate.PreviewTemplate {
 
 	pointMap := make(map[int]string)

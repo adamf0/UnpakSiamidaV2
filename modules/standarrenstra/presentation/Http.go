@@ -15,6 +15,7 @@ import (
     DeleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
     GetStandarRenstra "UnpakSiamida/modules/standarrenstra/application/GetStandarRenstra"
     GetAllStandarRenstras "UnpakSiamida/modules/standarrenstra/application/GetAllStandarRenstras"
+    SetupUuidStandarRenstra "UnpakSiamida/modules/standarrenstra/application/SetupUuidStandarRenstra"
 )
 
 // =======================================================
@@ -211,7 +212,20 @@ func GetAllStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, standarrenstras)
 }
 
+func SetupUuidStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand{}
+
+    message, err := mediatr.Send[SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleStandarRenstra(app *fiber.App) {
+    app.Get("/standarrenstra/setupuuid", SetupUuidStandarRenstrasHandlerfunc)
+
     app.Post("/standarrenstra", CreateStandarRenstraHandlerfunc)
     app.Put("/standarrenstra/:uuid", UpdateStandarRenstraHandlerfunc)
     app.Delete("/standarrenstra/:uuid", DeleteStandarRenstraHandlerfunc)

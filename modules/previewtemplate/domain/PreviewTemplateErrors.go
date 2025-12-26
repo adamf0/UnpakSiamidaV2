@@ -2,6 +2,7 @@ package domain
 
 import (
 	"UnpakSiamida/common/domain"
+	"fmt"
 )
 
 func EmptyData() domain.Error {
@@ -14,4 +15,8 @@ func NotFoundTreeIndikator() domain.Error {
 
 func NotFound() domain.Error {
 	return domain.NotFoundError("PreviewTemplate.NotFound", "Preview Template not found")
+}
+
+func NotFoundFakultasUnit(id string) domain.Error {
+	return domain.NotFoundError("PreviewTemplate.NotFoundFakultasUnit", fmt.Sprintf("FakultasUnit with identifier %s not found", id) )
 }

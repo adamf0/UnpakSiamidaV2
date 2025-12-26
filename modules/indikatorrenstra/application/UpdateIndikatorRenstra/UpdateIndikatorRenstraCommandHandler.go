@@ -2,14 +2,18 @@ package application
 
 import (
 	"context"
-	"strconv"
-
+	// "strconv"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+	// helper "UnpakSiamida/common/helper"
 	"github.com/google/uuid"
+	// "errors"
+    // "gorm.io/gorm"
 )
 
 type UpdateIndikatorRenstraCommandHandler struct {
 	Repo domainindikatorrenstra.IIndikatorRenstraRepository
+	RepoStandarRenstra domainstandarrenstra.IStandarRenstraRepository
 }
 
 func (h *UpdateIndikatorRenstraCommandHandler) Handle(
@@ -17,17 +21,11 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 	cmd UpdateIndikatorRenstraCommand,
 ) (string, error) {
 
-	// -------------------------
-	// VALIDATE UUID
-	// -------------------------
 	indikatorrenstraUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {
 		return "", domainindikatorrenstra.InvalidUuid()
 	}
 
-	// -------------------------
-	// GET EXISTING indikatorrenstra
-	// -------------------------
 	existingIndikatorRenstra, err := h.Repo.GetByUuid(ctx, indikatorrenstraUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
 		return "", err
@@ -36,32 +34,37 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 		return "", domainindikatorrenstra.NotFound(cmd.Uuid)
 	}
 
-	// -------------------------
-	// CHECK UNIQUE (jika indikator berubah)
-	// -------------------------
-	// isUnique, err := h.Repo.IsUniqueIndikator(ctx, cmd.Indikator, cmd.Tahun)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	var standarPtr *uint
-	if cmd.StandarRenstra != "" {
-		v, err := strconv.ParseUint(cmd.StandarRenstra, 10, 64)
-		if err != nil {
-			return "", domainindikatorrenstra.InvalidStandar()
-		}
-		tmp := uint(v)
-		standarPtr = &tmp
+	standarrenstraUUID, err := uuid.Parse(cmd.StandarRenstra)
+	if err != nil {
+		return "", domainindikatorrenstra.InvalidParent()
 	}
 
-	var parentPtr *uint //[PR] untuk sekarang masih int seharusnya uuid yg diubaj jadi int. dimasukkan ke domain
+	var standar *uint
+	standarRenstra, err := h.RepoStandarRenstra.GetByUuid(ctx, standarrenstraUUID)
+	if err != nil {
+		standar = nil
+	} else {
+		standar = &standarRenstra.ID
+	}
+
+	var parentUUID uuid.UUID
 	if cmd.Parent != nil && *cmd.Parent != "" {
-		v, err := strconv.ParseUint(*cmd.Parent, 10, 64)
+		parsed, err := uuid.Parse(*cmd.Parent)
 		if err != nil {
-			return "", domainindikatorrenstra.InvalidParent()
+			parentUUID = uuid.Nil
+		} else{
+			parentUUID = parsed
 		}
-		tmp := uint(v)
-		parentPtr = &tmp
+	} else {
+		parentUUID = uuid.Nil
+	} 
+
+	var parent *uint
+	parentIndikator, err := h.Repo.GetDefaultByUuid(ctx, parentUUID)
+	if err != nil {
+		parent = nil
+	} else {
+		parent = &parentIndikator.Id
 	}
 
 	// -------------------------
@@ -71,8 +74,8 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 		existingIndikatorRenstra,
 		indikatorrenstraUUID,
 		cmd.Indikator,
-		standarPtr,
-		parentPtr,
+		standar,
+		parent,
 		cmd.Tahun,
 		cmd.TipeTarget,
 		cmd.Operator,

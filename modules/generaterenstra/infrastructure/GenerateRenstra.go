@@ -10,19 +10,19 @@ import (
     infraTemplateRenstra "UnpakSiamida/modules/templaterenstra/infrastructure"
     infraTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/infrastructure"
     "github.com/mehdihadeli/go-mediatr"
-    "gorm.io/driver/mysql"
+    // "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-    "fmt"
+    // "fmt"
 )
 
-func RegisterModuleGenerateRenstra() error{
-    dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+func RegisterModuleGenerateRenstra(db *gorm.DB) error{
+    // dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
-		// panic(err)
-	}
+	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	// if err != nil {
+	// 	return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
+	// 	// panic(err)
+	// }
 
     repoGenerate := NewGenerateRenstraRepository(db)
     repoRenstra := infraRenstra.NewRenstraRepository(db)

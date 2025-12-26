@@ -14,7 +14,9 @@ import (
     UpdateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
     DeleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
     GetIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstra"
+    // GetTreeIndikatorRenstraByTahun "UnpakSiamida/modules/indikatorrenstra/application/GetTreeIndikatorRenstraByTahun"
     GetAllIndikatorRenstras "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
+    SetupUuidIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/SetupUuidIndikatorRenstra"
 )
 
 // CreateIndikatorRenstraHandler godoc
@@ -171,6 +173,39 @@ func GetIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
     return c.JSON(indikatorrenstra)
 }
 
+// =======================================================
+// GET /indikatorrenstra/tree/{tahun}
+// =======================================================
+
+// GetTreeIndikatorRenstraByTahunHandler godoc
+// @Summary Get IndikatorRenstra by UUID
+// @Tags IndikatorRenstra
+// @Param uuidTahun path string true "tahun UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} indikatorrenstradomain.IndikatorRenstra
+// @Failure 404 {object} commondomain.Error
+// @Router /indikatorrenstra/{uuid} [get]
+// func GetTreeIndikatorRenstraByTahunHandler(c *fiber.Ctx) error {
+//     uuidTahun := c.Params("uuidTahun")
+
+//     query := GetTreeIndikatorRenstraByTahun.GetTreeIndikatorRenstraByTahunByUuidQuery{UuidTahun: uuidTahun}
+
+//     indikatorrenstra, err := mediatr.Send[
+//         GetTreeIndikatorRenstraByTahun.GetTreeIndikatorRenstraByTahunByUuidQuery,
+//         *indikatorrenstradomain.IndikatorRenstra,
+//     ](context.Background(), query)
+
+//     if err != nil {
+//         return commoninfra.HandleError(c, err)
+//     }
+
+//     if indikatorrenstra == nil {
+//         return c.Status(404).JSON(fiber.Map{"error": "IndikatorRenstra not found"})
+//     }
+
+//     return c.JSON(indikatorrenstra)
+// }
+
 // GetAllIndikatorRenstrasHandler godoc
 // @Summary Get All IndikatorRenstras
 // @Tags IndikatorRenstra
@@ -246,12 +281,27 @@ func GetAllIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, result)
 }
 
+func SetupUuidIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidIndikatorRenstra.SetupUuidIndikatorRenstraCommand{}
+
+    message, err := mediatr.Send[SetupUuidIndikatorRenstra.SetupUuidIndikatorRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleIndikatorRenstra(app *fiber.App) {
+    app.Get("/indikatorrenstra/setupuuid", SetupUuidIndikatorRenstrasHandlerfunc)
+
     app.Post("/indikatorrenstra", CreateIndikatorRenstraHandlerfunc)
     app.Put("/indikatorrenstra/:uuid", UpdateIndikatorRenstraHandlerfunc)
     app.Delete("/indikatorrenstra/:uuid", DeleteIndikatorRenstraHandlerfunc)
     app.Get("/indikatorrenstra/:uuid", GetIndikatorRenstraHandlerfunc)
     app.Get("/indikatorrenstras", GetAllIndikatorRenstrasHandlerfunc)
+
+    // app.Get("/indikatorrenstra/tree/:uuidTahun", GetTreeIndikatorRenstraByTahunHandlerfunc)
 }
 
 // ====================================================================

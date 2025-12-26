@@ -11,7 +11,7 @@ import (
     commondomain "UnpakSiamida/common/domain"
     templatedokumentambahandomain "UnpakSiamida/modules/templatedokumentambahan/domain"
     CreateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
-    UpdateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
+    // UpdateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
     DeleteTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
     GetTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/GetTemplateDokumenTambahan"
     GetAllTemplateDokumenTambahans "UnpakSiamida/modules/templatedokumentambahan/application/GetAllTemplateDokumenTambahans"
@@ -85,33 +85,33 @@ func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]string "uuid of updated TemplateDokumenTambahan"
 // @Failure 400 {object} commondomain.Error
 // @Router /templatedokumentambahan/{uuid} [put]
-func UpdateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
+// func UpdateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 
-    uuid := c.Params("uuid")
-    tahun := c.FormValue("tahun")
-    jenisFile := c.FormValue("jenisFile")
-    pertanyaan := c.FormValue("pertanyaan")
-    klasifikasi := c.FormValue("klasifikasi")
-    kategori := c.FormValue("kategori")
-    tugas := c.FormValue("tugas")
+//     uuid := c.Params("uuid")
+//     tahun := c.FormValue("tahun")
+//     jenisFile := c.FormValue("jenisFile")
+//     pertanyaan := c.FormValue("pertanyaan")
+//     klasifikasi := c.FormValue("klasifikasi")
+//     kategori := c.FormValue("kategori")
+//     tugas := c.FormValue("tugas")
 
-    cmd := UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand{
-        Uuid:         uuid,
-        Tahun : tahun,
-        Pertanyaan : pertanyaan,
-        JenisFile : jenisFile,
-        Klasifikasi : klasifikasi,
-        Kategori : kategori,
-        Tugas : tugas,
-    }
+//     cmd := UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand{
+//         Uuid:         uuid,
+//         Tahun : tahun,
+//         Pertanyaan : pertanyaan,
+//         JenisFile : jenisFile,
+//         Klasifikasi : klasifikasi,
+//         Kategori : kategori,
+//         Tugas : tugas,
+//     }
 
-    updatedID, err := mediatr.Send[UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+//     updatedID, err := mediatr.Send[UpdateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand, string](context.Background(), cmd)
+//     if err != nil {
+//         return commoninfra.HandleError(c, err)
+//     }
 
-    return c.JSON(fiber.Map{"uuid": updatedID})
-}
+//     return c.JSON(fiber.Map{"uuid": updatedID})
+// }
 
 // =======================================================
 // DELETE /templatedokumentambahan/{uuid}
@@ -249,7 +249,7 @@ func GetAllTemplateDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleTemplateDokumenTambahan(app *fiber.App) {
     app.Post("/templatedokumentambahan", CreateTemplateDokumenTambahanHandlerfunc)
-    app.Put("/templatedokumentambahan/:uuid", UpdateTemplateDokumenTambahanHandlerfunc)
+    // app.Put("/templatedokumentambahan/:uuid", UpdateTemplateDokumenTambahanHandlerfunc)
     app.Delete("/templatedokumentambahan/:uuid", DeleteTemplateDokumenTambahanHandlerfunc)
     app.Get("/templatedokumentambahan/:uuid", GetTemplateDokumenTambahanHandlerfunc)
     app.Get("/templatedokumentambahans", GetAllTemplateDokumenTambahansHandlerfunc)

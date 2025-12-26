@@ -71,7 +71,6 @@ func (r *GenerateRenstraRepository) Rollback() {
 // 	return generaterenstras, nil
 // }
 
-//[PR] cek kembali siapa saja yg pakai
 // ------------------------
 // GET ALL Renstra Nilai BY Tahun & FakultasUnit (default)
 // ------------------------

@@ -7,28 +7,29 @@ import (
     delete "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
     get "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstra"
     getAll "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
+    setupUuid "UnpakSiamida/modules/indikatorrenstra/application/SetupUuidIndikatorRenstra"
+
+    infraStandarRenstra "UnpakSiamida/modules/standarrenstra/infrastructure"
     "github.com/mehdihadeli/go-mediatr"
-    "gorm.io/driver/mysql"
+    // "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-    "fmt"
+    // "fmt"
 )
 
-func RegisterModuleIndikatorRenstra() error{
-    dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+func RegisterModuleIndikatorRenstra(db *gorm.DB) error{
+    // dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
-		// panic(err)
-	}
+	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	// if err != nil {
+	// 	return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
+	// 	// panic(err)
+	// }
 
     repoIndikatorRenstra := NewIndikatorRenstraRepository(db)
+    repoStandarRenstra := infraStandarRenstra.NewStandarRenstraRepository(db)
 	// if err := db.AutoMigrate(&domainindikatorrenstra.IndikatorRenstra{}); err != nil {
 	// 	panic(err)
 	// }
-
-    // Pipeline behavior
-    // mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorIndikatorRenstra())
 
     // Register request handler
     mediatr.RegisterRequestHandler[
@@ -36,6 +37,7 @@ func RegisterModuleIndikatorRenstra() error{
         string,
     ](&create.CreateIndikatorRenstraCommandHandler{
         Repo: repoIndikatorRenstra,
+        RepoStandarRenstra: repoStandarRenstra,
     })
 
     mediatr.RegisterRequestHandler[
@@ -43,6 +45,7 @@ func RegisterModuleIndikatorRenstra() error{
         string,
     ](&update.UpdateIndikatorRenstraCommandHandler{
         Repo: repoIndikatorRenstra,
+        RepoStandarRenstra: repoStandarRenstra,
     })
 
     mediatr.RegisterRequestHandler[
@@ -63,6 +66,13 @@ func RegisterModuleIndikatorRenstra() error{
         getAll.GetAllIndikatorRenstrasQuery,
         domainindikatorrenstra.PagedIndikatorRenstras,
     ](&getAll.GetAllIndikatorRenstrasQueryHandler{
+        Repo: repoIndikatorRenstra,
+    })
+
+    mediatr.RegisterRequestHandler[
+        setupUuid.SetupUuidIndikatorRenstraCommand,
+        string,
+    ](&setupUuid.SetupUuidIndikatorRenstraCommandHandler{
         Repo: repoIndikatorRenstra,
     })
 

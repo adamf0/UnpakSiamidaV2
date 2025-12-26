@@ -1,6 +1,16 @@
 package main
 
 import (
+	"sync"
+	"time"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+)
+
+import (
+	"github.com/gofiber/fiber/v2/middleware/cors"
+
 	userInfrastructure "UnpakSiamida/modules/user/infrastructure"
 	userPresentation "UnpakSiamida/modules/user/presentation"
 
@@ -104,23 +114,67 @@ func main() {
 		// WriteTimeout: 10 * time.Second,
 		// IdleTimeout: 10 * time.Second
 	})
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+		AllowHeaders: "*",
+	}))
 	app.Use(commonpresentation.LoggerMiddleware)
 	// app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
 
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 
+	var db *gorm.DB
+	mustStart("Database", func() error {
+		var err error
+		db, err = NewMySQL()
+		return err
+	})
+
 	//berlaku untuk startup bukan hot reload
-	mustStart("User Module", userInfrastructure.RegisterModuleUser)
-	mustStart("Standar Renstra Module", standarrenstraInfrastructure.RegisterModuleStandarRenstra)
-	mustStart("Indikator Renstra Module", indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra)
-	mustStart("Tahun Renstra Module", tahunrenstraInfrastructure.RegisterModuleTahunRenstra)
-	mustStart("Template Renstra Module", templaterenstraInfrastructure.RegisterModuleTemplateRenstra)
-	mustStart("Template Dokumen Tambahan Module", templatedokumentambahanInfrastructure.RegisterModuleTemplateDokumenTambahan)
-	mustStart("Fakultas Unit Module", fakultasunitInfrastructure.RegisterModuleFakultasUnit)
-	mustStart("Jenis File Module", jenisfileInfrastructure.RegisterModuleJenisFile)
-	mustStart("Renstra Module", renstraInfrastructure.RegisterModuleRenstra)
-	mustStart("Generate Renstra Module", generaterenstraInfrastructure.RegisterModuleGenerateRenstra)
-	mustStart("Preview Template Module", previewtemplateInfrastructure.RegisterModulePreviewTemplate)
+	mustStart("User Module", func() error {
+		return userInfrastructure.RegisterModuleUser(db)
+	})
+
+	mustStart("Standar Renstra Module", func() error {
+		return standarrenstraInfrastructure.RegisterModuleStandarRenstra(db)
+	})
+
+	mustStart("Indikator Renstra Module", func() error {
+		return indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra(db)
+	})
+
+	mustStart("Tahun Renstra Module", func() error {
+		return tahunrenstraInfrastructure.RegisterModuleTahunRenstra(db)
+	})
+
+	mustStart("Template Renstra Module", func() error {
+		return templaterenstraInfrastructure.RegisterModuleTemplateRenstra(db)
+	})
+
+	mustStart("Template Dokumen Tambahan Module", func() error {
+		return templatedokumentambahanInfrastructure.RegisterModuleTemplateDokumenTambahan(db)
+	})
+
+	mustStart("Fakultas Unit Module", func() error {
+		return fakultasunitInfrastructure.RegisterModuleFakultasUnit(db)
+	})
+
+	mustStart("Jenis File Module", func() error {
+		return jenisfileInfrastructure.RegisterModuleJenisFile(db)
+	})
+
+	mustStart("Renstra Module", func() error {
+		return renstraInfrastructure.RegisterModuleRenstra(db)
+	})
+
+	mustStart("Generate Renstra Module", func() error {
+		return generaterenstraInfrastructure.RegisterModuleGenerateRenstra(db)
+	})
+
+	mustStart("Preview Template Module", func() error {
+		return previewtemplateInfrastructure.RegisterModulePreviewTemplate(db)
+	})
 
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
@@ -280,4 +334,31 @@ func wrapValidationError(code string, err error) error {
 		return commoninfra.NewResponseError(code, msgs)
 	}
 	return commoninfra.NewResponseError(code, err.Error())
+}
+
+var (
+	db   *gorm.DB
+	once sync.Once
+)
+
+func NewMySQL() (*gorm.DB, error) {
+	var err error
+
+	once.Do(func() {
+		dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			return
+		}
+
+		sqlDB, _ := db.DB()
+
+		sqlDB.SetMaxOpenConns(20)
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetConnMaxLifetime(60 * time.Minute)
+		sqlDB.SetConnMaxIdleTime(10 * time.Minute)
+	})
+
+	return db, err
 }

@@ -13,6 +13,10 @@ func InvalidUuid() domain.Error {
 	return domain.NotFoundError("JenisFile.InvalidUuid", "uuid is invalid")
 }
 
+func InvalidData() domain.Error {
+	return domain.NotFoundError("JenisFile.InvalidData", "data is invalid")
+}
+
 func NotFound(id string) domain.Error {
 	return domain.NotFoundError("JenisFile.NotFound", fmt.Sprintf("JenisFile with identifier %s not found", id) )
 }

@@ -279,7 +279,7 @@ func GetAllTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleTemplateRenstra(app *fiber.App) {
     app.Post("/templaterenstra", CreateTemplateRenstraHandlerfunc)
-    app.Put("/templaterenstra/:uuid", UpdateTemplateRenstraHandlerfunc)
+    // app.Put("/templaterenstra/:uuid", UpdateTemplateRenstraHandlerfunc)
     app.Delete("/templaterenstra/:uuid", DeleteTemplateRenstraHandlerfunc)
     app.Get("/templaterenstra/:uuid", GetTemplateRenstraHandlerfunc)
     app.Get("/templaterenstras", GetAllTemplateRenstrasHandlerfunc)

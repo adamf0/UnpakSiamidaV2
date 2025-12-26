@@ -10,13 +10,16 @@ func DeleteGenerateRenstraCommandValidation(cmd DeleteGenerateRenstraCommand) er
 		validation.Field(&cmd.Uuid,
 			validation.Required.Error("UUID cannot be blank"),
 			validation.By(helper.ValidateUUIDv4),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 		validation.Field(&cmd.UuidRenstra,
 			validation.Required.Error("Renstra cannot be blank"),
 			validation.By(helper.ValidateUUIDv4),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 		validation.Field(&cmd.Type,
 			validation.Required.Error("Type cannot be blank"),
+			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)
 }

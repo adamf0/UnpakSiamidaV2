@@ -15,4 +15,8 @@ type IJenisFileRepository interface {
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
     ) ([]JenisFile, int64, error)
+	Create(ctx context.Context, jenisfile *JenisFile) error
+	Update(ctx context.Context, jenisfile *JenisFile) error
+	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

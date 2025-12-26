@@ -4,22 +4,24 @@ import (
     domainpreviewtemplate "UnpakSiamida/modules/previewtemplate/domain"
     get "UnpakSiamida/modules/previewtemplate/application/GetPreviewTemplate"
     infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
+    infraIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
     "github.com/mehdihadeli/go-mediatr"
-    "gorm.io/driver/mysql"
+    // "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-    "fmt"
+    // "fmt"
 )
 
-func RegisterModulePreviewTemplate() error{
-    dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+func RegisterModulePreviewTemplate(db *gorm.DB) error{
+    // dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return fmt.Errorf("Standar Renstra DB connection failed: %w", err)
-		// panic(err)
-	}
+	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	// if err != nil {
+	// 	return fmt.Errorf("Standar Renstra DB connection failed: %w", err)
+	// 	// panic(err)
+	// }
 
     repoPreviewTemplate := NewPreviewTemplateRepository(db)
+    repoIndikatorRenstra := infraIndikatorRenstra.NewIndikatorRenstraRepository(db)
     repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
 	// if err := db.AutoMigrate(&domainpreviewtemplate.PreviewTemplate{}); err != nil {
 	// 	panic(err)
@@ -34,6 +36,7 @@ func RegisterModulePreviewTemplate() error{
         []domainpreviewtemplate.PreviewTemplate,
     ](&get.GetPreviewTemplateByTahunFakultasUnitQueryHandler{
         Repo: repoPreviewTemplate,
+        RepoIndikator: repoIndikatorRenstra,
         RepoFakultasUnit: repoFakultasUnit,
     })
 
