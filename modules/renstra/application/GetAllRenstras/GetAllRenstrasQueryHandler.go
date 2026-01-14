@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainrenstra "UnpakSiamida/modules/renstra/domain"
+    "time"
 )
 
 type GetAllRenstrasQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllRenstrasQueryHandler) Handle(
     ctx context.Context,
     q GetAllRenstrasQuery,
 ) (domainrenstra.PagedRenstras, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     renstras, total, err := h.Repo.GetAll(
         ctx,
@@ -20,6 +23,7 @@ func (h *GetAllRenstrasQueryHandler) Handle(
         q.SearchFilters,
         q.Page,
         q.Limit,
+        q.Scope,
     )
     if err != nil {
         return domainrenstra.PagedRenstras{}, err

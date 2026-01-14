@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
+    "time"
 )
 
 type GetAllTemplateDokumenTambahansQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllTemplateDokumenTambahansQueryHandler) Handle(
     ctx context.Context,
     q GetAllTemplateDokumenTambahansQuery,
 ) (domaintemplatedokumentambahan.PagedTemplateDokumenTambahans, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     templatedokumentambahans, total, err := h.Repo.GetAll(
         ctx,

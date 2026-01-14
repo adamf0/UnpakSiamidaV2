@@ -8,7 +8,9 @@ import (
     
     // "UnpakSiamida/common/domain"
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
+
     standarrenstradomain "UnpakSiamida/modules/standarrenstra/domain"
     CreateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
     UpdateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/UpdateStandarRenstra"
@@ -224,12 +226,15 @@ func SetupUuidStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleStandarRenstra(app *fiber.App) {
-    app.Get("/standarrenstra/setupuuid", SetupUuidStandarRenstrasHandlerfunc)
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
 
-    app.Post("/standarrenstra", CreateStandarRenstraHandlerfunc)
-    app.Put("/standarrenstra/:uuid", UpdateStandarRenstraHandlerfunc)
-    app.Delete("/standarrenstra/:uuid", DeleteStandarRenstraHandlerfunc)
-    app.Get("/standarrenstra/:uuid", GetStandarRenstraHandlerfunc)
-    app.Get("/standarrenstras", GetAllStandarRenstrasHandlerfunc)
+    app.Get("/standarrenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidStandarRenstrasHandlerfunc)
+
+    app.Post("/standarrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateStandarRenstraHandlerfunc)
+    app.Put("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateStandarRenstraHandlerfunc)
+    app.Delete("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteStandarRenstraHandlerfunc)
+    app.Get("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), GetStandarRenstraHandlerfunc)
+    app.Get("/standarrenstras", commonpresentation.JWTMiddleware(), GetAllStandarRenstrasHandlerfunc)
 }
 

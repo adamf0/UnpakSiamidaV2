@@ -4,6 +4,7 @@ import (
 	"context"
 	
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
+	"time"
 )
 
 type CreateJenisFileCommandHandler struct{
@@ -14,6 +15,8 @@ func (h *CreateJenisFileCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateJenisFileCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	result := domainjenisfile.NewJenisFile(
 		cmd.Nama,

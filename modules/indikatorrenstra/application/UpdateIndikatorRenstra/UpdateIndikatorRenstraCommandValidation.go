@@ -21,12 +21,12 @@ func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) 
 
 		validation.Field(&cmd.Indikator,
 			validation.Required.Error("Indikator wajib diisi"),
-			validation.By(helper.NoXSSFullScanWithDecode()),
+			validation.By(helper.ValidateUUIDv4),
 		),
 
 		validation.Field(&cmd.Parent,
 			validation.By(helper.ValidateParent),
-			validation.By(helper.NoXSSFullScanWithDecode()),
+			validation.By(helper.ValidateUUIDv4),
 		),
 
 		validation.Field(&cmd.Tahun,

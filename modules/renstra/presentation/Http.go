@@ -5,8 +5,11 @@ import (
     "github.com/gofiber/fiber/v2"
     "github.com/mehdihadeli/go-mediatr"
     "strings"
+    "fmt"
+    "log"
 
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
     renstradomain "UnpakSiamida/modules/renstra/domain"
 
@@ -16,6 +19,7 @@ import (
     DeleteRenstra "UnpakSiamida/modules/renstra/application/DeleteRenstra"
     GetRenstraDefault "UnpakSiamida/modules/renstra/application/GetRenstraDefault"
     GetAllRenstras "UnpakSiamida/modules/renstra/application/GetAllRenstras"
+    SetupUuidRenstra "UnpakSiamida/modules/renstra/application/SetupUuidRenstra"
 )
 
 // =======================================================
@@ -212,6 +216,101 @@ func GetRenstraHandlerfunc(c *fiber.Ctx) error {
     return c.JSON(renstra)
 }
 
+// =======================================================
+// GET /renstra/{tahun}
+// =======================================================
+
+// GetRenstraHandler godoc
+// @Summary Get Renstra by Tahun
+// @Tags Renstra
+// @Param tahun path string true "Tahun"
+// @Produce json
+// @Success 200 {object} renstradomain.RenstraDefault
+// @Failure 404 {object} commondomain.Error
+// @Router /renstra/{tahun} [get]
+func GetRenstraByTahunTargetHandlerfunc(c *fiber.Ctx) error {
+    mode := c.Query("mode", "paging")
+    page := c.QueryInt("page", 1)
+    limit := c.QueryInt("limit", 10)
+    search := c.Query("search", "")
+
+    filtersRaw := c.Query("filters", "")
+    tahun := c.Params("tahun")
+    if tahun != "" {
+        if filtersRaw != "" {
+            filtersRaw += ";"
+        }
+        filtersRaw += fmt.Sprintf("tahun:eq:%s", tahun)
+    }
+
+    sid := c.FormValue("sid")
+    if sid != "" {
+        if filtersRaw != "" {
+            filtersRaw += ";"
+        }
+        filtersRaw += fmt.Sprintf("uuidauditee:eq:%s;uuidauditor1:eq:%s;uuidauditor2:eq:%s", sid, sid, sid)
+    }
+    log.Printf("[filter] audit: %s", filtersRaw)
+
+    var filters []commondomain.SearchFilter
+
+    if filtersRaw != "" {
+        parts := strings.Split(filtersRaw, ";")
+        for _, p := range parts {
+            tokens := strings.SplitN(p, ":", 3)
+            if len(tokens) != 3 {
+                continue
+            }
+
+            field := strings.TrimSpace(tokens[0])
+            op := strings.TrimSpace(tokens[1])
+            rawValue := strings.TrimSpace(tokens[2])
+
+            var ptr *string
+            if rawValue != "" && rawValue != "null" {
+                ptr = &rawValue
+            }
+
+            filters = append(filters, commondomain.SearchFilter{
+                Field:    field,
+                Operator: op,
+                Value:    ptr,
+            })
+        }
+    }
+
+    query := GetAllRenstras.GetAllRenstrasQuery{
+        Scope: "audit",
+        Search:        search,
+        SearchFilters: filters,
+    }
+
+    var adapter OutputAdapter
+    switch mode {
+    case "all":
+        adapter = &AllAdapter{}
+    case "ndjson":
+        adapter = &NDJSONAdapter{}
+    case "sse":
+        adapter = &SSEAdapter{}
+    default:
+        query.Page = &page
+        query.Limit = &limit
+        adapter = &PagingAdapter{}
+    }
+
+    result, err := mediatr.Send[
+        GetAllRenstras.GetAllRenstrasQuery,
+        renstradomain.PagedRenstras,
+    ](context.Background(), query)
+
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return adapter.Send(c, result)
+}
+
 // GetAllRenstrasHandler godoc
 // @Summary Get All Renstras
 // @Tags Renstra
@@ -287,11 +386,31 @@ func GetAllRenstrasHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, result)
 }
 
+func SetupUuidRenstrasHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidRenstra.SetupUuidRenstraCommand{}
+
+    message, err := mediatr.Send[SetupUuidRenstra.SetupUuidRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleRenstra(app *fiber.App) {
-    app.Post("/renstra", CreateRenstraHandlerfunc)
-    app.Put("/renstra/:uuid", UpdateRenstraHandlerfunc)
-    app.Put("/renstra/:uuid/code_access", GiveCodeAccessRenstraHandlerfunc)
-    app.Delete("/renstra/:uuid", DeleteRenstraHandlerfunc)
-    app.Get("/renstra/:uuid", GetRenstraHandlerfunc)
-    app.Get("/renstras", GetAllRenstrasHandlerfunc)
+    admin := []string{"admin"}
+    audit := []string{"auditee","auditor1","auditor2"}
+	whoamiURL := "http://localhost:3000/whoami"
+
+    app.Get("/renstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidRenstrasHandlerfunc)
+
+    app.Post("/renstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateRenstraHandlerfunc)
+    app.Put("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateRenstraHandlerfunc)
+    app.Put("/renstra/:uuid/code_access", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GiveCodeAccessRenstraHandlerfunc)
+    app.Delete("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraHandlerfunc)
+    app.Get("/renstra/:uuid", commonpresentation.JWTMiddleware(), GetRenstraHandlerfunc)
+    app.Get("/renstras", commonpresentation.JWTMiddleware(), GetAllRenstrasHandlerfunc) //[pr] belum tambah total data renstra_nilai & dokumen_tambahan (hasil generate)
+
+    //untuk audit
+    app.Get("/renstra/audit/:tahun", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GetRenstraByTahunTargetHandlerfunc)
 }

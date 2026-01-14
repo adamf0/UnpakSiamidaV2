@@ -20,7 +20,7 @@ type IGenerateRenstraRepository interface {
 	DeleteRenstraNilai(ctx context.Context, tx *gorm.DB, generateRenstra *GenerateRenstra) error
 	ForceDeleteRenstraNilai(ctx context.Context, uid uuid.UUID, renstra uint) error
 
-	CreateDokumenTambahan(ctx context.Context, tx *gorm.DB, generateDokumenTamabahn *GenerateDokumenTambahan) error
-	DeleteDokumenTambahan(ctx context.Context, tx *gorm.DB, generateDokumenTamabahn *GenerateDokumenTambahan) error
+	CreateDokumenTambahan(ctx context.Context, tx *gorm.DB, generateDokumenTambahan *GenerateDokumenTambahan) error
+	DeleteDokumenTambahan(ctx context.Context, tx *gorm.DB, generateDokumenTambahan *GenerateDokumenTambahan) error
 	ForceDeleteDokumenTambahan(ctx context.Context, uid uuid.UUID, renstra uint) error
 }

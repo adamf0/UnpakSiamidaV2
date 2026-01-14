@@ -10,6 +10,7 @@ import (
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 	"errors"
     "gorm.io/gorm"
+	"time"
 )
 
 type UpdateTemplateRenstraCommandHandler struct {
@@ -22,6 +23,8 @@ func (h *UpdateTemplateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateTemplateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// -------------------------
 	// VALIDATE UUID

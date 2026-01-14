@@ -7,6 +7,7 @@ import (
     delete "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
     get "UnpakSiamida/modules/templatedokumentambahan/application/GetTemplateDokumenTambahan"
     getAll "UnpakSiamida/modules/templatedokumentambahan/application/GetAllTemplateDokumenTambahans"
+    setupUuid "UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan"
     infraJenisFile "UnpakSiamida/modules/jenisfile/infrastructure"
     "github.com/mehdihadeli/go-mediatr"
     // "gorm.io/driver/mysql"
@@ -67,6 +68,13 @@ func RegisterModuleTemplateDokumenTambahan(db *gorm.DB) error{
         getAll.GetAllTemplateDokumenTambahansQuery,
         domaintemplatedokumentambahan.PagedTemplateDokumenTambahans,
     ](&getAll.GetAllTemplateDokumenTambahansQueryHandler{
+        Repo: repoTemplateDokumenTambahan,
+    })
+
+    mediatr.RegisterRequestHandler[
+        setupUuid.SetupUuidTemplateDokumenTambahanCommand,
+        string,
+    ](&setupUuid.SetupUuidTemplateDokumenTambahanCommandHandler{
         Repo: repoTemplateDokumenTambahan,
     })
 

@@ -5,6 +5,7 @@ import (
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteJenisFileCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteJenisFileCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteJenisFileCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	jenisfileUUID, err := uuid.Parse(cmd.Uuid)

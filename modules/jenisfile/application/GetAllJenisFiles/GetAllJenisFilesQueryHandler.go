@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainJenisFile "UnpakSiamida/modules/jenisfile/domain"
+    "time"
 )
 
 type GetAllJenisFilesQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllJenisFilesQueryHandler) Handle(
     ctx context.Context,
     q GetAllJenisFilesQuery,
 ) (domainJenisFile.PagedJenisFiles, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     JenisFiles, total, err := h.Repo.GetAll(
         ctx,

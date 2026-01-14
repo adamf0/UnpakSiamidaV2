@@ -7,6 +7,7 @@ import (
     delete "UnpakSiamida/modules/templaterenstra/application/DeleteTemplateRenstra"
     get "UnpakSiamida/modules/templaterenstra/application/GetTemplateRenstra"
     getAll "UnpakSiamida/modules/templaterenstra/application/GetAllTemplateRenstras"
+    setupUuid "UnpakSiamida/modules/templaterenstra/application/SetupUuidTemplateRenstra"
     infraIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
     infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
     "github.com/mehdihadeli/go-mediatr"
@@ -71,6 +72,13 @@ func RegisterModuleTemplateRenstra(db *gorm.DB) error{
         getAll.GetAllTemplateRenstrasQuery,
         domaintemplaterenstra.PagedTemplateRenstras,
     ](&getAll.GetAllTemplateRenstrasQueryHandler{
+        Repo: repoTemplateRenstra,
+    })
+
+    mediatr.RegisterRequestHandler[
+        setupUuid.SetupUuidTemplateRenstraCommand,
+        string,
+    ](&setupUuid.SetupUuidTemplateRenstraCommandHandler{
         Repo: repoTemplateRenstra,
     })
 

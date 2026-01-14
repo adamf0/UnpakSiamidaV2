@@ -18,4 +18,5 @@ type ITemplateDokumenTambahanRepository interface {
 	Create(ctx context.Context, templatedokumentambahan *TemplateDokumenTambahan) error
 	Update(ctx context.Context, templatedokumentambahan *TemplateDokumenTambahan) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

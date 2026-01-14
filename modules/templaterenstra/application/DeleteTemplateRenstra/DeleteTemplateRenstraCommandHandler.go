@@ -5,6 +5,7 @@ import (
 
 	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteTemplateRenstraCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteTemplateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteTemplateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	templaterenstraUUID, err := uuid.Parse(cmd.Uuid)

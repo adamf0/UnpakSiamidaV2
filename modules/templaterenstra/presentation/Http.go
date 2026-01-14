@@ -8,13 +8,16 @@ import (
     
     // "UnpakSiamida/common/domain"
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
+
     templaterenstradomain "UnpakSiamida/modules/templaterenstra/domain"
     CreateTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
     UpdateTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
     DeleteTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/DeleteTemplateRenstra"
     GetTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/GetTemplateRenstra"
     GetAllTemplateRenstras "UnpakSiamida/modules/templaterenstra/application/GetAllTemplateRenstras"
+    SetupUuidTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/SetupUuidTemplateRenstra"
 )
 
 func strPtr(s string) *string {
@@ -277,11 +280,27 @@ func GetAllTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, templaterenstras)
 }
 
+func SetupUuidTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidTemplateRenstra.SetupUuidTemplateRenstraCommand{}
+
+    message, err := mediatr.Send[SetupUuidTemplateRenstra.SetupUuidTemplateRenstraCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleTemplateRenstra(app *fiber.App) {
-    app.Post("/templaterenstra", CreateTemplateRenstraHandlerfunc)
-    // app.Put("/templaterenstra/:uuid", UpdateTemplateRenstraHandlerfunc)
-    app.Delete("/templaterenstra/:uuid", DeleteTemplateRenstraHandlerfunc)
-    app.Get("/templaterenstra/:uuid", GetTemplateRenstraHandlerfunc)
-    app.Get("/templaterenstras", GetAllTemplateRenstrasHandlerfunc)
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
+
+    app.Get("/templaterenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidTemplateRenstrasHandlerfunc)
+    
+    app.Post("/templaterenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTemplateRenstraHandlerfunc)
+    // app.Put("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), UpdateTemplateRenstraHandlerfunc)
+    app.Delete("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTemplateRenstraHandlerfunc)
+    app.Get("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), GetTemplateRenstraHandlerfunc)
+    app.Get("/templaterenstras", commonpresentation.JWTMiddleware(), GetAllTemplateRenstrasHandlerfunc)
 }
 

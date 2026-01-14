@@ -5,6 +5,7 @@ import (
 
 	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteTemplateDokumenTambahanCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteTemplateDokumenTambahanCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteTemplateDokumenTambahanCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	templatedokumentambahanUUID, err := uuid.Parse(cmd.Uuid)

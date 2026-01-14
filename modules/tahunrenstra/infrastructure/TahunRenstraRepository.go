@@ -46,7 +46,7 @@ func (r *TahunRenstraRepository) GetActive(ctx context.Context) (*domainTahunRen
 var allowedSearchColumns = map[string]string{
     // key:param -> db column
     "tahun":          "tahun",
-	"status":         "status",
+	// "status":         "status", //masalah COLLATE utf8mb4_unicode_ci jika filter aktif
 }
 
 // ------------------------
@@ -63,8 +63,8 @@ func (r *TahunRenstraRepository) GetAll(
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainTahunRenstra.TahunRenstra{})
-	db = db.Where("status IN ('active', 'no-active')")
-    db = db.Where("tahun IS NOT NULL AND tahun != '0000'")
+	db = db.Where("status COLLATE utf8mb4_unicode_ci IN ('active', 'no-active')")
+    db = db.Where("tahun IS NOT NULL AND tahun != 0")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)

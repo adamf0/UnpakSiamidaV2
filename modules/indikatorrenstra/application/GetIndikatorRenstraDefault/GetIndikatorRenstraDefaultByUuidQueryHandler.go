@@ -1,29 +1,33 @@
 package application
 
 import (
-    "context"
+	"context"
 
-    domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
-    "github.com/google/uuid"
+	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	"errors"
-    "gorm.io/gorm"
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type GetIndikatorRenstraDefaultByUuidQueryHandler struct {
-    Repo domainindikatorrenstra.IIndikatorRenstraRepository
+	Repo domainindikatorrenstra.IIndikatorRenstraRepository
 }
 
 func (h *GetIndikatorRenstraDefaultByUuidQueryHandler) Handle(
-    ctx context.Context,
-    q GetIndikatorRenstraDefaultByUuidQuery,
+	ctx context.Context,
+	q GetIndikatorRenstraDefaultByUuidQuery,
 ) (*domainindikatorrenstra.IndikatorRenstraDefault, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
-    parsed, err := uuid.Parse(q.Uuid)
+	parsed, err := uuid.Parse(q.Uuid)
 	if err != nil {
 		return nil, domainindikatorrenstra.NotFound(q.Uuid)
 	}
 
-    inindikatorrenstra, err := h.Repo.GetDefaultByUuid(ctx, parsed)
+	inindikatorrenstra, err := h.Repo.GetDefaultByUuid(ctx, parsed)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domainindikatorrenstra.NotFound(q.Uuid)
@@ -31,5 +35,5 @@ func (h *GetIndikatorRenstraDefaultByUuidQueryHandler) Handle(
 		return nil, err
 	}
 
-    return inindikatorrenstra, nil
+	return inindikatorrenstra, nil
 }

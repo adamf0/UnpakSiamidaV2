@@ -9,6 +9,7 @@ import (
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
 	// helper "UnpakSiamida/common/helper"
+	"time"
 )
 
 type CreateIndikatorRenstraCommandHandler struct{
@@ -20,6 +21,8 @@ func (h *CreateIndikatorRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateIndikatorRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	standarrenstraUUID, err := uuid.Parse(cmd.StandarRenstra)
 	if err != nil {

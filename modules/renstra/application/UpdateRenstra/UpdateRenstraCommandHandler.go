@@ -7,6 +7,7 @@ import (
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type UpdateRenstraCommandHandler struct {
@@ -19,6 +20,8 @@ func (h *UpdateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	renstraUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 
 	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteUserCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteUserCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteUserCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	userUUID, err := uuid.Parse(cmd.Uuid)

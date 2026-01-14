@@ -6,6 +6,8 @@ import (
     "github.com/mehdihadeli/go-mediatr"
     
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
+    
     GenerateRenstra "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
     DeleteGenerateRenstra "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
 ) 
@@ -71,6 +73,9 @@ func DeleteRenstraQuestionHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleGenerateRenstra(app *fiber.App) {
-    app.Post("/renstra/generate", GenerateRenstraHandlerfunc)
-    app.Delete("/renstra/generate/question", DeleteRenstraQuestionHandlerfunc)
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
+
+    app.Post("/renstra/generate", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GenerateRenstraHandlerfunc)
+    app.Delete("/renstra/generate/question", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraQuestionHandlerfunc)
 }

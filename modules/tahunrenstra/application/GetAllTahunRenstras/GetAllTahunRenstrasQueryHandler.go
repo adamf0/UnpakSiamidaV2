@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainTahunRenstra "UnpakSiamida/modules/tahunrenstra/domain"
+    "time"
 )
 
 type GetAllTahunRenstrasQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllTahunRenstrasQueryHandler) Handle(
     ctx context.Context,
     q GetAllTahunRenstrasQuery,
 ) (domainTahunRenstra.PagedTahunRenstras, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     TahunRenstras, total, err := h.Repo.GetAll(
         ctx,

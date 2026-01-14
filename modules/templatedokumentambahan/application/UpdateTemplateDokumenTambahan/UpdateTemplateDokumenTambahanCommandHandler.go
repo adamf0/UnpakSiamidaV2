@@ -9,6 +9,7 @@ import (
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
 	"errors"
     "gorm.io/gorm"
+	"time"
 )
 
 type UpdateTemplateDokumenTambahanCommandHandler struct {
@@ -20,6 +21,8 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateTemplateDokumenTambahanCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// -------------------------
 	// VALIDATE UUID

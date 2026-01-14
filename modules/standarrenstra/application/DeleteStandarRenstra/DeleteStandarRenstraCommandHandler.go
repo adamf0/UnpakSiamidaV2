@@ -5,6 +5,7 @@ import (
 
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteStandarRenstraCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteStandarRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteStandarRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	standarrenstraUUID, err := uuid.Parse(cmd.Uuid)

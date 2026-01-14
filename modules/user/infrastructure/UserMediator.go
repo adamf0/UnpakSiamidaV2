@@ -7,6 +7,7 @@ import (
     delete "UnpakSiamida/modules/user/application/DeleteUser"
     get "UnpakSiamida/modules/user/application/GetUser"
     getAll "UnpakSiamida/modules/user/application/GetAllUsers"
+    setupUuid "UnpakSiamida/modules/user/application/SetupUuidUser"
     "github.com/mehdihadeli/go-mediatr"
     // "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -63,6 +64,13 @@ func RegisterModuleUser(db *gorm.DB) error {
         getAll.GetAllUsersQuery,
         domainuser.PagedUsers,
     ](&getAll.GetAllUsersQueryHandler{
+        Repo: repoUser,
+    })
+
+    mediatr.RegisterRequestHandler[
+        setupUuid.SetupUuidUserCommand,
+        string,
+    ](&setupUuid.SetupUuidUserCommandHandler{
         Repo: repoUser,
     })
 

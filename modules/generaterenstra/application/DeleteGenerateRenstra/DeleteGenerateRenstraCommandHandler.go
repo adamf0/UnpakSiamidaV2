@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"errors"
+	"time"
 )
 
 type DeleteGenerateRenstraCommandHandler struct {
@@ -20,6 +21,8 @@ func (h *DeleteGenerateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteGenerateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	if !helper.IsValidTypeGenerate(cmd.Type) {
 		return "", domaingeneraterenstra.InvalidType(cmd.Type)

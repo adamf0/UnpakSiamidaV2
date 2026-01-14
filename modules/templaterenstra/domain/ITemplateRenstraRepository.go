@@ -19,4 +19,5 @@ type ITemplateRenstraRepository interface {
 	Create(ctx context.Context, templaterenstra *TemplateRenstra) error
 	Update(ctx context.Context, templaterenstra *TemplateRenstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

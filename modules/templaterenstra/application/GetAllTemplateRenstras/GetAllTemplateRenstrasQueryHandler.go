@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
+    "time"
 )
 
 type GetAllTemplateRenstrasQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllTemplateRenstrasQueryHandler) Handle(
     ctx context.Context,
     q GetAllTemplateRenstrasQuery,
 ) (domaintemplaterenstra.PagedTemplateRenstras, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     templaterenstras, total, err := h.Repo.GetAll(
         ctx,

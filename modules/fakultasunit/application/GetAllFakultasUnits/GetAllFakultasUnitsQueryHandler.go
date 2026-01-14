@@ -2,6 +2,7 @@ package application
 
 import (
     "context"
+    "time"
     domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 )
 
@@ -13,7 +14,9 @@ func (h *GetAllFakultasUnitsQueryHandler) Handle(
     ctx context.Context,
     q GetAllFakultasUnitsQuery,
 ) (domainfakultasunit.PagedFakultasUnits, error) {
-
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+    
     fakultasunits, total, err := h.Repo.GetAll(
         ctx,
         q.Search,

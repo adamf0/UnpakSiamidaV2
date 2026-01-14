@@ -14,4 +14,5 @@ type IFakultasUnitRepository interface {
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
     ) ([]FakultasUnit, int64, error)
+	SetupUuid(ctx context.Context) error
 }

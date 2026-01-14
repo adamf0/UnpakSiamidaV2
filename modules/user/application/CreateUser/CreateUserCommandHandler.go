@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	domainuser "UnpakSiamida/modules/user/domain"
+	"time"
 )
 
 type CreateUserCommandHandler struct{
@@ -16,6 +17,8 @@ func (h *CreateUserCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateUserCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	var fu *int = nil
 

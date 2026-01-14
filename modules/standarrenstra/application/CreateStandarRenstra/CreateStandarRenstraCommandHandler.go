@@ -4,6 +4,7 @@ import (
 	"context"
 	
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+	"time"
 )
 
 type CreateStandarRenstraCommandHandler struct{
@@ -14,6 +15,8 @@ func (h *CreateStandarRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateStandarRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	result := domainstandarrenstra.NewStandarRenstra(
 		cmd.Nama,

@@ -10,6 +10,8 @@ import (
     "gorm.io/gorm"
 	"github.com/google/uuid"
 	"strconv"
+	"fmt"
+	"time"
 )
 
 type GetPreviewTemplateByTahunFakultasUnitQueryHandler struct {
@@ -22,6 +24,9 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 	ctx context.Context,
 	q GetPreviewTemplateByTahunFakultasUnitQuery,
 ) ([]domainpreviewtemplate.PreviewTemplate, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	UuidFakultasUnit, err := uuid.Parse(q.FakultasUnit)
 	if err != nil {
 		return nil, domainpreviewtemplate.NotFoundFakultasUnit(q.FakultasUnit)
@@ -56,12 +61,22 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 
 	g.Go(func() error {
 		var err error
-		preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10) )
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domainpreviewtemplate.NotFound()
+		if q.Tipe=="renstra"{
+			preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10) )
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return domainpreviewtemplate.NotFound()
+				}
+				return err
 			}
-			return err
+		} else{
+			preview, err = h.Repo.GetByTahunTag(ctx, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type) )
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return domainpreviewtemplate.NotFound()
+				}
+				return err
+			}
 		}
 		return nil
 	})

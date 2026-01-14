@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	// "errors"
     // "gorm.io/gorm"
+	"time"
 )
 
 type UpdateIndikatorRenstraCommandHandler struct {
@@ -20,6 +21,8 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateIndikatorRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	indikatorrenstraUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {

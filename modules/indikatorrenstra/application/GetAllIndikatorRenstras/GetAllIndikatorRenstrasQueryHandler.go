@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+    "time"
 )
 
 type GetAllIndikatorRenstrasQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllIndikatorRenstrasQueryHandler) Handle(
     ctx context.Context,
     q GetAllIndikatorRenstrasQuery,
 ) (domainindikatorrenstra.PagedIndikatorRenstras, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     indikatorrenstras, total, err := h.Repo.GetAll(
         ctx,

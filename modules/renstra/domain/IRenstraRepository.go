@@ -15,8 +15,10 @@ type IRenstraRepository interface {
         search string,
         searchFilters []commonDomain.SearchFilter,
         page, limit *int,
+		scope string,
     ) ([]RenstraDefault, int64, error)
 	Create(ctx context.Context, renstra *Renstra) error
 	Update(ctx context.Context, renstra *Renstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

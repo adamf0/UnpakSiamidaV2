@@ -5,6 +5,7 @@ import (
 
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteIndikatorRenstraCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteIndikatorRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteIndikatorRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	indikatorrenstraUUID, err := uuid.Parse(cmd.Uuid)

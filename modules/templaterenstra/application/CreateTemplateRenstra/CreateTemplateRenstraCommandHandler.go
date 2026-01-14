@@ -10,9 +10,8 @@ import (
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 	"errors"
     "gorm.io/gorm"
+	"time"
 )
-// import "encoding/json"
-// import "fmt"
 
 type CreateTemplateRenstraCommandHandler struct {
 	Repo                	domaintemplaterenstra.ITemplateRenstraRepository
@@ -24,6 +23,8 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateTemplateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	uuidIndikator, err := uuid.Parse(cmd.Indikator)
 	if err != nil {

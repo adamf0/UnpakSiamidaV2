@@ -2,9 +2,11 @@ package helper
 
 import (
 	"fmt"
+	"html"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func IsValidUnpakEmail(email string) bool {
@@ -110,9 +112,6 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 		return fmt.Errorf("FakultasUnit invalid type")
 	}
 
-	// fmt.Println("levelStr:", levelStr)
-	// fmt.Println("FakultasUnit:", s)
-
 	if levelStr == "fakultas" && s == "" {
 		return fmt.Errorf("FakultasUnit cannot be blank")
 	}
@@ -124,51 +123,33 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 		return nil
 	}
 
-	val, err := ParseInt64(s) //[PR] bukan int tapi uuid
-	if err != nil {
-		return err
-	}
-
-	if val < 1 {
-		return fmt.Errorf("FakultasUnit invalid value")
-	}
-
-	return nil
+	return ValidateUUIDv4(value)
 }
 
-func ValidateParent(value interface{}) error { //[PR] bukan int tapi uuid
+func ValidateParent(value interface{}) error {
 	var s string
 
 	switch v := value.(type) {
-		case string:
-			s = strings.TrimSpace(v)
+	case string:
+		s = strings.TrimSpace(v)
 
-		case *string:
-			if v != nil {
-				s = strings.TrimSpace(*v)
-			}
+	case *string:
+		if v != nil {
+			s = strings.TrimSpace(*v)
+		}
 
-		case nil:
-			return nil
+	case nil:
+		return nil
 
-		default:
-			return fmt.Errorf("Parent invalid type")
+	default:
+		return fmt.Errorf("Parent invalid type")
 	}
 
 	if s == "" {
 		return nil
 	}
 
-	val, err := ParseInt64(s)
-	if err != nil {
-		return err
-	}
-
-	if val < 1 {
-		return fmt.Errorf("Parent invalid value")
-	}
-
-	return nil
+	return ValidateUUIDv4(value)
 }
 
 func ValidateLevel(value interface{}) error {
@@ -207,28 +188,92 @@ func ParseInt64(s string) (int64, error) {
 }
 
 func IsValidTugas(tugas string) bool {
-    switch tugas {
-    case
-        "auditor1",
-        "auditor2":
-        return true
-    }
-    return false
+	switch tugas {
+	case
+		"auditor1",
+		"auditor2":
+		return true
+	}
+	return false
 }
 
 func IsValidTypeGenerate(tipe string) bool {
-    switch tipe {
-    case
-        "renstra",
-        "dokumen_tambahan":
-        return true
-    }
-    return false
+	switch tipe {
+	case
+		"renstra",
+		"dokumen_tambahan":
+		return true
+	}
+	return false
 }
 
 func StringValue(s *string) string {
-    if s == nil {
-        return ""
-    }
-    return *s
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+func StringHtmlValue(v *string) string {
+	if v == nil || *v == "" {
+		return "-"
+	}
+	return html.EscapeString(*v)
+}
+func Status(v *uint) string {
+	if v == nil {
+		return "-"
+	}
+	if *v == 1 {
+		return "Ya"
+	}
+	return "Tidak"
+}
+
+var bulanID = []string{
+	"",
+	"Januari", "Februari", "Maret", "April", "Mei", "Juni",
+	"Juli", "Agustus", "September", "Oktober", "November", "Desember",
+}
+
+var locWIB, _ = time.LoadLocation("Asia/Jakarta")
+
+func formatWIB(t time.Time) string {
+	t = t.In(locWIB)
+
+	return fmt.Sprintf(
+		"%02d %s %d %02d:%02d:%02d WIB",
+		t.Day(),
+		bulanID[int(t.Month())],
+		t.Year(),
+		t.Hour(),
+		t.Minute(),
+		t.Second(),
+	)
+}
+
+func FTime(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return formatWIB(t)
+}
+
+func FTimeStr(v *string) string {
+	if v == nil || *v == "" {
+		return "-"
+	}
+
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, *v); err == nil {
+			return formatWIB(t)
+		}
+	}
+
+	return *v
 }

@@ -427,3 +427,52 @@ func (r *TemplateDokumenTambahanRepository) Delete(ctx context.Context, uid uuid
 		Where("uuid = ?", uid).
 		Delete(&domaintemplatedokumentambahan.TemplateDokumenTambahan{}).Error
 }
+
+func (r *TemplateDokumenTambahanRepository) SetupUuid(ctx context.Context) error {
+	const chunkSize = 500
+
+	var ids []uint
+	if err := r.db.WithContext(ctx).
+		Model(&domaintemplatedokumentambahan.TemplateDokumenTambahan{}).
+		Where("uuid IS NULL OR uuid = ''").
+		Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(ids); i += chunkSize {
+		end := i + chunkSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+
+		chunk := ids[i:end]
+
+		caseSQL := "CASE id "
+		args := make([]any, 0, len(chunk)*2+1)
+
+		for _, id := range chunk {
+			u := uuid.NewString()
+			caseSQL += "WHEN ? THEN ? "
+			args = append(args, id, u)
+		}
+
+		caseSQL += "END"
+		args = append(args, chunk)
+
+		query := fmt.Sprintf(
+			"UPDATE template_dokumen_tambahan SET uuid = %s WHERE id IN (?)",
+			caseSQL,
+		)
+
+		if err := r.db.WithContext(ctx).
+			Exec(query, args...).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

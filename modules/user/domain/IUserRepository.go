@@ -17,4 +17,5 @@ type IUserRepository interface {
 	Create(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SetupUuid(ctx context.Context) error
 }

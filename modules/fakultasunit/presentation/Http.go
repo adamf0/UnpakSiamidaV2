@@ -7,11 +7,13 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commoninfra "UnpakSiamida/common/infrastructure"
+	commonpresentation "UnpakSiamida/common/presentation"
 	commondomain "UnpakSiamida/common/domain"
 
 	fakultasunitdomain "UnpakSiamida/modules/fakultasunit/domain"
 	GetFakultasUnit "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
 	GetAllFakultasUnits "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
+	SetupUuidFakultasUnit "UnpakSiamida/modules/fakultasunit/application/SetupUuidFakultasUnit"
 )
 
 // =======================================================
@@ -132,7 +134,23 @@ func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 	return adapter.Send(c, result)
 }
 
+func SetupUuidFakultasUnitsHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand{}
+
+    message, err := mediatr.Send[SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
+}
+
 func ModuleFakultasUnit(app *fiber.App) {
-	app.Get("/fakultasunit/:uuid", GetFakultasUnitHandler)
-	app.Get("/fakultasunits", GetAllFakultasUnitsHandler)
+	admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
+    
+    app.Get("/fakultasunit/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidFakultasUnitsHandlerfunc)
+
+	app.Get("/fakultasunit/:uuid", commonpresentation.JWTMiddleware(), GetFakultasUnitHandler)
+	app.Get("/fakultasunits", commonpresentation.JWTMiddleware(), GetAllFakultasUnitsHandler)
 }

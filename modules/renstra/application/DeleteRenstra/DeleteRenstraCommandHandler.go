@@ -5,6 +5,7 @@ import (
 
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type DeleteRenstraCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *DeleteRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd DeleteRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Validate UUID
 	renstraUUID, err := uuid.Parse(cmd.Uuid)

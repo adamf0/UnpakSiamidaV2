@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainuser "UnpakSiamida/modules/user/domain"
+    "time"
 )
 
 type GetAllUsersQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllUsersQueryHandler) Handle(
     ctx context.Context,
     q GetAllUsersQuery,
 ) (domainuser.PagedUsers, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     users, total, err := h.Repo.GetAll(
         ctx,

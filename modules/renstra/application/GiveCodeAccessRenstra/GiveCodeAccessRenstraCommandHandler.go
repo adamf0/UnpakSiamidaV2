@@ -5,6 +5,7 @@ import (
 	
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type GiveCodeAccessRenstraCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *GiveCodeAccessRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd GiveCodeAccessRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
 	renstraUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {

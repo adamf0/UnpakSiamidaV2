@@ -8,9 +8,10 @@ import (
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
 	"errors"
     "gorm.io/gorm"
+	"encoding/json"
+	"fmt"
+	"time"
 )
-import "encoding/json"
-import "fmt"
 
 type CreateTemplateDokumenTambahanCommandHandler struct {
 	Repo                	domaintemplatedokumentambahan.ITemplateDokumenTambahanRepository
@@ -21,6 +22,9 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 	ctx context.Context,
 	cmd CreateTemplateDokumenTambahanCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
 	x, _ := json.MarshalIndent(cmd, "", "  ")
 	fmt.Println("DEBUG cmd:", string(x))
 

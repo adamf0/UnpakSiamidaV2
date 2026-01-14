@@ -3,6 +3,7 @@ package application
 import (
     "context"
     domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+    "time"
 )
 
 type GetAllStandarRenstrasQueryHandler struct {
@@ -13,6 +14,8 @@ func (h *GetAllStandarRenstrasQueryHandler) Handle(
     ctx context.Context,
     q GetAllStandarRenstrasQuery,
 ) (domainstandarrenstra.PagedStandarRenstras, error) {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
     standarrenstras, total, err := h.Repo.GetAll(
         ctx,

@@ -7,9 +7,10 @@ import (
     "strings"
 
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
-    indikatorrenstradomain "UnpakSiamida/modules/indikatorrenstra/domain"
 
+    indikatorrenstradomain "UnpakSiamida/modules/indikatorrenstra/domain"
     CreateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
     UpdateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
     DeleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
@@ -293,13 +294,16 @@ func SetupUuidIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleIndikatorRenstra(app *fiber.App) {
-    app.Get("/indikatorrenstra/setupuuid", SetupUuidIndikatorRenstrasHandlerfunc)
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
+    
+    app.Get("/indikatorrenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidIndikatorRenstrasHandlerfunc)
 
-    app.Post("/indikatorrenstra", CreateIndikatorRenstraHandlerfunc)
-    app.Put("/indikatorrenstra/:uuid", UpdateIndikatorRenstraHandlerfunc)
-    app.Delete("/indikatorrenstra/:uuid", DeleteIndikatorRenstraHandlerfunc)
-    app.Get("/indikatorrenstra/:uuid", GetIndikatorRenstraHandlerfunc)
-    app.Get("/indikatorrenstras", GetAllIndikatorRenstrasHandlerfunc)
+    app.Post("/indikatorrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateIndikatorRenstraHandlerfunc)
+    app.Put("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateIndikatorRenstraHandlerfunc)
+    app.Delete("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteIndikatorRenstraHandlerfunc)
+    app.Get("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), GetIndikatorRenstraHandlerfunc)
+    app.Get("/indikatorrenstras", commonpresentation.JWTMiddleware(), GetAllIndikatorRenstrasHandlerfunc)
 
     // app.Get("/indikatorrenstra/tree/:uuidTahun", GetTreeIndikatorRenstraByTahunHandlerfunc)
 }

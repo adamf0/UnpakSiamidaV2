@@ -7,6 +7,7 @@ import (
     "strings"
 
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
     JenisFiledomain "UnpakSiamida/modules/jenisfile/domain"
 
@@ -230,11 +231,14 @@ func SetupUuidJenisFilesHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleJenisFile(app *fiber.App) {
-    app.Get("/jenisfile/setupuuid", SetupUuidJenisFilesHandlerfunc)
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
 
-    app.Post("/jenisfile", CreateJenisFileHandlerfunc)
-    app.Put("/jenisfile/:uuid", UpdateJenisFileHandlerfunc)
-    app.Delete("/jenisfile/:uuid", DeleteJenisFileHandlerfunc)
-    app.Get("/JenisFile/:uuid", GetJenisFileHandlerfunc)
-    app.Get("/JenisFiles", GetAllJenisFilesHandlerfunc)
+    app.Get("/jenisfile/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidJenisFilesHandlerfunc)
+
+    app.Post("/jenisfile", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJenisFileHandlerfunc)
+    app.Put("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJenisFileHandlerfunc)
+    app.Delete("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteJenisFileHandlerfunc)
+    app.Get("/JenisFile/:uuid", commonpresentation.JWTMiddleware(), GetJenisFileHandlerfunc)
+    app.Get("/JenisFiles", commonpresentation.JWTMiddleware(), GetAllJenisFilesHandlerfunc)
 }

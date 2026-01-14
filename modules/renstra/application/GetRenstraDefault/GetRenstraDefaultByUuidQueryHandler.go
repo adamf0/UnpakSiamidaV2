@@ -7,6 +7,7 @@ import (
     "github.com/google/uuid"
 	"errors"
     "gorm.io/gorm"
+	"time"
 )
 
 type GetRenstraDefaultByUuidQueryHandler struct {
@@ -17,6 +18,8 @@ func (h *GetRenstraDefaultByUuidQueryHandler) Handle(
     ctx context.Context,
     q GetRenstraDefaultByUuidQuery,
 ) (*domainrenstra.RenstraDefault, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
     parsed, err := uuid.Parse(q.Uuid)
 	if err != nil {

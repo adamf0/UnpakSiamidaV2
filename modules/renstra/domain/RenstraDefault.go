@@ -5,32 +5,39 @@ import (
 )
 
 type RenstraDefault struct {
-	ID                    uint           `json:"id"`
-	UUID                  uuid.UUID      `json:"uuid"`
-	Tahun                 string         `json:"tahun"`
-	FakultasUnit          uint           `json:"fakultas_unit"`
-	PeriodeUploadMulai    string         `json:"periode_upload_mulai"`
-	PeriodeUploadAkhir    string         `json:"periode_upload_akhir"`
-	PeriodeAssesmentDokumenMulai   string         `json:"periode_assesment_dokumen_mulai"`
-    PeriodeAssesmentDokumenAkhir   string         `json:"periode_assesment_dokumen_akhir"`
-    PeriodeAssesmentLapanganMulai  string         `json:"periode_assesment_lapangan_mulai"`
-    PeriodeAssesmentLapanganAkhir  string         `json:"periode_assesment_lapangan_akhir"`
-	KodeAkses             *string `json:"kode_akses"`
+	ID     uint      `json:"ID"`
+	UUID   uuid.UUID `json:"UUID"`
+	Tahun  string    `json:"Tahun"`
 
-	Auditee               uint  `json:"auditee"`
-	Auditor1              uint  `json:"auditor1"`
-	Auditor2              uint  `json:"auditor2"`
+	FakultasUnitId   uint        `json:"FakultasUnitId"`
+	FakultasUnitUUID *uuid.UUID `json:"FakultasUnitUuid"`
+	FakultasUnit     string     `json:"FakultasUnit"`
 
-	NamaAuditee           string `json:"nama_auditee"`
-	NamaAuditor1          string `json:"nama_auditor1"`
-	NamaAuditor2          string `json:"nama_auditor2"`
+	PeriodeUploadMulai   string `json:"PeriodeUploadMulai"`
+	PeriodeUploadAkhir   string `json:"PeriodeUploadAkhir"`
+	PeriodeAssesmentDokumenMulai  string `json:"PeriodeAssesmentDokumenMulai"`
+	PeriodeAssesmentDokumenAkhir  string `json:"PeriodeAssesmentDokumenAkhir"`
+	PeriodeAssesmentLapanganMulai string `json:"PeriodeAssesmentLapanganMulai"`
+	PeriodeAssesmentLapanganAkhir string `json:"PeriodeAssesmentLapanganAkhir"`
 
-	Catatan1          	  *string `json:"catatan1"`
-	Catatan2          	  *string `json:"catatan2"`
+	KodeAkses *string `json:"KodeAkses"`
 
-	UUIDFakultasUnit      *string `json:"uuid_fakultas_unit"`
-	NamaFakultasUnit      string `json:"nama_fakultas_unit"`
-	Jenjang               *string `json:"jenjang"`
-	Type                  string `json:"type"`
-	Fakultas              *string `json:"fakultas"`
+	AuditeeId  *uint `json:"AuditeeId"`
+	Auditor1Id *uint `json:"Auditor1Id"`
+	Auditor2Id *uint `json:"Auditor2Id"`
+
+	AuditeeUuid  *uuid.UUID `json:"AuditeeUuid"`
+	Auditor1Uuid *uuid.UUID `json:"Auditor1Uuid"`
+	Auditor2Uuid *uuid.UUID `json:"Auditor2Uuid"`
+
+	Auditee  *string `json:"Auditee"`
+	Auditor1 *string `json:"Auditor1"`
+	Auditor2 *string `json:"Auditor2"`
+
+	Catatan1 *string `json:"Catatan1"`
+	Catatan2 *string `json:"Catatan2"`
+
+	Jenjang  *string `json:"Jenjang"`
+	Type     string  `json:"Type"`
+	Fakultas *string `json:"Fakultas"`
 }

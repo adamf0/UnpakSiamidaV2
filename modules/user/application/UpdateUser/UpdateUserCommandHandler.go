@@ -7,6 +7,7 @@ import (
 
 	domainuser "UnpakSiamida/modules/user/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type UpdateUserCommandHandler struct {
@@ -17,6 +18,8 @@ func (h *UpdateUserCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateUserCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// -------------------------
 	// VALIDATE UUID

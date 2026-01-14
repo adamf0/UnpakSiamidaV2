@@ -8,13 +8,16 @@ import (
     
     // "UnpakSiamida/common/domain"
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
+
     templatedokumentambahandomain "UnpakSiamida/modules/templatedokumentambahan/domain"
     CreateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
     // UpdateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
     DeleteTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
     GetTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/GetTemplateDokumenTambahan"
     GetAllTemplateDokumenTambahans "UnpakSiamida/modules/templatedokumentambahan/application/GetAllTemplateDokumenTambahans"
+    SetupUuidTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan"
 )
 
 func strPtr(s string) *string {
@@ -247,11 +250,26 @@ func GetAllTemplateDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
     return adapter.Send(c, templatedokumentambahans)
 }
 
-func ModuleTemplateDokumenTambahan(app *fiber.App) {
-    app.Post("/templatedokumentambahan", CreateTemplateDokumenTambahanHandlerfunc)
-    // app.Put("/templatedokumentambahan/:uuid", UpdateTemplateDokumenTambahanHandlerfunc)
-    app.Delete("/templatedokumentambahan/:uuid", DeleteTemplateDokumenTambahanHandlerfunc)
-    app.Get("/templatedokumentambahan/:uuid", GetTemplateDokumenTambahanHandlerfunc)
-    app.Get("/templatedokumentambahans", GetAllTemplateDokumenTambahansHandlerfunc)
+func SetupUuidTemplateDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
+    cmd := SetupUuidTemplateDokumenTambahan.SetupUuidTemplateDokumenTambahanCommand{}
+
+    message, err := mediatr.Send[SetupUuidTemplateDokumenTambahan.SetupUuidTemplateDokumenTambahanCommand, string](context.Background(), cmd)
+    if err != nil {
+        return commoninfra.HandleError(c, err)
+    }
+
+    return c.JSON(fiber.Map{"message": message})
 }
 
+func ModuleTemplateDokumenTambahan(app *fiber.App) {
+    admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
+
+    app.Get("/templatedokumentambahan/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidTemplateDokumenTambahansHandlerfunc)
+    
+    app.Post("/templatedokumentambahan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTemplateDokumenTambahanHandlerfunc)
+    // app.Put("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), UpdateTemplateDokumenTambahanHandlerfunc)
+    app.Delete("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTemplateDokumenTambahanHandlerfunc)
+    app.Get("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), GetTemplateDokumenTambahanHandlerfunc)
+    app.Get("/templatedokumentambahans", commonpresentation.JWTMiddleware(), GetAllTemplateDokumenTambahansHandlerfunc)
+}

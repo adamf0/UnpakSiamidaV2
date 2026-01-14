@@ -4,6 +4,7 @@ import (
     domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
     get "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
     getAll "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
+    setupUuid "UnpakSiamida/modules/fakultasunit/application/SetupUuidFakultasUnit"
     "github.com/mehdihadeli/go-mediatr"
     // "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -39,6 +40,13 @@ func RegisterModuleFakultasUnit(db *gorm.DB) error{
         getAll.GetAllFakultasUnitsQuery,
         domainfakultasunit.PagedFakultasUnits,
     ](&getAll.GetAllFakultasUnitsQueryHandler{
+        Repo: repoFakultasUnit,
+    })
+
+    mediatr.RegisterRequestHandler[
+        setupUuid.SetupUuidFakultasUnitCommand,
+        string,
+    ](&setupUuid.SetupUuidFakultasUnitCommandHandler{
         Repo: repoFakultasUnit,
     })
 

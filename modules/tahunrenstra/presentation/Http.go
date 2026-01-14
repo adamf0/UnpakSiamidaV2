@@ -8,7 +8,9 @@ import (
     
     // "UnpakSiamida/common/domain"
     commoninfra "UnpakSiamida/common/infrastructure"
+    commonpresentation "UnpakSiamida/common/presentation"
     commondomain "UnpakSiamida/common/domain"
+    
     TahunRenstradomain "UnpakSiamida/modules/tahunrenstra/domain"
     GetActiveTahunRenstra "UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra"
     GetAllTahunRenstras "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
@@ -116,7 +118,6 @@ func GetAllTahunRenstrasHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleTahunRenstra(app *fiber.App) {
-    app.Get("/tahunrenstra/active", GetActiveTahunRenstraHandlerfunc)
-    app.Get("/tahunrenstras", GetAllTahunRenstrasHandlerfunc)
+    app.Get("/tahunrenstra/active", commonpresentation.JWTMiddleware(), GetActiveTahunRenstraHandlerfunc)
+    app.Get("/tahunrenstras", commonpresentation.JWTMiddleware(), GetAllTahunRenstrasHandlerfunc)
 }
-

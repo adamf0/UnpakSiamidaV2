@@ -5,6 +5,7 @@ import (
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
 	"github.com/google/uuid"
+	"time"
 )
 
 type UpdateJenisFileCommandHandler struct {
@@ -15,6 +16,8 @@ func (h *UpdateJenisFileCommandHandler) Handle(
 	ctx context.Context,
 	cmd UpdateJenisFileCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// -------------------------
 	// VALIDATE UUID

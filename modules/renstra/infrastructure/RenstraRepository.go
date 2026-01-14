@@ -70,27 +70,37 @@ func (r *RenstraRepository) GetDefaultByUuid(
 
 	query := `
 		SELECT 
-			r.id as Id,
-			r.uuid as Uuid,
+			r.id as ID,
+			r.uuid as UUID,
 			r.tahun as Tahun,
-			r.fakultas_unit as FakultasUnit,
+
+			r.fakultas_unit as FakultasUnitId,
+			vfu.uuid as FakultasUnitUuid,
+			vfu.nama_fak_prod_unit as FakultasUnit,
+
 			r.periode_upload_mulai as PeriodeUploadMulai,
 			r.periode_upload_akhir as PeriodeUploadAkhir,
 			r.periode_assesment_dokumen_mulai as PeriodeAssesmentDokumenMulai,
 			r.periode_assesment_dokumen_akhir as PeriodeAssesmentDokumenAkhir,
 			r.periode_assesment_lapangan_mulai as PeriodeAssesmentLapanganMulai,
 			r.periode_assesment_lapangan_akhir as PeriodeAssesmentLapanganAkhir,
-			r.auditee as Auditee,
-			r.auditor1 as Auditor1,
-			r.auditor2  as Auditor2,
+
+			r.auditee as AuditeeId,
+			r.auditor1 as Auditor1Id,
+			r.auditor2 as Auditor2Id,
+
 			r.kodeAkses as KodeAkses,
 			r.catatan as Catatan1,
 			r.catatan2 as Catatan2,
-			a0.name AS NamaAuditee,
-			a1.name AS NamaAuditor1,
-			a2.name AS NamaAuditor2,
-			vfu.uuid AS UUIDFakultasUnit,
-			vfu.nama_fak_prod_unit as NamaFakultasUnit,
+
+			a0.name as Auditee,
+			a1.name as Auditor1,
+			a2.name as Auditor2,
+
+			a0.uuid as AuditeeUuid,
+			a1.uuid as Auditor1Uuid,
+			a2.uuid as Auditor2Uuid,
+
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
 			vfu.fakultas as Fakultas
@@ -100,57 +110,32 @@ func (r *RenstraRepository) GetDefaultByUuid(
 		LEFT JOIN users a1 ON r.auditor1 = a1.id
 		LEFT JOIN users a2 ON r.auditor2 = a2.id
 		WHERE r.uuid = ?
-		ORDER BY r.tahun DESC
 		LIMIT 1
 	`
 
-	var rowData domainrenstra.RenstraDefault
+	var result domainrenstra.RenstraDefault
 
-	row := r.db.WithContext(ctx).Raw(query, id).Row()
-	err := row.Scan(
-		&rowData.ID,
-		&rowData.UUID,
-		&rowData.Tahun,
-		&rowData.FakultasUnit,
-		&rowData.PeriodeUploadMulai,
-		&rowData.PeriodeUploadAkhir,
-		&rowData.PeriodeAssesmentDokumenMulai,
-		&rowData.PeriodeAssesmentDokumenAkhir,
-		&rowData.PeriodeAssesmentLapanganMulai,
-		&rowData.PeriodeAssesmentLapanganAkhir,
-		&rowData.Auditee,
-		&rowData.Auditor1,
-		&rowData.Auditor2,
-		&rowData.KodeAkses,
-		&rowData.Catatan1,
-		&rowData.Catatan2,
-		&rowData.NamaAuditee,
-		&rowData.NamaAuditor1,
-		&rowData.NamaAuditor2,
-		&rowData.UUIDFakultasUnit,
-		&rowData.NamaFakultasUnit,
-		&rowData.Jenjang,
-		&rowData.Type,
-		&rowData.Fakultas,
-	)
-
+	err := r.db.WithContext(ctx).Raw(query, id).Scan(&result).Error
 	if err != nil {
 		return nil, err
 	}
 
-	if rowData.ID == 0 {
+	if result.ID == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	return &rowData, nil
+	return &result, nil
 }
 
 var allowedSearchColumns = map[string]string{
 	"tahun":         "r.tahun",
-	"fakultas_unit": "r.fakultas_unit",
-	"auditee":       "a0.auditee",
-	"auditor1":      "a1.auditor1",
-	"auditor2":      "a2.auditor2",
+	"fakultas_unit": "vfu.nama_fak_prod_unit",
+	"auditee":       "a0.name",
+	"auditor1":      "a1.name",
+	"auditor2":      "a2.name",
+	"uuidauditee":   "a0.uuid",
+	"uuidauditor1":  "a1.uuid",
+	"uuidauditor2":  "a2.uuid",
 	"kodeakses":     "r.kodeAkses",
 	"jenjang":     	 "vfu.jenjang",
 	"fakultas":      "vfu.fakultas",
@@ -164,6 +149,7 @@ func (r *RenstraRepository) GetAll(
 	search string,
 	searchFilters []commondomainrenstra.SearchFilter,
 	page, limit *int,
+	scope string,
 ) ([]domainrenstra.RenstraDefault, int64, error) {
 
 	var renstras []domainrenstra.RenstraDefault
@@ -171,27 +157,37 @@ func (r *RenstraRepository) GetAll(
 
 	db := r.db.WithContext(ctx).Table("renstra r").
 		Select(`
-			r.id as Id,
-			r.uuid as Uuid,
+			r.id as ID,
+			r.uuid as UUID,
 			r.tahun as Tahun,
-			r.fakultas_unit as FakultasUnit,
+
+			r.fakultas_unit as FakultasUnitId,
+			vfu.uuid as FakultasUnitUuid,
+			vfu.nama_fak_prod_unit as FakultasUnit,
+
 			r.periode_upload_mulai as PeriodeUploadMulai,
 			r.periode_upload_akhir as PeriodeUploadAkhir,
 			r.periode_assesment_dokumen_mulai as PeriodeAssesmentDokumenMulai,
 			r.periode_assesment_dokumen_akhir as PeriodeAssesmentDokumenAkhir,
 			r.periode_assesment_lapangan_mulai as PeriodeAssesmentLapanganMulai,
 			r.periode_assesment_lapangan_akhir as PeriodeAssesmentLapanganAkhir,
-			r.auditee as Auditee,
-			r.auditor1 as Auditor1,
-			r.auditor2  as Auditor2,
+
+			r.auditee as AuditeeId,
+			r.auditor1 as Auditor1Id,
+			r.auditor2 as Auditor2Id,
+
 			r.kodeAkses as KodeAkses,
 			r.catatan as Catatan1,
 			r.catatan2 as Catatan2,
-			a0.name AS NamaAuditee,
-			a1.name AS NamaAuditor1,
-			a2.name AS NamaAuditor2,
-			vfu.uuid AS UUIDFakultasUnit,
-			vfu.nama_fak_prod_unit as NamaFakultasUnit,
+
+			a0.name as Auditee,
+			a1.name as Auditor1,
+			a2.name as Auditor2,
+
+			a0.uuid as AuditeeUuid,
+			a1.uuid as Auditor1Uuid,
+			a2.uuid as Auditor2Uuid,
+
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
 			vfu.fakultas as Fakultas
@@ -204,6 +200,9 @@ func (r *RenstraRepository) GetAll(
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
 	// -------------------------------
+	var auditOrParts []string
+	var auditParams []interface{}
+
 	if len(searchFilters) > 0 {
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
@@ -224,6 +223,23 @@ func (r *RenstraRepository) GetAll(
 			col, ok := allowedSearchColumns[field]
 			if !ok {
 				continue // skip unknown field
+			}
+
+			if scope == "audit" &&
+				(col == "a0.uuid" || col == "a1.uuid" || col == "a2.uuid") {
+
+				switch operator {
+				case "eq":
+					auditOrParts = append(auditOrParts, fmt.Sprintf("%s = ?", col))
+					auditParams = append(auditParams, value)
+				case "neq":
+					auditOrParts = append(auditOrParts, fmt.Sprintf("%s <> ?", col))
+					auditParams = append(auditParams, value)
+				default:
+					auditOrParts = append(auditOrParts, fmt.Sprintf("%s LIKE ?", col))
+					auditParams = append(auditParams, "%"+value+"%")
+				}
+				continue
 			}
 
 			switch operator {
@@ -250,6 +266,14 @@ func (r *RenstraRepository) GetAll(
 		}
 
 	}
+
+	if scope == "audit" && len(auditOrParts) > 0 {
+		db = db.Where(
+			"("+strings.Join(auditOrParts, " OR ")+")",
+			auditParams...,
+		)
+	}
+
 	if strings.TrimSpace(search) != "" {
 
 		// -------------------------------
@@ -321,4 +345,53 @@ func (r *RenstraRepository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
 		Delete(&domainrenstra.Renstra{}).Error
+}
+
+func (r *RenstraRepository) SetupUuid(ctx context.Context) error {
+	const chunkSize = 500
+
+	var ids []uint
+	if err := r.db.WithContext(ctx).
+		Model(&domainrenstra.Renstra{}).
+		Where("uuid IS NULL OR uuid = ''").
+		Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(ids); i += chunkSize {
+		end := i + chunkSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+
+		chunk := ids[i:end]
+
+		caseSQL := "CASE id "
+		args := make([]any, 0, len(chunk)*2+1)
+
+		for _, id := range chunk {
+			u := uuid.NewString()
+			caseSQL += "WHEN ? THEN ? "
+			args = append(args, id, u)
+		}
+
+		caseSQL += "END"
+		args = append(args, chunk)
+
+		query := fmt.Sprintf(
+			"UPDATE renstra SET uuid = %s WHERE id IN (?)",
+			caseSQL,
+		)
+
+		if err := r.db.WithContext(ctx).
+			Exec(query, args...).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
+	"time"
 )
 
 type GenerateRenstraCommandHandler struct {
@@ -30,6 +31,8 @@ func (h *GenerateRenstraCommandHandler) Handle(
 	ctx context.Context,
 	cmd GenerateRenstraCommand,
 ) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
 	// ===============================
 	// PARSE UUID
