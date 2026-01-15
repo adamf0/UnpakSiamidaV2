@@ -198,9 +198,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 WHEN r.tahun = YEAR(CURRENT_TIMESTAMP()) THEN 'active'
                 ELSE 'no-active'
             END AS status
-        FROM
-        (
-            SELECT
+        FROM (
+            SELECT DISTINCT
                 renstra.id,
                 renstra.tahun,
                 renstra.kodeAkses,
@@ -234,11 +233,10 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 ON tr.indikator = mir.id
             LEFT JOIN sijamu_fakultas_unit sfu
                 ON renstra.fakultas_unit = sfu.id
-            GROUP BY
-                renstra.id,
-                renstra.fakultas_unit
+
             UNION ALL
-            SELECT
+
+            SELECT DISTINCT
                 renstra.id,
                 renstra.tahun,
                 renstra.kodeAkses,
@@ -274,9 +272,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 ON renstra.fakultas_unit = sfu.id
             LEFT JOIN dokumen_tambahan dt
                 ON renstra.id = dt.id_renstra
-            GROUP BY
-                renstra.id,
-                renstra.fakultas_unit
         ) r
         GROUP BY r.tahun
         ORDER BY r.tahun;
