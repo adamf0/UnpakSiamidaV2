@@ -77,7 +77,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	// Buat table & data contoh
 	err = gdb.Exec(`
-        CREATE OR REPLACE TABLE dokumen_tambahan (
+        DROP TABLE IF EXISTS dokumen_tambahan;
+        CREATE TABLE dokumen_tambahan (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
@@ -94,7 +95,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ALTER TABLE dokumen_tambahan
         ADD PRIMARY KEY (id);
 
-        CREATE OR REPLACE TABLE master_indikator_renstra (
+        DROP TABLE IF EXISTS master_indikator_renstra;
+        CREATE TABLE master_indikator_renstra (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_master_standar int(11) DEFAULT NULL,
@@ -110,7 +112,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ALTER TABLE master_indikator_renstra
         ADD PRIMARY KEY (id);
 
-        CREATE OR REPLACE TABLE renstra (
+        DROP TABLE IF EXISTS renstra;
+        CREATE TABLE renstra (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
@@ -135,7 +138,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ALTER TABLE renstra
         ADD PRIMARY KEY (id);
         
-        CREATE OR REPLACE TABLE renstra_nilai (
+        DROP TABLE IF EXISTS renstra_nilai;
+        CREATE TABLE renstra_nilai (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
@@ -154,7 +158,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ALTER TABLE renstra_nilai
         ADD PRIMARY KEY (id);
 
-        CREATE OR REPLACE TABLE sijamu_fakultas_unit (
+        DROP TABLE IF EXISTS sijamu_fakultas_unit;
+        CREATE TABLE sijamu_fakultas_unit (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             kode_fakultas char(9) DEFAULT NULL,
@@ -164,7 +169,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             standalone tinyint(4) DEFAULT 0
         );
 
-        CREATE OR REPLACE TABLE template_renstra (
+        DROP TABLE IF EXISTS template_renstra;
+        CREATE TABLE template_renstra (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
