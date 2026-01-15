@@ -9817,14 +9817,14 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 renstra.created_at,
                 renstra.updated_at,
                 rn.tugas
-            FROM unpak_sijamu_server.renstra
-            LEFT JOIN unpak_sijamu_server.renstra_nilai rn
+            FROM renstra
+            LEFT JOIN renstra_nilai rn
                 ON renstra.id = rn.id_renstra
-            LEFT JOIN unpak_sijamu_server.template_renstra tr
+            LEFT JOIN template_renstra tr
                 ON rn.template_renstra = tr.id
-            LEFT JOIN unpak_sijamu_server.master_indikator_renstra mir
+            LEFT JOIN master_indikator_renstra mir
                 ON tr.indikator = mir.id
-            LEFT JOIN unpak_sijamu_server.sijamu_fakultas_unit sfu
+            LEFT JOIN sijamu_fakultas_unit sfu
                 ON renstra.fakultas_unit = sfu.id
             GROUP BY
                 renstra.id,
@@ -9855,16 +9855,16 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 renstra.created_at,
                 renstra.updated_at,
                 dt.tugas
-            FROM unpak_sijamu_server.renstra
-            LEFT JOIN unpak_sijamu_server.renstra_nilai rn
+            FROM renstra
+            LEFT JOIN renstra_nilai rn
                 ON renstra.id = rn.id_renstra
-            LEFT JOIN unpak_sijamu_server.template_renstra tr
+            LEFT JOIN template_renstra tr
                 ON rn.template_renstra = tr.id
-            LEFT JOIN unpak_sijamu_server.master_indikator_renstra mir
+            LEFT JOIN master_indikator_renstra mir
                 ON tr.indikator = mir.id
-            LEFT JOIN unpak_sijamu_server.sijamu_fakultas_unit sfu
+            LEFT JOIN sijamu_fakultas_unit sfu
                 ON renstra.fakultas_unit = sfu.id
-            LEFT JOIN unpak_sijamu_server.dokumen_tambahan dt
+            LEFT JOIN dokumen_tambahan dt
                 ON renstra.id = dt.id_renstra
             GROUP BY
                 renstra.id,
