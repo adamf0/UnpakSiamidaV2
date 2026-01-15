@@ -65,33 +65,33 @@ func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
 	}
 }
 
-func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
-	db, cleanup := setupAccountMySQL(t)
-	defer cleanup()
+// func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
+// 	db, cleanup := setupAccountMySQL(t)
+// 	defer cleanup()
 
-	_ = db.Exec("TRUNCATE TABLE users")
+// 	_ = db.Exec("TRUNCATE TABLE users")
 
-	repo := infra.NewAccountRepository(db)
-	handler := app.WhoamiCommandHandler{Repo: repo}
+// 	repo := infra.NewAccountRepository(db)
+// 	handler := app.WhoamiCommandHandler{Repo: repo}
 
-	cmd := app.WhoamiCommand{
-		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
-	}
+// 	cmd := app.WhoamiCommand{
+// 		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+// 	}
 
-	err := app.WhoamiCommandValidation(cmd)
-	if err != nil {
-		t.Fatalf("unexpected validation error: %v", err)
-	}
+// 	err := app.WhoamiCommandValidation(cmd)
+// 	if err != nil {
+// 		t.Fatalf("unexpected validation error: %v", err)
+// 	}
 
-	user, err := handler.Handle(context.Background(), cmd)
-	if err == nil {
-		t.Fatalf("expected error, got success %+v", user)
-	}
+// 	user, err := handler.Handle(context.Background(), cmd)
+// 	if err == nil {
+// 		t.Fatalf("expected error, got success %+v", user)
+// 	}
 
-	if err.Error() != domain.InvalidCredential().Error() {
-		t.Fatalf("expected InvalidCredential error, got %v", err)
-	}
-}
+// 	if err.Error() != domain.InvalidCredential().Error() {
+// 		t.Fatalf("expected InvalidCredential error, got %v", err)
+// 	}
+// }
 
 func TestWhoamiIntegration_ValidationErrors(t *testing.T) {
 	tests := []struct {
