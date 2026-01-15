@@ -3,11 +3,14 @@ package applicationtest
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"testing"
 	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -18,9 +21,19 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	req := testcontainers.ContainerRequest{
 		Image: "mysql:8.0",
+		Tmpfs: map[string]string{
+			"/var/lib/mysql": "rw",
+		},
+		Cmd: []string{
+			"--innodb_flush_log_at_trx_commit=2",
+			"--sync_binlog=0",
+		},
 		Env: map[string]string{
 			"MYSQL_ROOT_PASSWORD": "pass",
 			"MYSQL_DATABASE":      "testdb",
+		},
+		Labels: map[string]string{
+			"testcontainers.sessionId": "tahunrenstra",
 		},
 		ExposedPorts: []string{"3306/tcp"},
 		WaitingFor: wait.ForListeningPort("3306/tcp").
@@ -43,7 +56,15 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	var gdb *gorm.DB
 	// Retry connect 10x
 	for i := 0; i < 10; i++ {
-		gdb, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		gdb, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+			Logger: logger.New(
+				log.New(io.Discard, "", 0),
+				logger.Config{
+					SlowThreshold: time.Minute, // naikkan threshold
+					LogLevel:      logger.Error,
+				},
+			),
+		})
 		if err == nil {
 			break
 		}
@@ -56,7 +77,7 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	// Buat table & data contoh
 	err = gdb.Exec(`
-        CREATE TABLE dokumen_tambahan (
+        CREATE OR REPLACE TABLE dokumen_tambahan (
             id int(11) NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
@@ -73,6 +94,227 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ALTER TABLE dokumen_tambahan
         ADD PRIMARY KEY (id);
 
+        CREATE OR REPLACE TABLE master_indikator_renstra (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            id_master_standar int(11) DEFAULT NULL,
+            indikator text NOT NULL,
+            parent int(11) DEFAULT NULL,
+            tahun year(4) NOT NULL,
+            tipe_target text DEFAULT NULL,
+            operator varchar(5) DEFAULT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE master_indikator_renstra
+        ADD PRIMARY KEY (id);
+
+        CREATE OR REPLACE TABLE renstra (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            tahun year(4) NOT NULL,
+            fakultas_unit_old int(11) DEFAULT NULL,
+            fakultas_unit int(11) DEFAULT NULL,
+            periode_upload_mulai datetime NOT NULL,
+            periode_upload_akhir datetime NOT NULL,
+            periode_assesment_dokumen_mulai datetime NOT NULL,
+            periode_assesment_dokumen_akhir datetime NOT NULL,
+            periode_assesment_lapangan_mulai datetime NOT NULL,
+            periode_assesment_lapangan_akhir datetime NOT NULL,
+            kodeAkses varchar(255) DEFAULT NULL,
+            auditee bigint(20) UNSIGNED DEFAULT NULL,
+            auditor1 bigint(20) UNSIGNED DEFAULT NULL,
+            auditor2 bigint(20) UNSIGNED DEFAULT NULL,
+            catatan text DEFAULT NULL,
+            catatan2 text DEFAULT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE renstra
+        ADD PRIMARY KEY (id);
+        
+        CREATE OR REPLACE TABLE renstra_nilai (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            id_renstra_old int(11) DEFAULT NULL,
+            id_renstra int(11) NOT NULL,
+            template_renstra int(11) NOT NULL,
+            tugas varchar(100) NOT NULL,
+            capaian text DEFAULT NULL,
+            catatan text DEFAULT NULL,
+            link_bukti text DEFAULT NULL,
+            capaian_auditor text DEFAULT NULL,
+            catatan_auditor text DEFAULT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE renstra_nilai
+        ADD PRIMARY KEY (id);
+
+        CREATE OR REPLACE TABLE sijamu_fakultas_unit (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            kode_fakultas char(9) DEFAULT NULL,
+            kode_prodi char(10) DEFAULT NULL,
+            nama varchar(100) DEFAULT NULL,
+            id_m_prodi int(11) DEFAULT NULL,
+            standalone tinyint(4) DEFAULT 0
+        );
+
+        CREATE OR REPLACE TABLE template_renstra (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            tahun year(4) NOT NULL,
+            indikator int(11) NOT NULL,
+            pertanyaan tinyint(1) NOT NULL DEFAULT 0,
+            fakultas_unit int(11) NOT NULL,
+            kategori varchar(100) NOT NULL,
+            klasifikasi varchar(100) NOT NULL,
+            satuan varchar(100) DEFAULT NULL,
+            target varchar(100) DEFAULT NULL,
+            target_min varchar(100) DEFAULT NULL,
+            target_max varchar(100) DEFAULT NULL,
+            tugas varchar(100) NOT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE template_renstra
+        ADD PRIMARY KEY (id);
+
+        CREATE OR REPLACE VIEW v_tahun_renstra AS
+        SELECT
+            r.tahun,
+            CASE
+                WHEN r.tahun = YEAR(CURRENT_TIMESTAMP()) THEN 'active'
+                ELSE 'no-active'
+            END AS status
+        FROM
+        (
+            SELECT
+                renstra.id,
+                renstra.tahun,
+                renstra.kodeAkses,
+                renstra.fakultas_unit,
+                CASE
+                    WHEN sfu.standalone THEN 'fakultas'
+                    WHEN sfu.kode_fakultas IS NOT NULL
+                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
+                    WHEN sfu.kode_fakultas IS NOT NULL
+                        AND sfu.kode_prodi IS NULL
+                        AND sfu.nama IS NOT NULL THEN 'unit'
+                END AS type,
+                renstra.periode_upload_mulai,
+                renstra.periode_upload_akhir,
+                renstra.periode_assesment_dokumen_mulai,
+                renstra.periode_assesment_dokumen_akhir,
+                renstra.periode_assesment_lapangan_mulai,
+                renstra.periode_assesment_lapangan_akhir,
+                renstra.auditee,
+                renstra.auditor1,
+                renstra.auditor2,
+                renstra.created_at,
+                renstra.updated_at,
+                rn.tugas
+            FROM renstra
+            LEFT JOIN renstra_nilai rn
+                ON renstra.id = rn.id_renstra
+            LEFT JOIN template_renstra tr
+                ON rn.template_renstra = tr.id
+            LEFT JOIN master_indikator_renstra mir
+                ON tr.indikator = mir.id
+            LEFT JOIN sijamu_fakultas_unit sfu
+                ON renstra.fakultas_unit = sfu.id
+            GROUP BY
+                renstra.id,
+                renstra.fakultas_unit
+            UNION ALL
+            SELECT
+                renstra.id,
+                renstra.tahun,
+                renstra.kodeAkses,
+                renstra.fakultas_unit,
+                CASE
+                    WHEN sfu.standalone THEN 'fakultas'
+                    WHEN sfu.kode_fakultas IS NOT NULL
+                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
+                    WHEN sfu.kode_fakultas IS NOT NULL
+                        AND sfu.kode_prodi IS NULL
+                        AND sfu.nama IS NOT NULL THEN 'unit'
+                END AS type,
+                renstra.periode_upload_mulai,
+                renstra.periode_upload_akhir,
+                renstra.periode_assesment_dokumen_mulai,
+                renstra.periode_assesment_dokumen_akhir,
+                renstra.periode_assesment_lapangan_mulai,
+                renstra.periode_assesment_lapangan_akhir,
+                renstra.auditee,
+                renstra.auditor1,
+                renstra.auditor2,
+                renstra.created_at,
+                renstra.updated_at,
+                dt.tugas
+            FROM renstra
+            LEFT JOIN renstra_nilai rn
+                ON renstra.id = rn.id_renstra
+            LEFT JOIN template_renstra tr
+                ON rn.template_renstra = tr.id
+            LEFT JOIN master_indikator_renstra mir
+                ON tr.indikator = mir.id
+            LEFT JOIN sijamu_fakultas_unit sfu
+                ON renstra.fakultas_unit = sfu.id
+            LEFT JOIN dokumen_tambahan dt
+                ON renstra.id = dt.id_renstra
+            GROUP BY
+                renstra.id,
+                renstra.fakultas_unit
+        ) r
+        GROUP BY r.tahun
+        ORDER BY r.tahun;
+    `).Error
+
+	if err != nil {
+		t.Fatalf("migration failed: %v", err)
+	}
+
+	seedAll(t, gdb)
+
+	cleanup := func() {
+		sqlDB, _ := gdb.DB()
+		resetDB(t, gdb)
+		sqlDB.Close()
+		// mysqlC.Terminate(ctx)
+	}
+
+	return gdb, cleanup
+}
+
+func resetDB(t *testing.T, gdb *gorm.DB) {
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
+
+	tables := []string{
+		"dokumen_tambahan",
+		"master_indikator_renstra",
+		"renstra",
+		"renstra_nilai",
+		"sijamu_fakultas_unit",
+		"template_renstra",
+	}
+
+	for _, tbl := range tables {
+		gdb.Exec("TRUNCATE TABLE " + tbl)
+	}
+
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
+
+	seedAll(t, gdb)
+}
+
+func seedAll(t *testing.T, gdb *gorm.DB) {
+	err := gdb.Exec(`
         INSERT INTO dokumen_tambahan (id, uuid, id_renstra_old, id_renstra, id_template_dokumen_tambahan, file, capaian_auditor, catatan_auditor, tugas, created_at, updated_at) VALUES
         (1271, 'c836800f-8c09-4e04-ba16-e0ca027ca571', NULL, 368, 28, 'https://www.linkedin.com/in/adamfurqon175901204', NULL, 'entah lah', 'auditor2', NULL, '2024-12-23 07:53:29'),
         (1274, 'db252319-9c5b-4884-ba10-0a3ad9bacee9', NULL, 368, 34, 'https://www.linkedin.com/in/adamfurqon175901204', NULL, NULL, 'auditor2', NULL, '2024-12-23 07:53:40'),
@@ -500,22 +742,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (2248, 'e16f5775-eb89-4792-b216-9620062c20f0', NULL, 611, 63, NULL, NULL, NULL, 'auditor2', NULL, NULL),
         (2249, '206f78a9-5f1a-412a-bfea-d9d0add1e5bb', NULL, 611, 66, NULL, NULL, NULL, 'auditor2', NULL, NULL);
 
-        CREATE TABLE master_indikator_renstra (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            id_master_standar int(11) DEFAULT NULL,
-            indikator text NOT NULL,
-            parent int(11) DEFAULT NULL,
-            tahun year(4) NOT NULL,
-            tipe_target text DEFAULT NULL,
-            operator varchar(5) DEFAULT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE master_indikator_renstra
-        ADD PRIMARY KEY (id);
-
         INSERT INTO master_indikator_renstra (id, uuid, id_master_standar, indikator, parent, tahun, tipe_target, operator, created_at, updated_at) VALUES
         (16, 'b763b5b3-a18e-416c-9d0d-a0c23aa6076c', 1, 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing', NULL, '2024', 'numerik', NULL, '2024-08-25 19:25:05', '2024-09-21 07:18:42'),
         (79, 'c9e5f716-57e4-4349-a95c-83e264db62a1', 1, 'Lulusan bekerja pada ruang lingkup nasional', NULL, '2024', 'numerik', NULL, '2024-09-08 10:45:01', '2024-09-23 08:17:48'),
@@ -678,31 +904,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (479, '9c0bcb0d-2a6d-42c3-90aa-132f69d6ccd3', 205, 'uji coba', NULL, '2026', 'range', '>=', '2024-09-10 10:53:28', '2024-10-10 14:12:42'),
         (480, 'd0754056-4d55-4091-a13d-0fae624a7616', 211, 'tester', NULL, '2026', 'kategori', '>=', NULL, NULL);
 
-        CREATE TABLE renstra (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            tahun year(4) NOT NULL,
-            fakultas_unit_old int(11) DEFAULT NULL,
-            fakultas_unit int(11) DEFAULT NULL,
-            periode_upload_mulai datetime NOT NULL,
-            periode_upload_akhir datetime NOT NULL,
-            periode_assesment_dokumen_mulai datetime NOT NULL,
-            periode_assesment_dokumen_akhir datetime NOT NULL,
-            periode_assesment_lapangan_mulai datetime NOT NULL,
-            periode_assesment_lapangan_akhir datetime NOT NULL,
-            kodeAkses varchar(255) DEFAULT NULL,
-            auditee bigint(20) UNSIGNED DEFAULT NULL,
-            auditor1 bigint(20) UNSIGNED DEFAULT NULL,
-            auditor2 bigint(20) UNSIGNED DEFAULT NULL,
-            catatan text DEFAULT NULL,
-            catatan2 text DEFAULT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE renstra
-        ADD PRIMARY KEY (id);
-        
         INSERT INTO renstra (id, uuid, tahun, fakultas_unit_old, fakultas_unit, periode_upload_mulai, periode_upload_akhir, periode_assesment_dokumen_mulai, periode_assesment_dokumen_akhir, periode_assesment_lapangan_mulai, periode_assesment_lapangan_akhir, kodeAkses, auditee, auditor1, auditor2, catatan, catatan2, created_at, updated_at) VALUES
         (368, 'c67a37c3-7f25-43de-835d-e4bece0eb308', '2024', 0, 91, '2024-10-18 00:00:00', '2024-11-22 00:00:00', '2024-11-23 00:00:00', '2024-12-11 00:00:00', '2024-12-12 00:00:00', '2024-12-31 00:00:00', '567244', 232, 70, 415, NULL, NULL, '2024-10-18 13:41:48', '2024-12-31 10:37:12'),
         (371, '0025699d-d69b-41e4-b712-f437aa15d3b1', '2024', 0, 1, '2024-10-18 00:00:00', '2024-11-22 00:00:00', '2024-11-23 00:00:00', '2024-12-11 00:00:00', '2024-12-12 00:00:00', '2024-12-31 00:00:00', '567244', 235, 70, 415, NULL, 'o	mahasiswa asing \r\no	Fasilitas magang\r\no	Inovasi mahasiswa', '2024-10-18 13:42:09', '2025-09-11 15:11:59'),
@@ -811,25 +1012,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (610, 'bb687877-bb64-4945-b3e9-9012e69d787e', '2025', 0, 126, '2025-10-21 00:00:00', '2025-11-28 00:00:00', '2025-11-29 00:00:00', '2025-12-07 00:00:00', '2025-12-08 00:00:00', '2025-12-20 00:00:00', '123123', 467, 115, 508, NULL, NULL, '2025-10-22 14:04:33', '2025-11-28 13:54:03'),
         (611, '756e3cd5-d62f-42ee-a6f6-ac97c7ef3442', '2025', NULL, 6, '2025-10-18 00:00:00', '2025-11-28 00:00:00', '2025-11-29 00:00:00', '2025-12-07 00:00:00', '2025-12-08 00:00:00', '2025-12-20 00:00:00', '321123', 268, 82, 511, NULL, NULL, '2025-11-18 13:58:42', '2025-11-28 14:11:57'),
         (619, '2e2d4672-cf8f-4578-8a85-992b5bce5f9f', '2033', NULL, 10, '2025-12-01 00:00:00', '2025-12-01 00:00:00', '2025-12-02 00:00:00', '2025-12-02 00:00:00', '2025-12-03 00:00:00', '2025-12-03 00:00:00', NULL, 515, 514, 513, NULL, NULL, NULL, NULL);
-        
-        CREATE TABLE renstra_nilai (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            id_renstra_old int(11) DEFAULT NULL,
-            id_renstra int(11) NOT NULL,
-            template_renstra int(11) NOT NULL,
-            tugas varchar(100) NOT NULL,
-            capaian text DEFAULT NULL,
-            catatan text DEFAULT NULL,
-            link_bukti text DEFAULT NULL,
-            capaian_auditor text DEFAULT NULL,
-            catatan_auditor text DEFAULT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE renstra_nilai
-        ADD PRIMARY KEY (id);
 
         INSERT INTO renstra_nilai (id, uuid, id_renstra_old, id_renstra, template_renstra, tugas, capaian, catatan, link_bukti, capaian_auditor, catatan_auditor, created_at, updated_at) VALUES
         (18947, '7b59ffc3-f851-4e38-ba96-06cc168c8dd1', NULL, 368, 11884, 'auditor1', '1', '2', '3', '0', 'Belum Tercapai x', NULL, '2024-12-16 15:13:34'),
@@ -5163,16 +5345,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (31079, '554ae2bd-e8e7-4f6b-991c-7dda899ae300', NULL, 611, 21450, 'auditor2', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
         (31160, '38df7ee9-0ec6-490b-b94d-e580e8451bd8', NULL, 527, 19004, 'auditor2', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
-        CREATE TABLE sijamu_fakultas_unit (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            kode_fakultas char(9) DEFAULT NULL,
-            kode_prodi char(10) DEFAULT NULL,
-            nama varchar(100) DEFAULT NULL,
-            id_m_prodi int(11) DEFAULT NULL,
-            standalone tinyint(4) DEFAULT 0
-        );
-
         INSERT INTO sijamu_fakultas_unit (id, uuid, kode_fakultas, kode_prodi, nama, id_m_prodi, standalone) VALUES
         (1, '0d2fa3f8-6df3-45b8-8985-654cb49d5d03', '01', '74201', NULL, 7, 0),
         (2, 'ce5459fa-8aa7-4efc-9cb0-3f067df561c9', '02', '61201', NULL, 8, 0),
@@ -5261,27 +5433,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (129, 'b13f35eb-91c9-4f5c-a79c-67542c7a195b', '03', NULL, 'LABORATORIUM BAHASA INGGRIS', 66, 0),
         (130, 'a85f99c4-bbe1-4f9c-827a-fea3b958ab58', '03', NULL, 'LABORATORIUM MICROTEACHING', 66, 0),
         (131, 'c031ad9c-5288-4343-bfee-0a9854c76d77', '03', NULL, 'LABORATORIUM KOMPUTER', 66, 0);
-
-        CREATE TABLE template_renstra (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            tahun year(4) NOT NULL,
-            indikator int(11) NOT NULL,
-            pertanyaan tinyint(1) NOT NULL DEFAULT 0,
-            fakultas_unit int(11) NOT NULL,
-            kategori varchar(100) NOT NULL,
-            klasifikasi varchar(100) NOT NULL,
-            satuan varchar(100) DEFAULT NULL,
-            target varchar(100) DEFAULT NULL,
-            target_min varchar(100) DEFAULT NULL,
-            target_max varchar(100) DEFAULT NULL,
-            tugas varchar(100) NOT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE template_renstra
-        ADD PRIMARY KEY (id);
 
         INSERT INTO template_renstra (id, uuid, tahun, indikator, pertanyaan, fakultas_unit, kategori, klasifikasi, satuan, target, target_min, target_max, tugas, created_at, updated_at) VALUES
         (11884, 'c6df396d-b15e-4129-b1c8-4f312b2830ca', '2024', 16, 1, 91, 'fakultas#all', 'minor', '% Lulusan', '15', NULL, NULL, 'auditor1', NULL, '2025-02-02 00:21:50'),
@@ -9916,107 +10067,9 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (21486, '388db386-936a-4022-af6e-d5183a82a1bb', '2025', 475, 1, 9, 'prodi#profesi', 'minor', 'Inovasi Mahasiswa', '3', NULL, NULL, 'auditor2', NULL, '2025-09-18 15:11:21'),
         (21487, '53a150d8-1a2e-434b-9bb1-aa63d86eb26d', '2025', 475, 1, 127, 'prodi#profesi', 'minor', 'Inovasi Mahasiswa', '3', NULL, NULL, 'auditor2', NULL, '2025-09-18 15:11:21'),
         (21496, 'f8bbd721-1657-42ff-8d1e-22f0ca8d9e4f', '2026', 479, 1, 10, 'prodi#s1', 'major', 'ok', NULL, '0.001', '0.002', 'auditor1', NULL, NULL);
-
-        CREATE OR REPLACE VIEW v_tahun_renstra AS
-        SELECT
-            r.tahun,
-            CASE
-                WHEN r.tahun = YEAR(CURRENT_TIMESTAMP()) THEN 'active'
-                ELSE 'no-active'
-            END AS status
-        FROM
-        (
-            SELECT
-                renstra.id,
-                renstra.tahun,
-                renstra.kodeAkses,
-                renstra.fakultas_unit,
-                CASE
-                    WHEN sfu.standalone THEN 'fakultas'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NULL
-                        AND sfu.nama IS NOT NULL THEN 'unit'
-                END AS type,
-                renstra.periode_upload_mulai,
-                renstra.periode_upload_akhir,
-                renstra.periode_assesment_dokumen_mulai,
-                renstra.periode_assesment_dokumen_akhir,
-                renstra.periode_assesment_lapangan_mulai,
-                renstra.periode_assesment_lapangan_akhir,
-                renstra.auditee,
-                renstra.auditor1,
-                renstra.auditor2,
-                renstra.created_at,
-                renstra.updated_at,
-                rn.tugas
-            FROM renstra
-            LEFT JOIN renstra_nilai rn
-                ON renstra.id = rn.id_renstra
-            LEFT JOIN template_renstra tr
-                ON rn.template_renstra = tr.id
-            LEFT JOIN master_indikator_renstra mir
-                ON tr.indikator = mir.id
-            LEFT JOIN sijamu_fakultas_unit sfu
-                ON renstra.fakultas_unit = sfu.id
-            GROUP BY
-                renstra.id,
-                renstra.fakultas_unit
-            UNION ALL
-            SELECT
-                renstra.id,
-                renstra.tahun,
-                renstra.kodeAkses,
-                renstra.fakultas_unit,
-                CASE
-                    WHEN sfu.standalone THEN 'fakultas'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NULL
-                        AND sfu.nama IS NOT NULL THEN 'unit'
-                END AS type,
-                renstra.periode_upload_mulai,
-                renstra.periode_upload_akhir,
-                renstra.periode_assesment_dokumen_mulai,
-                renstra.periode_assesment_dokumen_akhir,
-                renstra.periode_assesment_lapangan_mulai,
-                renstra.periode_assesment_lapangan_akhir,
-                renstra.auditee,
-                renstra.auditor1,
-                renstra.auditor2,
-                renstra.created_at,
-                renstra.updated_at,
-                dt.tugas
-            FROM renstra
-            LEFT JOIN renstra_nilai rn
-                ON renstra.id = rn.id_renstra
-            LEFT JOIN template_renstra tr
-                ON rn.template_renstra = tr.id
-            LEFT JOIN master_indikator_renstra mir
-                ON tr.indikator = mir.id
-            LEFT JOIN sijamu_fakultas_unit sfu
-                ON renstra.fakultas_unit = sfu.id
-            LEFT JOIN dokumen_tambahan dt
-                ON renstra.id = dt.id_renstra
-            GROUP BY
-                renstra.id,
-                renstra.fakultas_unit
-        ) r
-        GROUP BY r.tahun
-        ORDER BY r.tahun;
     `).Error
 
 	if err != nil {
 		t.Fatalf("migration failed: %v", err)
 	}
-
-	cleanup := func() {
-		sqlDB, _ := gdb.DB()
-		sqlDB.Close()
-		mysqlC.Terminate(ctx)
-	}
-
-	return gdb, cleanup
 }

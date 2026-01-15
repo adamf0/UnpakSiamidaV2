@@ -29,6 +29,8 @@ jobs:
   test:
     name: Test & Coverage
     runs-on: ubuntu-latest
+    env:
+      TESTCONTAINERS_REUSE_ENABLE: "true"
     needs: build
     steps:
       - uses: actions/checkout@v4
