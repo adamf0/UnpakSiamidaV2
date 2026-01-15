@@ -5,28 +5,29 @@ import (
 
 	common "UnpakSiamida/common/domain"
 	helper "UnpakSiamida/common/helper"
+	event "UnpakSiamida/modules/user/event"
 
 	"github.com/google/uuid"
 )
 
 type User struct {
 	common.Entity
-	ID           uint       `gorm:"primaryKey;autoIncrement"`
-	UUID         uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	Username     string     `gorm:"column:nidn_username;size:100;not null"`
-	Password 	 string     `gorm:"type:longtext;not null"`
-	Name         string     `gorm:"size:255;not null"`
-	Email        string     `gorm:"size:255;"`
-	Level        string     `gorm:"size:255;"`
-	FakultasUnit *int       `gorm:"column:fakultas_unit;"`
+	ID           uint      `gorm:"primaryKey;autoIncrement"`
+	UUID         uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	Username     string    `gorm:"column:nidn_username;size:100;not null"`
+	Password     string    `gorm:"type:longtext;not null"`
+	Name         string    `gorm:"size:255;not null"`
+	Email        string    `gorm:"size:255;"`
+	Level        string    `gorm:"size:255;"`
+	FakultasUnit *int      `gorm:"column:fakultas_unit;"`
 }
+
 func (User) TableName() string {
 	return "users"
 }
 
-
 // === CREATE ===
-func NewUser(username string, password string, name string, email string, level string, fakultasunit *int) common.ResultValue[*User] {
+func NewUser(username string, password string, name string, email string, level string, fakultasunit *int, target *string, tipe *string) common.ResultValue[*User] {
 
 	if !helper.IsValidUnpakEmail(email) {
 		return common.FailureValue[*User](InvalidEmail())
@@ -38,14 +39,21 @@ func NewUser(username string, password string, name string, email string, level 
 		Password:     password,
 		Name:         name,
 		Email:        email,
-		Level: 		  level,
+		Level:        level,
 		FakultasUnit: fakultasunit,
 	}
 
-	user.Raise(UserCreatedEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
-		UserUUID:   user.UUID,
+	user.Raise(event.UserCreatedEvent{
+		EventID:      uuid.New(),
+		OccurredOn:   time.Now().UTC(),
+		UserUUID:     user.UUID,
+		Username:     username,
+		Password:     password,
+		Name:         name,
+		Email:        email,
+		Level:        level,
+		FakultasUnit: target,
+		Tipe:         tipe,
 	})
 
 	return common.SuccessValue(user)
@@ -53,7 +61,7 @@ func NewUser(username string, password string, name string, email string, level 
 
 // === UPDATE ===
 func UpdateUser(
-	prev *User, 
+	prev *User,
 	uid uuid.UUID,
 	username string,
 	password *string,
@@ -61,6 +69,8 @@ func UpdateUser(
 	email string,
 	level string,
 	fakultasunit *int,
+	target *string,
+	tipe *string,
 ) common.ResultValue[*User] {
 
 	if prev == nil {
@@ -88,10 +98,17 @@ func UpdateUser(
 		prev.FakultasUnit = fakultasunit
 	}
 
-	prev.Raise(UserUpdatedEvent{
-		EventID:   	uuid.New(),
-		OccurredOn: time.Now().UTC(),
-		UserUUID:   prev.UUID,
+	prev.Raise(event.UserUpdatedEvent{
+		EventID:      uuid.New(),
+		OccurredOn:   time.Now().UTC(),
+		UserUUID:     prev.UUID,
+		Username:     username,
+		Password:     *password,
+		Name:         name,
+		Email:        email,
+		Level:        level,
+		FakultasUnit: target,
+		Tipe:         tipe,
 	})
 
 	return common.SuccessValue(prev)

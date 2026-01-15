@@ -18,5 +18,5 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("FakultasUnit.NotFound", fmt.Sprintf("FakultasUnit with identifier %s not found", id) )
+	return domain.NotFoundError("FakultasUnit.NotFound", fmt.Sprintf("FakultasUnit with identifier %s not found", id))
 }

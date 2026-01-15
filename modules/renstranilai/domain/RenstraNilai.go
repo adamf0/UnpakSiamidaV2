@@ -6,6 +6,7 @@ import (
 
 	common "UnpakSiamida/common/domain"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
+	event "UnpakSiamida/modules/renstranilai/event"
 
 	"github.com/google/uuid"
 )
@@ -13,16 +14,16 @@ import (
 type RenstraNilai struct {
 	common.Entity
 
-	ID              	uint       		`gorm:"primaryKey;autoIncrement"`
-	UUID            	uuid.UUID  		`gorm:"type:char(36);uniqueIndex"`
-	Renstra       		uint     		`gorm:"column:id_renstra;"`
-	TemplateRenstra     uint     		`gorm:""`
-	Tugas       		string     		`gorm:""`
-	Capaian       		*string     	`gorm:""`
-	Catatan       		*string     	`gorm:""`
-	LinkBukti       	*string     	`gorm:"column:link_bukti;"`
-	CapaianAuditor      *string     	`gorm:"column:capaian_auditor;"`
-	CatatanAuditor      *string     	`gorm:"column:catatan_auditor;"`
+	ID              uint      `gorm:"primaryKey;autoIncrement"`
+	UUID            uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	Renstra         uint      `gorm:"column:id_renstra;"`
+	TemplateRenstra uint      `gorm:""`
+	Tugas           string    `gorm:""`
+	Capaian         *string   `gorm:""`
+	Catatan         *string   `gorm:""`
+	LinkBukti       *string   `gorm:"column:link_bukti;"`
+	CapaianAuditor  *string   `gorm:"column:capaian_auditor;"`
+	CatatanAuditor  *string   `gorm:"column:catatan_auditor;"`
 }
 
 func (RenstraNilai) TableName() string {
@@ -77,9 +78,9 @@ func UpdateRenstraNilai(
 		prev.CatatanAuditor = CatatanAuditor
 	}
 
-	prev.Raise(RenstraNilaiUpdatedEvent{ //[pr] ketika tersave maka buat kts
-		EventID:              uuid.New(),
-		OccurredOn:           time.Now().UTC(),
+	prev.Raise(event.RenstraNilaiUpdatedEvent{ //[pr] ketika tersave maka buat kts
+		EventID:          uuid.New(),
+		OccurredOn:       time.Now().UTC(),
 		RenstraNilaiUUID: prev.UUID,
 	})
 
@@ -95,7 +96,7 @@ func contains(list []string, value string) bool {
 	return false
 }
 
-func IsGrantedAccess(tahun, mode, granted string) bool{
+func IsGrantedAccess(tahun, mode, granted string) bool {
 	requiredKey := tahun + "#" + mode
 
 	grantedList := strings.Split(granted, ",")

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	domain "UnpakSiamida/modules/user/domain"
-	
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,35 +25,41 @@ func TestNewUser(t *testing.T) {
 		email        string
 		level        string
 		fakultasUnit *int
+		target       *string
+		tipe         *string
 		wantSuccess  bool
 		wantErrCode  string
 	}{
 		{
-			name:        "ValidUser",
-			username:    "user1",
-			password:    "secret",
-			nameField:   "John Doe",
-			email:       validEmail,
-			level:       "admin",
+			name:         "ValidUser",
+			username:     "user1",
+			password:     "secret",
+			nameField:    "John Doe",
+			email:        validEmail,
+			level:        "admin",
 			fakultasUnit: nil,
-			wantSuccess: true,
+			target:       nil,
+			tipe:         nil,
+			wantSuccess:  true,
 		},
 		{
-			name:        "InvalidEmail",
-			username:    "user2",
-			password:    "secret",
-			nameField:   "Jane Doe",
-			email:       invalidEmail,
-			level:       "user",
+			name:         "InvalidEmail",
+			username:     "user2",
+			password:     "secret",
+			nameField:    "Jane Doe",
+			email:        invalidEmail,
+			level:        "user",
 			fakultasUnit: nil,
-			wantSuccess: false,
-			wantErrCode: domain.InvalidEmail().Code,
+			target:       nil,
+			tipe:         nil,
+			wantSuccess:  false,
+			wantErrCode:  domain.InvalidEmail().Code,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := domain.NewUser(tt.username, tt.password, tt.nameField, tt.email, tt.level, tt.fakultasUnit)
+			res := domain.NewUser(tt.username, tt.password, tt.nameField, tt.email, tt.level, tt.fakultasUnit, tt.target, tt.tipe)
 
 			if tt.wantSuccess {
 				require.True(t, res.IsSuccess)
@@ -101,6 +107,8 @@ func TestUpdateUser(t *testing.T) {
 		email        string
 		level        string
 		fakultasUnit *int
+		target       *string
+		tipe         *string
 		wantSuccess  bool
 		wantErrCode  string
 	}{
@@ -113,6 +121,8 @@ func TestUpdateUser(t *testing.T) {
 			nameField:   "X",
 			email:       validEmail,
 			level:       "user",
+			target:      nil,
+			tipe:        nil,
 			wantSuccess: false,
 			wantErrCode: domain.EmptyData().Code,
 		},
@@ -125,6 +135,8 @@ func TestUpdateUser(t *testing.T) {
 			nameField:   "X",
 			email:       validEmail,
 			level:       "user",
+			target:      nil,
+			tipe:        nil,
 			wantSuccess: false,
 			wantErrCode: domain.InvalidData().Code,
 		},
@@ -137,38 +149,44 @@ func TestUpdateUser(t *testing.T) {
 			nameField:   "X",
 			email:       invalidEmail,
 			level:       "user",
+			target:      nil,
+			tipe:        nil,
 			wantSuccess: false,
 			wantErrCode: domain.InvalidEmail().Code,
 		},
 		{
-			name:        "SuccessWithPassword",
-			prev:        prev,
-			uid:         baseUUID,
-			username:    "u1",
-			password:    &newPassword,
-			nameField:   newName,
-			email:       validEmail,
-			level:       newLevel,
+			name:         "SuccessWithPassword",
+			prev:         prev,
+			uid:          baseUUID,
+			username:     "u1",
+			password:     &newPassword,
+			nameField:    newName,
+			email:        validEmail,
+			level:        newLevel,
 			fakultasUnit: &fakultasUnit,
-			wantSuccess: true,
+			target:       nil,
+			tipe:         nil,
+			wantSuccess:  true,
 		},
 		{
-			name:        "SuccessWithoutPassword",
-			prev:        prev,
-			uid:         baseUUID,
-			username:    "u1",
-			password:    nil,
-			nameField:   newName,
-			email:       validEmail,
-			level:       newLevel,
+			name:         "SuccessWithoutPassword",
+			prev:         prev,
+			uid:          baseUUID,
+			username:     "u1",
+			password:     nil,
+			nameField:    newName,
+			email:        validEmail,
+			level:        newLevel,
 			fakultasUnit: &fakultasUnit,
-			wantSuccess: true,
+			target:       nil,
+			tipe:         nil,
+			wantSuccess:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := domain.UpdateUser(tt.prev, tt.uid, tt.username, tt.password, tt.nameField, tt.email, tt.level, tt.fakultasUnit)
+			res := domain.UpdateUser(tt.prev, tt.uid, tt.username, tt.password, tt.nameField, tt.email, tt.level, tt.fakultasUnit, tt.target, tt.tipe)
 
 			if tt.wantSuccess {
 				require.True(t, res.IsSuccess)

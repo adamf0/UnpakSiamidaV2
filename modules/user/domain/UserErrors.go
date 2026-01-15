@@ -22,5 +22,13 @@ func InvalidEmail() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("User.NotFound", fmt.Sprintf("User with identifier %s not found", id) )
+	return domain.NotFoundError("User.NotFound", fmt.Sprintf("User with identifier %s not found", id))
+}
+
+func InvalidParsing(target string) domain.Error {
+	return domain.NotFoundError("User.IvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
+}
+
+func NotFoundFakultasUnit(id string) domain.Error {
+	return domain.NotFoundError("User.NotFoundFakultasUnit", fmt.Sprintf("Fakultas unit with identifier %s not found", id))
 }

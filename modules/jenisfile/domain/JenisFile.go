@@ -4,6 +4,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	event "UnpakSiamida/modules/jenisfile/event"
 
 	"github.com/google/uuid"
 )
@@ -11,9 +12,9 @@ import (
 type JenisFile struct {
 	common.Entity
 
-	ID              uint       `gorm:"primaryKey;autoIncrement"`
-	UUID            uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	Nama       		string     `gorm:"type:longtext;not null"`
+	ID   uint      `gorm:"primaryKey;autoIncrement"`
+	UUID uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	Nama string    `gorm:"type:longtext;not null"`
 }
 
 func (JenisFile) TableName() string {
@@ -24,14 +25,14 @@ func (JenisFile) TableName() string {
 func NewJenisFile(nama string) common.ResultValue[*JenisFile] {
 
 	jenisfile := &JenisFile{
-		UUID:         uuid.New(),
-		Nama:         nama,
+		UUID: uuid.New(),
+		Nama: nama,
 	}
 
-	jenisfile.Raise(JenisFileCreatedEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
-		JenisFileUUID:   jenisfile.UUID,
+	jenisfile.Raise(event.JenisFileCreatedEvent{
+		EventID:       uuid.New(),
+		OccurredOn:    time.Now().UTC(),
+		JenisFileUUID: jenisfile.UUID,
 	})
 
 	return common.SuccessValue(jenisfile)
@@ -39,7 +40,7 @@ func NewJenisFile(nama string) common.ResultValue[*JenisFile] {
 
 // === UPDATE ===
 func UpdateJenisFile(
-	prev *JenisFile, 
+	prev *JenisFile,
 	uid uuid.UUID,
 	nama string,
 ) common.ResultValue[*JenisFile] {
@@ -54,10 +55,10 @@ func UpdateJenisFile(
 
 	prev.Nama = nama
 
-	prev.Raise(JenisFileUpdatedEvent{
-		EventID:   	uuid.New(),
-		OccurredOn: time.Now().UTC(),
-		JenisFileUUID:   prev.UUID,
+	prev.Raise(event.JenisFileUpdatedEvent{
+		EventID:       uuid.New(),
+		OccurredOn:    time.Now().UTC(),
+		JenisFileUUID: prev.UUID,
 	})
 
 	return common.SuccessValue(prev)

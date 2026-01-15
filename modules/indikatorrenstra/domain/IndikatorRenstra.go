@@ -4,6 +4,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	event "UnpakSiamida/modules/indikatorrenstra/event"
 
 	"github.com/google/uuid"
 )
@@ -11,14 +12,14 @@ import (
 type IndikatorRenstra struct {
 	common.Entity
 
-	ID              uint       `gorm:"primaryKey;autoIncrement"`
-	UUID            uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	StandarRenstra  *uint      `gorm:"column:id_master_standar;"`
-	Indikator       string     `gorm:"type:longtext;not null"`
-	Parent          *uint      `gorm:""`
-	Tahun           string     `gorm:"size:255;not null"`
-	TipeTarget      string     `gorm:"size:255;not null"`
-	Operator        *string    `gorm:""`
+	ID             uint      `gorm:"primaryKey;autoIncrement"`
+	UUID           uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	StandarRenstra *uint     `gorm:"column:id_master_standar;"`
+	Indikator      string    `gorm:"type:longtext;not null"`
+	Parent         *uint     `gorm:""`
+	Tahun          string    `gorm:"size:255;not null"`
+	TipeTarget     string    `gorm:"size:255;not null"`
+	Operator       *string   `gorm:""`
 }
 
 func (IndikatorRenstra) TableName() string {
@@ -53,7 +54,7 @@ func NewIndikatorRenstra(
 		Operator:       operator,
 	}
 
-	ir.Raise(IndikatorRenstraCreatedEvent{
+	ir.Raise(event.IndikatorRenstraCreatedEvent{
 		EventID:              uuid.New(),
 		OccurredOn:           time.Now().UTC(),
 		IndikatorRenstraUUID: ir.UUID,
@@ -96,9 +97,7 @@ func UpdateIndikatorRenstra(
 	prev.TipeTarget = tipeTarget
 
 	// optional pointer fields updated only if not nil
-	if standar != nil {
-		prev.StandarRenstra = standar
-	}
+	prev.StandarRenstra = standar
 
 	if parent != nil {
 		prev.Parent = parent
@@ -108,7 +107,7 @@ func UpdateIndikatorRenstra(
 		prev.Operator = operator
 	}
 
-	prev.Raise(IndikatorRenstraUpdatedEvent{
+	prev.Raise(event.IndikatorRenstraUpdatedEvent{
 		EventID:              uuid.New(),
 		OccurredOn:           time.Now().UTC(),
 		IndikatorRenstraUUID: prev.UUID,

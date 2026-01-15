@@ -5,6 +5,7 @@ import (
 
 	common "UnpakSiamida/common/domain"
 	helper "UnpakSiamida/common/helper"
+	event "UnpakSiamida/modules/generaterenstra/event"
 
 	"github.com/google/uuid"
 )
@@ -12,11 +13,11 @@ import (
 type GenerateRenstra struct {
 	common.Entity
 
-	ID              				uint       `gorm:"primaryKey;autoIncrement"`
-	UUID            				uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	RenstraId            			uint  	   `gorm:"column:id_renstra;"`
-	TemplateRenstra           		uint       `gorm:"column:template_renstra;"`
-	Tugas  							string       `gorm:""`
+	ID              uint      `gorm:"primaryKey;autoIncrement"`
+	UUID            uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	RenstraId       uint      `gorm:"column:id_renstra;"`
+	TemplateRenstra uint      `gorm:"column:template_renstra;"`
+	Tugas           string    `gorm:""`
 }
 
 func (GenerateRenstra) TableName() string {
@@ -26,12 +27,12 @@ func (GenerateRenstra) TableName() string {
 func NewGenerateRenstra(
 	tahun string, //tahun template
 	renstraTahun string, //tahun renstra
-	
+
 	fakultasUnit uint, //fakunit template
 	renstraFakultasUnit uint, //fakunit renstra
-	
+
 	renstraId uint,
-	
+
 	template uint,
 	templateUuid string,
 	indikator string,
@@ -56,15 +57,15 @@ func NewGenerateRenstra(
 	}
 
 	renstra := &GenerateRenstra{
-		UUID:                   uuid.New(),
-		RenstraId:              renstraId,
-		TemplateRenstra:        template,
-		Tugas:         			tugas,
+		UUID:            uuid.New(),
+		RenstraId:       renstraId,
+		TemplateRenstra: template,
+		Tugas:           tugas,
 	}
 
-	renstra.Raise(GenerateRenstraCreatedEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
+	renstra.Raise(event.GenerateRenstraCreatedEvent{
+		EventID:             uuid.New(),
+		OccurredOn:          time.Now().UTC(),
 		GenerateRenstraUUID: renstra.UUID,
 	})
 

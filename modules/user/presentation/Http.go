@@ -7,19 +7,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
 
+	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
-	commondomain "UnpakSiamida/common/domain"
 
-	userdomain "UnpakSiamida/modules/user/domain"
 	CreateUser "UnpakSiamida/modules/user/application/CreateUser"
-	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	DeleteUser "UnpakSiamida/modules/user/application/DeleteUser"
-	GetUser "UnpakSiamida/modules/user/application/GetUser"
 	GetAllUsers "UnpakSiamida/modules/user/application/GetAllUsers"
-    SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
+	GetUser "UnpakSiamida/modules/user/application/GetUser"
+	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
+	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
+	userdomain "UnpakSiamida/modules/user/domain"
 )
-
 
 // =======================================================
 // POST /user
@@ -40,19 +39,13 @@ import (
 // @Router /user [post]
 func CreateUserHandler(c *fiber.Ctx) error {
 
-	fakultasUnit := c.FormValue("FakultasUnit")
-	var fakultasUnitPtr *string
-	if fakultasUnit != "" {
-		fakultasUnitPtr = &fakultasUnit
-	}
-
 	cmd := CreateUser.CreateUserCommand{
-		Name:         c.FormValue("name"),
-		Username:     c.FormValue("username"),
-		Password:     c.FormValue("password"),
-		Email:        c.FormValue("email"),
-		Level:        c.FormValue("level"),
-		FakultasUnit: fakultasUnitPtr,
+		Name:             c.FormValue("name"),
+		Username:         c.FormValue("username"),
+		Password:         c.FormValue("password"),
+		Email:            c.FormValue("email"),
+		Level:            c.FormValue("level"),
+		UuidFakultasUnit: nullableString(c.FormValue("FakultasUnit")),
 	}
 
 	uuid, err := mediatr.Send[
@@ -66,7 +59,6 @@ func CreateUserHandler(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"uuid": uuid})
 }
-
 
 // =======================================================
 // PUT /user/{uuid}
@@ -94,20 +86,14 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 		passwordPtr = &password
 	}
 
-	fakultasUnit := c.FormValue("FakultasUnit")
-	var fakultasUnitPtr *string
-	if fakultasUnit != "" {
-		fakultasUnitPtr = &fakultasUnit
-	}
-
 	cmd := UpdateUser.UpdateUserCommand{
-		Uuid:         c.Params("uuid"),
-		Name:         c.FormValue("name"),
-		Username:     c.FormValue("username"),
-		Password:     passwordPtr,
-		Email:        c.FormValue("email"),
-		Level:        c.FormValue("level"),
-		FakultasUnit: fakultasUnitPtr,
+		Uuid:             c.Params("uuid"),
+		Name:             c.FormValue("name"),
+		Username:         c.FormValue("username"),
+		Password:         passwordPtr,
+		Email:            c.FormValue("email"),
+		Level:            c.FormValue("level"),
+		UuidFakultasUnit: nullableString(c.FormValue("FakultasUnit")),
 	}
 
 	updatedID, err := mediatr.Send[
@@ -121,7 +107,6 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"uuid": updatedID})
 }
-
 
 // =======================================================
 // DELETE /user/{uuid}
@@ -152,7 +137,6 @@ func DeleteUserHandler(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"uuid": deletedID})
 }
-
 
 // =======================================================
 // GET /user/{uuid}
@@ -187,7 +171,6 @@ func GetUserHandler(c *fiber.Ctx) error {
 
 	return c.JSON(user)
 }
-
 
 // =======================================================
 // GET /users
@@ -271,25 +254,33 @@ func GetAllUsersHandler(c *fiber.Ctx) error {
 }
 
 func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
-    cmd := SetupUuidUser.SetupUuidUserCommand{}
+	cmd := SetupUuidUser.SetupUuidUserCommand{}
 
-    message, err := mediatr.Send[SetupUuidUser.SetupUuidUserCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	message, err := mediatr.Send[SetupUuidUser.SetupUuidUserCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"message": message})
+	return c.JSON(fiber.Map{"message": message})
 }
 
 func ModuleUser(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-    app.Get("/user/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidUsersHandlerfunc)
+	app.Get("/user/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidUsersHandlerfunc)
 
 	app.Post("/user", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateUserHandler)
 	app.Put("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateUserHandler)
 	app.Delete("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteUserHandler)
 	app.Get("/user/:uuid", commonpresentation.JWTMiddleware(), GetUserHandler)
 	app.Get("/users", commonpresentation.JWTMiddleware(), GetAllUsersHandler)
+}
+
+func nullableString(s string) *string {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }

@@ -5,6 +5,7 @@ import (
 
 	common "UnpakSiamida/common/domain"
 	helper "UnpakSiamida/common/helper"
+	event "UnpakSiamida/modules/generaterenstra/event"
 
 	"github.com/google/uuid"
 )
@@ -12,11 +13,11 @@ import (
 type GenerateDokumenTambahan struct {
 	common.Entity
 
-	ID              				uint       `gorm:"primaryKey;autoIncrement"`
-	UUID            				uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	RenstraId            			uint  	   `gorm:"column:id_renstra;"`
-	TemplateDokumenTambahan         uint       `gorm:"column:id_template_dokumen_tambahan;"`
-	Tugas  							string     `gorm:""`
+	ID                      uint      `gorm:"primaryKey;autoIncrement"`
+	UUID                    uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	RenstraId               uint      `gorm:"column:id_renstra;"`
+	TemplateDokumenTambahan uint      `gorm:"column:id_template_dokumen_tambahan;"`
+	Tugas                   string    `gorm:""`
 }
 
 func (GenerateDokumenTambahan) TableName() string {
@@ -26,12 +27,12 @@ func (GenerateDokumenTambahan) TableName() string {
 func NewGenerateDokumenTambahan(
 	tahun string, //tahun template
 	renstraTahun string, //tahun renstra
-	
+
 	fakultasUnit uint, //fakunit template
 	renstraFakultasUnit uint, //fakunit renstra
-	
+
 	renstraId uint,
-	
+
 	template uint,
 	templateUuid string,
 	jenisFile string,
@@ -56,15 +57,15 @@ func NewGenerateDokumenTambahan(
 	}
 
 	renstra := &GenerateDokumenTambahan{
-		UUID:                   uuid.New(),
-		RenstraId:              renstraId,
-		TemplateDokumenTambahan:template,
-		Tugas:         			tugas,
+		UUID:                    uuid.New(),
+		RenstraId:               renstraId,
+		TemplateDokumenTambahan: template,
+		Tugas:                   tugas,
 	}
 
-	renstra.Raise(GenerateDokumenTambahanCreatedEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
+	renstra.Raise(event.GenerateDokumenTambahanCreatedEvent{
+		EventID:                     uuid.New(),
+		OccurredOn:                  time.Now().UTC(),
 		GenerateDokumenTambahanUUID: renstra.UUID,
 	})
 

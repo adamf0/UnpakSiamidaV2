@@ -8,17 +8,21 @@ import (
 	"time"
 )
 
-type TelegramClient struct {
-	Token  string
-	ChatID string
-	Client *http.Client
+type TelegramSender interface {
+	SendHTML(message string) error
 }
 
-func NewTelegramClient(token, chatID string) *TelegramClient {
+type TelegramClient struct {
+	token  string
+	chatID string
+	client *http.Client
+}
+
+func NewTelegramClient(token, chatID string) TelegramSender {
 	return &TelegramClient{
-		Token:  token,
-		ChatID: chatID,
-		Client: &http.Client{
+		token:  token,
+		chatID: chatID,
+		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
@@ -33,16 +37,19 @@ type sendMessageRequest struct {
 func (c *TelegramClient) SendHTML(message string) error {
 	url := fmt.Sprintf(
 		"https://api.telegram.org/bot%s/sendMessage",
-		c.Token,
+		c.token,
 	)
 
 	payload := sendMessageRequest{
-		ChatID:    c.ChatID,
+		ChatID:    c.chatID,
 		Text:      message,
 		ParseMode: "HTML",
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
 
 	req, err := http.NewRequest(
 		http.MethodPost,
@@ -55,7 +62,7 @@ func (c *TelegramClient) SendHTML(message string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}

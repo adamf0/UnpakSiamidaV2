@@ -1,14 +1,15 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainindikatorrenstra "UnpakSiamida/common/domain"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
-	"errors"
 )
 
 type IndikatorRenstraRepository struct {
@@ -65,14 +66,14 @@ func (r *IndikatorRenstraRepository) GetByUuid(ctx context.Context, uid uuid.UUI
 // GET DEFAULT BY UUID
 // ------------------------
 func (r *IndikatorRenstraRepository) GetDefaultByUuid(
-    ctx context.Context,
-    id uuid.UUID,
+	ctx context.Context,
+	id uuid.UUID,
 ) (*domainindikatorrenstra.IndikatorRenstraDefault, error) {
 
-    query := `
+	query := `
         SELECT 
             i.id as Id,
-            i.uuid as Uuuid,
+            i.uuid as Uuid,
             i.indikator as Indikator,
             i.id_master_standar AS StandarID,
             ms.uuid AS UuidStandar,
@@ -89,28 +90,28 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
         LIMIT 1
     `
 
-    var rowData domainindikatorrenstra.IndikatorRenstraDefault
+	var rowData domainindikatorrenstra.IndikatorRenstraDefault
 
-    res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-    if res.Error != nil {
-        if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-            return nil, gorm.ErrRecordNotFound
-        }
-        return nil, res.Error
-    }
+	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, res.Error
+	}
 
-    if rowData.Id == 0 {
-        return nil, gorm.ErrRecordNotFound
-    }
+	if rowData.Id == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
-    return &rowData, nil
+	return &rowData, nil
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "indikator":        "i.indikator",
-	"standar":   		"ms.nama ",
-	"tahun":           	"i.tahun",
+	// key:param -> db column
+	"indikator": "i.indikator",
+	"standar":   "ms.nama ",
+	"tahun":     "i.tahun",
 }
 
 // ------------------------
@@ -135,7 +136,7 @@ var allowedSearchColumns = map[string]string{
 // 		for _, f := range searchFilters {
 // 			field := strings.TrimSpace(strings.ToLower(f.Field))
 // 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 // 			var value string
 // 			if f.Value != nil {
 // 				value = strings.TrimSpace(*f.Value)
@@ -223,8 +224,8 @@ var allowedSearchColumns = map[string]string{
 // 		return nil, 0, err
 // 	}
 
-// 	return indikatorrenstras, total, nil
-// }
+//		return indikatorrenstras, total, nil
+//	}
 func (r *IndikatorRenstraRepository) GetAll(
 	ctx context.Context,
 	search string,
@@ -397,7 +398,6 @@ func (r *IndikatorRenstraRepository) GetAll(
 	return result, total, nil
 }
 
-
 // ------------------------
 // CREATE
 // ------------------------
@@ -421,7 +421,7 @@ func (r *IndikatorRenstraRepository) Delete(ctx context.Context, uid uuid.UUID) 
 		Delete(&domainindikatorrenstra.IndikatorRenstra{}).Error
 }
 
-//[note] baca case nomor A001
+// [note] baca case nomor A001
 func (r *IndikatorRenstraRepository) GetIndikatorTree(
 	ctx context.Context,
 	tahun string,
@@ -555,7 +555,6 @@ func joinPath(path []int) string {
 	}
 	return out
 }
-
 
 func (r *IndikatorRenstraRepository) SetupUuid(ctx context.Context) error {
 	const chunkSize = 500

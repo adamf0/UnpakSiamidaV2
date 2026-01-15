@@ -1,8 +1,9 @@
 package application
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	helper "UnpakSiamida/common/helper"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 func CreateUserCommandValidation(cmd CreateUserCommand) error {
@@ -33,7 +34,7 @@ func CreateUserCommandValidation(cmd CreateUserCommand) error {
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
-		validation.Field(&cmd.FakultasUnit,
+		validation.Field(&cmd.UuidFakultasUnit,
 			validation.By(func(value interface{}) error {
 				return helper.ValidateFakultasUnit(value, cmd.Level)
 			}),

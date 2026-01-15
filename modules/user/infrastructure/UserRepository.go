@@ -1,21 +1,24 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainuser "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	domainuser "UnpakSiamida/modules/user/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
 )
 
 type UserRepository struct {
-	db *gorm.DB
+	db  *gorm.DB
+	uow *commoninfra.UnitOfWork
 }
 
 func NewUserRepository(db *gorm.DB) domainuser.IUserRepository {
-	return &UserRepository{db: db}
+	return &UserRepository{db: db, uow: commoninfra.NewUnitOfWork(db)}
 }
 
 // ------------------------
@@ -40,12 +43,12 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "name":          "name",
-    "username":      "nidn_username",
-    "email":         "email",
+	// key:param -> db column
+	"name":          "name",
+	"username":      "nidn_username",
+	"email":         "email",
 	"level":         "level",
-    "fakultas_unit":  "fakultas_unit",
+	"fakultas_unit": "fakultas_unit",
 }
 
 // ------------------------
@@ -70,7 +73,7 @@ func (r *UserRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -126,7 +129,7 @@ func (r *UserRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------
@@ -161,19 +164,29 @@ func (r *UserRepository) GetAll(
 	return users, total, nil
 }
 
-
 // ------------------------
 // CREATE
 // ------------------------
 func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) error {
-	return r.db.WithContext(ctx).Create(user).Error
+	// return r.db.WithContext(ctx).Create(user).Error
+	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+		return err
+	}
+
+	return r.uow.Save(&user.Entity)
 }
 
 // ------------------------
 // UPDATE
 // ------------------------
 func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) error {
-	return r.db.WithContext(ctx).Save(user).Error
+	// return r.db.WithContext(ctx).Save(user).Error
+
+	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+		return err
+	}
+
+	return r.uow.Save(&user.Entity)
 }
 
 // ------------------------
@@ -232,4 +245,25 @@ func (r *UserRepository) SetupUuid(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *UserRepository) WithTx(
+	ctx context.Context,
+	fn func(txRepo domainuser.IUserRepositoryTx) error,
+) error {
+
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := &UserRepository{
+			db:  tx,
+			uow: commoninfra.NewUnitOfWork(tx),
+		}
+		return fn(txRepo)
+	})
+}
+
+func (r *UserRepository) InsertOutbox(
+	ctx context.Context,
+	msg *commoninfra.OutboxMessage,
+) error {
+	return r.db.WithContext(ctx).Create(msg).Error
 }

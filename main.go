@@ -141,6 +141,7 @@ import (
 	//////////
 
 	eventKts "UnpakSiamida/modules/kts/event"
+	eventUser "UnpakSiamida/modules/user/event"
 
 	_ "UnpakSiamida/docs"
 
@@ -194,9 +195,25 @@ func main() {
 		return err
 	})
 
+	var tg commoninfra.TelegramSender
+
+	mustStart("Telegram Service", func() error {
+		factory := &commoninfra.DefaultTelegramFactory{
+			UseFake: false,
+		}
+
+		client, err := factory.Create()
+		if err != nil {
+			return err
+		}
+
+		tg = client
+		return nil
+	})
+
 	//berlaku untuk startup bukan hot reload
 	mustStart("User Module", func() error {
-		return userInfrastructure.RegisterModuleUser(db)
+		return userInfrastructure.RegisterModuleUser(db, tg)
 	})
 
 	mustStart("Standar Renstra Module", func() error {
@@ -252,13 +269,6 @@ func main() {
 	})
 
 	mustStart("Kts Module", func() error { //buat audit
-		tg := commoninfra.NewTelegramClient(
-			// os.Getenv("TELEGRAM_BOT_TOKEN"),
-			"8598253529:AAHx8G4uAIi0Ws5kGjYLKDFhBeKwrO9kbaQ",
-			// os.Getenv("TELEGRAM_CHAT_ID"),
-			"6327475613",
-		)
-
 		return ktsInfrastructure.RegisterModuleKts(db, tg)
 	})
 
@@ -275,6 +285,8 @@ func main() {
 	dispatcher := commoninfra.NewEventDispatcher()
 	commoninfra.RegisterEvent[eventKts.KtsCreatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventKts.KtsUpdatedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventUser.UserCreatedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
 
 	userPresentation.ModuleUser(app)
 	standarrenstraPresentation.ModuleStandarRenstra(app)

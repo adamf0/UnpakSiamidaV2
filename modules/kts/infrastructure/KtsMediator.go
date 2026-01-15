@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterModuleKts(db *gorm.DB, tg *commoninfra.TelegramClient) error {
+func RegisterModuleKts(db *gorm.DB, tg commoninfra.TelegramSender) error {
 	repoKts := NewKtsRepository(db)
 	repoUser := infraUser.NewUserRepository(db)
 

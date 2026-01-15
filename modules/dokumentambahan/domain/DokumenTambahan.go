@@ -5,6 +5,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	event "UnpakSiamida/modules/dokumentambahan/event"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 
 	"github.com/google/uuid"
@@ -70,7 +71,7 @@ func UpdateDokumenTambahan(
 		prev.CatatanAuditor = CatatanAuditor
 	}
 
-	prev.Raise(DokumenTambahanUpdatedEvent{ //[pr] ketika tersave maka buat kts
+	prev.Raise(event.DokumenTambahanUpdatedEvent{ //[pr] ketika tersave maka buat kts
 		EventID:             uuid.New(),
 		OccurredOn:          time.Now().UTC(),
 		DokumenTambahanUUID: prev.UUID,

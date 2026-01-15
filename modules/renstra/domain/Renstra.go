@@ -4,6 +4,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	event "UnpakSiamida/modules/renstra/event"
 
 	"github.com/google/uuid"
 )
@@ -11,22 +12,22 @@ import (
 type Renstra struct {
 	common.Entity
 
-	ID              				uint       `gorm:"primaryKey;autoIncrement"`
-	UUID            				uuid.UUID  `gorm:"type:char(36);uniqueIndex"`
-	Tahun           				string     `gorm:"size:255;not null"`
-	FakultasUnit  					uint       `gorm:"column:fakultas_unit;"`
-	PeriodeUploadMulai  			string     `gorm:"column:periode_upload_mulai;"`
-	PeriodeUploadAkhir  			string     `gorm:"column:periode_upload_akhir;"`
-	PeriodeAssesmentDokumenMulai  	string     `gorm:"column:periode_assesment_dokumen_mulai;"`
-	PeriodeAssesmentDokumenAkhir  	string     `gorm:"column:periode_assesment_dokumen_akhir;"`
-	PeriodeAssesmentLapanganMulai  	string     `gorm:"column:periode_assesment_lapangan_mulai;"`
-	PeriodeAssesmentLapanganAkhir  	string     `gorm:"column:periode_assesment_lapangan_akhir;"`
-	KodeAkses  						*string     `gorm:"column:kodeAkses;"`
-	Auditee  						uint     	`gorm:""`
-	Auditor1  						uint     	`gorm:""`
-	Auditor2  						uint     	`gorm:""`
-	Catatan1  						*string     `gorm:"column:catatan;"`
-	Catatan2  						*string     `gorm:"column:catatan2;"`
+	ID                            uint      `gorm:"primaryKey;autoIncrement"`
+	UUID                          uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	Tahun                         string    `gorm:"size:255;not null"`
+	FakultasUnit                  uint      `gorm:"column:fakultas_unit;"`
+	PeriodeUploadMulai            string    `gorm:"column:periode_upload_mulai;"`
+	PeriodeUploadAkhir            string    `gorm:"column:periode_upload_akhir;"`
+	PeriodeAssesmentDokumenMulai  string    `gorm:"column:periode_assesment_dokumen_mulai;"`
+	PeriodeAssesmentDokumenAkhir  string    `gorm:"column:periode_assesment_dokumen_akhir;"`
+	PeriodeAssesmentLapanganMulai string    `gorm:"column:periode_assesment_lapangan_mulai;"`
+	PeriodeAssesmentLapanganAkhir string    `gorm:"column:periode_assesment_lapangan_akhir;"`
+	KodeAkses                     *string   `gorm:"column:kodeAkses;"`
+	Auditee                       uint      `gorm:""`
+	Auditor1                      uint      `gorm:""`
+	Auditor2                      uint      `gorm:""`
+	Catatan1                      *string   `gorm:"column:catatan;"`
+	Catatan2                      *string   `gorm:"column:catatan2;"`
 }
 
 func (Renstra) TableName() string {
@@ -64,7 +65,7 @@ func NewRenstra(
 	if auditee <= 0 {
 		return common.FailureValue[*Renstra](MissingAuditee())
 	}
-	if auditor1 <= 0{
+	if auditor1 <= 0 {
 		return common.FailureValue[*Renstra](MissingAuditor1())
 	}
 	if auditor2 <= 0 {
@@ -121,23 +122,23 @@ func NewRenstra(
 	}
 
 	renstra := &Renstra{
-		UUID:                       uuid.New(),
-		Tahun:                      tahun,
-		FakultasUnit:               fakultasUnit,
-		PeriodeUploadMulai:         periodeUploadMulai,
-		PeriodeUploadAkhir:         periodeUploadAkhir,
-		PeriodeAssesmentDokumenMulai: periodeDokumenMulai,
-		PeriodeAssesmentDokumenAkhir: periodeDokumenAkhir,
+		UUID:                          uuid.New(),
+		Tahun:                         tahun,
+		FakultasUnit:                  fakultasUnit,
+		PeriodeUploadMulai:            periodeUploadMulai,
+		PeriodeUploadAkhir:            periodeUploadAkhir,
+		PeriodeAssesmentDokumenMulai:  periodeDokumenMulai,
+		PeriodeAssesmentDokumenAkhir:  periodeDokumenAkhir,
 		PeriodeAssesmentLapanganMulai: periodeLapanganMulai,
 		PeriodeAssesmentLapanganAkhir: periodeLapanganAkhir,
-		Auditee:                    auditee,
-		Auditor1:                   auditor1,
-		Auditor2:                   auditor2,
+		Auditee:                       auditee,
+		Auditor1:                      auditor1,
+		Auditor2:                      auditor2,
 	}
 
-	renstra.Raise(RenstraCreatedEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
+	renstra.Raise(event.RenstraCreatedEvent{
+		EventID:     uuid.New(),
+		OccurredOn:  time.Now().UTC(),
 		RenstraUUID: renstra.UUID,
 	})
 
@@ -160,9 +161,9 @@ func GiveCodeAccessRenstra(
 
 	prev.KodeAkses = &kodeAkses
 
-	prev.Raise(RenstraGiveCodeAccessEvent{
-		EventID:              uuid.New(),
-		OccurredOn:           time.Now().UTC(),
+	prev.Raise(event.RenstraGiveCodeAccessEvent{
+		EventID:     uuid.New(),
+		OccurredOn:  time.Now().UTC(),
 		RenstraUUID: prev.UUID,
 	})
 
@@ -195,7 +196,7 @@ func UpdateRenstra(
 	if auditee <= 0 {
 		return common.FailureValue[*Renstra](MissingAuditee())
 	}
-	if auditor1 <= 0{
+	if auditor1 <= 0 {
 		return common.FailureValue[*Renstra](MissingAuditor1())
 	}
 	if auditor2 <= 0 {
@@ -252,21 +253,21 @@ func UpdateRenstra(
 	}
 
 	// always overwrite (required field)
-	prev.Tahun =                      tahun
-	prev.FakultasUnit =               fakultasUnit
-	prev.PeriodeUploadMulai =         periodeUploadMulai
-	prev.PeriodeUploadAkhir =         periodeUploadAkhir
+	prev.Tahun = tahun
+	prev.FakultasUnit = fakultasUnit
+	prev.PeriodeUploadMulai = periodeUploadMulai
+	prev.PeriodeUploadAkhir = periodeUploadAkhir
 	prev.PeriodeAssesmentDokumenMulai = periodeDokumenMulai
 	prev.PeriodeAssesmentDokumenAkhir = periodeDokumenAkhir
 	prev.PeriodeAssesmentLapanganMulai = periodeLapanganMulai
 	prev.PeriodeAssesmentLapanganAkhir = periodeLapanganAkhir
-	prev.Auditee =                    auditee
+	prev.Auditee = auditee
 	prev.Auditor1 = auditor1
 	prev.Auditor2 = auditor2
-	
-	prev.Raise(RenstraUpdatedEvent{
-		EventID:              uuid.New(),
-		OccurredOn:           time.Now().UTC(),
+
+	prev.Raise(event.RenstraUpdatedEvent{
+		EventID:     uuid.New(),
+		OccurredOn:  time.Now().UTC(),
 		RenstraUUID: prev.UUID,
 	})
 

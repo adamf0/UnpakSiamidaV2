@@ -6,11 +6,11 @@ import (
 )
 
 type KtsCreatedEventHandler struct {
-	Telegram *commoninfra.TelegramClient
+	Telegram commoninfra.TelegramSender
 }
 
 func NewKtsCreatedEventHandler(
-	tg *commoninfra.TelegramClient,
+	tg commoninfra.TelegramSender,
 ) *KtsCreatedEventHandler {
 	return &KtsCreatedEventHandler{
 		Telegram: tg,
