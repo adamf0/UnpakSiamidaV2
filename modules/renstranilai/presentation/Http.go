@@ -1,21 +1,22 @@
 package presentation
 
 import (
-    "context"
-    "github.com/gofiber/fiber/v2"
-    "github.com/mehdihadeli/go-mediatr"
-    "strings"
+	"context"
+	"strings"
 
-    commoninfra "UnpakSiamida/common/infrastructure"
-    commonpresentation "UnpakSiamida/common/presentation"
-    commondomain "UnpakSiamida/common/domain"
+	"github.com/gofiber/fiber/v2"
+	"github.com/mehdihadeli/go-mediatr"
 
-    renstranilaidomain "UnpakSiamida/modules/renstranilai/domain"
-    UpdateRenstraNilai "UnpakSiamida/modules/renstranilai/application/UpdateRenstraNilai"
-    DeleteRenstraNilai "UnpakSiamida/modules/renstranilai/application/DeleteRenstraNilai"
-    GetRenstraNilai "UnpakSiamida/modules/renstranilai/application/GetRenstraNilai"
-    GetAllRenstraNilais "UnpakSiamida/modules/renstranilai/application/GetAllRenstraNilais"
-    SetupUuidRenstraNilai "UnpakSiamida/modules/renstranilai/application/SetupUuidRenstraNilai"
+	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
+	commonpresentation "UnpakSiamida/common/presentation"
+
+	DeleteRenstraNilai "UnpakSiamida/modules/renstranilai/application/DeleteRenstraNilai"
+	GetAllRenstraNilais "UnpakSiamida/modules/renstranilai/application/GetAllRenstraNilais"
+	GetRenstraNilai "UnpakSiamida/modules/renstranilai/application/GetRenstraNilai"
+	SetupUuidRenstraNilai "UnpakSiamida/modules/renstranilai/application/SetupUuidRenstraNilai"
+	UpdateRenstraNilai "UnpakSiamida/modules/renstranilai/application/UpdateRenstraNilai"
+	renstranilaidomain "UnpakSiamida/modules/renstranilai/domain"
 )
 
 // =======================================================
@@ -42,43 +43,45 @@ import (
 // @Param catatanAuditor formData string false "Catatan auditor (khusus auditor1)"
 //
 // @Success 200 {object} map[string]string "uuid of updated RenstraNilai"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /renstranilai/{uuid} [put]
 func UpdateRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
-    uuid            := c.Params("uuid")
-	uuidRenstra     := c.FormValue("uuidRenstra")
-	tahun     		:= c.Params("tahun")
-	mode 			:= c.FormValue("mode")
-	granted 		:= c.FormValue("grantedaccess") //dari middleware
-	capaian         := nullableString(c.FormValue("capaian"))
-	catatan         := nullableString(c.FormValue("catatan"))
-	linkBukti      	:= nullableString(c.FormValue("linkBukti"))
-	capaianAuditor	:= nullableString(c.FormValue("capaianAuditor"))
-	catatanAuditor 	:= nullableString(c.FormValue("catatanAuditor"))
+	uuid := c.Params("uuid")
+	uuidRenstra := c.FormValue("uuidRenstra")
+	tahun := c.Params("tahun")
+	mode := c.FormValue("mode")
+	granted := c.FormValue("grantedaccess") //dari middleware
+	capaian := nullableString(c.FormValue("capaian"))
+	catatan := nullableString(c.FormValue("catatan"))
+	linkBukti := nullableString(c.FormValue("linkBukti"))
+	capaianAuditor := nullableString(c.FormValue("capaianAuditor"))
+	catatanAuditor := nullableString(c.FormValue("catatanAuditor"))
 
-    cmd := UpdateRenstraNilai.UpdateRenstraNilaiCommand{
-        Uuid:               uuid,
-        UuidRenstra:        uuidRenstra,
-        Tahun:              tahun,
-        Mode:               mode,
-        Granted:            granted,
-        Capaian:            capaian,
-        Catatan:            catatan,
-        LinkBukti:          linkBukti,
-        CapaianAuditor:     capaianAuditor,
-        CatatanAuditor:     catatanAuditor,
-    }
+	cmd := UpdateRenstraNilai.UpdateRenstraNilaiCommand{
+		Uuid:           uuid,
+		UuidRenstra:    uuidRenstra,
+		Tahun:          tahun,
+		Mode:           mode,
+		Granted:        granted,
+		Capaian:        capaian,
+		Catatan:        catatan,
+		LinkBukti:      linkBukti,
+		CapaianAuditor: capaianAuditor,
+		CatatanAuditor: catatanAuditor,
+	}
 
-    updatedID, err := mediatr.Send[
-        UpdateRenstraNilai.UpdateRenstraNilaiCommand,
-        string,
-    ](context.Background(), cmd)
+	updatedID, err := mediatr.Send[
+		UpdateRenstraNilai.UpdateRenstraNilaiCommand,
+		string,
+	](context.Background(), cmd)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": updatedID})
+	return c.JSON(fiber.Map{"uuid": updatedID})
 }
 
 // =======================================================
@@ -94,20 +97,20 @@ func UpdateRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Failure 404 {object} commondomain.Error
 // @Router /renstranilai/{uuid} [delete]
 func DeleteRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    cmd := DeleteRenstraNilai.DeleteRenstraNilaiCommand{Uuid: uuid}
+	cmd := DeleteRenstraNilai.DeleteRenstraNilaiCommand{Uuid: uuid}
 
-    deletedID, err := mediatr.Send[
-        DeleteRenstraNilai.DeleteRenstraNilaiCommand,
-        string,
-    ](context.Background(), cmd)
+	deletedID, err := mediatr.Send[
+		DeleteRenstraNilai.DeleteRenstraNilaiCommand,
+		string,
+	](context.Background(), cmd)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": deletedID})
+	return c.JSON(fiber.Map{"uuid": deletedID})
 }
 
 // =======================================================
@@ -123,24 +126,24 @@ func DeleteRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Failure 404 {object} commondomain.Error
 // @Router /renstranilai/{uuid} [get]
 func GetRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    query := GetRenstraNilai.GetRenstraNilaiByUuidQuery{Uuid: uuid}
+	query := GetRenstraNilai.GetRenstraNilaiByUuidQuery{Uuid: uuid}
 
-    renstranilai, err := mediatr.Send[
-        GetRenstraNilai.GetRenstraNilaiByUuidQuery,
-        *renstranilaidomain.RenstraNilai,
-    ](context.Background(), query)
+	renstranilai, err := mediatr.Send[
+		GetRenstraNilai.GetRenstraNilaiByUuidQuery,
+		*renstranilaidomain.RenstraNilai,
+	](context.Background(), query)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    if renstranilai == nil {
-        return c.Status(404).JSON(fiber.Map{"error": "RenstraNilai not found"})
-    }
+	if renstranilai == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "RenstraNilai not found"})
+	}
 
-    return c.JSON(renstranilai)
+	return c.JSON(renstranilai)
 }
 
 // GetAllRenstraNilaisHandler godoc
@@ -154,106 +157,106 @@ func GetRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} renstranilaidomain.PagedRenstraNilais
 // @Router /renstranilais [get]
 func GetAllRenstraNilaisHandlerfunc(c *fiber.Ctx) error {
-    mode := c.Query("mode", "paging")
-    page := c.QueryInt("page", 1)
-    limit := c.QueryInt("limit", 10)
-    search := c.Query("search", "")
+	mode := c.Query("mode", "paging")
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	search := c.Query("search", "")
 
-    filtersRaw := c.Query("filters", "")
-    var filters []commondomain.SearchFilter
+	filtersRaw := c.Query("filters", "")
+	var filters []commondomain.SearchFilter
 
-    if filtersRaw != "" {
-        parts := strings.Split(filtersRaw, ";")
-        for _, p := range parts {
-            tokens := strings.SplitN(p, ":", 3)
-            if len(tokens) != 3 {
-                continue
-            }
+	if filtersRaw != "" {
+		parts := strings.Split(filtersRaw, ";")
+		for _, p := range parts {
+			tokens := strings.SplitN(p, ":", 3)
+			if len(tokens) != 3 {
+				continue
+			}
 
-            field := strings.TrimSpace(tokens[0])
-            op := strings.TrimSpace(tokens[1])
-            rawValue := strings.TrimSpace(tokens[2])
+			field := strings.TrimSpace(tokens[0])
+			op := strings.TrimSpace(tokens[1])
+			rawValue := strings.TrimSpace(tokens[2])
 
-            var ptr *string
-            if rawValue != "" && rawValue != "null" {
-                ptr = &rawValue
-            }
+			var ptr *string
+			if rawValue != "" && rawValue != "null" {
+				ptr = &rawValue
+			}
 
-            filters = append(filters, commondomain.SearchFilter{
-                Field:    field,
-                Operator: op,
-                Value:    ptr,
-            })
-        }
-    }
+			filters = append(filters, commondomain.SearchFilter{
+				Field:    field,
+				Operator: op,
+				Value:    ptr,
+			})
+		}
+	}
 
-    query := GetAllRenstraNilais.GetAllRenstraNilaisQuery{
-        Search:        search,
-        SearchFilters: filters,
-    }
+	query := GetAllRenstraNilais.GetAllRenstraNilaisQuery{
+		Search:        search,
+		SearchFilters: filters,
+	}
 
-    var adapter OutputAdapter
-    switch mode {
-    case "all":
-        adapter = &AllAdapter{}
-    case "ndjson":
-        adapter = &NDJSONAdapter{}
-    case "sse":
-        adapter = &SSEAdapter{}
-    default:
-        query.Page = &page
-        query.Limit = &limit
-        adapter = &PagingAdapter{}
-    }
+	var adapter OutputAdapter
+	switch mode {
+	case "all":
+		adapter = &AllAdapter{}
+	case "ndjson":
+		adapter = &NDJSONAdapter{}
+	case "sse":
+		adapter = &SSEAdapter{}
+	default:
+		query.Page = &page
+		query.Limit = &limit
+		adapter = &PagingAdapter{}
+	}
 
-    result, err := mediatr.Send[
-        GetAllRenstraNilais.GetAllRenstraNilaisQuery,
-        renstranilaidomain.PagedRenstraNilais,
-    ](context.Background(), query)
+	result, err := mediatr.Send[
+		GetAllRenstraNilais.GetAllRenstraNilaisQuery,
+		renstranilaidomain.PagedRenstraNilais,
+	](context.Background(), query)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return adapter.Send(c, result)
+	return adapter.Send(c, result)
 }
 
 func SetupUuidRenstraNilaisHandlerfunc(c *fiber.Ctx) error {
-    cmd := SetupUuidRenstraNilai.SetupUuidRenstraNilaiCommand{}
+	cmd := SetupUuidRenstraNilai.SetupUuidRenstraNilaiCommand{}
 
-    message, err := mediatr.Send[SetupUuidRenstraNilai.SetupUuidRenstraNilaiCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	message, err := mediatr.Send[SetupUuidRenstraNilai.SetupUuidRenstraNilaiCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"message": message})
+	return c.JSON(fiber.Map{"message": message})
 }
 
 func ModuleRenstraNilai(app *fiber.App) {
-    admin := []string{"admin"}
-    audit := []string{"auditee","auditor1","auditor2"}
+	admin := []string{"admin"}
+	audit := []string{"auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
-    
-    app.Get("/renstranilai/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidRenstraNilaisHandlerfunc)
 
-    //hanya admin
-    app.Delete("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraNilaiHandlerfunc)
+	app.Get("/renstranilai/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidRenstraNilaisHandlerfunc)
 
-    //admin & audit
-    app.Put("/renstranilai/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateRenstraNilaiHandlerfunc)
-    
-    //private
-    app.Get("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), GetRenstraNilaiHandlerfunc)
-    app.Get("/renstranilais", commonpresentation.JWTMiddleware(), GetAllRenstraNilaisHandlerfunc)
+	//hanya admin
+	app.Delete("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraNilaiHandlerfunc)
+
+	//admin & audit
+	app.Put("/renstranilai/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateRenstraNilaiHandlerfunc)
+
+	//private
+	app.Get("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), GetRenstraNilaiHandlerfunc)
+	app.Get("/renstranilais", commonpresentation.JWTMiddleware(), GetAllRenstraNilaisHandlerfunc)
 }
 
 // ====================================================================
 // Helper: convert empty string → nil
 // ====================================================================
 func nullableString(s string) *string {
-    trimmed := strings.TrimSpace(s)
-    if trimmed == "" {
-        return nil
-    }
-    return &trimmed
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }

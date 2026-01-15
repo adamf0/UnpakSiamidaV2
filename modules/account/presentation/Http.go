@@ -1,15 +1,16 @@
 package presentation
 
 import (
-    "context"
-    "github.com/gofiber/fiber/v2"
-    "github.com/mehdihadeli/go-mediatr"
-    
-    commoninfra "UnpakSiamida/common/infrastructure"
+	"context"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/mehdihadeli/go-mediatr"
+
+	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
-    domainaccount "UnpakSiamida/modules/account/domain"
-    login "UnpakSiamida/modules/account/application/Login"
+	login "UnpakSiamida/modules/account/application/Login"
 	who "UnpakSiamida/modules/account/application/Whoami"
+	domainaccount "UnpakSiamida/modules/account/domain"
 )
 
 // =======================================================
@@ -23,7 +24,9 @@ import (
 // @Param password formData string true "Password"
 // @Produce json
 // @Success 200 {object} map[string]string "jwt"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /account [post]
 func LoginHandlerfunc(c *fiber.Ctx) error {
 	username := c.FormValue("username")
@@ -48,7 +51,7 @@ func LoginHandlerfunc(c *fiber.Ctx) error {
 
 func WhoAmIHandler(c *fiber.Ctx) error {
 	userID := c.FormValue("sid")
-	
+
 	cmd := who.WhoamiCommand{
 		SID: userID,
 	}
@@ -61,7 +64,6 @@ func WhoAmIHandler(c *fiber.Ctx) error {
 }
 
 func ModuleAccount(app *fiber.App) {
-    app.Post("/login", LoginHandlerfunc)
+	app.Post("/login", LoginHandlerfunc)
 	app.Get("/whoami", commonpresentation.JWTMiddleware(), WhoAmIHandler)
 }
-

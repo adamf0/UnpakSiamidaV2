@@ -30,7 +30,9 @@ import (
 // @Param nama formData string true "Nama Kts"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated Kts"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /kts/{uuid} [put]
 func UpdateKtsHandlerfunc(c *fiber.Ctx) error {
 

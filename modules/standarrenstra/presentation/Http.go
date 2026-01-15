@@ -1,23 +1,24 @@
 package presentation
 
 import (
-    "context"
-    "github.com/gofiber/fiber/v2"
-    "github.com/mehdihadeli/go-mediatr"
-    "strings"
-    
-    // "UnpakSiamida/common/domain"
-    commoninfra "UnpakSiamida/common/infrastructure"
-    commonpresentation "UnpakSiamida/common/presentation"
-    commondomain "UnpakSiamida/common/domain"
+	"context"
+	"strings"
 
-    standarrenstradomain "UnpakSiamida/modules/standarrenstra/domain"
-    CreateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
-    UpdateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/UpdateStandarRenstra"
-    DeleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
-    GetStandarRenstra "UnpakSiamida/modules/standarrenstra/application/GetStandarRenstra"
-    GetAllStandarRenstras "UnpakSiamida/modules/standarrenstra/application/GetAllStandarRenstras"
-    SetupUuidStandarRenstra "UnpakSiamida/modules/standarrenstra/application/SetupUuidStandarRenstra"
+	"github.com/gofiber/fiber/v2"
+	"github.com/mehdihadeli/go-mediatr"
+
+	// "UnpakSiamida/common/domain"
+	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
+	commonpresentation "UnpakSiamida/common/presentation"
+
+	CreateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
+	DeleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
+	GetAllStandarRenstras "UnpakSiamida/modules/standarrenstra/application/GetAllStandarRenstras"
+	GetStandarRenstra "UnpakSiamida/modules/standarrenstra/application/GetStandarRenstra"
+	SetupUuidStandarRenstra "UnpakSiamida/modules/standarrenstra/application/SetupUuidStandarRenstra"
+	UpdateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/UpdateStandarRenstra"
+	standarrenstradomain "UnpakSiamida/modules/standarrenstra/domain"
 )
 
 // =======================================================
@@ -30,22 +31,24 @@ import (
 // @Param nama formData string true "Nama StandarRenstra"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created StandarRenstra"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /standarrenstra [post]
 func CreateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-    nama := c.FormValue("nama")
+	nama := c.FormValue("nama")
 
-    cmd := CreateStandarRenstra.CreateStandarRenstraCommand{
-        Nama:         nama,
-    }
+	cmd := CreateStandarRenstra.CreateStandarRenstraCommand{
+		Nama: nama,
+	}
 
-    uuid, err := mediatr.Send[CreateStandarRenstra.CreateStandarRenstraCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	uuid, err := mediatr.Send[CreateStandarRenstra.CreateStandarRenstraCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": uuid})
+	return c.JSON(fiber.Map{"uuid": uuid})
 }
 
 // =======================================================
@@ -59,25 +62,27 @@ func CreateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param nama formData string true "Nama StandarRenstra"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated StandarRenstra"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /standarrenstra/{uuid} [put]
 func UpdateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    nama := c.FormValue("nama")
+	nama := c.FormValue("nama")
 
-    cmd := UpdateStandarRenstra.UpdateStandarRenstraCommand{
-        Uuid:         uuid,
-        Nama:         nama,
-    }
+	cmd := UpdateStandarRenstra.UpdateStandarRenstraCommand{
+		Uuid: uuid,
+		Nama: nama,
+	}
 
-    updatedID, err := mediatr.Send[UpdateStandarRenstra.UpdateStandarRenstraCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	updatedID, err := mediatr.Send[UpdateStandarRenstra.UpdateStandarRenstraCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": updatedID})
+	return c.JSON(fiber.Map{"uuid": updatedID})
 }
 
 // =======================================================
@@ -94,18 +99,18 @@ func UpdateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Router /standarrenstra/{uuid} [delete]
 func DeleteStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    cmd := DeleteStandarRenstra.DeleteStandarRenstraCommand{
-        Uuid: uuid,
-    }
+	cmd := DeleteStandarRenstra.DeleteStandarRenstraCommand{
+		Uuid: uuid,
+	}
 
-    deletedID, err := mediatr.Send[DeleteStandarRenstra.DeleteStandarRenstraCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	deletedID, err := mediatr.Send[DeleteStandarRenstra.DeleteStandarRenstraCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": deletedID})
+	return c.JSON(fiber.Map{"uuid": deletedID})
 }
 
 // =======================================================
@@ -121,22 +126,22 @@ func DeleteStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Failure 404 {object} commondomain.Error
 // @Router /standarrenstra/{uuid} [get]
 func GetStandarRenstraHandlerfunc(c *fiber.Ctx) error {
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    query := GetStandarRenstra.GetStandarRenstraByUuidQuery{
-        Uuid: uuid,
-    }
+	query := GetStandarRenstra.GetStandarRenstraByUuidQuery{
+		Uuid: uuid,
+	}
 
-    standarrenstra, err := mediatr.Send[GetStandarRenstra.GetStandarRenstraByUuidQuery, *standarrenstradomain.StandarRenstra](context.Background(), query)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	standarrenstra, err := mediatr.Send[GetStandarRenstra.GetStandarRenstraByUuidQuery, *standarrenstradomain.StandarRenstra](context.Background(), query)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    if standarrenstra == nil {
-        return c.Status(404).JSON(fiber.Map{"error": "StandarRenstra not found"})
-    }
+	if standarrenstra == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "StandarRenstra not found"})
+	}
 
-    return c.JSON(standarrenstra)
+	return c.JSON(standarrenstra)
 }
 
 // =======================================================
@@ -154,87 +159,86 @@ func GetStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} standarrenstradomain.PagedStandarRenstras
 // @Router /standarrenstras [get]
 func GetAllStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
-    mode := c.Query("mode", "paging") // default mode = paging
-    page := c.QueryInt("page", 1)
-    limit := c.QueryInt("limit", 10)
-    search := c.Query("search", "")
+	mode := c.Query("mode", "paging") // default mode = paging
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	search := c.Query("search", "")
 
-    // Parse filters
-    filtersRaw := c.Query("filters", "")
-    var filters []commondomain.SearchFilter
-    if filtersRaw != "" {
-        parts := strings.Split(filtersRaw, ";")
-        for _, p := range parts {
-            tokens := strings.SplitN(p, ":", 3)
-            if len(tokens) != 3 {
-                continue
-            }
-            field := strings.TrimSpace(tokens[0])
-            op := strings.TrimSpace(tokens[1])
-            rawValue := strings.TrimSpace(tokens[2])
+	// Parse filters
+	filtersRaw := c.Query("filters", "")
+	var filters []commondomain.SearchFilter
+	if filtersRaw != "" {
+		parts := strings.Split(filtersRaw, ";")
+		for _, p := range parts {
+			tokens := strings.SplitN(p, ":", 3)
+			if len(tokens) != 3 {
+				continue
+			}
+			field := strings.TrimSpace(tokens[0])
+			op := strings.TrimSpace(tokens[1])
+			rawValue := strings.TrimSpace(tokens[2])
 
-            var valuePtr *string
-            if rawValue != "" && rawValue != "null" {
-                valuePtr = &rawValue
-            }
-            filters = append(filters, commondomain.SearchFilter{
-                Field:    field,
-                Operator: op,
-                Value:    valuePtr,
-            })
-        }
-    }
+			var valuePtr *string
+			if rawValue != "" && rawValue != "null" {
+				valuePtr = &rawValue
+			}
+			filters = append(filters, commondomain.SearchFilter{
+				Field:    field,
+				Operator: op,
+				Value:    valuePtr,
+			})
+		}
+	}
 
-    query := GetAllStandarRenstras.GetAllStandarRenstrasQuery{
-        Search:        search,
-        SearchFilters: filters,
-    }
+	query := GetAllStandarRenstras.GetAllStandarRenstrasQuery{
+		Search:        search,
+		SearchFilters: filters,
+	}
 
-    // Pilih adapter sesuai mode
-    var adapter OutputAdapter
-    switch mode {
-    case "all":
-        adapter = &AllAdapter{}
-    case "ndjson":
-        adapter = &NDJSONAdapter{}
-    case "sse":
-        adapter = &SSEAdapter{}
-    default:
-        query.Page = &page
-        query.Limit = &limit
-        adapter = &PagingAdapter{}
-    }
+	// Pilih adapter sesuai mode
+	var adapter OutputAdapter
+	switch mode {
+	case "all":
+		adapter = &AllAdapter{}
+	case "ndjson":
+		adapter = &NDJSONAdapter{}
+	case "sse":
+		adapter = &SSEAdapter{}
+	default:
+		query.Page = &page
+		query.Limit = &limit
+		adapter = &PagingAdapter{}
+	}
 
-    // Ambil data
-    standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, standarrenstradomain.PagedStandarRenstras](context.Background(), query)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	// Ambil data
+	standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, standarrenstradomain.PagedStandarRenstras](context.Background(), query)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return adapter.Send(c, standarrenstras)
+	return adapter.Send(c, standarrenstras)
 }
 
 func SetupUuidStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
-    cmd := SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand{}
+	cmd := SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand{}
 
-    message, err := mediatr.Send[SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	message, err := mediatr.Send[SetupUuidStandarRenstra.SetupUuidStandarRenstraCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"message": message})
+	return c.JSON(fiber.Map{"message": message})
 }
 
 func ModuleStandarRenstra(app *fiber.App) {
-    admin := []string{"admin"}
+	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-    app.Get("/standarrenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidStandarRenstrasHandlerfunc)
+	app.Get("/standarrenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidStandarRenstrasHandlerfunc)
 
-    app.Post("/standarrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateStandarRenstraHandlerfunc)
-    app.Put("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateStandarRenstraHandlerfunc)
-    app.Delete("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteStandarRenstraHandlerfunc)
-    app.Get("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), GetStandarRenstraHandlerfunc)
-    app.Get("/standarrenstras", commonpresentation.JWTMiddleware(), GetAllStandarRenstrasHandlerfunc)
+	app.Post("/standarrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateStandarRenstraHandlerfunc)
+	app.Put("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateStandarRenstraHandlerfunc)
+	app.Delete("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteStandarRenstraHandlerfunc)
+	app.Get("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), GetStandarRenstraHandlerfunc)
+	app.Get("/standarrenstras", commonpresentation.JWTMiddleware(), GetAllStandarRenstrasHandlerfunc)
 }
-

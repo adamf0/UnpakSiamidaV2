@@ -35,7 +35,9 @@ import (
 // @Param FakultasUnit formData string false "Fakultas / Unit UUID"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created user"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /user [post]
 func CreateUserHandler(c *fiber.Ctx) error {
 
@@ -76,7 +78,9 @@ func CreateUserHandler(c *fiber.Ctx) error {
 // @Param FakultasUnit formData string false "Fakultas / Unit UUID"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated user"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /user/{uuid} [put]
 func UpdateUserHandler(c *fiber.Ctx) error {
 

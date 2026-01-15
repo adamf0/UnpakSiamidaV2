@@ -1,22 +1,23 @@
 package presentation
 
 import (
-    "context"
-    "github.com/gofiber/fiber/v2"
-    "github.com/mehdihadeli/go-mediatr"
-    "strings"
+	"context"
+	"strings"
 
-    commoninfra "UnpakSiamida/common/infrastructure"
-    commonpresentation "UnpakSiamida/common/presentation"
-    commondomain "UnpakSiamida/common/domain"
-    JenisFiledomain "UnpakSiamida/modules/jenisfile/domain"
+	"github.com/gofiber/fiber/v2"
+	"github.com/mehdihadeli/go-mediatr"
 
-    CreateJenisFile "UnpakSiamida/modules/jenisfile/application/CreateJenisFile"
-    UpdateJenisFile "UnpakSiamida/modules/jenisfile/application/UpdateJenisFile"
-    DeleteJenisFile "UnpakSiamida/modules/jenisfile/application/DeleteJenisFile"
-    GetJenisFile "UnpakSiamida/modules/jenisfile/application/GetJenisFile"
-    GetAllJenisFiles "UnpakSiamida/modules/jenisfile/application/GetAllJenisFiles"
-    SetupUuidJenisFile "UnpakSiamida/modules/jenisfile/application/SetupUuidJenisFile"
+	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
+	commonpresentation "UnpakSiamida/common/presentation"
+	JenisFiledomain "UnpakSiamida/modules/jenisfile/domain"
+
+	CreateJenisFile "UnpakSiamida/modules/jenisfile/application/CreateJenisFile"
+	DeleteJenisFile "UnpakSiamida/modules/jenisfile/application/DeleteJenisFile"
+	GetAllJenisFiles "UnpakSiamida/modules/jenisfile/application/GetAllJenisFiles"
+	GetJenisFile "UnpakSiamida/modules/jenisfile/application/GetJenisFile"
+	SetupUuidJenisFile "UnpakSiamida/modules/jenisfile/application/SetupUuidJenisFile"
+	UpdateJenisFile "UnpakSiamida/modules/jenisfile/application/UpdateJenisFile"
 )
 
 // =======================================================
@@ -29,22 +30,24 @@ import (
 // @Param nama formData string true "Nama JenisFile"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created JenisFile"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /jenisfile [post]
 func CreateJenisFileHandlerfunc(c *fiber.Ctx) error {
 
-    nama := c.FormValue("nama")
+	nama := c.FormValue("nama")
 
-    cmd := CreateJenisFile.CreateJenisFileCommand{
-        Nama:         nama,
-    }
+	cmd := CreateJenisFile.CreateJenisFileCommand{
+		Nama: nama,
+	}
 
-    uuid, err := mediatr.Send[CreateJenisFile.CreateJenisFileCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	uuid, err := mediatr.Send[CreateJenisFile.CreateJenisFileCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": uuid})
+	return c.JSON(fiber.Map{"uuid": uuid})
 }
 
 // =======================================================
@@ -58,25 +61,27 @@ func CreateJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Param nama formData string true "Nama JenisFile"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated JenisFile"
-// @Failure 400 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /jenisfile/{uuid} [put]
 func UpdateJenisFileHandlerfunc(c *fiber.Ctx) error {
 
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    nama := c.FormValue("nama")
+	nama := c.FormValue("nama")
 
-    cmd := UpdateJenisFile.UpdateJenisFileCommand{
-        Uuid:         uuid,
-        Nama:         nama,
-    }
+	cmd := UpdateJenisFile.UpdateJenisFileCommand{
+		Uuid: uuid,
+		Nama: nama,
+	}
 
-    updatedID, err := mediatr.Send[UpdateJenisFile.UpdateJenisFileCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	updatedID, err := mediatr.Send[UpdateJenisFile.UpdateJenisFileCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": updatedID})
+	return c.JSON(fiber.Map{"uuid": updatedID})
 }
 
 // =======================================================
@@ -93,18 +98,18 @@ func UpdateJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Router /jenisfile/{uuid} [delete]
 func DeleteJenisFileHandlerfunc(c *fiber.Ctx) error {
 
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    cmd := DeleteJenisFile.DeleteJenisFileCommand{
-        Uuid: uuid,
-    }
+	cmd := DeleteJenisFile.DeleteJenisFileCommand{
+		Uuid: uuid,
+	}
 
-    deletedID, err := mediatr.Send[DeleteJenisFile.DeleteJenisFileCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	deletedID, err := mediatr.Send[DeleteJenisFile.DeleteJenisFileCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"uuid": deletedID})
+	return c.JSON(fiber.Map{"uuid": deletedID})
 }
 
 // =======================================================
@@ -120,24 +125,24 @@ func DeleteJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Failure 404 {object} commondomain.Error
 // @Router /JenisFile/{uuid} [get]
 func GetJenisFileHandlerfunc(c *fiber.Ctx) error {
-    uuid := c.Params("uuid")
+	uuid := c.Params("uuid")
 
-    query := GetJenisFile.GetJenisFileByUuidQuery{Uuid: uuid}
+	query := GetJenisFile.GetJenisFileByUuidQuery{Uuid: uuid}
 
-    JenisFile, err := mediatr.Send[
-        GetJenisFile.GetJenisFileByUuidQuery,
-        *JenisFiledomain.JenisFile,
-    ](context.Background(), query)
+	JenisFile, err := mediatr.Send[
+		GetJenisFile.GetJenisFileByUuidQuery,
+		*JenisFiledomain.JenisFile,
+	](context.Background(), query)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    if JenisFile == nil {
-        return c.Status(404).JSON(fiber.Map{"error": "JenisFile not found"})
-    }
+	if JenisFile == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "JenisFile not found"})
+	}
 
-    return c.JSON(JenisFile)
+	return c.JSON(JenisFile)
 }
 
 // =======================================================
@@ -155,90 +160,90 @@ func GetJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} JenisFiledomain.PagedJenisFiles
 // @Router /JenisFiles [get]
 func GetAllJenisFilesHandlerfunc(c *fiber.Ctx) error {
-    mode := c.Query("mode", "paging")
-    page := c.QueryInt("page", 1)
-    limit := c.QueryInt("limit", 10)
-    search := c.Query("search", "")
+	mode := c.Query("mode", "paging")
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	search := c.Query("search", "")
 
-    filtersRaw := c.Query("filters", "")
-    var filters []commondomain.SearchFilter
+	filtersRaw := c.Query("filters", "")
+	var filters []commondomain.SearchFilter
 
-    if filtersRaw != "" {
-        parts := strings.Split(filtersRaw, ";")
-        for _, p := range parts {
-            tokens := strings.SplitN(p, ":", 3)
-            if len(tokens) != 3 {
-                continue
-            }
+	if filtersRaw != "" {
+		parts := strings.Split(filtersRaw, ";")
+		for _, p := range parts {
+			tokens := strings.SplitN(p, ":", 3)
+			if len(tokens) != 3 {
+				continue
+			}
 
-            field := strings.TrimSpace(tokens[0])
-            op := strings.TrimSpace(tokens[1])
-            rawValue := strings.TrimSpace(tokens[2])
+			field := strings.TrimSpace(tokens[0])
+			op := strings.TrimSpace(tokens[1])
+			rawValue := strings.TrimSpace(tokens[2])
 
-            var ptr *string
-            if rawValue != "" && rawValue != "null" {
-                ptr = &rawValue
-            }
+			var ptr *string
+			if rawValue != "" && rawValue != "null" {
+				ptr = &rawValue
+			}
 
-            filters = append(filters, commondomain.SearchFilter{
-                Field:    field,
-                Operator: op,
-                Value:    ptr,
-            })
-        }
-    }
+			filters = append(filters, commondomain.SearchFilter{
+				Field:    field,
+				Operator: op,
+				Value:    ptr,
+			})
+		}
+	}
 
-    query := GetAllJenisFiles.GetAllJenisFilesQuery{
-        Search:        search,
-        SearchFilters: filters,
-    }
+	query := GetAllJenisFiles.GetAllJenisFilesQuery{
+		Search:        search,
+		SearchFilters: filters,
+	}
 
-    var adapter OutputAdapter
-    switch mode {
-    case "all":
-        adapter = &AllAdapter{}
-    case "ndjson":
-        adapter = &NDJSONAdapter{}
-    case "sse":
-        adapter = &SSEAdapter{}
-    default:
-        query.Page = &page
-        query.Limit = &limit
-        adapter = &PagingAdapter{}
-    }
+	var adapter OutputAdapter
+	switch mode {
+	case "all":
+		adapter = &AllAdapter{}
+	case "ndjson":
+		adapter = &NDJSONAdapter{}
+	case "sse":
+		adapter = &SSEAdapter{}
+	default:
+		query.Page = &page
+		query.Limit = &limit
+		adapter = &PagingAdapter{}
+	}
 
-    result, err := mediatr.Send[
-        GetAllJenisFiles.GetAllJenisFilesQuery,
-        JenisFiledomain.PagedJenisFiles,
-    ](context.Background(), query)
+	result, err := mediatr.Send[
+		GetAllJenisFiles.GetAllJenisFilesQuery,
+		JenisFiledomain.PagedJenisFiles,
+	](context.Background(), query)
 
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return adapter.Send(c, result)
+	return adapter.Send(c, result)
 }
 
 func SetupUuidJenisFilesHandlerfunc(c *fiber.Ctx) error {
-    cmd := SetupUuidJenisFile.SetupUuidJenisFileCommand{}
+	cmd := SetupUuidJenisFile.SetupUuidJenisFileCommand{}
 
-    message, err := mediatr.Send[SetupUuidJenisFile.SetupUuidJenisFileCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	message, err := mediatr.Send[SetupUuidJenisFile.SetupUuidJenisFileCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"message": message})
+	return c.JSON(fiber.Map{"message": message})
 }
 
 func ModuleJenisFile(app *fiber.App) {
-    admin := []string{"admin"}
+	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-    app.Get("/jenisfile/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidJenisFilesHandlerfunc)
+	app.Get("/jenisfile/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidJenisFilesHandlerfunc)
 
-    app.Post("/jenisfile", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJenisFileHandlerfunc)
-    app.Put("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJenisFileHandlerfunc)
-    app.Delete("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteJenisFileHandlerfunc)
-    app.Get("/JenisFile/:uuid", commonpresentation.JWTMiddleware(), GetJenisFileHandlerfunc)
-    app.Get("/JenisFiles", commonpresentation.JWTMiddleware(), GetAllJenisFilesHandlerfunc)
+	app.Post("/jenisfile", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJenisFileHandlerfunc)
+	app.Put("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJenisFileHandlerfunc)
+	app.Delete("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteJenisFileHandlerfunc)
+	app.Get("/JenisFile/:uuid", commonpresentation.JWTMiddleware(), GetJenisFileHandlerfunc)
+	app.Get("/JenisFiles", commonpresentation.JWTMiddleware(), GetAllJenisFilesHandlerfunc)
 }
