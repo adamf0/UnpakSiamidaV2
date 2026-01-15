@@ -193,37 +193,17 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
         CREATE OR REPLACE VIEW v_tahun_renstra AS
         SELECT
-            r.tahun,
+            t.tahun,
             CASE
-                WHEN r.tahun = YEAR(CURRENT_TIMESTAMP()) THEN 'active'
+                WHEN t.tahun = (
+                    SELECT MAX(tahun)
+                    FROM renstra
+                )
+                THEN 'active'
                 ELSE 'no-active'
             END AS status
         FROM (
-            SELECT DISTINCT
-                renstra.id,
-                renstra.tahun,
-                renstra.kodeAkses,
-                renstra.fakultas_unit,
-                CASE
-                    WHEN sfu.standalone THEN 'fakultas'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NULL
-                        AND sfu.nama IS NOT NULL THEN 'unit'
-                END AS type,
-                renstra.periode_upload_mulai,
-                renstra.periode_upload_akhir,
-                renstra.periode_assesment_dokumen_mulai,
-                renstra.periode_assesment_dokumen_akhir,
-                renstra.periode_assesment_lapangan_mulai,
-                renstra.periode_assesment_lapangan_akhir,
-                renstra.auditee,
-                renstra.auditor1,
-                renstra.auditor2,
-                renstra.created_at,
-                renstra.updated_at,
-                rn.tugas
+            SELECT DISTINCT renstra.tahun
             FROM renstra
             LEFT JOIN renstra_nilai rn
                 ON renstra.id = rn.id_renstra
@@ -234,33 +214,9 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             LEFT JOIN sijamu_fakultas_unit sfu
                 ON renstra.fakultas_unit = sfu.id
 
-            UNION ALL
+            UNION
 
-            SELECT DISTINCT
-                renstra.id,
-                renstra.tahun,
-                renstra.kodeAkses,
-                renstra.fakultas_unit,
-                CASE
-                    WHEN sfu.standalone THEN 'fakultas'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
-                    WHEN sfu.kode_fakultas IS NOT NULL
-                        AND sfu.kode_prodi IS NULL
-                        AND sfu.nama IS NOT NULL THEN 'unit'
-                END AS type,
-                renstra.periode_upload_mulai,
-                renstra.periode_upload_akhir,
-                renstra.periode_assesment_dokumen_mulai,
-                renstra.periode_assesment_dokumen_akhir,
-                renstra.periode_assesment_lapangan_mulai,
-                renstra.periode_assesment_lapangan_akhir,
-                renstra.auditee,
-                renstra.auditor1,
-                renstra.auditor2,
-                renstra.created_at,
-                renstra.updated_at,
-                dt.tugas
+            SELECT DISTINCT renstra.tahun
             FROM renstra
             LEFT JOIN renstra_nilai rn
                 ON renstra.id = rn.id_renstra
@@ -272,9 +228,8 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
                 ON renstra.fakultas_unit = sfu.id
             LEFT JOIN dokumen_tambahan dt
                 ON renstra.id = dt.id_renstra
-        ) r
-        GROUP BY r.tahun
-        ORDER BY r.tahun;
+        ) t
+        ORDER BY t.tahun;
     `).Error
 
 	if err != nil {
@@ -312,6 +267,25 @@ func resetDB(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 
 	seedAll(t, gdb)
+}
+
+func resetDBOnly(t *testing.T, gdb *gorm.DB) {
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
+
+	tables := []string{
+		"dokumen_tambahan",
+		"master_indikator_renstra",
+		"renstra",
+		"renstra_nilai",
+		"sijamu_fakultas_unit",
+		"template_renstra",
+	}
+
+	for _, tbl := range tables {
+		gdb.Exec("TRUNCATE TABLE " + tbl)
+	}
+
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 }
 
 func seedAll(t *testing.T, gdb *gorm.DB) {
