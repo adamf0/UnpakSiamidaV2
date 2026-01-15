@@ -69,7 +69,7 @@ func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
-	_ = db.Exec("DELETE FROM users")
+	_ = db.Exec("TRUNCATE TABLE users")
 
 	repo := infra.NewAccountRepository(db)
 	handler := app.WhoamiCommandHandler{Repo: repo}

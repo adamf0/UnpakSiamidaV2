@@ -139,7 +139,7 @@ func TestGetFakultasUnit_NotFound(t *testing.T) {
 	db, cleanup := setupFakultasUnitMySQL(t)
 	defer cleanup()
 
-	_ = db.Exec("DELETE FROM sijamu_fakultas_unit")
+	_ = db.Exec("TRUNCATE TABLE sijamu_fakultas_unit")
 
 	repo := infra.NewFakultasUnitRepository(db)
 	handler := app.GetAllFakultasUnitsQueryHandler{Repo: repo}

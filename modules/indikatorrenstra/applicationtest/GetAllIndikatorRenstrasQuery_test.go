@@ -128,7 +128,7 @@ func TestGetIndikatorRenstra_NotFound(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 
-	_ = db.Exec("DELETE FROM master_indikator_renstra")
+	_ = db.Exec("TRUNCATE TABLE master_indikator_renstra")
 
 	repo := infra.NewIndikatorRenstraRepository(db)
 	handler := app.GetAllIndikatorRenstrasQueryHandler{Repo: repo}
