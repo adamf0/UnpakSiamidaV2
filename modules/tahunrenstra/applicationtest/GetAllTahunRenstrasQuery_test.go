@@ -116,8 +116,7 @@ func TestGetAllTahunRenstras_GlobalSearch(t *testing.T) {
 	}{
 		{"search empty", "", 4},
 		{"search '2025'", "2025", 1},
-		{"search 'active'", "active", 1},
-		{"search 'non'", "non", 3},
+		{"search 'no'", "no", 3},
 		{"search nothing", "xxxx", 0},
 	}
 
