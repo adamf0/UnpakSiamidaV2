@@ -2,11 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainaccount "UnpakSiamida/modules/account/domain"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type WhoamiCommandHandler struct {
@@ -27,10 +29,10 @@ func (h *WhoamiCommandHandler) Handle(
 
 	user, err := h.Repo.Get(ctx, cmd.SID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainaccount.InvalidCredential()
+		}
 		return nil, err
-	}
-	if user == nil {
-		return nil, domainaccount.InvalidCredential()
 	}
 	if user.ExtraRole == nil {
 		user.ExtraRole = []domainaccount.ExtraRole{}

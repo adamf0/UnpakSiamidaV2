@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	commonDomain "UnpakSiamida/common/domain"
 	domain "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
 	infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
@@ -120,6 +121,31 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
 					tt.name, tt.expectedRows, len(res.Data))
 			}
 		})
+	}
+}
+
+func TestGetIndikatorRenstra_NotFound(t *testing.T) {
+	db, cleanup := setupIndikatorRenstraMySQL(t)
+	defer cleanup()
+
+	_ = db.Exec("DELETE FROM master_indikator_renstra")
+
+	repo := infra.NewIndikatorRenstraRepository(db)
+	handler := app.GetAllIndikatorRenstrasQueryHandler{Repo: repo}
+
+	_, err := handler.Handle(context.Background(), app.GetAllIndikatorRenstrasQuery{})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	derr, ok := err.(commonDomain.Error)
+	if !ok {
+		t.Fatalf("expected commonDomain.Error, got %T (%v)", err, err)
+	}
+
+	if derr.Code != "IndikatorRenstra.EmptyData" {
+		t.Fatalf("expected IndikatorRenstra.EmptyData, got %s", derr.Code)
 	}
 }
 

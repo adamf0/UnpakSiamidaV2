@@ -34,10 +34,8 @@ func TestGetActiveTahunRenstra_Success(t *testing.T) {
 
 func TestGetActiveTahunRenstra_NotFound(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
-	resetDBOnly(t, db)
+	resetDBOnlyTahunRenstra(t, db)
 	defer cleanup()
-
-	_ = db.Exec("DELETE FROM v_tahun_renstra")
 
 	repo := infra.NewTahunRenstraRepository(db)
 	handler := appactive.GetActiveTahunRenstraQueryHandler{Repo: repo}

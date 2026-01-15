@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	commonDomain "UnpakSiamida/common/domain"
 	domain "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/dokumentambahan/application/GetAllDokumenTambahans"
 	infra "UnpakSiamida/modules/dokumentambahan/infrastructure"
@@ -150,6 +151,30 @@ func TestGetAllDokumenTambahansIntegration(t *testing.T) {
 					tt.name, tt.expectedRows, len(res.Data))
 			}
 		})
+	}
+}
+
+func TestGetDokumenTambahan_NotFound(t *testing.T) {
+	db, cleanup := setupDokumenTambahanMySQL(t)
+	resetDBOnlyDokumenTambahan(t, db)
+	defer cleanup()
+
+	repo := infra.NewDokumenTambahanRepository(db)
+	handler := app.GetAllDokumenTambahansQueryHandler{Repo: repo}
+
+	_, err := handler.Handle(context.Background(), app.GetAllDokumenTambahansQuery{})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	derr, ok := err.(commonDomain.Error)
+	if !ok {
+		t.Fatalf("expected commonDomain.Error, got %T (%v)", err, err)
+	}
+
+	if derr.Code != "DokumenTambahan.EmptyData" {
+		t.Fatalf("expected DokumenTambahan.EmptyData, got %s", derr.Code)
 	}
 }
 

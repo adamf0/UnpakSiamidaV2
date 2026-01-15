@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	commonDomain "UnpakSiamida/common/domain"
 	domain "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
 	infra "UnpakSiamida/modules/fakultasunit/infrastructure"
@@ -131,6 +132,31 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 					tt.name, tt.expectedRows, len(res.Data))
 			}
 		})
+	}
+}
+
+func TestGetFakultasUnit_NotFound(t *testing.T) {
+	db, cleanup := setupFakultasUnitMySQL(t)
+	defer cleanup()
+
+	_ = db.Exec("DELETE FROM sijamu_fakultas_unit")
+
+	repo := infra.NewFakultasUnitRepository(db)
+	handler := app.GetAllFakultasUnitsQueryHandler{Repo: repo}
+
+	_, err := handler.Handle(context.Background(), app.GetAllFakultasUnitsQuery{})
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	derr, ok := err.(commonDomain.Error)
+	if !ok {
+		t.Fatalf("expected commonDomain.Error, got %T (%v)", err, err)
+	}
+
+	if derr.Code != "FakultasUnit.EmptyData" {
+		t.Fatalf("expected FakultasUnit.EmptyData, got %s", derr.Code)
 	}
 }
 

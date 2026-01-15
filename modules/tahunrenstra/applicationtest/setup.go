@@ -236,11 +236,11 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 		t.Fatalf("migration failed: %v", err)
 	}
 
-	seedAll(t, gdb)
+	seedAllTahunRenstra(t, gdb)
 
 	cleanup := func() {
 		sqlDB, _ := gdb.DB()
-		resetDB(t, gdb)
+		resetDBTahunRenstra(t, gdb)
 		sqlDB.Close()
 		// mysqlC.Terminate(ctx)
 	}
@@ -248,7 +248,7 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	return gdb, cleanup
 }
 
-func resetDB(t *testing.T, gdb *gorm.DB) {
+func resetDBTahunRenstra(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
 
 	tables := []string{
@@ -266,10 +266,10 @@ func resetDB(t *testing.T, gdb *gorm.DB) {
 
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 
-	seedAll(t, gdb)
+	seedAllTahunRenstra(t, gdb)
 }
 
-func resetDBOnly(t *testing.T, gdb *gorm.DB) {
+func resetDBOnlyTahunRenstra(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
 
 	tables := []string{
@@ -288,7 +288,7 @@ func resetDBOnly(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 }
 
-func seedAll(t *testing.T, gdb *gorm.DB) {
+func seedAllTahunRenstra(t *testing.T, gdb *gorm.DB) {
 	err := gdb.Exec(`
         INSERT INTO dokumen_tambahan (id, uuid, id_renstra_old, id_renstra, id_template_dokumen_tambahan, file, capaian_auditor, catatan_auditor, tugas, created_at, updated_at) VALUES
         (1271, 'c836800f-8c09-4e04-ba16-e0ca027ca571', NULL, 368, 28, 'https://www.linkedin.com/in/adamfurqon175901204', NULL, 'entah lah', 'auditor2', NULL, '2024-12-23 07:53:29'),

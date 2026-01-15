@@ -17,7 +17,7 @@ func TestWhoamiIntegration_Success(t *testing.T) {
 	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
-		SID: "f524cbfd-b5aa-41d9-9a94-d9d5065918b4",
+		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
 	}
 
 	// validation
@@ -69,11 +69,13 @@ func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
+	_ = db.Exec("DELETE FROM users")
+
 	repo := infra.NewAccountRepository(db)
 	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
-		SID: "f524cbfd-b5aa-41d9-9a94-d9d5065918bf",
+		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
 	}
 
 	err := app.WhoamiCommandValidation(cmd)

@@ -2,13 +2,16 @@ package application
 
 import (
 	"context"
-	
-	domainaccount "UnpakSiamida/modules/account/domain"
+	"errors"
+
 	helper "UnpakSiamida/common/helper"
+	domainaccount "UnpakSiamida/modules/account/domain"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-type LoginCommandHandler struct{
+type LoginCommandHandler struct {
 	Repo domainaccount.IAccountRepository
 }
 
@@ -21,10 +24,10 @@ func (h *LoginCommandHandler) Handle(
 
 	user, err := h.Repo.Auth(ctx, cmd.Username, cmd.Password)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainaccount.InvalidCredential()
+		}
 		return nil, err
-	}
-	if user == nil {
-		return nil, domainaccount.InvalidCredential()
 	}
 
 	sid := user.UUID

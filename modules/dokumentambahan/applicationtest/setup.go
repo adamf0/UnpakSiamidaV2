@@ -273,10 +273,11 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 	if err != nil {
 		t.Fatalf("migration failed: %v", err)
 	}
-	seedAll(t, gdb)
+	seedAllDokumenTambahan(t, gdb)
 
 	cleanup := func() {
 		sqlDB, _ := gdb.DB()
+		resetDBDokumenTambahan(t, gdb)
 		sqlDB.Close()
 		// mysqlC.Terminate(ctx)
 	}
@@ -284,7 +285,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 	return gdb, cleanup
 }
 
-func resetDB(t *testing.T, gdb *gorm.DB) {
+func resetDBDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
 
 	tables := []string{
@@ -303,10 +304,10 @@ func resetDB(t *testing.T, gdb *gorm.DB) {
 
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 
-	seedAll(t, gdb)
+	seedAllDokumenTambahan(t, gdb)
 }
 
-func resetDBOnly(t *testing.T, gdb *gorm.DB) {
+func resetDBOnlyDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
 
 	tables := []string{
@@ -326,7 +327,7 @@ func resetDBOnly(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 }
 
-func seedAll(t *testing.T, gdb *gorm.DB) {
+func seedAllDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 	err := gdb.Exec(`
         INSERT INTO m_fakultas (kode_fakultas, kode_pt, nama_fakultas, pejabat, jabatan, wakil_pejabat, wakil_pejabat_adm, logo) VALUES
         ('01', '041004', 'HUKUM', '0410067306', 'H', '0417086801', '0414106202', ''),
