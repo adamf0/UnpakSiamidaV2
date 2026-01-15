@@ -30,7 +30,7 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 		search       string
 		expectedRows int
 	}{
-		{"No search, returns all", "", 10}, //fail
+		{"No search, returns all", "", 10},
 		{"Search matching Teknik", "Teknik", 7},
 		{"Search not matching anything", "TidakAda", 0},
 	}
@@ -71,7 +71,7 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 		{"nama like Tek", []domain.SearchFilter{
 			{"nama_fak_prod_unit", "like", str("Tek")},
 		}, 9},
-		{"nama neq Ekonomi", []domain.SearchFilter{ //fail
+		{"nama neq Ekonomi", []domain.SearchFilter{
 			{"nama_fak_prod_unit", "neq", str("Ekonomi")},
 		}, 10},
 

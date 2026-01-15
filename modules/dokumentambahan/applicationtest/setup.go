@@ -18,9 +18,19 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	req := testcontainers.ContainerRequest{
 		Image: "mysql:8.0",
+		Tmpfs: map[string]string{
+			"/var/lib/mysql": "rw",
+		},
+		Cmd: []string{
+			"--innodb_flush_log_at_trx_commit=2",
+			"--sync_binlog=0",
+		},
 		Env: map[string]string{
 			"MYSQL_ROOT_PASSWORD": "pass",
 			"MYSQL_DATABASE":      "testdb",
+		},
+		Labels: map[string]string{
+			"testcontainers.sessionId": "tahunrenstra",
 		},
 		ExposedPorts: []string{"3306/tcp"},
 		WaitingFor: wait.ForListeningPort("3306/tcp").
@@ -56,6 +66,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	// Buat table & data contoh
 	err = gdb.Exec(`
+        DROP TABLE IF EXISTS m_fakultas;
         CREATE TABLE m_fakultas (
             kode_fakultas char(9) NOT NULL,
             kode_pt char(10) NOT NULL,
@@ -67,16 +78,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
             logo varchar(50) DEFAULT NULL
         );
 
-        INSERT INTO m_fakultas (kode_fakultas, kode_pt, nama_fakultas, pejabat, jabatan, wakil_pejabat, wakil_pejabat_adm, logo) VALUES
-        ('01', '041004', 'HUKUM', '0410067306', 'H', '0417086801', '0414106202', ''),
-        ('02', '041004', 'EKONOMI DAN BISNIS', '0415056901', 'H', '0425097604', '0414109101', ''),
-        ('03', '041004', 'KIP', '0416076701', 'H', '0413018604', '0415128202', ''),
-        ('04', '041004', 'ISIB', '0416068002', 'H', '0401098708', '0413026701', ''),
-        ('05', '041004', 'TEKNIK', '0428106901', 'H', '0424076601', '0417097601', ''),
-        ('06', '041004', 'MIPA', '0406097101', 'H', '0404107405', '0407027501', ''),
-        ('07', '041004', 'PASCASARJANA', '0403055801', 'H', '0427017501', '0025057515', ''),
-        ('08', '041004', 'VOKASI', '0413117601', 'H', '0402047301', '0404047007', '');
-
+        DROP TABLE IF EXISTS m_program_studi;
         CREATE TABLE m_program_studi (
             kode_prodi char(10) NOT NULL,
             kode_pt char(10) NOT NULL,
@@ -120,6 +122,221 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
             logo varchar(50) DEFAULT NULL,
             nama_prodi_ing varchar(50) DEFAULT NULL
         );
+
+        DROP TABLE IF EXISTS sijamu_fakultas_unit;
+        CREATE TABLE sijamu_fakultas_unit (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            kode_fakultas char(9) DEFAULT NULL,
+            kode_prodi char(10) DEFAULT NULL,
+            nama varchar(100) DEFAULT NULL,
+            id_m_prodi int(11) DEFAULT NULL,
+            standalone tinyint(4) DEFAULT 0
+        );
+
+        DROP TABLE IF EXISTS dokumen_tambahan;
+        CREATE TABLE dokumen_tambahan (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            id_renstra_old int(11) DEFAULT NULL,
+            id_renstra int(11) NOT NULL,
+            id_template_dokumen_tambahan int(11) NOT NULL,
+            file text DEFAULT NULL,
+            capaian_auditor varchar(100) DEFAULT NULL,
+            catatan_auditor text DEFAULT NULL,
+            tugas varchar(100) NOT NULL DEFAULT 'auditor2',
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE dokumen_tambahan
+        ADD PRIMARY KEY (id);
+
+        DROP TABLE IF EXISTS jenis_file_renstra;
+        CREATE TABLE jenis_file_renstra (
+            id bigint(20) UNSIGNED NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            nama text NOT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE jenis_file_renstra
+        ADD PRIMARY KEY (id);
+
+        DROP TABLE IF EXISTS renstra;
+        CREATE TABLE renstra (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            tahun year(4) NOT NULL,
+            fakultas_unit_old int(11) DEFAULT NULL,
+            fakultas_unit int(11) DEFAULT NULL,
+            periode_upload_mulai datetime NOT NULL,
+            periode_upload_akhir datetime NOT NULL,
+            periode_assesment_dokumen_mulai datetime NOT NULL,
+            periode_assesment_dokumen_akhir datetime NOT NULL,
+            periode_assesment_lapangan_mulai datetime NOT NULL,
+            periode_assesment_lapangan_akhir datetime NOT NULL,
+            kodeAkses varchar(255) DEFAULT NULL,
+            auditee bigint(20) UNSIGNED DEFAULT NULL,
+            auditor1 bigint(20) UNSIGNED DEFAULT NULL,
+            auditor2 bigint(20) UNSIGNED DEFAULT NULL,
+            catatan text DEFAULT NULL,
+            catatan2 text DEFAULT NULL,
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+
+        ALTER TABLE renstra
+        ADD PRIMARY KEY (id);
+        
+        DROP TABLE IF EXISTS template_dokumen_tambahan;
+        CREATE TABLE template_dokumen_tambahan (
+            id int(11) NOT NULL,
+            uuid varchar(36) DEFAULT NULL,
+            tahun varchar(100) NOT NULL,
+            jenis_file bigint(11) UNSIGNED NOT NULL,
+            pertanyaan text NOT NULL,
+            klasifikasi varchar(100) NOT NULL,
+            fakultas_prodi_unit varchar(100) NOT NULL,
+            tugas varchar(100) NOT NULL DEFAULT 'auditor2',
+            created_at datetime DEFAULT NULL,
+            updated_at datetime DEFAULT NULL
+        );
+        
+        ALTER TABLE template_dokumen_tambahan
+        ADD PRIMARY KEY (id),
+        ADD UNIQUE KEY uq_template_dokumen (tahun,jenis_file,fakultas_prodi_unit);
+
+        CREATE OR REPLACE VIEW v_fakultas_unit AS
+        SELECT
+            sfu.id AS id,
+            sfu.uuid AS uuid,
+            CASE
+                WHEN sfu.standalone THEN fak.nama_fakultas
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NOT NULL
+                    AND sfu.nama IS NULL THEN prod.nama_prodi
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NOT NULL
+                    AND sfu.nama IS NOT NULL THEN sfu.nama
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NULL
+                    AND sfu.nama IS NOT NULL THEN sfu.nama
+                ELSE 'tidak diketahui'
+            END AS nama_fak_prod_unit,
+            prod.kode_jenjang AS kode_jenjang,
+            CASE
+                WHEN prod.kode_jenjang = 'C' THEN 's1'
+                WHEN prod.kode_jenjang = 'B' THEN 's2'
+                WHEN prod.kode_jenjang = 'A' THEN 's3'
+                WHEN prod.kode_jenjang = 'E' THEN 'd3'
+                WHEN prod.kode_jenjang = 'D' THEN 'd4'
+                WHEN prod.kode_jenjang = 'J' THEN 'profesi'
+                ELSE NULL
+            END AS jenjang,
+            CASE
+                WHEN prod.kode_jenjang = 'C' THEN '1'
+                WHEN prod.kode_jenjang = 'B' THEN '2'
+                WHEN prod.kode_jenjang = 'A' THEN '3'
+                WHEN prod.kode_jenjang = 'E' THEN '4'
+                WHEN prod.kode_jenjang = 'D' THEN '5'
+                WHEN prod.kode_jenjang = 'J' THEN '6'
+                ELSE '7'
+            END AS jenjang_int,
+            CASE
+                WHEN sfu.standalone THEN 'fakultas'
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NOT NULL
+                    AND sfu.nama IS NULL THEN 'prodi'
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NOT NULL
+                    AND sfu.nama IS NOT NULL THEN 'prodi'
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NULL
+                    AND sfu.nama IS NOT NULL THEN 'unit'
+                ELSE NULL
+            END AS type,
+            CASE
+                WHEN sfu.standalone THEN fak.nama_fakultas
+                WHEN sfu.kode_fakultas IS NOT NULL
+                    AND sfu.kode_prodi IS NOT NULL THEN fak.nama_fakultas
+                ELSE NULL
+            END AS fakultas
+        FROM sijamu_fakultas_unit sfu
+        LEFT JOIN m_fakultas fak
+            ON sfu.kode_fakultas = fak.kode_fakultas
+        LEFT JOIN m_program_studi prod
+            ON sfu.kode_prodi = prod.kode_prodi;
+    `).Error
+
+	if err != nil {
+		t.Fatalf("migration failed: %v", err)
+	}
+	seedAll(t, gdb)
+
+	cleanup := func() {
+		sqlDB, _ := gdb.DB()
+		sqlDB.Close()
+		// mysqlC.Terminate(ctx)
+	}
+
+	return gdb, cleanup
+}
+
+func resetDB(t *testing.T, gdb *gorm.DB) {
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
+
+	tables := []string{
+		"m_fakultas",
+		"m_program_studi",
+		"sijamu_fakultas_unit",
+		"dokumen_tambahan",
+		"jenis_file_renstra",
+		"renstra",
+		"template_dokumen_tambahan",
+	}
+
+	for _, tbl := range tables {
+		gdb.Exec("TRUNCATE TABLE " + tbl)
+	}
+
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
+
+	seedAll(t, gdb)
+}
+
+func resetDBOnly(t *testing.T, gdb *gorm.DB) {
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
+
+	tables := []string{
+		"m_fakultas",
+		"m_program_studi",
+		"sijamu_fakultas_unit",
+		"dokumen_tambahan",
+		"jenis_file_renstra",
+		"renstra",
+		"template_dokumen_tambahan",
+	}
+
+	for _, tbl := range tables {
+		gdb.Exec("TRUNCATE TABLE " + tbl)
+	}
+
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
+}
+
+func seedAll(t *testing.T, gdb *gorm.DB) {
+	err := gdb.Exec(`
+        INSERT INTO m_fakultas (kode_fakultas, kode_pt, nama_fakultas, pejabat, jabatan, wakil_pejabat, wakil_pejabat_adm, logo) VALUES
+        ('01', '041004', 'HUKUM', '0410067306', 'H', '0417086801', '0414106202', ''),
+        ('02', '041004', 'EKONOMI DAN BISNIS', '0415056901', 'H', '0425097604', '0414109101', ''),
+        ('03', '041004', 'KIP', '0416076701', 'H', '0413018604', '0415128202', ''),
+        ('04', '041004', 'ISIB', '0416068002', 'H', '0401098708', '0413026701', ''),
+        ('05', '041004', 'TEKNIK', '0428106901', 'H', '0424076601', '0417097601', ''),
+        ('06', '041004', 'MIPA', '0406097101', 'H', '0404107405', '0407027501', ''),
+        ('07', '041004', 'PASCASARJANA', '0403055801', 'H', '0427017501', '0025057515', ''),
+        ('08', '041004', 'VOKASI', '0413117601', 'H', '0402047301', '0404047007', '');
 
         INSERT INTO m_program_studi (kode_prodi, kode_pt, kode_fak, kode_jenjang, kode_jurusan, nama_prodi, alamat, kode_kabupaten, kode_propinsi, kode_negara, kode_pos, telepon, fax, email, website, sks_lulus, status_prodi, tgl_awal_berdiri, semester_awal, mulai_semester, no_sk_dikti, tgl_sk_dikti, tgl_akhir_sk_dikti, no_sk_ban, tgl_sk_ban, tgl_akhir_sk_ban, kode_akreditasi, frekuensi_kurikulum, pelaksanaan_kurikulum, idd_ketua_prodi, hp_ketua, idd_nama_operator, telepon_operator, nama_sesi, jumlah_sesi, batas_sesi, gelar, gelar_panjang, no_sk_ban_lama, logo, nama_prodi_ing) VALUES
         ('20201', '041004', '05', 'C', '05', 'TEKNIK ELEKTRO', ' Jl. Pakuan PO Box 452 Bogor', 200, 2, NULL, '16143', '081382928035', '0521 8314332', 'fteknik@unpak.ac.id', 'http://ft.unpak.ac.id', 144, 'A', '1986-05-22', '20021', '20021', '8414/D/T/K-IV/2011', '2011-08-19', '2015-09-23', '1151/SK/BAN-PT/Akred/S/XI/2015', '2015-11-14', '2020-11-14', 'B', 'F', 'A', '0428106301', '081316626393', 'EVYTA WISMIANA', '0521 8314332', 'SEMESTER', 2, 8, 'S.T.', 'Sarjana Teknik', '-', '', NULL),
@@ -166,16 +383,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         ('88203', '041004', '03', 'C', '03', 'PENDIDIKAN BAHASA INGGRIS', 'Pakuan 452', 200, 2, NULL, '111111', '0812000000000', '02518375608', 'fkip@unpak.ac.id', 'http://fkip.unpak.ac.id', 6, 'A', '1982-05-10', '20021', '20021', '2305/D/T/2011', '2011-08-21', '2015-08-21', '13796/SK/BAN-PT/Ak-PPJ/S/XII/2021', '2022-01-11', '2027-01-11', 'B', 'A', 'A', '0404038901', '', '', '', 'SEMESTER', 2, 8, 'S.Pd.', 'Sarjana Pendidikan', '0165/SK/BAN-PT/Akred/S/I/2017', '', '-'),
         ('95102', '041004', '07', 'B', '07', 'PKLH', 'Jl. Pakuan', 200, 2, NULL, '16145', '085218534206', '02518320123', 'pasca@unpak.ac.id', 'http://pasca.unpak.ac.id', 6, 'N', '2000-09-22', '20021', '20021', '1359/D/T/K-IV/2012', '2012-10-19', '2015-10-27', '2212/SK/BAN-PT/Akred/M/VII/2017', '2017-07-04', '2022-07-04', 'A', 'A', 'A', '0323016503', '', 'Fredy Herlambang', '02518320123', 'SEMESTER', 2, 4, 'M.Ling.', 'Magister Lingkungan', '-', '', '-'),
         ('95125', '041004', '07', 'B', '07', 'PERENCANAAN WILAYAH DAN KOTA', 'Jl. Pakuan', 200, 2, NULL, '16143', '02518311007', '02518311007', 'pasca@unpak.ac.id', 'https://pasca.unpak.ac.id', 5, 'A', '2019-01-10', '20191', '20191', '-', '2019-01-10', '2030-01-20', '-', '2019-01-20', '2025-01-20', 'C', 'D', 'A', '0024087504', '081355131023', '', '', 'SEMESTER', 2, 4, 'M.P.W.K.', 'Magister Perencanaan Wilayah dan Kota', '-', '', '-');
-
-        CREATE TABLE sijamu_fakultas_unit (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            kode_fakultas char(9) DEFAULT NULL,
-            kode_prodi char(10) DEFAULT NULL,
-            nama varchar(100) DEFAULT NULL,
-            id_m_prodi int(11) DEFAULT NULL,
-            standalone tinyint(4) DEFAULT 0
-        );
 
         INSERT INTO sijamu_fakultas_unit (id, uuid, kode_fakultas, kode_prodi, nama, id_m_prodi, standalone) VALUES
         (1, '0d2fa3f8-6df3-45b8-8985-654cb49d5d03', '01', '74201', NULL, 7, 0),
@@ -265,23 +472,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         (129, 'b13f35eb-91c9-4f5c-a79c-67542c7a195b', '03', NULL, 'LABORATORIUM BAHASA INGGRIS', 66, 0),
         (130, 'a85f99c4-bbe1-4f9c-827a-fea3b958ab58', '03', NULL, 'LABORATORIUM MICROTEACHING', 66, 0),
         (131, 'c031ad9c-5288-4343-bfee-0a9854c76d77', '03', NULL, 'LABORATORIUM KOMPUTER', 66, 0);
-
-        CREATE TABLE dokumen_tambahan (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            id_renstra_old int(11) DEFAULT NULL,
-            id_renstra int(11) NOT NULL,
-            id_template_dokumen_tambahan int(11) NOT NULL,
-            file text DEFAULT NULL,
-            capaian_auditor varchar(100) DEFAULT NULL,
-            catatan_auditor text DEFAULT NULL,
-            tugas varchar(100) NOT NULL DEFAULT 'auditor2',
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE dokumen_tambahan
-        ADD PRIMARY KEY (id);
 
         INSERT INTO dokumen_tambahan (id, uuid, id_renstra_old, id_renstra, id_template_dokumen_tambahan, file, capaian_auditor, catatan_auditor, tugas, created_at, updated_at) VALUES
         (1271, 'c836800f-8c09-4e04-ba16-e0ca027ca571', NULL, 368, 28, 'https://www.linkedin.com/in/adamfurqon175901204', NULL, 'entah lah', 'auditor2', NULL, '2024-12-23 07:53:29'),
@@ -710,17 +900,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         (2248, 'e16f5775-eb89-4792-b216-9620062c20f0', NULL, 611, 63, NULL, NULL, NULL, 'auditor2', NULL, NULL),
         (2249, '206f78a9-5f1a-412a-bfea-d9d0add1e5bb', NULL, 611, 66, NULL, NULL, NULL, 'auditor2', NULL, NULL);
 
-        CREATE TABLE jenis_file_renstra (
-            id bigint(20) UNSIGNED NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            nama text NOT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE jenis_file_renstra
-        ADD PRIMARY KEY (id);
-
         INSERT INTO jenis_file_renstra (id, uuid, nama, created_at, updated_at) VALUES
         (1, '14212231-792f-4935-bb1c-9a38695a4b6b', 'Program Kerja Sesuai Dengan Template 2024 disertai Monev', NULL, '2024-10-08 13:35:36'),
         (2, '1a353e22-1111-4fc5-96c1-a2ed2877a6a4', 'Struktur Organisasi Disertai Dengan Job Description, Job Spesification, Dan Disahkan Dengan SK', NULL, '2024-10-08 13:36:55'),
@@ -729,31 +908,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         (14, '6aee7cd5-da31-4735-9243-8c19aa7497c0', 'Program Kerja Sesuai Dengan Template 2025 disertai Monev', '2025-10-13 15:14:06', '2025-10-13 15:14:06'),
         (15, '84066942-1f2d-44b0-be66-8b87cdab6e91', 'Hasil/Catatan Audit/KTS Sebelumnya (2024) Telah Diselesaikan (Closed)', '2025-10-13 15:14:25', '2025-10-13 15:14:25');
 
-        CREATE TABLE renstra (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            tahun year(4) NOT NULL,
-            fakultas_unit_old int(11) DEFAULT NULL,
-            fakultas_unit int(11) DEFAULT NULL,
-            periode_upload_mulai datetime NOT NULL,
-            periode_upload_akhir datetime NOT NULL,
-            periode_assesment_dokumen_mulai datetime NOT NULL,
-            periode_assesment_dokumen_akhir datetime NOT NULL,
-            periode_assesment_lapangan_mulai datetime NOT NULL,
-            periode_assesment_lapangan_akhir datetime NOT NULL,
-            kodeAkses varchar(255) DEFAULT NULL,
-            auditee bigint(20) UNSIGNED DEFAULT NULL,
-            auditor1 bigint(20) UNSIGNED DEFAULT NULL,
-            auditor2 bigint(20) UNSIGNED DEFAULT NULL,
-            catatan text DEFAULT NULL,
-            catatan2 text DEFAULT NULL,
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-
-        ALTER TABLE renstra
-        ADD PRIMARY KEY (id);
-        
         INSERT INTO renstra (id, uuid, tahun, fakultas_unit_old, fakultas_unit, periode_upload_mulai, periode_upload_akhir, periode_assesment_dokumen_mulai, periode_assesment_dokumen_akhir, periode_assesment_lapangan_mulai, periode_assesment_lapangan_akhir, kodeAkses, auditee, auditor1, auditor2, catatan, catatan2, created_at, updated_at) VALUES
         (368, 'c67a37c3-7f25-43de-835d-e4bece0eb308', '2024', 0, 91, '2024-10-18 00:00:00', '2024-11-22 00:00:00', '2024-11-23 00:00:00', '2024-12-11 00:00:00', '2024-12-12 00:00:00', '2024-12-31 00:00:00', '567244', 232, 70, 415, NULL, NULL, '2024-10-18 13:41:48', '2024-12-31 10:37:12'),
         (371, '0025699d-d69b-41e4-b712-f437aa15d3b1', '2024', 0, 1, '2024-10-18 00:00:00', '2024-11-22 00:00:00', '2024-11-23 00:00:00', '2024-12-11 00:00:00', '2024-12-12 00:00:00', '2024-12-31 00:00:00', '567244', 235, 70, 415, NULL, 'o	mahasiswa asing \r\no	Fasilitas magang\r\no	Inovasi mahasiswa', '2024-10-18 13:42:09', '2025-09-11 15:11:59'),
@@ -863,23 +1017,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         (611, '756e3cd5-d62f-42ee-a6f6-ac97c7ef3442', '2025', NULL, 6, '2025-10-18 00:00:00', '2025-11-28 00:00:00', '2025-11-29 00:00:00', '2025-12-07 00:00:00', '2025-12-08 00:00:00', '2025-12-20 00:00:00', '321123', 268, 82, 511, NULL, NULL, '2025-11-18 13:58:42', '2025-11-28 14:11:57'),
         (619, '2e2d4672-cf8f-4578-8a85-992b5bce5f9f', '2033', NULL, 10, '2025-12-01 00:00:00', '2025-12-01 00:00:00', '2025-12-02 00:00:00', '2025-12-02 00:00:00', '2025-12-03 00:00:00', '2025-12-03 00:00:00', NULL, 515, 514, 513, NULL, NULL, NULL, NULL);
 
-        CREATE TABLE template_dokumen_tambahan (
-            id int(11) NOT NULL,
-            uuid varchar(36) DEFAULT NULL,
-            tahun varchar(100) NOT NULL,
-            jenis_file bigint(11) UNSIGNED NOT NULL,
-            pertanyaan text NOT NULL,
-            klasifikasi varchar(100) NOT NULL,
-            fakultas_prodi_unit varchar(100) NOT NULL,
-            tugas varchar(100) NOT NULL DEFAULT 'auditor2',
-            created_at datetime DEFAULT NULL,
-            updated_at datetime DEFAULT NULL
-        );
-        
-        ALTER TABLE template_dokumen_tambahan
-        ADD PRIMARY KEY (id),
-        ADD UNIQUE KEY uq_template_dokumen (tahun,jenis_file,fakultas_prodi_unit);
-
         INSERT INTO template_dokumen_tambahan (id, uuid, tahun, jenis_file, pertanyaan, klasifikasi, fakultas_prodi_unit, tugas, created_at, updated_at) VALUES
         (28, '9b354f31-be71-4173-9e26-c319d163660d', '2024', 1, 'Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?', 'minor', 'fakultas#all', 'auditor2', NULL, '2025-02-04 21:59:46'),
         (30, '4bda1f5a-c31f-4db0-a70a-ce007f7fb6de', '2024', 1, 'Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?', 'minor', 'prodi#all', 'auditor2', NULL, '2025-02-04 21:59:46'),
@@ -906,78 +1043,9 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         (66, '0265bb82-0707-49f0-82e7-ad452072f4c1', '2025', 15, 'Apakah KTS Pada Audit Sebelumnya (2024) Telah Diselesaikan (Closed)?', 'major', 'prodi#all', 'auditor2', NULL, NULL),
         (67, 'a94a807a-cb72-40b1-b9a4-d62bfa1a1206', '2025', 15, 'Apakah KTS Pada Audit Sebelumnya (2024) Telah Diselesaikan (Closed)?', 'major', 'unit#all', 'auditor2', NULL, NULL),
         (71, 'f3740e32-c373-4833-90bc-69b5cc358a93', '2026', 15, 'beta tester', 'minor', 'unit#all', 'auditor2', NULL, NULL);
-
-        CREATE OR REPLACE VIEW v_fakultas_unit AS
-        SELECT
-            sfu.id AS id,
-            sfu.uuid AS uuid,
-            CASE
-                WHEN sfu.standalone THEN fak.nama_fakultas
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NULL THEN prod.nama_prodi
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NOT NULL THEN sfu.nama
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NULL
-                    AND sfu.nama IS NOT NULL THEN sfu.nama
-                ELSE 'tidak diketahui'
-            END AS nama_fak_prod_unit,
-            prod.kode_jenjang AS kode_jenjang,
-            CASE
-                WHEN prod.kode_jenjang = 'C' THEN 's1'
-                WHEN prod.kode_jenjang = 'B' THEN 's2'
-                WHEN prod.kode_jenjang = 'A' THEN 's3'
-                WHEN prod.kode_jenjang = 'E' THEN 'd3'
-                WHEN prod.kode_jenjang = 'D' THEN 'd4'
-                WHEN prod.kode_jenjang = 'J' THEN 'profesi'
-                ELSE NULL
-            END AS jenjang,
-            CASE
-                WHEN prod.kode_jenjang = 'C' THEN '1'
-                WHEN prod.kode_jenjang = 'B' THEN '2'
-                WHEN prod.kode_jenjang = 'A' THEN '3'
-                WHEN prod.kode_jenjang = 'E' THEN '4'
-                WHEN prod.kode_jenjang = 'D' THEN '5'
-                WHEN prod.kode_jenjang = 'J' THEN '6'
-                ELSE '7'
-            END AS jenjang_int,
-            CASE
-                WHEN sfu.standalone THEN 'fakultas'
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NULL THEN 'prodi'
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NOT NULL THEN 'prodi'
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NULL
-                    AND sfu.nama IS NOT NULL THEN 'unit'
-                ELSE NULL
-            END AS type,
-            CASE
-                WHEN sfu.standalone THEN fak.nama_fakultas
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL THEN fak.nama_fakultas
-                ELSE NULL
-            END AS fakultas
-        FROM sijamu_fakultas_unit sfu
-        LEFT JOIN m_fakultas fak
-            ON sfu.kode_fakultas = fak.kode_fakultas
-        LEFT JOIN m_program_studi prod
-            ON sfu.kode_prodi = prod.kode_prodi;
     `).Error
 
 	if err != nil {
 		t.Fatalf("migration failed: %v", err)
 	}
-
-	cleanup := func() {
-		sqlDB, _ := gdb.DB()
-		sqlDB.Close()
-		mysqlC.Terminate(ctx)
-	}
-
-	return gdb, cleanup
 }

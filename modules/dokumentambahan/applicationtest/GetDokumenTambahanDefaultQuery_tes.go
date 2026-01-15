@@ -17,7 +17,7 @@ func TestGetDokumenTambahanDefaultByUuid_Success(t *testing.T) {
 	handler := app.GetDokumenTambahanDefaultByUuidQueryHandler{Repo: repo}
 
 	// UUID fix yang kamu tentukan
-	fixedUUID := "0d2fa3f8-6df3-45b8-8985-654cb49d5d03"
+	fixedUUID := "c836800f-8c09-4e04-ba16-e0ca027ca571"
 
 	q := app.GetDokumenTambahanDefaultByUuidQuery{Uuid: fixedUUID}
 
