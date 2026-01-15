@@ -87,9 +87,12 @@ func UpdateUser(
 	}
 
 	// update opsional
+	updatedPassword := prev.Password
 	if password != nil {
+		updatedPassword = *password
 		prev.Password = *password
 	}
+
 	prev.Name = name
 	prev.Email = email
 	prev.Level = level
@@ -103,7 +106,7 @@ func UpdateUser(
 		OccurredOn:   time.Now().UTC(),
 		UserUUID:     prev.UUID,
 		Username:     username,
-		Password:     *password,
+		Password:     updatedPassword,
 		Name:         name,
 		Email:        email,
 		Level:        level,
