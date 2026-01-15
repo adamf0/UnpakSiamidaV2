@@ -1,13 +1,14 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainfakultasunit "UnpakSiamida/common/domain"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
 )
 
 type FakultasUnitRepository struct {
@@ -21,7 +22,7 @@ func NewFakultasUnitRepository(db *gorm.DB) domainfakultasunit.IFakultasUnitRepo
 // ------------------------
 // GET BY UUID
 // ------------------------
-//[PR] ini bukan default
+// [PR] ini bukan default
 func (r *FakultasUnitRepository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID) (*domainfakultasunit.FakultasUnit, error) {
 	var fakultasunit domainfakultasunit.FakultasUnit
 
@@ -41,10 +42,10 @@ func (r *FakultasUnitRepository) GetDefaultByUuid(ctx context.Context, uid uuid.
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "nama_fak_prod_unit":          	"nama_fak_prod_unit",
-	"jenjang":          			"jenjang",
-	"fakultas":          			"fakultas",
+	// key:param -> db column
+	"nama_fak_prod_unit": "nama_fak_prod_unit",
+	"jenjang":            "jenjang",
+	"fakultas":           "fakultas",
 }
 
 // ------------------------
@@ -69,7 +70,7 @@ func (r *FakultasUnitRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -125,7 +126,7 @@ func (r *FakultasUnitRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------
