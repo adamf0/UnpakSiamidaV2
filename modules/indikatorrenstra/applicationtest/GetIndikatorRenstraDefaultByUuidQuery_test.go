@@ -21,7 +21,7 @@ func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
 	handler := app.GetIndikatorRenstraDefaultByUuidQueryHandler{Repo: repo}
 
 	// UUID fix yang kamu seed di setupIndikatorRenstraMySQL
-	fixedUUID := "d0754056-4d55-4091-a13d-0fae624a7616"
+	fixedUUID := "8dafad3e-b182-46a7-a678-8d23bd553f92"
 
 	q := app.GetIndikatorRenstraDefaultByUuidQuery{Uuid: fixedUUID}
 
