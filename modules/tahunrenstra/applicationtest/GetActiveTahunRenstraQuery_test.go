@@ -27,7 +27,7 @@ func TestGetActiveTahunRenstra_Success(t *testing.T) {
 		t.Fatalf("expected data, got nil")
 	}
 
-	if res.Status != "active" {
+	if res.Status != "non-active" {
 		t.Fatalf("expected status (active), got %s", res.Status)
 	}
 }

@@ -1,14 +1,15 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainTahunRenstra "UnpakSiamida/common/domain"
 	domainTahunRenstra "UnpakSiamida/modules/tahunrenstra/domain"
-	"gorm.io/gorm"
-	"strings"
+	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type TahunRenstraRepository struct {
@@ -44,9 +45,9 @@ func (r *TahunRenstraRepository) GetActive(ctx context.Context) (*domainTahunRen
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "tahun":          "tahun",
-	// "status":         "status", //masalah COLLATE utf8mb4_unicode_ci jika filter aktif
+	// key:param -> db column
+	"tahun":  "tahun",
+	"status": "status", //masalah COLLATE utf8mb4_unicode_ci jika filter aktif
 }
 
 // ------------------------
@@ -64,7 +65,7 @@ func (r *TahunRenstraRepository) GetAll(
 
 	db := r.db.WithContext(ctx).Model(&domainTahunRenstra.TahunRenstra{})
 	db = db.Where("status COLLATE utf8mb4_unicode_ci IN ('active', 'no-active')")
-    db = db.Where("tahun IS NOT NULL AND tahun != 0")
+	db = db.Where("tahun IS NOT NULL AND tahun != 0")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -73,7 +74,7 @@ func (r *TahunRenstraRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -129,7 +130,7 @@ func (r *TahunRenstraRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------

@@ -194,14 +194,14 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         CREATE OR REPLACE VIEW v_tahun_renstra AS
         SELECT
             t.tahun,
-            CASE
+            (CASE
                 WHEN t.tahun = (
                     SELECT MAX(tahun)
                     FROM renstra
                 )
                 THEN 'active'
                 ELSE 'no-active'
-            END AS status
+            END) COLLATE utf8mb4_unicode_ci AS status
         FROM (
             SELECT DISTINCT renstra.tahun
             FROM renstra
