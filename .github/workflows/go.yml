@@ -38,32 +38,34 @@ jobs:
         with:
           go-version: '1.25.4'
 
-      - name: Run tests
+      - name: Run tests (mode=set)
         run: |
           set -e
           mkdir -p coverage
+
           for testdir in $(find ./modules -type d \( -name "applicationtest" -o -name "domaintest" \)); do
             modulepath=$(dirname "$testdir")
             modulename=$(basename "$modulepath")
             testname=$(basename "$testdir")
 
             if [[ "$testname" == "applicationtest" ]]; then
-              coverpkg="UnpakSiamida/modules/${modulename}/application/..."
+              coverpkg="UnpakSiamida/modules/${modulename}/application"
             else
-              coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
+              coverpkg="UnpakSiamida/modules/${modulename}/domain"
             fi
 
+            out="coverage/${testname}.out"
+
             go test -v \
-              -covermode=atomic \
               -coverpkg=$coverpkg \
-              -coverprofile=coverage/${modulename}_${testname}.out \
+              -coverprofile=$out \
               $testdir
           done
 
-      - name: Merge coverage
+      - name: Merge coverage (mode=set)
         run: |
-          echo "mode: count" > coverage/coverage_all.out
-          tail -q -n +2 coverage/*.out >> coverage/coverage_all.out
+          echo "mode: set" > coverage/coverage_all.out
+          grep -h -v "^mode:" coverage/*.out >> coverage/coverage_all.out
 
       - uses: actions/upload-artifact@v4
         with:
