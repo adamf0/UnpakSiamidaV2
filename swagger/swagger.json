@@ -297,7 +297,7 @@
                     {
                         "enum": [
                             "auditee",
-                            "auditor1"
+                            "auditor2"
                         ],
                         "type": "string",
                         "description": "Mode akses",
@@ -325,13 +325,13 @@
                     },
                     {
                         "type": "string",
-                        "description": "Capaian auditor (khusus auditor1)",
+                        "description": "Capaian auditor (khusus auditor2)",
                         "name": "capaianAuditor",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Catatan auditor (khusus auditor1)",
+                        "description": "Catatan auditor (khusus auditor2)",
                         "name": "catatanAuditor",
                         "in": "formData"
                     }
@@ -1714,7 +1714,8 @@
                     {
                         "enum": [
                             "auditee",
-                            "auditor1"
+                            "auditor1",
+                            "auditor2"
                         ],
                         "type": "string",
                         "description": "Mode akses",
@@ -1742,13 +1743,13 @@
                     },
                     {
                         "type": "string",
-                        "description": "Capaian auditor (khusus auditor1)",
+                        "description": "Capaian auditor (khusus auditor1 / auditor2)",
                         "name": "capaianAuditor",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Catatan auditor (khusus auditor1)",
+                        "description": "Catatan auditor (khusus auditor1 / auditor2)",
                         "name": "catatanAuditor",
                         "in": "formData"
                     }
