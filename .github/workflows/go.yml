@@ -43,29 +43,56 @@ jobs:
           set -e
           mkdir -p coverage
 
-          for testdir in $(find ./modules -type d \( -name "applicationtest" -o -name "domaintest" \)); do
-            modulepath=$(dirname "$testdir")
-            modulename=$(basename "$modulepath")
-            testname=$(basename "$testdir")
+          # LOOP 1: jenis test
+          for testtype in domaintest applicationtest; do
+            for moduledir in ./modules/*; do
+              modulename=$(basename "$moduledir")
 
-            if [[ "$testname" == "applicationtest" ]]; then
-              coverpkg="UnpakSiamida/modules/${modulename}/application"
-            else
-              coverpkg="UnpakSiamida/modules/${modulename}/domain"
-            fi
+              # ===== DOMAIN TEST =====
+              if [[ "$testtype" == "domaintest" && -d "$moduledir/domaintest" ]]; then
+                testdir="$moduledir/domaintest"
+                coverpkg="UnpakSiamida/modules/${modulename}/domain"
+                outdir="coverage/${modulename}/domain"
 
-            if [[ "$testname" == "applicationtest" ]]; then
-              type="application"
-            else
-              type="domain"
-            fi
+                mkdir -p "$outdir"
 
-            out="coverage/${modulename}/${type}/${testname}.out"
+                for testfile in "$testdir"/*_test.go; do
+                  base=$(basename "$testfile" _test.go)
+                  out="$outdir/${base}.out"
 
-            go test -v \
-              -coverpkg=$coverpkg \
-              -coverprofile=$out \
-              $testdir
+                  echo "▶ DOMAIN $modulename :: $base"
+                  go test -v \
+                    -run "$base" \
+                    -covermode=set \
+                    -coverpkg="$coverpkg" \
+                    -coverprofile="$out" \
+                    "$testdir"
+                done
+              fi
+
+              # ===== APPLICATION TEST =====
+              if [[ "$testtype" == "applicationtest" && -d "$moduledir/applicationtest/applicationtest" ]]; then
+                testdir="$moduledir/applicationtest/applicationtest"
+                coverpkg="UnpakSiamida/modules/${modulename}/application"
+                outdir="coverage/${modulename}/application"
+
+                mkdir -p "$outdir"
+
+                for testfile in "$testdir"/*_test.go; do
+                  base=$(basename "$testfile" _test.go)
+                  out="$outdir/${base}.out"
+
+                  echo "▶ APPLICATION $modulename :: $base"
+                  go test -v \
+                    -run "$base" \
+                    -covermode=set \
+                    -coverpkg="$coverpkg" \
+                    -coverprofile="$out" \
+                    "$testdir"
+                done
+              fi
+
+            done
           done
 
       - name: Merge coverage (mode=set)
