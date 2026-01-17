@@ -1,4 +1,4 @@
-package applicationtest
+package testutil
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
+func SetupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{

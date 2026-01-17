@@ -48,47 +48,47 @@ jobs:
             for moduledir in ./modules/*; do
               modulename=$(basename "$moduledir")
 
-              # ===== DOMAIN TEST =====
+              # ==================================================
+              # DOMAIN TEST
+              # ==================================================
               if [[ "$testtype" == "domaintest" && -d "$moduledir/domaintest" ]]; then
                 testdir="$moduledir/domaintest"
-                coverpkg="UnpakSiamida/modules/${modulename}/domain"
+                coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
                 outdir="coverage/${modulename}/domain"
 
                 mkdir -p "$outdir"
 
-                for testfile in "$testdir"/*_test.go; do
-                  base=$(basename "$testfile" _test.go)
-                  out="$outdir/${base}.out"
-
-                  echo "▶ DOMAIN $modulename :: $base"
-                  go test -v \
-                    -run "$base" \
-                    -covermode=set \
-                    -coverpkg="$coverpkg" \
-                    -coverprofile="$out" \
-                    "$testdir"
-                done
+                echo "▶ DOMAIN $modulename"
+                go test -v \
+                  -covermode=set \
+                  -coverpkg="$coverpkg" \
+                  -coverprofile="$outdir/coverage.out" \
+                  "$testdir"
               fi
 
-              # ===== APPLICATION TEST =====
-              if [[ "$testtype" == "applicationtest" && -d "$moduledir/applicationtest/applicationtest" ]]; then
-                testdir="$moduledir/applicationtest/applicationtest"
-                coverpkg="UnpakSiamida/modules/${modulename}/application"
-                outdir="coverage/${modulename}/application"
+              # ==================================================
+              # APPLICATION TEST
+              # ==================================================
+              if [[ "$testtype" == "applicationtest" && -d "$moduledir/application" ]]; then
+                for appdir in "$moduledir/application"/*; do
+                  [ -d "$appdir" ] || continue
 
-                mkdir -p "$outdir"
+                  # hanya jalankan jika ada *_test.go
+                  if ls "$appdir"/*_test.go >/dev/null 2>&1; then
+                    appname=$(basename "$appdir")
+                    testdir="$appdir"
+                    coverpkg="UnpakSiamida/modules/${modulename}/application/..."
+                    outdir="coverage/${modulename}/application/${appname}"
 
-                for testfile in "$testdir"/*_test.go; do
-                  base=$(basename "$testfile" _test.go)
-                  out="$outdir/${base}.out"
+                    mkdir -p "$outdir"
 
-                  echo "▶ APPLICATION $modulename :: $base"
-                  go test -v \
-                    -run "$base" \
-                    -covermode=set \
-                    -coverpkg="$coverpkg" \
-                    -coverprofile="$out" \
-                    "$testdir"
+                    echo "▶ APPLICATION $modulename :: $appname"
+                    go test -v \
+                      -covermode=set \
+                      -coverpkg="$coverpkg" \
+                      -coverprofile="$outdir/coverage.out" \
+                      "$testdir"
+                  fi
                 done
               fi
 
@@ -98,7 +98,8 @@ jobs:
       - name: Merge coverage (mode=set)
         run: |
           echo "mode: set" > coverage/coverage_all.out
-          find coverage -name "*.out" ! -name "coverage_all.out" -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
+          find coverage -name "*.out" ! -name "coverage_all.out" \
+            -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
 
       - uses: actions/upload-artifact@v4
         with:

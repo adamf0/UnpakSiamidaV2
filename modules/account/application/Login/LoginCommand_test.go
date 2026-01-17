@@ -1,16 +1,17 @@
-package applicationtest
+package application_test
 
 import (
 	"context"
 	"testing"
 
 	app "UnpakSiamida/modules/account/application/Login"
+	testutil "UnpakSiamida/modules/account/application/testutil"
 	domain "UnpakSiamida/modules/account/domain"
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
 func TestLoginIntegration_Success(t *testing.T) {
-	db, cleanup := setupAccountMySQL(t)
+	db, cleanup := testutil.SetupAccountMySQL(t)
 	defer cleanup()
 
 	repo := infra.NewAccountRepository(db)
@@ -41,7 +42,7 @@ func TestLoginIntegration_Success(t *testing.T) {
 }
 
 func TestLoginIntegration_Failed(t *testing.T) {
-	db, cleanup := setupAccountMySQL(t)
+	db, cleanup := testutil.SetupAccountMySQL(t)
 	defer cleanup()
 
 	repo := infra.NewAccountRepository(db)
@@ -90,7 +91,7 @@ func TestLoginIntegration_ValidationErrors(t *testing.T) {
 }
 
 func TestLoginIntegration_ContextTimeout(t *testing.T) {
-	db, cleanup := setupAccountMySQL(t)
+	db, cleanup := testutil.SetupAccountMySQL(t)
 	defer cleanup()
 
 	repo := infra.NewAccountRepository(db)

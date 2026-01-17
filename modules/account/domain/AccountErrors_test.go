@@ -1,10 +1,9 @@
-package domaintest
+package domain
 
 import (
 	"testing"
 
 	common "UnpakSiamida/common/domain"
-	"UnpakSiamida/modules/account/domain"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,13 +19,13 @@ func TestAccountErrors(t *testing.T) {
 	}{
 		{
 			name:         "InvalidCredential_ReturnsCorrectError",
-			err:          domain.InvalidCredential(),
+			err:          InvalidCredential(),
 			expectedCode: "Account.InvalidCredential",
 			expectedDesc: "invalid credentials",
 		},
 		{
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
-			err:          domain.NotFound("ABC123"),
+			err:          NotFound("ABC123"),
 			expectedCode: "Account.NotFound",
 			expectedDesc: "Account with identifier ABC123 not found",
 		},
