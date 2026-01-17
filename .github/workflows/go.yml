@@ -65,7 +65,7 @@ jobs:
       - name: Merge coverage (mode=set)
         run: |
           echo "mode: set" > coverage/coverage_all.out
-          grep -h -v "^mode:" coverage/*.out >> coverage/coverage_all.out
+          find coverage -name "*.out" ! -name "coverage_all.out" -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
 
       - uses: actions/upload-artifact@v4
         with:
