@@ -16,7 +16,7 @@ func TestNewGenerateRenstra_Success(t *testing.T) {
 	validTemplate := uint(20)
 	validTemplateUUID := "uuid-template"
 	indikator := "indikator1"
-	validTugas := "Tugas 1"
+	validTugas := "auditor1"
 
 	res := domain.NewGenerateRenstra(
 		validTahun, validTahun, // tahun template & renstra
@@ -47,7 +47,7 @@ func TestNewGenerateRenstra_FailAndEdgeCases(t *testing.T) {
 	invalidTemplate := uint(0)
 	validTemplateUUID := "uuid-template"
 	indikator := "indikator1"
-	validTugas := "Tugas 1"
+	validTugas := "auditor1"
 	invalidTugas := "" // dianggap tidak valid
 
 	tests := []struct {

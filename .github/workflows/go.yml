@@ -54,7 +54,7 @@ jobs:
             fi
 
             go test -v \
-              -covermode=count \
+              -covermode=atomic \
               -coverpkg=$coverpkg \
               -coverprofile=coverage/${modulename}_${testname}.out \
               $testdir
