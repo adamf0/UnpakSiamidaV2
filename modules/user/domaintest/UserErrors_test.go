@@ -51,7 +51,7 @@ func TestUserErrors(t *testing.T) {
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
 			err:          domain.NotFound("USR-001"),
 			expectedCode: "User.NotFound",
-			expectedDesc: "sser with identifier USR-001 not found",
+			expectedDesc: "user with identifier USR-001 not found",
 		},
 		{
 			name:         "InvalidParsing_WithTarget_ReturnsCorrectError",

@@ -168,7 +168,7 @@ func TestUpdateUser(t *testing.T) {
 			target:       nil,
 			tipe:         nil,
 			wantSuccess:  false,
-			wantErrCode:  domain.InvalidEmail().Code,
+			wantErrCode:  domain.InvalidFakultasUnit().Code,
 		},
 		{
 			name:         "SuccessWithPassword",
