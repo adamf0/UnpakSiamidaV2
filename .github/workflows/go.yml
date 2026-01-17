@@ -54,7 +54,13 @@ jobs:
               coverpkg="UnpakSiamida/modules/${modulename}/domain"
             fi
 
-            out="coverage/${testname}.out"
+            if [[ "$testname" == "applicationtest" ]]; then
+              type="application"
+            else
+              type="domain"
+            fi
+
+            out="coverage/${modulename}/${type}/${testname}.out"
 
             go test -v \
               -coverpkg=$coverpkg \
