@@ -43,63 +43,57 @@ jobs:
           set -e
           mkdir -p coverage
 
-          # LOOP 1: jenis test
-          for testtype in domaintest applicationtest; do
-            for moduledir in ./modules/*; do
-              modulename=$(basename "$moduledir")
+          for moduledir in ./modules/*; do
+            modulename=$(basename "$moduledir")
 
-              # ==================================================
-              # DOMAIN TEST
-              # ==================================================
-              if [[ "$testtype" == "domaintest" && -d "$moduledir/domaintest" ]]; then
-                testdir="$moduledir/domaintest"
-                coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
-                outdir="coverage/${modulename}/domain"
+            # ==============================
+            # DOMAIN TEST
+            # ==============================
+            if [[ -d "$moduledir/domain" ]]; then
+              testdir="$moduledir/domain"
+              coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
+              outdir="coverage/${modulename}/domain"
+              mkdir -p "$outdir"
 
-                mkdir -p "$outdir"
+              echo "▶ DOMAIN $modulename"
+              go test -v \
+                -covermode=set \
+                -coverpkg="$coverpkg" \
+                -coverprofile="$outdir/coverage.out" \
+                "$testdir"
+            fi
 
-                echo "▶ DOMAIN $modulename"
-                go test -v \
-                  -covermode=set \
-                  -coverpkg="$coverpkg" \
-                  -coverprofile="$outdir/coverage.out" \
-                  "$testdir"
-              fi
+            # ==============================
+            # APPLICATION TEST
+            # ==============================
+            if [[ -d "$moduledir/application" ]]; then
+              for appdir in "$moduledir/application"/*; do
+                [ -d "$appdir" ] || continue
+                if ls "$appdir"/*_test.go >/dev/null 2>&1; then
+                  appname=$(basename "$appdir")
+                  testdir="$appdir"
+                  coverpkg="UnpakSiamida/modules/${modulename}/application/..."
+                  outdir="coverage/${modulename}/application/${appname}"
+                  mkdir -p "$outdir"
 
-              # ==================================================
-              # APPLICATION TEST
-              # ==================================================
-              if [[ "$testtype" == "applicationtest" && -d "$moduledir/application" ]]; then
-                for appdir in "$moduledir/application"/*; do
-                  [ -d "$appdir" ] || continue
-
-                  # hanya jalankan jika ada *_test.go
-                  if ls "$appdir"/*_test.go >/dev/null 2>&1; then
-                    appname=$(basename "$appdir")
-                    testdir="$appdir"
-                    coverpkg="UnpakSiamida/modules/${modulename}/application/..."
-                    outdir="coverage/${modulename}/application/${appname}"
-
-                    mkdir -p "$outdir"
-
-                    echo "▶ APPLICATION $modulename :: $appname"
-                    go test -v \
-                      -covermode=set \
-                      -coverpkg="$coverpkg" \
-                      -coverprofile="$outdir/coverage.out" \
-                      "$testdir"
-                  fi
-                done
-              fi
-
-            done
+                  echo "▶ APPLICATION $modulename :: $appname"
+                  go test -v \
+                    -covermode=set \
+                    -coverpkg="$coverpkg" \
+                    -coverprofile="$outdir/coverage.out" \
+                    "$testdir"
+                fi
+              done
+            fi
           done
 
-      - name: Merge coverage (mode=set)
-        run: |
-          echo "mode: set" > coverage/coverage_all.out
-          find coverage -name "*.out" ! -name "coverage_all.out" \
-            -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: "coverage/**/*.out"
+          flags: unpak-go
+          name: codecov-umbrella
+          fail_ci_if_error: true
 
       - uses: actions/upload-artifact@v4
         with:
