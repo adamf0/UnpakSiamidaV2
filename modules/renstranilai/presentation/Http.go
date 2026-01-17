@@ -33,14 +33,14 @@ import (
 // @Param uuid path string true "RenstraNilai UUID" format(uuid)
 //
 // @Param uuidRenstra formData string true "Renstra UUID" format(uuid)
-// @Param mode formData string true "Mode akses" Enums(auditee,auditor1)
+// @Param mode formData string true "Mode akses" Enums(auditee,auditor1,auditor2)
 //
 // @Param capaian formData string false "Capaian (khusus auditee)"
 // @Param catatan formData string false "Catatan (khusus auditee)"
 // @Param linkBukti formData string false "Link bukti (khusus auditee)"
 //
-// @Param capaianAuditor formData string false "Capaian auditor (khusus auditor1)"
-// @Param catatanAuditor formData string false "Catatan auditor (khusus auditor1)"
+// @Param capaianAuditor formData string false "Capaian auditor (khusus auditor1 / auditor2)"
+// @Param catatanAuditor formData string false "Catatan auditor (khusus auditor1 / auditor2)"
 //
 // @Success 200 {object} map[string]string "uuid of updated RenstraNilai"
 // @Failure 400 {object} commoninfra.ResponseError
