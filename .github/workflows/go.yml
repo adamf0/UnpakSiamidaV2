@@ -22,14 +22,11 @@ jobs:
         with:
           go-version: '1.25.4'
 
-      - name: Go mod tidy
-        run: go mod tidy
-
-      - name: Go list
-        run: go list ./...
+      - run: go mod tidy
+      - run: go list ./...
 
 # ==========================================================
-# TEST + COVERAGE (FIXED)
+# TEST + COVERAGE (PER MODULE)
 # ==========================================================
   test:
     name: Test & Coverage
@@ -45,15 +42,48 @@ jobs:
         with:
           go-version: '1.25.4'
 
-      - name: Run tests with coverage (ALL MODULES)
+      - name: Run tests (per module coverage)
         run: |
           set -e
           mkdir -p coverage
 
-          go test ./modules/... \
-            -covermode=atomic \
-            -coverpkg=./modules/... \
-            -coverprofile=coverage/coverage_all.out
+          for module in modules/*; do
+            name=$(basename "$module")
+            echo "▶ Processing module: $name"
+
+            out="coverage/${name}.out"
+            echo "mode: atomic" > "$out"
+
+            # === DOMAIN ===
+            if [ -d "$module/domaintest" ]; then
+              go test -v \
+                -covermode=atomic \
+                -coverpkg=./modules/$name/domain/... \
+                -coverprofile=coverage/tmp.out \
+                ./modules/$name/domaintest || exit 1
+
+              grep -v "^mode:" coverage/tmp.out >> "$out"
+            fi
+
+            # === APPLICATION ===
+            if [ -d "$module/applicationtest" ]; then
+              go test -v \
+                -covermode=atomic \
+                -coverpkg=./modules/$name/application/... \
+                -coverprofile=coverage/tmp.out \
+                ./modules/$name/applicationtest || exit 1
+
+              grep -v "^mode:" coverage/tmp.out >> "$out"
+            fi
+
+            # === SKIP MODULE TANPA COVERAGE ===
+            if [ "$(wc -l < "$out")" -le 1 ]; then
+              echo "⚠ Skip $name (no coverage)"
+              rm -f "$out"
+            fi
+          done
+
+          rm -f coverage/tmp.out
 
       - uses: actions/upload-artifact@v4
         with:
@@ -90,9 +120,9 @@ jobs:
           dotnet tool install --global dotnet-reportgenerator-globaltool
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      # ---------------------------
-      # Swagger
-      # ---------------------------
+      # =============================
+      # SWAGGER
+      # =============================
       - name: Generate Swagger
         run: |
           swag init -g main.go --parseDependency --parseInternal
@@ -122,30 +152,48 @@ jobs:
           </html>
           EOF
 
-      # ---------------------------
-      # Coverage Report
-      # ---------------------------
+      # =============================
+      # COVERAGE REPORT (PER MODULE)
+      # =============================
       - uses: actions/download-artifact@v4
         with:
           name: go-coverage
           path: coverage
 
-      - name: Generate Coverage HTML
+      - name: Generate Coverage HTML (per module)
         run: |
-          gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
+          mkdir -p public/coverage
 
-          reportgenerator \
-            -reports:coverage/coverage.xml \
-            -targetdir:public/coverage \
-            -reporttypes:Html \
-            -sourcedirs:.
+          for out in coverage/*.out; do
+            modulename=$(basename "$out" .out)
+            echo "▶ Generate coverage for $modulename"
 
-          # Pastikan index.html ada
-          if [ ! -f public/coverage/index.html ]; then
-            if [ -f public/coverage/index.htm ]; then
-              mv public/coverage/index.htm public/coverage/index.html
-            fi
-          fi
+            mkdir -p public/coverage/$modulename
+
+            gocover-cobertura < "$out" > coverage/$modulename.xml
+
+            reportgenerator \
+              -reports:coverage/$modulename.xml \
+              -targetdir:public/coverage/$modulename \
+              -reporttypes:Html \
+              -sourcedirs:./modules/$modulename
+          done
+
+      - name: Coverage index page
+        run: |
+          cat <<EOF > public/coverage/index.html
+          <html>
+          <body>
+          <h1>Module Coverage</h1>
+          <ul>
+          $(for d in public/coverage/*; do
+            name=$(basename "$d")
+            [ "$name" != "index.html" ] && echo "<li><a href='./$name/'>$name</a></li>"
+          done)
+          </ul>
+          </body>
+          </html>
+          EOF
 
       - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -153,46 +201,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: public
           publish_branch: gh-pages
-
-# ==========================================================
-# DAST (ZAP) — JALAN SETELAH SWAGGER SIAP
-# ==========================================================
-  # dast:
-  #   name: ZAP DAST
-  #   runs-on: ubuntu-latest
-  #   needs: report
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Start Docker Compose (CI)
-  #       run: |
-  #         docker compose -f docker-compose.ci.yml up -d
-  #         docker compose -f docker-compose.ci.yml ps
-
-  #     - name: Wait Swagger ready
-  #       run: |
-  #         echo "⏳ Waiting for Swagger..."
-  #         for i in {1..40}; do
-  #           if curl -s https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json | grep -q '"openapi"'; then
-  #             echo "✅ Swagger ready"
-  #             exit 0
-  #           fi
-  #           sleep 3
-  #         done
-  #         echo "❌ Swagger not ready"
-  #         exit 1
-
-  #     - name: ZAP DAST Scan
-  #       uses: zaproxy/action-api-scan@v0.7.0
-  #       with:
-  #         target: https://adamf0.github.io/UnpakSiamidaV2/swagger/swagger.json
-  #         format: openapi
-  #         fail_action: false
-  #         cmd_options: "-a -m 5 -l WARN"
-
-  #     - name: Shutdown containers
-  #       if: always()
-  #       run: docker compose -f docker-compose.ci.yml down
 
 # ==========================================================
 # SECRET SCANNING
