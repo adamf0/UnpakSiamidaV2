@@ -220,7 +220,7 @@ var assemblies = [
     "name": "UnpakSiamida/modules/account/application/Whoami",
     "classes": [
       { "name": "-", "rp": "Whoami__.html", "cl": 8, "ucl": 0, "cal": 8, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "WhoamiCommandHandler", "rp": "Whoami_WhoamiCommandHandler.html", "cl": 10, "ucl": 8, "cal": 18, "tl": 42, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "WhoamiCommandHandler", "rp": "Whoami_WhoamiCommandHandler.html", "cl": 14, "ucl": 4, "cal": 18, "tl": 42, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/account/domain",
@@ -231,7 +231,7 @@ var assemblies = [
   {
     "name": "UnpakSiamida/modules/dokumentambahan/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.2.html", "cl": 24, "ucl": 48, "cal": 72, "tl": 141, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.2.html", "cl": 72, "ucl": 0, "cal": 72, "tl": 141, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "DokumenTambahan", "rp": "domain_DokumenTambahan.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 104, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
@@ -254,6 +254,13 @@ var assemblies = [
     "classes": [
       { "name": "-", "rp": "domain__.3.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FakultasUnit", "rp": "domain_FakultasUnit.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 21, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+    ]},
+  {
+    "name": "UnpakSiamida/modules/generaterenstra/domain",
+    "classes": [
+      { "name": "-", "rp": "domain__.4.html", "cl": 83, "ucl": 68, "cal": 151, "tl": 271, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GenerateDokumenTambahan", "rp": "domain_GenerateDokumenTambahan.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 73, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "GenerateRenstra", "rp": "domain_GenerateRenstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 73, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra",
@@ -296,7 +303,7 @@ var assemblies = [
   {
     "name": "UnpakSiamida/modules/indikatorrenstra/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.4.html", "cl": 77, "ucl": 3, "cal": 80, "tl": 155, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.5.html", "cl": 80, "ucl": 0, "cal": 80, "tl": 155, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "IndikatorRenstra", "rp": "domain_IndikatorRenstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 117, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
@@ -340,19 +347,36 @@ var assemblies = [
   {
     "name": "UnpakSiamida/modules/jenisfile/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.5.html", "cl": 9, "ucl": 35, "cal": 44, "tl": 87, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.6.html", "cl": 44, "ucl": 0, "cal": 44, "tl": 87, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "JenisFile", "rp": "domain_JenisFile.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 65, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+    ]},
+  {
+    "name": "UnpakSiamida/modules/kts/domain",
+    "classes": [
+      { "name": "-", "rp": "domain__.7.html", "cl": 432, "ucl": 176, "cal": 608, "tl": 828, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "Kts", "rp": "domain_Kts.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 770, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+    ]},
+  {
+    "name": "UnpakSiamida/modules/previewtemplate/domain",
+    "classes": [
+      { "name": "-", "rp": "domain__.8.html", "cl": 12, "ucl": 0, "cal": 12, "tl": 22, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/renstra/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.6.html", "cl": 221, "ucl": 0, "cal": 221, "tl": 341, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.9.html", "cl": 221, "ucl": 0, "cal": 221, "tl": 341, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "Renstra", "rp": "domain_Renstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 275, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+    ]},
+  {
+    "name": "UnpakSiamida/modules/renstranilai/domain",
+    "classes": [
+      { "name": "-", "rp": "domain__.10.html", "cl": 71, "ucl": 0, "cal": 71, "tl": 144, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "RenstraNilai", "rp": "domain_RenstraNilai.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 107, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/standarrenstra/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.7.html", "cl": 44, "ucl": 0, "cal": 44, "tl": 86, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.11.html", "cl": 44, "ucl": 0, "cal": 44, "tl": 86, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "StandarRenstra", "rp": "domain_StandarRenstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 64, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
@@ -368,19 +392,19 @@ var assemblies = [
   {
     "name": "UnpakSiamida/modules/tahunrenstra/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.8.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 14, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.12.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 14, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "TahunRenstra", "rp": "domain_TahunRenstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 14, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/templatedokumentambahan/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.9.html", "cl": 61, "ucl": 0, "cal": 61, "tl": 122, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.13.html", "cl": 61, "ucl": 0, "cal": 61, "tl": 122, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "TemplateDokumenTambahan", "rp": "domain_TemplateDokumenTambahan.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 96, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
     "name": "UnpakSiamida/modules/templaterenstra/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.10.html", "cl": 102, "ucl": 0, "cal": 102, "tl": 183, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.14.html", "cl": 102, "ucl": 0, "cal": 102, "tl": 183, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "TemplateRenstra", "rp": "domain_TemplateRenstra.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 149, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
   {
@@ -419,8 +443,8 @@ var assemblies = [
   {
     "name": "UnpakSiamida/modules/user/domain",
     "classes": [
-      { "name": "-", "rp": "domain__.11.html", "cl": 81, "ucl": 6, "cal": 87, "tl": 152, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "User", "rp": "domain_User.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 118, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "-", "rp": "domain__.15.html", "cl": 93, "ucl": 6, "cal": 99, "tl": 167, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "User", "rp": "domain_User.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 129, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
 
