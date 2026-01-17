@@ -3,14 +3,17 @@ package domaintest
 import (
 	"testing"
 
-	"UnpakSiamida/modules/renstra/domain"
 	common "UnpakSiamida/common/domain"
+	domain "UnpakSiamida/modules/renstra/domain"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// ====================
+// RENSTRA ERROR TESTS
+// ====================
 func TestRenstraErrors(t *testing.T) {
-
 	tests := []struct {
 		name         string
 		err          common.Error
@@ -36,10 +39,10 @@ func TestRenstraErrors(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
-			name:         "NotFound_ReturnsCorrectError",
-			err:          domain.NotFound("ABC123"),
+			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
+			err:          domain.NotFound("REN-001"),
 			expectedCode: "Renstra.NotFound",
-			expectedDesc: "Renstra with identifier ABC123 not found",
+			expectedDesc: "Renstra with identifier REN-001 not found",
 		},
 		{
 			name:         "InvalidFakultasUnit_ReturnsCorrectError",
@@ -72,10 +75,10 @@ func TestRenstraErrors(t *testing.T) {
 			expectedDesc: "auditor2 have not been assigned",
 		},
 		{
-			name:         "InvalidParsing_ReturnsCorrectError",
-			err:          domain.InvalidParsing("tahun"),
-			expectedCode: "Renstra.IvalidParsing", // sesuai domain-mu (ada typo "IvalidParsing")
-			expectedDesc: "failed parsing tahun to UUID",
+			name:         "InvalidParsing_WithTarget_ReturnsCorrectError",
+			err:          domain.InvalidParsing("auditee_id"),
+			expectedCode: "Renstra.InvalidParsing",
+			expectedDesc: "failed parsing auditee_id to UUID",
 		},
 		{
 			name:         "DuplicateAssigment_ReturnsCorrectError",
@@ -84,7 +87,7 @@ func TestRenstraErrors(t *testing.T) {
 			expectedDesc: "auditee, auditee 1, and auditor 2 must not have the same target",
 		},
 		{
-			name:         "InvalidDate_ReturnsCorrectError",
+			name:         "InvalidDate_WithTarget_ReturnsCorrectError",
 			err:          domain.InvalidDate("upload"),
 			expectedCode: "Renstra.InvalidDate",
 			expectedDesc: "upload period have wrong date format",
@@ -112,7 +115,6 @@ func TestRenstraErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotNil(t, tt.err)
-
 			assert.Equal(t, tt.expectedCode, tt.err.Code)
 			assert.Equal(t, tt.expectedDesc, tt.err.Description)
 		})

@@ -18,19 +18,19 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.NotFound", fmt.Sprintf("GenerateRenstra with identifier %s not found", id) )
+	return domain.NotFoundError("GenerateRenstra.NotFound", fmt.Sprintf("GenerateRenstra with identifier %s not found", id))
 }
 func NotFoundFakultasUnit(id string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.NotFoundFakultasUnit", fmt.Sprintf("Fakultas unit with identifier %s not found", id) )
+	return domain.NotFoundError("GenerateRenstra.NotFoundFakultasUnit", fmt.Sprintf("Fakultas unit with identifier %s not found", id))
 }
 func NotFoundRenstra(id string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.NotFoundRenstra", fmt.Sprintf("renstra with identifier %s not found", id) )
+	return domain.NotFoundError("GenerateRenstra.NotFoundRenstra", fmt.Sprintf("renstra with identifier %s not found", id))
 }
 func NotFoundTemplate(tahun string, fakultas string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.NotFoundTemplate", fmt.Sprintf("template not found with identifier tahun %s & fakultas %s", tahun, fakultas) )
+	return domain.NotFoundError("GenerateRenstra.NotFoundTemplate", fmt.Sprintf("template not found with identifier tahun %s & fakultas %s", tahun, fakultas))
 }
 func NotFoundAudit(tahun string, fakultas string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.NotFoundAudit", fmt.Sprintf("previous audit not found with identifier tahun %s & fakultas %s", tahun, fakultas) )
+	return domain.NotFoundError("GenerateRenstra.NotFoundAudit", fmt.Sprintf("previous audit not found with identifier tahun %s & fakultas %s", tahun, fakultas))
 }
 
 func InvalidFakultasUnit() domain.Error {
@@ -111,8 +111,8 @@ func InvalidRenstra() domain.Error {
 
 func InvalidType(tipe string) domain.Error {
 	return domain.NotFoundError("GenerateRenstra.InvalidType", fmt.Sprintf(
-			"type %s is invalid",
-			tipe,
+		"type %s is invalid",
+		tipe,
 	))
 }
 
@@ -121,5 +121,5 @@ func InvalidTugas() domain.Error {
 }
 
 func InvalidParsing(target string) domain.Error {
-	return domain.NotFoundError("GenerateRenstra.IvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target) )
+	return domain.NotFoundError("GenerateRenstra.InvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
 }

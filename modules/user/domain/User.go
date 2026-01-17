@@ -33,6 +33,14 @@ func NewUser(username string, password string, name string, email string, level 
 		return common.FailureValue[*User](InvalidEmail())
 	}
 
+	if fakultasunit != nil && *fakultasunit <= 0 {
+		return common.FailureValue[*User](InvalidFakultasUnit())
+	}
+
+	if !helper.IsValidUnpakEmail(email) {
+		return common.FailureValue[*User](InvalidEmail())
+	}
+
 	user := &User{
 		UUID:         uuid.New(),
 		Username:     username,
@@ -81,7 +89,10 @@ func UpdateUser(
 		return common.FailureValue[*User](InvalidData())
 	}
 
-	// check email
+	if fakultasunit != nil && *fakultasunit <= 0 {
+		return common.FailureValue[*User](InvalidFakultasUnit())
+	}
+
 	if !helper.IsValidUnpakEmail(email) {
 		return common.FailureValue[*User](InvalidEmail())
 	}

@@ -96,6 +96,7 @@ func TestUpdateUser(t *testing.T) {
 	newPassword := "newpass"
 	newLevel := "admin"
 	fakultasUnit := 10
+	fakultasUnitInvalid := -1
 
 	tests := []struct {
 		name         string
@@ -153,6 +154,21 @@ func TestUpdateUser(t *testing.T) {
 			tipe:        nil,
 			wantSuccess: false,
 			wantErrCode: domain.InvalidEmail().Code,
+		},
+		{
+			name:         "InvalidFakultasUnit",
+			prev:         prev,
+			uid:          baseUUID,
+			username:     "u1",
+			password:     nil,
+			nameField:    "X",
+			email:        validEmail,
+			level:        "user",
+			fakultasUnit: &fakultasUnitInvalid,
+			target:       nil,
+			tipe:         nil,
+			wantSuccess:  false,
+			wantErrCode:  domain.InvalidEmail().Code,
 		},
 		{
 			name:         "SuccessWithPassword",

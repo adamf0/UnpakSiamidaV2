@@ -2,8 +2,10 @@ package infrastructure
 
 import (
 	"context"
+	"errors"
+
 	"gorm.io/gorm"
-	
+
 	domain "UnpakSiamida/modules/account/domain"
 )
 
@@ -22,7 +24,11 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 	err := r.db.WithContext(ctx).
 		Where("nidn_username = ? AND password = ?", username, password).
 		First(&user).Error
+
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
 		return nil, err
 	}
 

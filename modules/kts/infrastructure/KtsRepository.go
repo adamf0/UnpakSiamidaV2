@@ -1,24 +1,25 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainKts "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domainKts "UnpakSiamida/modules/kts/domain"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
-	"errors"
 )
 
 type KtsRepository struct {
-	db *gorm.DB
+	db  *gorm.DB
 	uow *commoninfra.UnitOfWork
 }
 
 func NewKtsRepository(db *gorm.DB) domainKts.IKtsRepository {
-	return &KtsRepository{db: db, uow: commoninfra.NewUnitOfWork(db),}
+	return &KtsRepository{db: db, uow: commoninfra.NewUnitOfWork(db)}
 }
 
 // ------------------------
@@ -153,21 +154,17 @@ func (r *KtsRepository) GetDefaultByUuid( //[pr] masih belum sesuai contract
 		return nil, nil // ✅ PENTING
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return &rowData, nil
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "status":           	"k.status",
-	"pertanyaan":           "tdt.pertanyaan",
-	"jenisfile":           	"jf.nama",
-	"standar":           	"sr.nama",
-	"indikator":           	"mir.indikator",
-	"target":           	"CASE WHEN fu.type COLLATE utf8mb4_unicode_ci = 'prodi' THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')') ELSE fu.nama_fak_prod_unit END",
+	// key:param -> db column
+	"status":     "k.status",
+	"pertanyaan": "tdt.pertanyaan",
+	"jenisfile":  "jf.nama",
+	"standar":    "sr.nama",
+	"indikator":  "mir.indikator",
+	"target":     "CASE WHEN fu.type COLLATE utf8mb4_unicode_ci = 'prodi' THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')') ELSE fu.nama_fak_prod_unit END",
 }
 
 // ------------------------

@@ -18,7 +18,7 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("Renstra.NotFound", fmt.Sprintf("Renstra with identifier %s not found", id) )
+	return domain.NotFoundError("Renstra.NotFound", fmt.Sprintf("Renstra with identifier %s not found", id))
 }
 
 func InvalidFakultasUnit() domain.Error {
@@ -42,7 +42,7 @@ func MissingAuditor2() domain.Error {
 }
 
 func InvalidParsing(target string) domain.Error {
-	return domain.NotFoundError("Renstra.IvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target) )
+	return domain.NotFoundError("Renstra.InvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
 }
 
 func DuplicateAssigment() domain.Error {
@@ -50,7 +50,7 @@ func DuplicateAssigment() domain.Error {
 }
 
 func InvalidDate(target string) domain.Error {
-	return domain.NotFoundError("Renstra.InvalidDate", fmt.Sprintf("%s period have wrong date format", target) )
+	return domain.NotFoundError("Renstra.InvalidDate", fmt.Sprintf("%s period have wrong date format", target))
 }
 
 func PeriodOverlapUploadDokumen() domain.Error {

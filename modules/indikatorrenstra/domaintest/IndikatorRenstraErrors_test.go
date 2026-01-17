@@ -3,14 +3,14 @@ package domaintest
 import (
 	"testing"
 
-	"UnpakSiamida/modules/indikatorrenstra/domain"
 	common "UnpakSiamida/common/domain"
+	domain "UnpakSiamida/modules/indikatorrenstra/domain"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIndikatorRenstraErrors(t *testing.T) {
-
 	tests := []struct {
 		name         string
 		err          common.Error
@@ -59,12 +59,17 @@ func TestIndikatorRenstraErrors(t *testing.T) {
 			expectedCode: "IndikatorRenstra.NotFound",
 			expectedDesc: "IndikatorRenstra with identifier ABC123 not found",
 		},
+		{
+			name:         "NotFoundParent_WithDynamicId_ReturnsCorrectError",
+			err:          domain.NotFoundParent("PARENT01"),
+			expectedCode: "IndikatorRenstra.InvalidParent",
+			expectedDesc: "Parent with identifier PARENT01 not found",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotNil(t, tt.err)
-
 			assert.Equal(t, tt.expectedCode, tt.err.Code)
 			assert.Equal(t, tt.expectedDesc, tt.err.Description)
 		})

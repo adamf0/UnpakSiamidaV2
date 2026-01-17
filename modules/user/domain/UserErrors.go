@@ -21,14 +21,18 @@ func InvalidEmail() domain.Error {
 	return domain.NotFoundError("User.InvalidEmail", "email tidak valid atau tidak diperbolehkan")
 }
 
+func InvalidFakultasUnit() domain.Error {
+	return domain.NotFoundError("User.InvalidFakultasUnit", "fakultas unit tidak valid")
+}
+
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("User.NotFound", fmt.Sprintf("User with identifier %s not found", id))
+	return domain.NotFoundError("User.NotFound", fmt.Sprintf("user with identifier %s not found", id))
 }
 
 func InvalidParsing(target string) domain.Error {
-	return domain.NotFoundError("User.IvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
+	return domain.NotFoundError("User.InvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
 }
 
 func NotFoundFakultasUnit(id string) domain.Error {
-	return domain.NotFoundError("User.NotFoundFakultasUnit", fmt.Sprintf("Fakultas unit with identifier %s not found", id))
+	return domain.NotFoundError("User.NotFoundFakultasUnit", fmt.Sprintf("fakultas unit with identifier %s not found", id))
 }

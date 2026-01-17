@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -88,20 +89,15 @@ func UpdateRenstraNilai(
 }
 
 func contains(list []string, value string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, value)
 }
 
 func IsGrantedAccess(tahun, mode, granted string) bool {
 	requiredKey := tahun + "#" + mode
 
-	grantedList := strings.Split(granted, ",")
+	grantedList := strings.SplitSeq(granted, ",")
 
-	for _, g := range grantedList {
+	for g := range grantedList {
 		if strings.TrimSpace(g) == requiredKey {
 			return true
 		}

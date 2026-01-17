@@ -1,18 +1,13 @@
 package domaintest
 
 import (
+	domain "UnpakSiamida/modules/indikatorrenstra/domain"
 	"testing"
-	"UnpakSiamida/modules/indikatorrenstra/domain"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-//
-// ===============
-//  CREATE
-// ===============
-//
 
 func TestNewIndikatorRenstra_Success(t *testing.T) {
 	standar := uint(1)
@@ -26,11 +21,10 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 		"2025",
 		"Peningkatan",
 		&operator,
-		true, // unique
+		true,
 	)
 
 	require.True(t, res.IsSuccess)
-
 	ir := res.Value
 	require.NotNil(t, ir)
 
@@ -43,13 +37,7 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, &parent, ir.Parent)
 }
 
-//
-// =========================
-//  CREATE (NEGATIVE TESTS)
-// =========================
-//
-
-func TestNewIndikatorRenstra_NegativeCases(t *testing.T) {
+func TestNewIndikatorRenstra_Fail(t *testing.T) {
 	standar := uint(1)
 
 	tests := []struct {
@@ -74,9 +62,8 @@ func TestNewIndikatorRenstra_NegativeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			res := domain.NewIndikatorRenstra(
-				"Test",
+				"Test Indikator",
 				tt.standar,
 				nil,
 				"2025",
@@ -84,20 +71,12 @@ func TestNewIndikatorRenstra_NegativeCases(t *testing.T) {
 				nil,
 				tt.isUnique,
 			)
-
 			require.False(t, res.IsSuccess)
 			require.NotNil(t, res.Error)
-
 			assert.Equal(t, tt.expectedErrDesc, res.Error.Description)
 		})
 	}
 }
-
-//
-// ====================
-//   UPDATE (SUCCESS)
-// ====================
-//
 
 func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 	standar := uint(1)
@@ -113,8 +92,8 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 		&operator,
 		true,
 	)
-
 	require.True(t, prevRes.IsSuccess)
+
 	prev := prevRes.Value
 	prevUUID := prev.UUID
 
@@ -135,7 +114,6 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 
 	require.True(t, res.IsSuccess)
 	ir := res.Value
-
 	assert.Equal(t, "Indikator Update", ir.Indikator)
 	assert.Equal(t, "2026", ir.Tahun)
 	assert.Equal(t, "Perubahan", ir.TipeTarget)
@@ -144,17 +122,9 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, &newParent, ir.Parent)
 }
 
-//
-// ====================
-//   UPDATE (NEGATIVE)
-// ====================
-//
-
-func TestUpdateIndikatorRenstra_NegativeCases(t *testing.T) {
-
+func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
 	standar := uint(1)
 
-	// Entity valid untuk referensi
 	prevRes := domain.NewIndikatorRenstra(
 		"Awal",
 		&standar,
@@ -165,7 +135,6 @@ func TestUpdateIndikatorRenstra_NegativeCases(t *testing.T) {
 		true,
 	)
 	require.True(t, prevRes.IsSuccess)
-
 	validPrev := prevRes.Value
 
 	tests := []struct {
@@ -192,7 +161,7 @@ func TestUpdateIndikatorRenstra_NegativeCases(t *testing.T) {
 		{
 			name:        "UUIDMismatch → InvalidData",
 			prev:        validPrev,
-			uid:         uuid.New(), // mismatch
+			uid:         uuid.New(),
 			standar:     &standar,
 			expectedErr: domain.InvalidData().Description,
 		},
@@ -200,11 +169,10 @@ func TestUpdateIndikatorRenstra_NegativeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			res := domain.UpdateIndikatorRenstra(
 				tt.prev,
 				tt.uid,
-				"Test",
+				"Test Update",
 				tt.standar,
 				nil,
 				"2025",
@@ -214,8 +182,48 @@ func TestUpdateIndikatorRenstra_NegativeCases(t *testing.T) {
 
 			require.False(t, res.IsSuccess)
 			require.NotNil(t, res.Error)
-
 			assert.Equal(t, tt.expectedErr, res.Error.Description)
 		})
 	}
+}
+
+func TestIndikatorRenstra_EdgeCases(t *testing.T) {
+	standar := uint(1)
+
+	// Create dengan parent dan operator nil
+	res := domain.NewIndikatorRenstra(
+		"Edge Indikator",
+		&standar,
+		nil,
+		"",
+		"",
+		nil,
+		true,
+	)
+	require.True(t, res.IsSuccess)
+	ir := res.Value
+	assert.Nil(t, ir.Parent)
+	assert.Nil(t, ir.Operator)
+	assert.Equal(t, "", ir.Tahun)
+	assert.Equal(t, "", ir.TipeTarget)
+
+	// Update tanpa mengubah operator dan parent
+	newTahun := "2030"
+	newTipe := "Edge"
+	resUpdate := domain.UpdateIndikatorRenstra(
+		ir,
+		ir.UUID,
+		"Edge Update",
+		&standar,
+		nil,
+		newTahun,
+		newTipe,
+		nil,
+	)
+	require.True(t, resUpdate.IsSuccess)
+	assert.Nil(t, resUpdate.Value.Operator)
+	assert.Nil(t, resUpdate.Value.Parent)
+	assert.Equal(t, newTahun, resUpdate.Value.Tahun)
+	assert.Equal(t, newTipe, resUpdate.Value.TipeTarget)
+	assert.Equal(t, "Edge Update", resUpdate.Value.Indikator)
 }
