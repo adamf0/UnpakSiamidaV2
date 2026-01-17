@@ -89,6 +89,371 @@
                 }
             }
         },
+        "/Kts/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Get Kts by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Kts"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/Ktss": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Get all Ktss",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedKtss"
+                        }
+                    }
+                }
+            }
+        },
+        "/account": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Create new Account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "jwt",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dokumentambahan/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenTambahan"
+                ],
+                "summary": "Get DokumenTambahan by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.DokumenTambahan"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update nilai Renstra berdasarkan role (auditee / auditor)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenTambahan"
+                ],
+                "summary": "Update existing Renstra Nilai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuidRenstra",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "auditee",
+                            "auditor1"
+                        ],
+                        "type": "string",
+                        "description": "Mode akses",
+                        "name": "mode",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capaian (khusus auditee)",
+                        "name": "capaian",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan (khusus auditee)",
+                        "name": "catatan",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Link bukti (khusus auditee)",
+                        "name": "linkBukti",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capaian auditor (khusus auditor1)",
+                        "name": "capaianAuditor",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan auditor (khusus auditor1)",
+                        "name": "catatanAuditor",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated DokumenTambahan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenTambahan"
+                ],
+                "summary": "Delete an DokumenTambahan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenTambahan UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted DokumenTambahan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/dokumentambahans": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenTambahan"
+                ],
+                "summary": "Get All DokumenTambahans",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedDokumenTambahans"
+                        }
+                    }
+                }
+            }
+        },
         "/fakultasunit/{uuid}": {
             "get": {
                 "produces": [
@@ -233,7 +598,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -344,7 +727,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -426,6 +827,329 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.PagedIndikatorRenstras"
+                        }
+                    }
+                }
+            }
+        },
+        "/jenisfile": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "JenisFile"
+                ],
+                "summary": "Create new JenisFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nama JenisFile",
+                        "name": "nama",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created JenisFile",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/jenisfile/{uuid}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "JenisFile"
+                ],
+                "summary": "Update existing JenisFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "JenisFile UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nama JenisFile",
+                        "name": "nama",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated JenisFile",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "JenisFile"
+                ],
+                "summary": "Delete a JenisFile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "JenisFile UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted JenisFile",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/kts/{uuid}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Update existing Kts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nama Kts",
+                        "name": "nama",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated Kts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Delete an Kts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted Kts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/preview/audit/{tahun}/{fakultasUnit}": {
+            "get": {
+                "description": "Mengambil data preview template berdasarkan tahun dan fakultas unit",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "PreviewTemplate"
+                ],
+                "summary": "Get preview template by tahun dan fakultas unit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tipe",
+                        "name": "tipe",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tahun Renstra",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas Unit ID / UUID",
+                        "name": "fakultasUnit",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PreviewTemplate"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -531,6 +1255,127 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstra/generate": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "GenerateRenstra"
+                ],
+                "summary": "new GenerateRenstra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Renstra Uuid",
+                        "name": "renstra",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit Uuid",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created GenerateRenstra",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstra/{tahun}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Renstra"
+                ],
+                "summary": "Get Renstra by Tahun",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RenstraDefault"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/domain.Error"
                         }
@@ -680,7 +1525,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -761,7 +1624,248 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstranilai/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RenstraNilai"
+                ],
+                "summary": "Get RenstraNilai by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "RenstraNilai UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.RenstraNilai"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
                             "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update nilai Renstra berdasarkan role (auditee / auditor)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RenstraNilai"
+                ],
+                "summary": "Update existing Renstra Nilai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "RenstraNilai UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Renstra UUID",
+                        "name": "uuidRenstra",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "auditee",
+                            "auditor1"
+                        ],
+                        "type": "string",
+                        "description": "Mode akses",
+                        "name": "mode",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capaian (khusus auditee)",
+                        "name": "capaian",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan (khusus auditee)",
+                        "name": "catatan",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Link bukti (khusus auditee)",
+                        "name": "linkBukti",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Capaian auditor (khusus auditor1)",
+                        "name": "capaianAuditor",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan auditor (khusus auditor1)",
+                        "name": "catatanAuditor",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated RenstraNilai",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RenstraNilai"
+                ],
+                "summary": "Delete an RenstraNilai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "RenstraNilai UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted RenstraNilai",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/renstranilais": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RenstraNilai"
+                ],
+                "summary": "Get All RenstraNilais",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedRenstraNilais"
                         }
                     }
                 }
@@ -843,7 +1947,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -921,7 +2043,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1144,7 +2284,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1178,84 +2336,6 @@
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Error"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "TemplateDokumenTambahan"
-                ],
-                "summary": "Update existing TemplateDokumenTambahan",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "TemplateDokumenTambahan UUID",
-                        "name": "uuid",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Tahun",
-                        "name": "tahun",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Jenis File",
-                        "name": "jenisFile",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Pertanyaan",
-                        "name": "pertanyaan",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Klasifikasi",
-                        "name": "klasifikasi",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Kategori",
-                        "name": "kategori",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Tugas",
-                        "name": "tugas",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "uuid of updated TemplateDokumenTambahan",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/domain.Error"
                         }
@@ -1441,7 +2521,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1585,7 +2683,25 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1671,9 +2787,402 @@
                     }
                 }
             }
+        },
+        "/user": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Create new User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nama",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Level User",
+                        "name": "level",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas / Unit UUID",
+                        "name": "FakultasUnit",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get User by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.User"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Update existing User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nama",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Password (optional)",
+                        "name": "password",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Email",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Level User",
+                        "name": "level",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas / Unit UUID",
+                        "name": "FakultasUnit",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get All Users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search filters (field:op:value;...)",
+                        "name": "filters",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedUsers"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "domain.DokumenTambahan": {
+            "type": "object",
+            "properties": {
+                "capaianAuditor": {
+                    "type": "string"
+                },
+                "catatanAuditor": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "renstra": {
+                    "type": "integer"
+                },
+                "templateDokumenTambahan": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.DokumenTambahanDefault": {
+            "type": "object",
+            "properties": {
+                "capaianAuditor": {
+                    "type": "string"
+                },
+                "catatanAuditor": {
+                    "type": "string"
+                },
+                "dokumen": {
+                    "type": "string"
+                },
+                "fakultas": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenjang": {
+                    "type": "string"
+                },
+                "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "string"
+                },
+                "pertanyaan": {
+                    "type": "string"
+                },
+                "renstraId": {
+                    "type": "integer"
+                },
+                "renstraUUID": {
+                    "type": "string"
+                },
+                "tahunDokumenTambahan": {
+                    "type": "string"
+                },
+                "tahunRenstra": {
+                    "type": "string"
+                },
+                "targetAudit": {
+                    "type": "string"
+                },
+                "templateDokumenTambahanUUID": {
+                    "type": "string"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Error": {
             "type": "object",
             "properties": {
@@ -1760,6 +3269,44 @@
                 }
             }
         },
+        "domain.IndikatorRenstraDefault": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "operator": {
+                    "type": "string"
+                },
+                "parent": {
+                    "type": "integer"
+                },
+                "standar": {
+                    "type": "string"
+                },
+                "standarID": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tipeTarget": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "uuidParent": {
+                    "type": "string"
+                },
+                "uuidStandar": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.JenisFile": {
             "type": "object",
             "properties": {
@@ -1771,6 +3318,244 @@
                 },
                 "uuid": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.Kts": {
+            "type": "object",
+            "properties": {
+                "accAuditee": {
+                    "type": "integer"
+                },
+                "accAuditor": {
+                    "type": "integer"
+                },
+                "accFinal": {
+                    "type": "integer"
+                },
+                "akarMasalah": {
+                    "type": "string"
+                },
+                "auditor": {
+                    "type": "string"
+                },
+                "closingBy": {
+                    "type": "integer"
+                },
+                "dokumenTambahan": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "keteranganTolak": {
+                    "type": "string"
+                },
+                "ketidaksesuaianL": {
+                    "type": "string"
+                },
+                "ketidaksesuaianO": {
+                    "type": "string"
+                },
+                "ketidaksesuaianP": {
+                    "type": "string"
+                },
+                "ketidaksesuaianR": {
+                    "type": "string"
+                },
+                "nomorLaporan": {
+                    "description": "auditor",
+                    "type": "string"
+                },
+                "renstraNilai": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusAccAuditee": {
+                    "description": "auditee",
+                    "type": "integer"
+                },
+                "tanggalClosing": {
+                    "type": "string"
+                },
+                "tanggalClosingFinal": {
+                    "description": "auditor",
+                    "type": "string"
+                },
+                "tanggalLaporan": {
+                    "type": "string"
+                },
+                "tanggalPenyelesaian": {
+                    "description": "auditor",
+                    "type": "string"
+                },
+                "tindakanKoreksi": {
+                    "type": "string"
+                },
+                "tindakanPerbaikan": {
+                    "type": "string"
+                },
+                "tinjauanTindakanPerbaikan": {
+                    "description": "auditee",
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "wmmUpmfUpmps": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.KtsDefault": {
+            "type": "object",
+            "properties": {
+                "accAuditee": {
+                    "type": "integer"
+                },
+                "accAuditor": {
+                    "type": "integer"
+                },
+                "accFinal": {
+                    "type": "integer"
+                },
+                "akarMasalah": {
+                    "type": "string"
+                },
+                "auditee": {
+                    "type": "string"
+                },
+                "auditor": {
+                    "type": "string"
+                },
+                "closingBy": {
+                    "type": "integer"
+                },
+                "dokumenTambahan": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "idTarget": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "indikatorId": {
+                    "type": "integer"
+                },
+                "jenisFile": {
+                    "type": "string"
+                },
+                "jenisFileId": {
+                    "type": "integer"
+                },
+                "keteranganTolak": {
+                    "type": "string"
+                },
+                "ketidaksesuaianL": {
+                    "type": "string"
+                },
+                "ketidaksesuaianO": {
+                    "type": "string"
+                },
+                "ketidaksesuaianP": {
+                    "type": "string"
+                },
+                "ketidaksesuaianR": {
+                    "type": "string"
+                },
+                "nomorLaporan": {
+                    "description": "auditor (1)",
+                    "type": "string"
+                },
+                "pertanyaan": {
+                    "type": "string"
+                },
+                "renstraId": {
+                    "type": "integer"
+                },
+                "renstraNilai": {
+                    "type": "integer"
+                },
+                "standar": {
+                    "type": "string"
+                },
+                "standarId": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "statusAccAuditee": {
+                    "description": "auditee (2)",
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tanggalClosing": {
+                    "type": "string"
+                },
+                "tanggalClosingFinal": {
+                    "description": "auditor (5)",
+                    "type": "string"
+                },
+                "tanggalLaporan": {
+                    "type": "string"
+                },
+                "tanggalPenyelesaian": {
+                    "description": "auditor (3)",
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "templateDokumen": {
+                    "type": "integer"
+                },
+                "templateRenstra": {
+                    "type": "integer"
+                },
+                "tindakanKoreksi": {
+                    "type": "string"
+                },
+                "tindakanPerbaikan": {
+                    "type": "string"
+                },
+                "tinjauanTindakanPerbaikan": {
+                    "description": "auditee (4)",
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "wmmUpmfUpmps": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.PagedDokumenTambahans": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.DokumenTambahanDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -1803,7 +3588,7 @@
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.IndikatorRenstra"
+                        "$ref": "#/definitions/domain.IndikatorRenstraDefault"
                     }
                 },
                 "total": {
@@ -1824,6 +3609,46 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.JenisFile"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedKtss": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.KtsDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedRenstraNilais": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RenstraNilaiDefault"
                     }
                 },
                 "total": {
@@ -1904,7 +3729,7 @@
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.TemplateDokumenTambahan"
+                        "$ref": "#/definitions/domain.TemplateDokumenTambahanDefault"
                     }
                 },
                 "total": {
@@ -1924,7 +3749,7 @@
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.TemplateRenstra"
+                        "$ref": "#/definitions/domain.TemplateRenstraDefault"
                     }
                 },
                 "total": {
@@ -1935,79 +3760,279 @@
                 }
             }
         },
+        "domain.PagedUsers": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.User"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PreviewTemplate": {
+            "type": "object",
+            "properties": {
+                "fakultas": {
+                    "type": "string"
+                },
+                "fakultasUnit": {
+                    "type": "string"
+                },
+                "fakultasUnitId": {
+                    "type": "integer"
+                },
+                "fakultasUnitType": {
+                    "type": "string"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "indikatorId": {
+                    "type": "integer"
+                },
+                "indikatorTahun": {
+                    "type": "integer"
+                },
+                "isPertanyaan": {
+                    "type": "integer"
+                },
+                "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "parentIndikatorId": {
+                    "type": "integer"
+                },
+                "pointing": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.RenstraDefault": {
             "type": "object",
             "properties": {
-                "auditee": {
-                    "type": "integer"
-                },
-                "auditor1": {
-                    "type": "integer"
-                },
-                "auditor2": {
-                    "type": "integer"
-                },
-                "catatan1": {
+                "Auditee": {
                     "type": "string"
                 },
-                "catatan2": {
+                "AuditeeId": {
+                    "type": "integer"
+                },
+                "AuditeeUuid": {
+                    "type": "string"
+                },
+                "Auditor1": {
+                    "type": "string"
+                },
+                "Auditor1Id": {
+                    "type": "integer"
+                },
+                "Auditor1Uuid": {
+                    "type": "string"
+                },
+                "Auditor2": {
+                    "type": "string"
+                },
+                "Auditor2Id": {
+                    "type": "integer"
+                },
+                "Auditor2Uuid": {
+                    "type": "string"
+                },
+                "Catatan1": {
+                    "type": "string"
+                },
+                "Catatan2": {
+                    "type": "string"
+                },
+                "Fakultas": {
+                    "type": "string"
+                },
+                "FakultasUnit": {
+                    "type": "string"
+                },
+                "FakultasUnitId": {
+                    "type": "integer"
+                },
+                "FakultasUnitUuid": {
+                    "type": "string"
+                },
+                "ID": {
+                    "type": "integer"
+                },
+                "Jenjang": {
+                    "type": "string"
+                },
+                "KodeAkses": {
+                    "type": "string"
+                },
+                "PeriodeAssesmentDokumenAkhir": {
+                    "type": "string"
+                },
+                "PeriodeAssesmentDokumenMulai": {
+                    "type": "string"
+                },
+                "PeriodeAssesmentLapanganAkhir": {
+                    "type": "string"
+                },
+                "PeriodeAssesmentLapanganMulai": {
+                    "type": "string"
+                },
+                "PeriodeUploadAkhir": {
+                    "type": "string"
+                },
+                "PeriodeUploadMulai": {
+                    "type": "string"
+                },
+                "Tahun": {
+                    "type": "string"
+                },
+                "Type": {
+                    "type": "string"
+                },
+                "UUID": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RenstraNilai": {
+            "type": "object",
+            "properties": {
+                "capaian": {
+                    "type": "string"
+                },
+                "capaianAuditor": {
+                    "type": "string"
+                },
+                "catatan": {
+                    "type": "string"
+                },
+                "catatanAuditor": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "linkBukti": {
+                    "type": "string"
+                },
+                "renstra": {
+                    "type": "integer"
+                },
+                "templateRenstra": {
+                    "type": "integer"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RenstraNilaiDefault": {
+            "type": "object",
+            "properties": {
+                "capaianAuditee": {
+                    "type": "string"
+                },
+                "capaianAuditor": {
+                    "type": "string"
+                },
+                "catatanAuditee": {
+                    "type": "string"
+                },
+                "catatanAuditor": {
                     "type": "string"
                 },
                 "fakultas": {
                     "type": "string"
                 },
-                "fakultas_unit": {
-                    "type": "integer"
-                },
                 "id": {
                     "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
                 },
                 "jenjang": {
                     "type": "string"
                 },
-                "kode_akses": {
+                "kategori": {
                     "type": "string"
                 },
-                "nama_auditee": {
+                "klasifikasi": {
                     "type": "string"
                 },
-                "nama_auditor1": {
+                "linkBukti": {
                     "type": "string"
                 },
-                "nama_auditor2": {
+                "namaStandarRenstra": {
                     "type": "string"
                 },
-                "nama_fakultas_unit": {
+                "operator": {
                     "type": "string"
                 },
-                "periode_assesment_dokumen_akhir": {
+                "renstraId": {
+                    "type": "integer"
+                },
+                "renstraUUID": {
                     "type": "string"
                 },
-                "periode_assesment_dokumen_mulai": {
+                "satuan": {
                     "type": "string"
                 },
-                "periode_assesment_lapangan_akhir": {
+                "tahunIndikator": {
                     "type": "string"
                 },
-                "periode_assesment_lapangan_mulai": {
+                "tahunRenstra": {
                     "type": "string"
                 },
-                "periode_upload_akhir": {
+                "target": {
                     "type": "string"
                 },
-                "periode_upload_mulai": {
+                "targetAudit": {
                     "type": "string"
                 },
-                "tahun": {
+                "targetMax": {
+                    "type": "string"
+                },
+                "targetMin": {
+                    "type": "string"
+                },
+                "templateRenstraUUID": {
+                    "type": "string"
+                },
+                "tugas": {
                     "type": "string"
                 },
                 "type": {
                     "type": "string"
                 },
                 "uuid": {
-                    "type": "string"
-                },
-                "uuid_fakultas_unit": {
                     "type": "string"
                 }
             }
@@ -2047,6 +4072,41 @@
                     "type": "integer"
                 },
                 "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "pertanyaan": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TemplateDokumenTambahanDefault": {
+            "type": "object",
+            "properties": {
+                "fakultasProdiUnit": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenisFile": {
+                    "type": "string"
+                },
+                "jenisFileID": {
+                    "type": "integer"
+                },
+                "jenisFileUuid": {
                     "type": "string"
                 },
                 "klasifikasi": {
@@ -2108,6 +4168,109 @@
                 "uuid": {
                     "type": "string"
                 }
+            }
+        },
+        "domain.TemplateRenstraDefault": {
+            "type": "object",
+            "properties": {
+                "fakultasUnit": {
+                    "type": "string"
+                },
+                "fakultasUnitID": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "indikator": {
+                    "type": "string"
+                },
+                "indikatorRenstraID": {
+                    "type": "integer"
+                },
+                "indikatorRenstraUuid": {
+                    "type": "string"
+                },
+                "isPertanyaan": {
+                    "type": "boolean"
+                },
+                "kategori": {
+                    "type": "string"
+                },
+                "klasifikasi": {
+                    "type": "string"
+                },
+                "satuan": {
+                    "type": "string"
+                },
+                "standarRenstra": {
+                    "type": "string"
+                },
+                "standarRenstraID": {
+                    "type": "integer"
+                },
+                "standarRenstraUuid": {
+                    "type": "string"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                },
+                "targetMax": {
+                    "type": "string"
+                },
+                "targetMin": {
+                    "type": "string"
+                },
+                "tugas": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "fakultasUnit": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "infrastructure.ResponseError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "description": "string atau object/map"
+                },
+                "trace": {}
             }
         }
     }
