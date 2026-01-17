@@ -22,6 +22,7 @@ func TestUpdateDokumenTambahan_Success(t *testing.T) {
 		UUID:                    baseUUID,
 		Renstra:                 1,
 		TemplateDokumenTambahan: 1,
+		Link:                    nil,
 	}
 
 	renstra := &domainrenstra.Renstra{

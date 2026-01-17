@@ -54,7 +54,7 @@ func UpdateDokumenTambahan(
 		return common.FailureValue[*DokumenTambahan](InvalidData())
 	}
 
-	if !contains([]string{"auditee", "auditor1", "auditor2"}, Mode) {
+	if !contains([]string{"auditee", "auditor2"}, Mode) {
 		return common.FailureValue[*DokumenTambahan](RejectAction())
 	}
 
