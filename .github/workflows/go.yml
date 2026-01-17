@@ -87,13 +87,11 @@ jobs:
             fi
           done
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: "coverage/**/*.out"
-          flags: unpak-go
-          name: codecov-umbrella
-          fail_ci_if_error: true
+      - name: Merge coverage (mode=set)
+        run: |
+          echo "mode: set" > coverage/coverage_all.out
+          find coverage -name "*.out" ! -name "coverage_all.out" \
+            -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
 
       - uses: actions/upload-artifact@v4
         with:
