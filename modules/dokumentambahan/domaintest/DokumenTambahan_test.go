@@ -55,12 +55,12 @@ func TestUpdateDokumenTambahan_Success(t *testing.T) {
 		{
 			name:        "Success_Auditor2",
 			mode:        "auditor2",
-			link:        nil,
+			link:        &link,
 			capaian:     &capaian,
 			catatan:     &catatan,
 			wantSuccess: true,
 			wantCheckFields: func(t *testing.T, res *domain.DokumenTambahan) {
-				assert.Nil(t, res.Link)
+				assert.Equal(t, &link, res.Link)
 				assert.Equal(t, &capaian, res.CapaianAuditor)
 				assert.Equal(t, &catatan, res.CatatanAuditor)
 			},
