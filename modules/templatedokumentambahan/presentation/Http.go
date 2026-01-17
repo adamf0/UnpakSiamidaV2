@@ -45,7 +45,8 @@ func strPtr(s string) *string {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created TemplateDokumenTambahan"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /templatedokumentambahan [post]
 func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
@@ -91,7 +92,8 @@ func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated TemplateDokumenTambahan"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /templatedokumentambahan/{uuid} [put]
 // func UpdateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {

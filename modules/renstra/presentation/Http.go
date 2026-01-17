@@ -44,7 +44,8 @@ import (
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created Renstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /renstra [post]
 func CreateRenstraHandlerfunc(c *fiber.Ctx) error {
@@ -97,7 +98,8 @@ func CreateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated Renstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /renstra/{uuid} [put]
 func UpdateRenstraHandlerfunc(c *fiber.Ctx) error {
@@ -140,7 +142,8 @@ func UpdateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated Renstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /renstra/{uuid}/code_access [put]
 func GiveCodeAccessRenstraHandlerfunc(c *fiber.Ctx) error {

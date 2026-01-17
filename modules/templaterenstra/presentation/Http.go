@@ -49,7 +49,8 @@ func strPtr(s string) *string {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created TemplateRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /templaterenstra [post]
 func CreateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
@@ -110,7 +111,8 @@ func CreateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated TemplateRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /templaterenstra/{uuid} [put]
 func UpdateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {

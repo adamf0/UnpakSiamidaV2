@@ -25,7 +25,8 @@ import (
 // @Produce json
 // @Success 200 {object} map[string]string "jwt"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /account [post]
 func LoginHandlerfunc(c *fiber.Ctx) error {

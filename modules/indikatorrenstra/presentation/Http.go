@@ -34,7 +34,8 @@ import (
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /indikatorrenstra [post]
 func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
@@ -83,7 +84,8 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /indikatorrenstra/{uuid} [put]
 func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {

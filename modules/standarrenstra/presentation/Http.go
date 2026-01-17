@@ -32,7 +32,8 @@ import (
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created StandarRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /standarrenstra [post]
 func CreateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
@@ -63,7 +64,8 @@ func CreateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated StandarRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
-// @Failure 401 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /standarrenstra/{uuid} [put]
 func UpdateStandarRenstraHandlerfunc(c *fiber.Ctx) error {
