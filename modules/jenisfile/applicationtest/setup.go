@@ -57,7 +57,7 @@ func setupJenisFileMySQL(t *testing.T) (*gorm.DB, func()) {
 	// Buat table & data contoh
 	err = gdb.Exec(`
         CREATE TABLE jenis_file_renstra (
-            id bigint(20) UNSIGNED NOT NULL,
+            id bigint(20) AUTO_INCREMENT UNSIGNED NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nama text NOT NULL,
             created_at datetime DEFAULT NULL,
