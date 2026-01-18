@@ -2,25 +2,26 @@ package application
 
 import (
 	"context"
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 	domaingenerate "UnpakSiamida/modules/generaterenstra/domain"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
-	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
-	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
 	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
+	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
+
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
-	"time"
 )
 
 type GenerateRenstraCommandHandler struct {
-	Repo                        domaingenerate.IGenerateRenstraRepository
-	RepoRenstra                 domainrenstra.IRenstraRepository
+	Repo        domaingenerate.IGenerateRenstraRepository
+	RepoRenstra domainrenstra.IRenstraRepository
 
 	RepoFakultasUnit            domainfakultasunit.IFakultasUnitRepository
 	RepoTemplateRenstra         domaintemplaterenstra.ITemplateRenstraRepository
@@ -323,7 +324,7 @@ func (h *GenerateRenstraCommandHandler) Handle(
 			existingRenstra.ID,
 			ins.TemplateID,
 			tr.UUID.String(),
-			tr.JenisFile,//tr.Indikator,
+			tr.JenisFile, //tr.Indikator,
 			ins.Tugas,
 			"insert",
 		)

@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
-func TestLoginIntegration_Success(t *testing.T) {
+func TestLogin_Success(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 

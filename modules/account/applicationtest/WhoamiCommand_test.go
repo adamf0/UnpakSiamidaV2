@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
-func TestWhoamiIntegration_Success(t *testing.T) {
+func TestWhoami_Success(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
