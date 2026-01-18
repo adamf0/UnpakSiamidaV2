@@ -1,17 +1,16 @@
-package application_test
+package applicationtest
 
 import (
 	"context"
 	"testing"
 
 	app "UnpakSiamida/modules/account/application/Whoami"
-	testutil "UnpakSiamida/modules/account/application/testutil"
 	domain "UnpakSiamida/modules/account/domain"
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
 func TestWhoamiIntegration_Success(t *testing.T) {
-	db, cleanup := testutil.SetupAccountMySQL(t)
+	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
 	repo := infra.NewAccountRepository(db)
@@ -41,7 +40,7 @@ func TestWhoamiIntegration_Success(t *testing.T) {
 }
 
 func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
-	db, cleanup := testutil.SetupAccountMySQL(t)
+	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
 	repo := infra.NewAccountRepository(db)
@@ -67,7 +66,7 @@ func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
 }
 
 func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
-	db, cleanup := testutil.SetupAccountMySQL(t)
+	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
 	_ = db.Exec("TRUNCATE TABLE users")
