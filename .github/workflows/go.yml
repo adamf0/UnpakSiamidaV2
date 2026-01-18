@@ -38,58 +38,43 @@ jobs:
         with:
           go-version: '1.25.4'
 
-      - name: Run tests (mode=set)
+      - name: Run Domain & Application Tests with Coverage
         run: |
           set -e
-          mkdir -p coverage
+          mkdir -p coverage/domain coverage/application
 
           for moduledir in ./modules/*; do
             modulename=$(basename "$moduledir")
 
-            # ==============================
-            # DOMAIN TEST
-            # ==============================
-            if [[ -d "$moduledir/domain" ]]; then
-              testdir="$moduledir/domain"
-              coverpkg="UnpakSiamida/modules/${modulename}/domain/..."
-              outdir="coverage/${modulename}/domain"
-              mkdir -p "$outdir"
-
+            # =========================
+            # DOMAIN
+            # =========================
+            if [[ -d "$moduledir/domaintest" ]]; then
               echo "▶ DOMAIN $modulename"
               go test -v \
                 -covermode=set \
-                -coverpkg="$coverpkg" \
-                -coverprofile="$outdir/coverage.out" \
-                "$testdir"
+                -coverpkg="UnpakSiamida/modules/${modulename}/domain" \
+                -coverprofile="coverage/domain/${modulename}.out" \
+                "./modules/${modulename}/domaintest"
             fi
 
-            # ==============================
-            # APPLICATION TEST
-            # ==============================
-            if [[ -d "$moduledir/application" ]]; then
-              for appdir in "$moduledir/application"/*; do
-                [ -d "$appdir" ] || continue
-                if ls "$appdir"/*_test.go >/dev/null 2>&1; then
-                  appname=$(basename "$appdir")
-                  testdir="$appdir"
-                  coverpkg="UnpakSiamida/modules/${modulename}/application/..."
-                  outdir="coverage/${modulename}/application/${appname}"
-                  mkdir -p "$outdir"
-
-                  echo "▶ APPLICATION $modulename :: $appname"
-                  go test -v \
-                    -covermode=set \
-                    -coverpkg="$coverpkg" \
-                    -coverprofile="$outdir/coverage.out" \
-                    "$testdir"
-                fi
-              done
+            # =========================
+            # APPLICATION
+            # =========================
+            if [[ -d "$moduledir/applicationtest" ]]; then
+              echo "▶ APPLICATION $modulename"
+              go test -v \
+                -covermode=set \
+                -coverpkg="UnpakSiamida/modules/${modulename}/application/..." \
+                -coverprofile="coverage/application/${modulename}.out" \
+                "./modules/${modulename}/applicationtest"
             fi
           done
 
-      - name: Merge coverage (mode=set)
+      - name: Merge coverage files
         run: |
           echo "mode: set" > coverage/coverage_all.out
+
           find coverage -name "*.out" ! -name "coverage_all.out" \
             -exec grep -h -v "^mode:" {} \; >> coverage/coverage_all.out
 
@@ -159,19 +144,12 @@ jobs:
 
       - name: Generate Coverage HTML
         run: |
-          gocover-cobertura < coverage/coverage_all.out > coverage/coverage.xml
-          reportgenerator \
-            -reports:coverage/coverage.xml \
-            -targetdir:public/coverage \
-            -reporttypes:Html \
-            -sourcedirs:./modules
-          
-          # Pastikan index.html ada
-          if [ ! -f public/coverage/index.html ]; then
-            if [ -f public/coverage/index.htm ]; then
-              mv public/coverage/index.htm public/coverage/index.html
-            fi
-          fi
+          mkdir -p public/coverage
+
+          go tool cover \
+            -html=coverage/coverage_all.out \
+            -o public/coverage/index.html
+
 
       - name: Deploy Pages
         uses: peaceiris/actions-gh-pages@v4
