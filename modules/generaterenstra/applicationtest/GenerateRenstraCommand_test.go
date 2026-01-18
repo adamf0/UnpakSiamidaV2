@@ -259,6 +259,10 @@ func TestGenerateRenstraCommand_Success(t *testing.T) {
 	mockTemplateRenstra := new(MockTemplateRenstraRepo)
 	mockTemplateDok := new(MockTemplateDokTambahanRepo)
 
+	mockRepo.On("BeginTx", mock.Anything).Return(&gorm.DB{}, nil)
+	mockRepo.On("Commit").Return(nil)
+	mockRepo.On("Rollback").Return()
+
 	// Mock return values
 	mockRenstra.On("GetByUuid", mock.Anything, renstraUUID).Return(&domainrenstra.Renstra{
 		ID:           1,
