@@ -27,12 +27,12 @@ func TestUpdateRenstraCommandValidation_Success(t *testing.T) {
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
 		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
 		Tahun:                         "2031",
-		PeriodeUploadMulai:            time.Now().String(),
-		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).String(),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).String(),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
+		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
 	}
 
 	err := app.UpdateRenstraCommandValidation(cmd)
@@ -92,12 +92,12 @@ func TestUpdateRenstraCommandHandler_Success(t *testing.T) {
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
 		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
 		Tahun:                         "2031",
-		PeriodeUploadMulai:            time.Now().String(),
-		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).String(),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).String(),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
+		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
 	}
 
 	_, err := handler.Handle(context.Background(), cmd)
@@ -129,16 +129,16 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
 		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
 		Tahun:                         "2031",
-		PeriodeUploadMulai:            time.Now().String(),
-		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).String(),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).String(),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
+		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
 	}
 
 	x, err := handler.Handle(context.Background(), cmd)
-	godump.Dump(cmd, x)
+	godump.Dump(cmd, x, err)
 	assert.Error(t, err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
