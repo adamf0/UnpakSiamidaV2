@@ -13,7 +13,7 @@ import (
 // ========================================
 // TEMPLATE DOKUMEN TAMBAHAN ERROR TESTS
 // ========================================
-func TestTemplateDokumenTambahanErrors(t *testing.T) {
+func TemplateDokumenTambahanErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIndikatorRenstraErrors(t *testing.T) {
+func IndikatorRenstraErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

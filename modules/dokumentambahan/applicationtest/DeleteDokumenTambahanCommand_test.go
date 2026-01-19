@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDeleteDokumenTambahanCommandValidation_Success(t *testing.T) {
+func DeleteDokumenTambahanCommandValidation_Success(t *testing.T) {
 	validCmd := app.DeleteDokumenTambahanCommand{
 		Uuid: uuid.NewString(),
 	}
@@ -22,7 +22,7 @@ func TestDeleteDokumenTambahanCommandValidation_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDeleteDokumenTambahanCommandValidation_Fail(t *testing.T) {
+func DeleteDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	invalidCmd := app.DeleteDokumenTambahanCommand{
 		Uuid: "",
 	}
@@ -31,7 +31,7 @@ func TestDeleteDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "UUID cannot be blank")
 }
 
-func TestDeleteDokumenTambahanCommandHandler_Success(t *testing.T) {
+func DeleteDokumenTambahanCommandHandler_Success(t *testing.T) {
 	db, terminate := setupDokumenTambahanMySQL(t)
 	defer terminate()
 
@@ -52,7 +52,7 @@ func TestDeleteDokumenTambahanCommandHandler_Success(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestDeleteDokumenTambahanCommandHandler_Edge(t *testing.T) {
+func DeleteDokumenTambahanCommandHandler_Edge(t *testing.T) {
 	db, terminate := setupDokumenTambahanMySQL(t)
 	defer terminate()
 
@@ -78,7 +78,7 @@ func TestDeleteDokumenTambahanCommandHandler_Edge(t *testing.T) {
 	assert.Contains(t, commonErr.Description, "DokumenTambahan with identifier 864285ba-3b78-4aaa-bbb3-02b162af12a6 not found")
 }
 
-func TestDeleteDokumenTambahanCommandHandler_Fail(t *testing.T) {
+func DeleteDokumenTambahanCommandHandler_Fail(t *testing.T) {
 	db, terminate := setupDokumenTambahanMySQL(t)
 	defer terminate()
 

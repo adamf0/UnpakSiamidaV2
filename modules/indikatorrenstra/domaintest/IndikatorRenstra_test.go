@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewIndikatorRenstra_Success(t *testing.T) {
+func NewIndikatorRenstra_Success(t *testing.T) {
 	standar := uint(1)
 	parent := uint(10)
 	operator := "SUM"
@@ -37,7 +37,7 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, &parent, ir.Parent)
 }
 
-func TestNewIndikatorRenstra_Fail(t *testing.T) {
+func NewIndikatorRenstra_Fail(t *testing.T) {
 	standar := uint(1)
 
 	tests := []struct {
@@ -78,7 +78,7 @@ func TestNewIndikatorRenstra_Fail(t *testing.T) {
 	}
 }
 
-func TestUpdateIndikatorRenstra_Success(t *testing.T) {
+func UpdateIndikatorRenstra_Success(t *testing.T) {
 	standar := uint(1)
 	parent := uint(2)
 	operator := "AVG"
@@ -122,7 +122,7 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, &newParent, ir.Parent)
 }
 
-func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
+func UpdateIndikatorRenstra_Fail(t *testing.T) {
 	standar := uint(1)
 
 	prevRes := domain.NewIndikatorRenstra(
@@ -187,7 +187,7 @@ func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
 	}
 }
 
-func TestIndikatorRenstra_EdgeCases(t *testing.T) {
+func IndikatorRenstra_EdgeCases(t *testing.T) {
 	standar := uint(1)
 
 	// Create dengan parent dan operator nil

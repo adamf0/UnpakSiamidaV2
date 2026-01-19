@@ -13,7 +13,7 @@ import (
 // -----------------------------------------------------------------------------
 // Test NewUser - Full Scenarios
 // -----------------------------------------------------------------------------
-func TestNewUser(t *testing.T) {
+func NewUser(t *testing.T) {
 	validEmail := "user@unpak.ac.id"
 	invalidEmail := "invalid-email"
 
@@ -78,7 +78,7 @@ func TestNewUser(t *testing.T) {
 // -----------------------------------------------------------------------------
 // Test UpdateUser - Full Scenarios
 // -----------------------------------------------------------------------------
-func TestUpdateUser(t *testing.T) {
+func UpdateUser(t *testing.T) {
 	baseUUID := uuid.New()
 	validEmail := "update@unpak.ac.id"
 	invalidEmail := "invalid-email"

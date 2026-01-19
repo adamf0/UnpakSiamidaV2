@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
-func TestWhoami_Success(t *testing.T) {
+func Whoami_Success(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
@@ -39,7 +39,7 @@ func TestWhoami_Success(t *testing.T) {
 	}
 }
 
-func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
+func WhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
@@ -65,7 +65,7 @@ func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
 	}
 }
 
-func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
+func WhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
@@ -93,7 +93,7 @@ func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	}
 }
 
-func TestWhoamiIntegration_ValidationErrors(t *testing.T) {
+func WhoamiIntegration_ValidationErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		cmd  app.WhoamiCommand

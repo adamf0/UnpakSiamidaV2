@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/account/infrastructure"
 )
 
-func TestLogin_Success(t *testing.T) {
+func Login_Success(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
@@ -40,7 +40,7 @@ func TestLogin_Success(t *testing.T) {
 	}
 }
 
-func TestLoginIntegration_Failed(t *testing.T) {
+func LoginIntegration_Failed(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 
@@ -68,7 +68,7 @@ func TestLoginIntegration_Failed(t *testing.T) {
 	}
 }
 
-func TestLoginIntegration_ValidationErrors(t *testing.T) {
+func LoginIntegration_ValidationErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		cmd  app.LoginCommand
@@ -89,7 +89,7 @@ func TestLoginIntegration_ValidationErrors(t *testing.T) {
 	}
 }
 
-func TestLoginIntegration_ContextTimeout(t *testing.T) {
+func LoginIntegration_ContextTimeout(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
 

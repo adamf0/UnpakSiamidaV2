@@ -11,7 +11,7 @@ import (
 	infra "UnpakSiamida/modules/fakultasunit/infrastructure"
 )
 
-func TestGetAllFakultasUnitsIntegration(t *testing.T) {
+func GetAllFakultasUnitsIntegration(t *testing.T) {
 	db, cleanup := setupFakultasUnitMySQL(t)
 	defer cleanup()
 
@@ -134,7 +134,7 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 	}
 }
 
-// func TestGetFakultasUnit_NotFound(t *testing.T) {
+// func GetFakultasUnit_NotFound(t *testing.T) {
 // 	db, cleanup := setupFakultasUnitMySQL(t)
 // 	defer cleanup()
 

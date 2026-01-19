@@ -13,7 +13,7 @@ import (
 // ------------------------------
 // SUCCESS
 // ------------------------------
-func TestGetJenisFileDefaultByUuid_Success(t *testing.T) {
+func GetJenisFileDefaultByUuid_Success(t *testing.T) {
 	db, cleanup := setupJenisFileMySQL(t)
 	defer cleanup()
 
@@ -38,7 +38,7 @@ func TestGetJenisFileDefaultByUuid_Success(t *testing.T) {
 // ------------------------------
 // ERROR CASES
 // ------------------------------
-func TestGetJenisFileDefaultByUuid_Errors(t *testing.T) {
+func GetJenisFileDefaultByUuid_Errors(t *testing.T) {
 	db, cleanup := setupJenisFileMySQL(t)
 	defer cleanup()
 

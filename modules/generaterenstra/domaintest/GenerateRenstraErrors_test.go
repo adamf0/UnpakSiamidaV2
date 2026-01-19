@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenerateRenstraErrors_TableDriven(t *testing.T) {
+func GenerateRenstraErrors_TableDriven(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

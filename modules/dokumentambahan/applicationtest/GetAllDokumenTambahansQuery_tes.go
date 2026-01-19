@@ -12,7 +12,7 @@ import (
 	infra "UnpakSiamida/modules/dokumentambahan/infrastructure"
 )
 
-func TestGetAllDokumenTambahansIntegration(t *testing.T) {
+func GetAllDokumenTambahansIntegration(t *testing.T) {
 	db, cleanup := setupDokumenTambahanMySQL(t)
 	defer cleanup()
 
@@ -154,7 +154,7 @@ func TestGetAllDokumenTambahansIntegration(t *testing.T) {
 	}
 }
 
-func TestGetDokumenTambahan_NotFound(t *testing.T) {
+func GetDokumenTambahan_NotFound(t *testing.T) {
 	db, cleanup := setupDokumenTambahanMySQL(t)
 	resetDBOnlyDokumenTambahan(t, db)
 	defer cleanup()

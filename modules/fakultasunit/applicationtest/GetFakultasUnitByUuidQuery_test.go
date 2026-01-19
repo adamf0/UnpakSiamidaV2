@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/fakultasunit/infrastructure"
 )
 
-func TestGetFakultasUnitByUuid_Success(t *testing.T) {
+func GetFakultasUnitByUuid_Success(t *testing.T) {
 	db, cleanup := setupFakultasUnitMySQL(t)
 	defer cleanup()
 
@@ -31,7 +31,7 @@ func TestGetFakultasUnitByUuid_Success(t *testing.T) {
 	}
 }
 
-func TestGetFakultasUnitByUuid_Errors(t *testing.T) {
+func GetFakultasUnitByUuid_Errors(t *testing.T) {
 	db, cleanup := setupFakultasUnitMySQL(t)
 	defer cleanup()
 

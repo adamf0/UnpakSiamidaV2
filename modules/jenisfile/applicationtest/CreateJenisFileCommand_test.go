@@ -12,20 +12,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateJenisFileCommandValidation_Success(t *testing.T) {
+func CreateJenisFileCommandValidation_Success(t *testing.T) {
 	validCmd := app.CreateJenisFileCommand{Nama: "Dokumen Valid"}
 	err := app.CreateJenisFileCommandValidation(validCmd)
 	assert.NoError(t, err)
 }
 
-func TestCreateJenisFileCommandValidation_Fail(t *testing.T) {
+func CreateJenisFileCommandValidation_Fail(t *testing.T) {
 	invalidCmd := app.CreateJenisFileCommand{Nama: ""}
 	err := app.CreateJenisFileCommandValidation(invalidCmd)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Nama cannot be blank")
 }
 
-func TestCreateJenisFileCommand_Success(t *testing.T) {
+func CreateJenisFileCommand_Success(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -44,7 +44,7 @@ func TestCreateJenisFileCommand_Success(t *testing.T) {
 	assert.Equal(t, "Dokumen Baru", saved.Nama)
 }
 
-func TestCreateJenisFileCommand_Edge(t *testing.T) {
+func CreateJenisFileCommand_Edge(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 

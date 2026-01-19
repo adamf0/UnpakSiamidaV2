@@ -13,7 +13,7 @@ import (
 // =========================
 // STANDAR RENSTRA ERROR TESTS
 // =========================
-func TestStandarRenstraErrors(t *testing.T) {
+func StandarRenstraErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

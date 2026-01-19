@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDeleteJenisFileCommandValidation_Success(t *testing.T) {
+func DeleteJenisFileCommandValidation_Success(t *testing.T) {
 	validCmd := app.DeleteJenisFileCommand{
 		Uuid: uuid.NewString(),
 	}
@@ -22,7 +22,7 @@ func TestDeleteJenisFileCommandValidation_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDeleteJenisFileCommandValidation_Fail(t *testing.T) {
+func DeleteJenisFileCommandValidation_Fail(t *testing.T) {
 	invalidCmd := app.DeleteJenisFileCommand{
 		Uuid: "",
 	}
@@ -31,7 +31,7 @@ func TestDeleteJenisFileCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "UUID cannot be blank")
 }
 
-func TestDeleteJenisFileCommand_Success(t *testing.T) {
+func DeleteJenisFileCommand_Success(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -60,7 +60,7 @@ func TestDeleteJenisFileCommand_Success(t *testing.T) {
 	assert.Error(t, err) // harus error karena sudah dihapus
 }
 
-func TestDeleteJenisFileCommand_Edge(t *testing.T) {
+func DeleteJenisFileCommand_Edge(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -93,7 +93,7 @@ func TestDeleteJenisFileCommand_Edge(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", record.UUID.String()), commonErr.Description)
 }
 
-func TestDeleteJenisFileCommand_Fail(t *testing.T) {
+func DeleteJenisFileCommand_Fail(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 

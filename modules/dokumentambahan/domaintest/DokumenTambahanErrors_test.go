@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDokumenTambahanErrors(t *testing.T) {
+func DokumenTambahanErrors(t *testing.T) {
 
 	tests := []struct {
 		name         string

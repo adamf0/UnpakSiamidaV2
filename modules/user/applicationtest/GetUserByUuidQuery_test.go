@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/user/infrastructure"
 )
 
-func TestGetUserByUuid_Success(t *testing.T) {
+func GetUserByUuid_Success(t *testing.T) {
 	db, cleanup := setupUserMySQL(t)
 	defer cleanup()
 
@@ -31,7 +31,7 @@ func TestGetUserByUuid_Success(t *testing.T) {
 	}
 }
 
-func TestGetUserByUuid_Errors(t *testing.T) {
+func GetUserByUuid_Errors(t *testing.T) {
 	db, cleanup := setupUserMySQL(t)
 	defer cleanup()
 

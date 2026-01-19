@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUpdateDokumenTambahanCommandValidation_Success(t *testing.T) {
+func UpdateDokumenTambahanCommandValidation_Success(t *testing.T) {
 	link := "https://drive.google.com/example"
 	capaianAuditor := ""
 
@@ -31,7 +31,7 @@ func TestUpdateDokumenTambahanCommandValidation_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestUpdateDokumenTambahanCommandValidation_Fail(t *testing.T) {
+func UpdateDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	link := "https://drive.google.com/example"
 	capaianAuditor := ""
 
@@ -52,7 +52,7 @@ func TestUpdateDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "Mode harus auditee, auditor1 atau auditor2")
 }
 
-func TestUpdateDokumenTambahanCommandHandler_Success(t *testing.T) {
+func UpdateDokumenTambahanCommandHandler_Success(t *testing.T) {
 	db, terminate := setupDokumenTambahanMySQL(t)
 	defer terminate()
 
@@ -116,7 +116,7 @@ func TestUpdateDokumenTambahanCommandHandler_Success(t *testing.T) {
 	assert.Equal(t, catatanAuditor, saved.CatatanAuditor)
 }
 
-func TestUpdateDokumenTambahanCommandHandler_Fail(t *testing.T) {
+func UpdateDokumenTambahanCommandHandler_Fail(t *testing.T) {
 	db, terminate := setupDokumenTambahanMySQL(t)
 	defer terminate()
 

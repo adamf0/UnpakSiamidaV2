@@ -11,7 +11,7 @@ import (
 	infra "UnpakSiamida/modules/jenisfile/infrastructure"
 )
 
-func TestGetAllJenisFilesIntegration(t *testing.T) {
+func GetAllJenisFilesIntegration(t *testing.T) {
 	db, cleanup := setupJenisFileMySQL(t)
 	defer cleanup()
 

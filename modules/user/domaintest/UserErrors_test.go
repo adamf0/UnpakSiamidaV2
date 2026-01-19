@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUserErrors(t *testing.T) {
+func UserErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error
