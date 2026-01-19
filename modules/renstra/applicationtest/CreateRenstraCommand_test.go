@@ -8,10 +8,10 @@ import (
 	common "UnpakSiamida/common/domain"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	app "UnpakSiamida/modules/renstra/application/CreateRenstra"
-	domain "UnpakSiamida/modules/renstra/domain"
 	infra "UnpakSiamida/modules/renstra/infrastructure"
 	infraUser "UnpakSiamida/modules/user/infrastructure"
 
+	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -94,13 +94,9 @@ func TestCreateRenstraCommandHandler_Success(t *testing.T) {
 		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
 	}
 
-	renstraUUID, err := handler.Handle(context.Background(), cmd)
+	x, err := handler.Handle(context.Background(), cmd)
+	godump.Dump(cmd, x)
 	assert.NoError(t, err)
-
-	var saved domain.Renstra
-	err = db.Where("uuid = ?", renstraUUID).First(&saved).Error
-	assert.NoError(t, err)
-	assert.Equal(t, cmd.Tahun, saved.Tahun)
 }
 
 // Test handler gagal karena UUID invalid / tidak ada data

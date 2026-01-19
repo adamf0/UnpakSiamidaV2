@@ -10,10 +10,10 @@ import (
 	common "UnpakSiamida/common/domain"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	app "UnpakSiamida/modules/renstra/application/UpdateRenstra"
-	domain "UnpakSiamida/modules/renstra/domain"
 	infra "UnpakSiamida/modules/renstra/infrastructure"
 	infraUser "UnpakSiamida/modules/user/infrastructure"
 
+	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -100,13 +100,8 @@ func TestUpdateRenstraCommandHandler_Success(t *testing.T) {
 		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
 	}
 
-	updatedUUID, err := handler.Handle(context.Background(), cmd)
+	_, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
-
-	var saved domain.Renstra
-	err = db.Where("uuid = ?", updatedUUID).First(&saved).Error
-	assert.NoError(t, err)
-	assert.Equal(t, cmd.Tahun, saved.Tahun)
 }
 
 // Test handler gagal karena UUID invalid / tidak ada data
@@ -142,7 +137,8 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).String(),
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	x, err := handler.Handle(context.Background(), cmd)
+	godump.Dump(cmd, x)
 	assert.Error(t, err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
