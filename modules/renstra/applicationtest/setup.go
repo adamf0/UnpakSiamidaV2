@@ -259,10 +259,8 @@ func resetDBDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 		"m_fakultas",
 		"m_program_studi",
 		"sijamu_fakultas_unit",
-		"dokumen_tambahan",
-		"jenis_file_renstra",
+		"users",
 		"renstra",
-		"template_dokumen_tambahan",
 	}
 
 	for _, tbl := range tables {
@@ -281,10 +279,8 @@ func resetDBOnlyDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 		"m_fakultas",
 		"m_program_studi",
 		"sijamu_fakultas_unit",
-		"dokumen_tambahan",
-		"jenis_file_renstra",
+		"users",
 		"renstra",
-		"template_dokumen_tambahan",
 	}
 
 	for _, tbl := range tables {
