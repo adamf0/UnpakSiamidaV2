@@ -7,6 +7,7 @@ import (
 
 	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/renstra/application/DeleteRenstra"
+	"UnpakSiamida/modules/renstra/domain"
 	infra "UnpakSiamida/modules/renstra/infrastructure"
 
 	"github.com/google/uuid"
@@ -33,27 +34,18 @@ func TestDeleteRenstraCommandHandler_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, uuid.String(), deletedUUID)
 
-	// Pastikan sudah terhapus
-	found, err := repo.GetByUuid(context.Background(), uuid)
-	assert.NoError(t, err)
-	assert.Nil(t, found)
+	var saved domain.Renstra
+	err = db.Where("uuid = ?", deletedUUID).First(&saved).Error
+	assert.Error(t, err) // harus error karena sudah dihapus
 }
 
 // Test handler gagal karena UUID invalid
 func TestDeleteRenstraCommandHandler_InvalidUUID(t *testing.T) {
-	db, terminate := setupRenstraMySQL(t)
-	defer terminate()
-
-	repo := infra.NewRenstraRepository(db)
-	handler := &app.DeleteRenstraCommandHandler{
-		Repo: repo,
-	}
-
 	cmd := app.DeleteRenstraCommand{
 		Uuid: "invalid-uuid",
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	err := app.DeleteRenstraCommandValidation(cmd)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "UUID must be a valid UUIDv4 format")
 }
