@@ -57,7 +57,7 @@ func setupIndikatorRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	// Buat table & data contoh
 	err = gdb.Exec(`
         CREATE TABLE master_indikator_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_master_standar int(11) DEFAULT NULL,
             indikator text NOT NULL,
@@ -68,9 +68,6 @@ func setupIndikatorRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE master_indikator_renstra
-        ADD PRIMARY KEY (id);
 
         INSERT INTO master_indikator_renstra (id, uuid, id_master_standar, indikator, parent, tahun, tipe_target, operator, created_at, updated_at) VALUES
         (16, 'b763b5b3-a18e-416c-9d0d-a0c23aa6076c', 1, 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing', NULL, '2024', 'numerik', NULL, '2024-08-25 19:25:05', '2024-09-21 07:18:42'),
@@ -235,15 +232,12 @@ func setupIndikatorRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         (480, 'd0754056-4d55-4091-a13d-0fae624a7616', 211, 'tester', NULL, '2026', 'kategori', '>=', NULL, NULL);
 
         CREATE TABLE master_standar_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nama text NOT NULL,
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE master_standar_renstra
-        ADD PRIMARY KEY (id);
 
         INSERT INTO master_standar_renstra (id, uuid, nama, created_at, updated_at) VALUES
         (1, '5fd713d0-adfe-4086-a000-21c948faf84d', 'Standar Kompetensi Lulusan', '2024-08-09 09:35:07', '2024-08-25 19:24:41'),

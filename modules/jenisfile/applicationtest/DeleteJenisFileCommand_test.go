@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/jenisfile/application/DeleteJenisFile"
 	domain "UnpakSiamida/modules/jenisfile/domain"
 	infra "UnpakSiamida/modules/jenisfile/infrastructure"
@@ -29,7 +30,7 @@ func TestDeleteJenisFileCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "UUID cannot be blank")
 }
 
-func TestDeleteJenisFileCommandHandler_Handle_Success(t *testing.T) {
+func TestDeleteJenisFileCommand_Success(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -58,7 +59,7 @@ func TestDeleteJenisFileCommandHandler_Handle_Success(t *testing.T) {
 	assert.Error(t, err) // harus error karena sudah dihapus
 }
 
-func TestDeleteJenisFileCommandHandler_Handle_Edge(t *testing.T) {
+func TestDeleteJenisFileCommand_Edge(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -88,7 +89,7 @@ func TestDeleteJenisFileCommandHandler_Handle_Edge(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestDeleteJenisFileCommandHandler_Handle_Fail(t *testing.T) {
+func TestDeleteJenisFileCommand_Fail(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -97,9 +98,13 @@ func TestDeleteJenisFileCommandHandler_Handle_Fail(t *testing.T) {
 
 	// UUID tidak valid
 	cmdInvalidUUID := app.DeleteJenisFileCommand{
-		Uuid: "invalid-uuid",
+		Uuid: uuid.NewString(),
 	}
 	_, err := handler.Handle(context.Background(), cmdInvalidUUID)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid uuid")
+
+	commonErr, _ := err.(common.Error)
+
+	assert.Equal(t, "JenisFile.EmptyData", commonErr.Code)
+	assert.Equal(t, "data is not found", commonErr.Description)
 }

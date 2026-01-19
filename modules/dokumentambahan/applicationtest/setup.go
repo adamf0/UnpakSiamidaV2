@@ -136,7 +136,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS dokumen_tambahan;
         CREATE TABLE dokumen_tambahan (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
             id_renstra int(11) NOT NULL,
@@ -149,24 +149,18 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE dokumen_tambahan
-        ADD PRIMARY KEY (id);
-
         DROP TABLE IF EXISTS jenis_file_renstra;
         CREATE TABLE jenis_file_renstra (
-            id bigint(20) UNSIGNED NOT NULL,
+            id bigint(20) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nama text NOT NULL,
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE jenis_file_renstra
-        ADD PRIMARY KEY (id);
-
         DROP TABLE IF EXISTS renstra;
         CREATE TABLE renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             fakultas_unit_old int(11) DEFAULT NULL,
@@ -187,12 +181,9 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE renstra
-        ADD PRIMARY KEY (id);
-        
         DROP TABLE IF EXISTS template_dokumen_tambahan;
         CREATE TABLE template_dokumen_tambahan (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun varchar(100) NOT NULL,
             jenis_file bigint(11) UNSIGNED NOT NULL,
@@ -205,7 +196,6 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
         );
         
         ALTER TABLE template_dokumen_tambahan
-        ADD PRIMARY KEY (id),
         ADD UNIQUE KEY uq_template_dokumen (tahun,jenis_file,fakultas_prodi_unit);
 
         CREATE OR REPLACE VIEW v_fakultas_unit AS

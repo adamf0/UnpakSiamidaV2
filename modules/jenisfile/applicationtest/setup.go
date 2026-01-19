@@ -56,16 +56,13 @@ func setupJenisFileMySQL(t *testing.T) (*gorm.DB, func()) {
 
 	// Buat table & data contoh
 	err = gdb.Exec(`
-        CREATE TABLE jenis_file_renstra (
-            id bigint(20) AUTO_INCREMENT UNSIGNED NOT NULL,
+       CREATE TABLE jenis_file_renstra (
+            id bigint(20) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nama text NOT NULL,
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE jenis_file_renstra
-        ADD PRIMARY KEY (id);
 
         INSERT INTO jenis_file_renstra (id, uuid, nama, created_at, updated_at) VALUES
         (1, '14212231-792f-4935-bb1c-9a38695a4b6b', 'Program Kerja Sesuai Dengan Template 2024 disertai Monev', NULL, '2024-10-08 13:35:36'),

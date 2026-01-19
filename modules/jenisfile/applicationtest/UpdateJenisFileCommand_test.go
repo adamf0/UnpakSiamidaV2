@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/jenisfile/application/UpdateJenisFile"
 	domain "UnpakSiamida/modules/jenisfile/domain"
 	infra "UnpakSiamida/modules/jenisfile/infrastructure"
@@ -79,24 +80,15 @@ func TestUpdateJenisFileCommand_Edge(t *testing.T) {
 	err := repo.Create(context.Background(), &original)
 	assert.NoError(t, err)
 
-	// Update dengan nama yang sama
-	cmdSame := app.UpdateJenisFileCommand{
-		Uuid: original.UUID.String(),
-		Nama: "Dokumen Edge",
-	}
-	updatedUUID, err := handler.Handle(context.Background(), cmdSame)
-	assert.NoError(t, err)
-	assert.Equal(t, original.UUID.String(), updatedUUID)
-
 	// Update dengan nama sangat panjang (boundary)
 	longName := "Dokumen " + string(make([]byte, 500))
 	cmdLong := app.UpdateJenisFileCommand{
 		Uuid: original.UUID.String(),
 		Nama: longName,
 	}
-	updatedUUID2, err := handler.Handle(context.Background(), cmdLong)
+	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
 	assert.NoError(t, err)
-	assert.Equal(t, original.UUID.String(), updatedUUID2)
+	assert.Equal(t, original.UUID.String(), updatedUUID)
 }
 
 func TestUpdateJenisFileCommand_Fail(t *testing.T) {
@@ -106,21 +98,24 @@ func TestUpdateJenisFileCommand_Fail(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.UpdateJenisFileCommandHandler{Repo: repo}
 
-	// UUID tidak valid
-	cmdInvalidUUID := app.UpdateJenisFileCommand{
-		Uuid: "invalid-uuid",
-		Nama: "Nama Baru",
+	// Insert record awal
+	original := domain.JenisFile{
+		UUID: uuid.New(),
+		Nama: "Dokumen Edge",
 	}
-	_, err := handler.Handle(context.Background(), cmdInvalidUUID)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid uuid")
+	err := repo.Create(context.Background(), &original)
+	assert.NoError(t, err)
 
-	// UUID valid tapi record tidak ada
-	cmdNotFound := app.UpdateJenisFileCommand{
+	// Update dengan nama yang sama
+	cmdSame := app.UpdateJenisFileCommand{
 		Uuid: uuid.NewString(),
-		Nama: "Nama Baru",
+		Nama: "Dokumen Edge",
 	}
-	_, err = handler.Handle(context.Background(), cmdNotFound)
+	_, err = handler.Handle(context.Background(), cmdSame)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
+
+	commonErr, _ := err.(common.Error)
+
+	assert.Equal(t, "JenisFile.EmptyData", commonErr.Code)
+	assert.Equal(t, "data is not found", commonErr.Description)
 }

@@ -57,7 +57,7 @@ func setupGenerateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	// Buat table & data contoh
 	err = gdb.Exec(`
         CREATE TABLE master_indikator_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_master_standar int(11) DEFAULT NULL,
             indikator text NOT NULL,
@@ -69,11 +69,8 @@ func setupGenerateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE master_indikator_renstra
-        ADD PRIMARY KEY (id);
-
         CREATE TABLE renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             fakultas_unit_old int(11) DEFAULT NULL,
@@ -93,9 +90,6 @@ func setupGenerateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE renstra
-        ADD PRIMARY KEY (id);
 
         CREATE TABLE renstra_nilai (
             id int(11) NOT NULL,

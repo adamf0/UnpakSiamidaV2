@@ -79,7 +79,7 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	err = gdb.Exec(`
         DROP TABLE IF EXISTS dokumen_tambahan;
         CREATE TABLE dokumen_tambahan (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
             id_renstra int(11) NOT NULL,
@@ -92,12 +92,9 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE dokumen_tambahan
-        ADD PRIMARY KEY (id);
-
         DROP TABLE IF EXISTS master_indikator_renstra;
         CREATE TABLE master_indikator_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_master_standar int(11) DEFAULT NULL,
             indikator text NOT NULL,
@@ -109,12 +106,9 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE master_indikator_renstra
-        ADD PRIMARY KEY (id);
-
         DROP TABLE IF EXISTS renstra;
         CREATE TABLE renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             fakultas_unit_old int(11) DEFAULT NULL,
@@ -134,13 +128,10 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE renstra
-        ADD PRIMARY KEY (id);
         
         DROP TABLE IF EXISTS renstra_nilai;
         CREATE TABLE renstra_nilai (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
             id_renstra int(11) NOT NULL,
@@ -155,9 +146,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        ALTER TABLE renstra_nilai
-        ADD PRIMARY KEY (id);
-
         DROP TABLE IF EXISTS sijamu_fakultas_unit;
         CREATE TABLE sijamu_fakultas_unit (
             id int(11) NOT NULL,
@@ -171,7 +159,7 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS template_renstra;
         CREATE TABLE template_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             indikator int(11) NOT NULL,
@@ -187,9 +175,6 @@ func setupTahunRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at datetime DEFAULT NULL,
             updated_at datetime DEFAULT NULL
         );
-
-        ALTER TABLE template_renstra
-        ADD PRIMARY KEY (id);
 
         CREATE OR REPLACE VIEW v_tahun_renstra AS
         SELECT
