@@ -118,28 +118,119 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 		UserRepo:         repoUser,
 	}
 
-	uuid := uuid.NewString()
+	invalidUuid := uuid.NewString()
 
-	// UUID renstra tidak ditemukan
-	cmd := app.UpdateRenstraCommand{
-		Uuid:                          uuid,
-		FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-		Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
-		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
-		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
-		Tahun:                         "2031",
-		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
-		PeriodeUploadAkhir:            time.Now().Add(1 * 24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(2 * 24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(3 * 24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(4 * 24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(5 * 24 * time.Hour).Format("2006-01-02"),
+	tests := []struct {
+		name       string
+		cmd        app.UpdateRenstraCommand
+		expectCode string
+		expectDesc string
+	}{
+		{
+			"NotFound",
+			app.UpdateRenstraCommand{
+				Uuid:                          invalidUuid,
+				FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+				Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
+				Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+				Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+				Tahun:                         "2031",
+				PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+				PeriodeUploadAkhir:            time.Now().Add(1 * 24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenMulai:  time.Now().Add(2 * 24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenAkhir:  time.Now().Add(3 * 24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganMulai: time.Now().Add(4 * 24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganAkhir: time.Now().Add(5 * 24 * time.Hour).Format("2006-01-02"),
+			},
+			"Renstra.NotFound",
+			fmt.Sprintf("Renstra with identifier %s not found", invalidUuid),
+		},
+		{
+			"InvalidFakultasUnit",
+			app.UpdateRenstraCommand{
+				Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
+				FakultasUnit:                  "dea9a83f-70b3-4295-85ed-000000000000",
+				Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
+				Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+				Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+				Tahun:                         "2031",
+				PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+				PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+			},
+			"Renstra.InvalidFakultasUnit",
+			"fakultas unit is invalid",
+		},
+		{
+			"MissingAuditee",
+			app.UpdateRenstraCommand{
+				Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
+				FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+				Auditee:                       "c7fd1d83-2d34-42a7-9cfe-000000000000",
+				Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+				Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+				Tahun:                         "2031",
+				PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+				PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+			},
+			"Renstra.MissingAuditee",
+			"auditee have not been assigned",
+		},
+		{
+			"MissingAuditor1",
+			app.UpdateRenstraCommand{
+				Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
+				FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+				Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
+				Auditor1:                      "56ce6c95-e23f-463b-bcf6-000000000000",
+				Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+				Tahun:                         "2031",
+				PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+				PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+			},
+			"Renstra.MissingAuditor1",
+			"auditor1 have not been assigned",
+		},
+		{
+			"MissingAuditor2",
+			app.UpdateRenstraCommand{
+				Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
+				FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+				Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
+				Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+				Auditor2:                      "63b1c4b2-5e13-407f-a9fc-000000000000",
+				Tahun:                         "2031",
+				PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
+				PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
+				PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+			},
+			"Renstra.MissingAuditor2",
+			"auditor2 have not been assigned",
+		},
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
-	assert.Error(t, err)
-	commonErr, ok := err.(common.Error)
-	assert.True(t, ok)
-	assert.Contains(t, commonErr.Code, "Renstra.NotFound")
-	assert.Contains(t, commonErr.Description, fmt.Sprintf("Renstra with identifier %s not found", uuid))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := handler.Handle(context.Background(), tt.cmd)
+			assert.Error(t, err)
+			commonErr, ok := err.(common.Error)
+			assert.True(t, ok)
+			assert.Contains(t, commonErr.Code, tt.expectCode)
+			assert.Contains(t, commonErr.Description, tt.expectDesc)
+		})
+	}
 }

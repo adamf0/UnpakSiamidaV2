@@ -8,7 +8,6 @@ import (
 	domainuser "UnpakSiamida/modules/user/domain"
 	"time"
 
-	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -26,7 +25,6 @@ func (h *UpdateRenstraCommandHandler) Handle(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	godump.Dump(cmd)
 	renstraUUID, err := uuid.Parse(cmd.Uuid)
 	if err != nil {
 		return "", domainrenstra.InvalidUuid()

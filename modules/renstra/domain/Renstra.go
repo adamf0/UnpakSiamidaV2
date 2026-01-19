@@ -6,7 +6,6 @@ import (
 	common "UnpakSiamida/common/domain"
 	event "UnpakSiamida/modules/renstra/event"
 
-	"github.com/goforj/godump"
 	"github.com/google/uuid"
 )
 
@@ -182,16 +181,6 @@ func UpdateRenstra(
 	auditee, auditor1, auditor2 uint,
 ) common.ResultValue[*Renstra] {
 
-	godump.Dump(
-		prev,
-		uid,
-		tahun,
-		fakultasUnit,
-		periodeUploadMulai,
-		periodeDokumenMulai,
-		periodeLapanganMulai,
-		auditee,
-	)
 	if prev == nil {
 		return common.FailureValue[*Renstra](EmptyData())
 	}
