@@ -14,7 +14,7 @@ func InvalidUuid() domain.Error {
 }
 
 func JenisFileNotFound() domain.Error {
-	return domain.NotFoundError("TemplateDokumenTambahan.JenisFileNotFound", "fakultas unit not found")
+	return domain.NotFoundError("TemplateDokumenTambahan.JenisFileNotFound", "JenisFile is not found")
 }
 
 func InvalidData() domain.Error {
@@ -22,5 +22,5 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("TemplateDokumenTambahan.NotFound", fmt.Sprintf("TemplateDokumenTambahan with identifier %s not found", id) )
+	return domain.NotFoundError("TemplateDokumenTambahan.NotFound", fmt.Sprintf("TemplateDokumenTambahan with identifier %s not found", id))
 }

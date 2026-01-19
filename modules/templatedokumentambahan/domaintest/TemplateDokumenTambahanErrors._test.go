@@ -36,7 +36,7 @@ func TestTemplateDokumenTambahanErrors(t *testing.T) {
 			name:         "JenisFileNotFound_ReturnsCorrectError",
 			err:          domain.JenisFileNotFound(),
 			expectedCode: "TemplateDokumenTambahan.JenisFileNotFound",
-			expectedDesc: "fakultas unit not found",
+			expectedDesc: "JenisFile is not found",
 		},
 		{
 			name:         "InvalidData_ReturnsCorrectError",

@@ -30,7 +30,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 			"MYSQL_DATABASE":      "testdb",
 		},
 		Labels: map[string]string{
-			"testcontainers.sessionId": "tahunrenstra",
+			"testcontainers.sessionId": "renstra",
 		},
 		ExposedPorts: []string{"3306/tcp"},
 		WaitingFor: wait.ForListeningPort("3306/tcp").
@@ -68,7 +68,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 	err = gdb.Exec(`
         DROP TABLE IF EXISTS users;
         CREATE TABLE users (
-            id bigint(20) UNSIGNED NOT NULL,
+            id bigint(20) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nidn_username varchar(255) NOT NULL,
             password varchar(255) NOT NULL,
@@ -143,7 +143,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS sijamu_fakultas_unit;
         CREATE TABLE sijamu_fakultas_unit (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             kode_fakultas char(9) DEFAULT NULL,
             kode_prodi char(10) DEFAULT NULL,

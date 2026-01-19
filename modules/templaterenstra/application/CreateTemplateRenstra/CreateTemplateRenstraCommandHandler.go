@@ -2,21 +2,23 @@ package application
 
 import (
 	"context"
-	"golang.org/x/sync/errgroup"
+
 	"github.com/google/uuid"
-	
-	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
-	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	"golang.org/x/sync/errgroup"
+
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
 	"errors"
-    "gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type CreateTemplateRenstraCommandHandler struct {
-	Repo                	domaintemplaterenstra.ITemplateRenstraRepository
-	IndikatorRenstraRepo    domainindikatorrenstra.IIndikatorRenstraRepository
-	FakultasUnitRepo    	domainfakultasunit.IFakultasUnitRepository
+	Repo                 domaintemplaterenstra.ITemplateRenstraRepository
+	IndikatorRenstraRepo domainindikatorrenstra.IIndikatorRenstraRepository
+	FakultasUnitRepo     domainfakultasunit.IFakultasUnitRepository
 }
 
 func (h *CreateTemplateRenstraCommandHandler) Handle(
@@ -37,8 +39,8 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 	}
 
 	var (
-		indikatorDefault     *domainindikatorrenstra.IndikatorRenstraDefault
-		fakultasunitDefault  *domainfakultasunit.FakultasUnit
+		indikatorDefault    *domainindikatorrenstra.IndikatorRenstraDefault
+		fakultasunitDefault *domainfakultasunit.FakultasUnit
 	)
 
 	g, gctx := errgroup.WithContext(context.Background())
@@ -49,7 +51,7 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domaintemplaterenstra.IndikatorNotFound()
 			}
-			return err;
+			return err
 		}
 		indikatorDefault = r
 		return nil
@@ -71,16 +73,10 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 		return "", err
 	}
 
-	// b, _ := json.MarshalIndent(fakultasunitDefault, "", "  ")
-	// fmt.Println("DEBUG fakultasunitDefault:", string(b))
-	
-	// c, _ := json.MarshalIndent(indikatorDefault, "", "  ")
-	// fmt.Println("DEBUG indikatorDefault:", string(c))
-
 	result := domaintemplaterenstra.NewTemplateRenstra(
 		cmd.Tahun,
 		indikatorDefault.Id,
-		cmd.IsPertanyaan=="1",
+		cmd.IsPertanyaan == "1",
 		fakultasunitDefault.ID,
 		cmd.Kategori,
 		cmd.Klasifikasi,

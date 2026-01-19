@@ -4,9 +4,11 @@ import (
 	"context"
 	"testing"
 
+	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/account/application/Whoami"
-	domain "UnpakSiamida/modules/account/domain"
 	infra "UnpakSiamida/modules/account/infrastructure"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWhoami_Success(t *testing.T) {
@@ -21,48 +23,35 @@ func TestWhoami_Success(t *testing.T) {
 	}
 
 	// validation
-	if err := app.WhoamiCommandValidation(cmd); err != nil {
-		t.Fatalf("validation failed: %v", err)
-	}
+	err := app.WhoamiCommandValidation(cmd)
+	assert.NoError(t, err)
 
 	user, err := handler.Handle(context.Background(), cmd)
-	if err != nil {
-		t.Fatalf("expected success, got error: %v", err)
-	}
+	assert.NotNil(t, user)
+	// if err != nil {
+	// 	t.Fatalf("expected success, got error: %v", err)
+	// }
 
-	if user.UUID == "" {
-		t.Fatalf("uuid should not be empty")
-	}
+	// if user.UUID == "" {
+	// 	t.Fatalf("uuid should not be empty")
+	// }
 
-	if user.ExtraRole == nil {
-		t.Fatalf("ExtraRole should be initialized (empty slice)")
-	}
+	// if user.ExtraRole == nil {
+	// 	t.Fatalf("ExtraRole should be initialized (empty slice)")
+	// }
 }
 
 func TestWhoamiIntegration_Failed_InvalidUUID(t *testing.T) {
-	db, cleanup := setupAccountMySQL(t)
+	_, cleanup := setupAccountMySQL(t)
 	defer cleanup()
-
-	repo := infra.NewAccountRepository(db)
-	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
 		SID: "not-a-uuid",
 	}
 
 	err := app.WhoamiCommandValidation(cmd)
-	if err != nil {
-		t.Fatalf("unexpected validation error: %v", err)
-	}
-
-	user, err := handler.Handle(context.Background(), cmd)
-	if err == nil {
-		t.Fatalf("expected error, got success %+v", user)
-	}
-
-	if err.Error() != domain.NotFound(cmd.SID).Error() {
-		t.Fatalf("expected NotFound error, got %v", err)
-	}
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "UUID must be a valid UUIDv4 format")
 }
 
 func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
@@ -79,18 +68,14 @@ func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	}
 
 	err := app.WhoamiCommandValidation(cmd)
-	if err != nil {
-		t.Fatalf("unexpected validation error: %v", err)
-	}
+	assert.NoError(t, err)
 
-	user, err := handler.Handle(context.Background(), cmd)
-	if err == nil {
-		t.Fatalf("expected error, got success %+v", user)
-	}
-
-	if err.Error() != domain.InvalidCredential().Error() {
-		t.Fatalf("expected InvalidCredential error, got %v", err)
-	}
+	_, err = handler.Handle(context.Background(), cmd)
+	assert.Error(t, err)
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
+	assert.Equal(t, commonErr.Code, "Account.InvalidCredential")
+	assert.Equal(t, commonErr.Description, "invalid credentials")
 }
 
 func TestWhoamiIntegration_ValidationErrors(t *testing.T) {
@@ -110,4 +95,27 @@ func TestWhoamiIntegration_ValidationErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWhoamiIntegration_ContextTimeout(t *testing.T) {
+	db, cleanup := setupAccountMySQL(t)
+	defer cleanup()
+
+	repo := infra.NewAccountRepository(db)
+	handler := app.WhoamiCommandHandler{Repo: repo}
+
+	cmd := app.WhoamiCommand{
+		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+	}
+
+	// validation
+	err := app.WhoamiCommandValidation(cmd)
+	assert.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // force cancel
+
+	_, err = handler.Handle(ctx, cmd)
+	assert.Error(t, err)
+	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
 }

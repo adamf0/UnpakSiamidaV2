@@ -2,20 +2,20 @@ package application
 
 import (
 	"context"
+
 	"github.com/google/uuid"
-	
-	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
+
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
+	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
 	"errors"
-    "gorm.io/gorm"
-	"encoding/json"
-	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type CreateTemplateDokumenTambahanCommandHandler struct {
-	Repo                	domaintemplatedokumentambahan.ITemplateDokumenTambahanRepository
-	JenisFileRepo    		domainjenisfile.IJenisFileRepository
+	Repo          domaintemplatedokumentambahan.ITemplateDokumenTambahanRepository
+	JenisFileRepo domainjenisfile.IJenisFileRepository
 }
 
 func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
@@ -24,9 +24,6 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 ) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	
-	x, _ := json.MarshalIndent(cmd, "", "  ")
-	fmt.Println("DEBUG cmd:", string(x))
 
 	uuidJenisFile, err := uuid.Parse(cmd.JenisFile)
 	if err != nil {
@@ -34,19 +31,14 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 	}
 
 	jenisfile, err := h.JenisFileRepo.GetDefaultByUuid(ctx, uuidJenisFile)
-	b, _ := json.MarshalIndent(jenisfile, "", "  ")
-	fmt.Println("DEBUG jenisfile:", string(b))
-	
+
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", domaintemplatedokumentambahan.JenisFileNotFound()
 		}
 
-		return "", err;
+		return "", err
 	}
-	
-	// c, _ := json.MarshalIndent(jenisfile, "", "  ")
-	// fmt.Println("DEBUG jenisfile:", string(c))
 
 	result := domaintemplatedokumentambahan.NewTemplateDokumenTambahan(
 		cmd.Tahun,
@@ -62,9 +54,6 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 	}
 
 	templateDokumenTambahan := result.Value
-
-	// b, _ := json.MarshalIndent(templateDokumenTambahan, "", "  ")
-	// fmt.Println("DEBUG templateDokumenTambahan:", string(b))
 
 	// --------------------------
 	// SAVE REPOSITORY

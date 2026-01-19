@@ -1,14 +1,15 @@
 package infrastructure
 
 import (
-	"context"
 	commondomain "UnpakSiamida/common/domain"
 	domainrenstranilai "UnpakSiamida/modules/renstranilai/domain"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
-	"errors"
 )
 
 type RenstraNilaiRepository struct {
@@ -43,12 +44,12 @@ func (r *RenstraNilaiRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (
 // ------------------------
 // GET DEFAULT BY UUID
 // ------------------------
-func (r *RenstraNilaiRepository) GetDefaultByUuid(
-    ctx context.Context,
-    id uuid.UUID,
+func (r *RenstraNilaiRepository) GetDefaultByUuid( //[pr] ini salah, ini tanpa kts
+	ctx context.Context,
+	id uuid.UUID,
 ) (*domainrenstranilai.RenstraNilaiDefault, error) {
 
-    query := `
+	query := `
         SELECT 
 			k.id AS ID,
 			k.uuid AS UUID,
@@ -119,25 +120,25 @@ func (r *RenstraNilaiRepository) GetDefaultByUuid(
         LIMIT 1
     `
 
-    var rowData domainrenstranilai.RenstraNilaiDefault
+	var rowData domainrenstranilai.RenstraNilaiDefault
 
-    res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-    if res.Error != nil {
-        if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-            return nil, gorm.ErrRecordNotFound
-        }
-        return nil, res.Error
-    }
+	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, res.Error
+	}
 
-    if rowData.ID == 0 {
-        return nil, gorm.ErrRecordNotFound
-    }
+	if rowData.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
-    return &rowData, nil
+	return &rowData, nil
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
+	// key:param -> db column
 	// "uuidrenstra":      "r.uuid",
 }
 
@@ -363,7 +364,6 @@ func (r *RenstraNilaiRepository) GetAll(
 
 	return result, total, nil
 }
-
 
 // ------------------------
 // UPDATE

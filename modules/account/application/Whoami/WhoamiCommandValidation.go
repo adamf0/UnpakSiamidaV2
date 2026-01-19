@@ -9,7 +9,8 @@ import (
 func WhoamiCommandValidation(cmd WhoamiCommand) error {
 	return validation.ValidateStruct(&cmd,
 		validation.Field(&cmd.SID,
-			validation.Required.Error("Username cannot be blank"),
+			validation.Required.Error("SID cannot be blank"),
+			validation.By(helper.ValidateUUIDv4),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)

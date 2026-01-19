@@ -1,14 +1,15 @@
 package infrastructure
 
 import (
-	"context"
 	commondomaintemplatedokumentambahan "UnpakSiamida/common/domain"
 	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"strings"
-	"fmt"
 )
 
 type TemplateDokumenTambahanRepository struct {
@@ -41,125 +42,13 @@ func (r *TemplateDokumenTambahanRepository) GetByUuid(ctx context.Context, uid u
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "tahun":          	"dt.tahun",
-	"pertanyaan":     	"dt.pertanyaan",
-	"kategori":         "dt.fakultas_prodi_unit",
-	"jenisfileuuid":    "jf.uuid",
+	// key:param -> db column
+	"tahun":         "dt.tahun",
+	"pertanyaan":    "dt.pertanyaan",
+	"kategori":      "dt.fakultas_prodi_unit",
+	"jenisfileuuid": "jf.uuid",
 }
 
-// ------------------------
-// GET ALL
-// ------------------------
-// func (r *TemplateDokumenTambahanRepository) GetAll(
-// 	ctx context.Context,
-// 	search string,
-// 	searchFilters []commondomaintemplatedokumentambahan.SearchFilter,
-// 	page, limit *int,
-// ) ([]domaintemplatedokumentambahan.TemplateDokumenTambahan, int64, error) {
-
-// 	var templatedokumentambahans []domaintemplatedokumentambahan.TemplateDokumenTambahan
-// 	var total int64
-
-// 	db := r.db.WithContext(ctx).Model(&domaintemplatedokumentambahan.TemplateDokumenTambahan{})
-
-// 	// -------------------------------
-// 	// SEARCH FILTERS (ADVANCED)
-// 	// -------------------------------
-// 	if len(searchFilters) > 0 {
-// 		for _, f := range searchFilters {
-// 			field := strings.TrimSpace(strings.ToLower(f.Field))
-// 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
-// 			var value string
-// 			if f.Value != nil {
-// 				value = strings.TrimSpace(*f.Value)
-// 			} else {
-// 				value = "" // nil dianggap kosong
-// 			}
-
-// 			// if value == "" {
-// 			// 	continue
-// 			// }
-
-// 			// Validate allowed column
-// 			col, ok := allowedSearchColumns[field]
-// 			if !ok {
-// 				continue // skip unknown field
-// 			}
-
-// 			switch operator {
-// 			case "eq":
-// 				db = db.Where(fmt.Sprintf("%s = ?", col), value)
-// 			case "neq":
-// 				db = db.Where(fmt.Sprintf("%s <> ?", col), value)
-// 			case "like":
-// 				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-// 			case "gt":
-// 				db = db.Where(fmt.Sprintf("%s > ?", col), value)
-// 			case "gte":
-// 				db = db.Where(fmt.Sprintf("%s >= ?", col), value)
-// 			case "lt":
-// 				db = db.Where(fmt.Sprintf("%s < ?", col), value)
-// 			case "lte":
-// 				db = db.Where(fmt.Sprintf("%s <= ?", col), value)
-// 			case "in":
-// 				db = db.Where(fmt.Sprintf("%s IN (?)", col), strings.Split(value, ","))
-// 			default:
-// 				// default fallback → LIKE
-// 				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-// 			}
-// 		}
-
-// 	}
-// 	if strings.TrimSpace(search) != "" {
-
-// 		// -------------------------------
-// 		// GLOBAL SEARCH
-// 		// -------------------------------
-// 		like := "%" + search + "%"
-// 		var orParts []string
-// 		var params []interface{}
-
-// 		for _, col := range allowedSearchColumns {
-// 			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
-// 			params = append(params, like)
-// 		}
-
-// 		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
-// 	}
-
-// 	// -------------------------------
-// 	// COUNT
-// 	// -------------------------------
-// 	if err := db.Count(&total).Error; err != nil {
-// 		return nil, 0, err
-// 	}
-
-// 	// -------------------------------
-// 	// PAGINATION
-// 	// -------------------------------
-// 	if page != nil && limit != nil && *limit > 0 {
-// 		p := *page
-// 		l := *limit
-
-// 		if p < 1 {
-// 			p = 1
-// 		}
-
-// 		offset := (p - 1) * l
-// 		db = db.Offset(offset).Limit(l)
-// 	}
-
-// 	// -------------------------------
-// 	// EXECUTE QUERY
-// 	// -------------------------------
-// 	if err := db.Find(&templatedokumentambahans).Error; err != nil {
-// 		return nil, 0, err
-// 	}
-
-// 	return templatedokumentambahans, total, nil
-// }
 func (r *TemplateDokumenTambahanRepository) GetAll(
 	ctx context.Context,
 	search string,

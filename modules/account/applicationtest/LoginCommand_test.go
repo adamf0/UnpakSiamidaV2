@@ -7,6 +7,8 @@ import (
 	app "UnpakSiamida/modules/account/application/Login"
 	domain "UnpakSiamida/modules/account/domain"
 	infra "UnpakSiamida/modules/account/infrastructure"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLogin_Success(t *testing.T) {
@@ -104,7 +106,6 @@ func TestLoginIntegration_ContextTimeout(t *testing.T) {
 		Password: "123",
 	})
 
-	if err == nil {
-		t.Fatalf("expected context canceled error")
-	}
+	assert.Error(t, err)
+	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
 }

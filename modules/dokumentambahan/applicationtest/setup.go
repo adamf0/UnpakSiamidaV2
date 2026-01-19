@@ -30,7 +30,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 			"MYSQL_DATABASE":      "testdb",
 		},
 		Labels: map[string]string{
-			"testcontainers.sessionId": "tahunrenstra",
+			"testcontainers.sessionId": "dokumentambahan",
 		},
 		ExposedPorts: []string{"3306/tcp"},
 		WaitingFor: wait.ForListeningPort("3306/tcp").
