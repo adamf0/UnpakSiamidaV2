@@ -92,11 +92,11 @@ func TestUpdateRenstraCommandHandler_Success(t *testing.T) {
 		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
 		Tahun:                         "2031",
 		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
-		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+		PeriodeUploadAkhir:            time.Now().Add(1 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenMulai:  time.Now().Add(2 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenAkhir:  time.Now().Add(3 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganMulai: time.Now().Add(4 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganAkhir: time.Now().Add(5 * 24 * time.Hour).Format("2006-01-02"),
 	}
 
 	_, err := handler.Handle(context.Background(), cmd)
@@ -129,11 +129,11 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
 		Tahun:                         "2031",
 		PeriodeUploadMulai:            time.Now().Format("2006-01-02"),
-		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentDokumenAkhir:  time.Now().Add(27 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganMulai: time.Now().Add(28 * time.Hour).Format("2006-01-02"),
-		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
+		PeriodeUploadAkhir:            time.Now().Add(1 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenMulai:  time.Now().Add(2 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentDokumenAkhir:  time.Now().Add(3 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganMulai: time.Now().Add(4 * 24 * time.Hour).Format("2006-01-02"),
+		PeriodeAssesmentLapanganAkhir: time.Now().Add(5 * 24 * time.Hour).Format("2006-01-02"),
 	}
 
 	_, err := handler.Handle(context.Background(), cmd)
