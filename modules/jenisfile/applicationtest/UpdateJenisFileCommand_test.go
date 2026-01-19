@@ -2,6 +2,7 @@ package applicationtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	common "UnpakSiamida/common/domain"
@@ -106,9 +107,10 @@ func TestUpdateJenisFileCommand_Fail(t *testing.T) {
 	err := repo.Create(context.Background(), &original)
 	assert.NoError(t, err)
 
+	uuid := uuid.NewString()
 	// Update dengan nama yang sama
 	cmdSame := app.UpdateJenisFileCommand{
-		Uuid: uuid.NewString(),
+		Uuid: uuid,
 		Nama: "Dokumen Edge",
 	}
 	_, err = handler.Handle(context.Background(), cmdSame)
@@ -116,6 +118,6 @@ func TestUpdateJenisFileCommand_Fail(t *testing.T) {
 
 	commonErr, _ := err.(common.Error)
 
-	assert.Equal(t, "JenisFile.EmptyData", commonErr.Code)
-	assert.Equal(t, "data is not found", commonErr.Description)
+	assert.Equal(t, "JenisFile.NotFound", commonErr.Code)
+	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", uuid), commonErr.Description)
 }
