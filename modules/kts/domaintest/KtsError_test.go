@@ -13,7 +13,7 @@ import (
 // ====================
 // KTS ERROR TESTS
 // ====================
-func KtsErrors(t *testing.T) {
+func TestKtsErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

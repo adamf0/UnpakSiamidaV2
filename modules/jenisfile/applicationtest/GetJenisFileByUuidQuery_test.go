@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/jenisfile/infrastructure"
 )
 
-func GetJenisFileByUuid_Success(t *testing.T) {
+func TestGetJenisFileByUuid_Success(t *testing.T) {
 	db, cleanup := setupJenisFileMySQL(t)
 	defer cleanup()
 
@@ -31,7 +31,7 @@ func GetJenisFileByUuid_Success(t *testing.T) {
 	}
 }
 
-func GetJenisFileByUuid_Errors(t *testing.T) {
+func TestGetJenisFileByUuid_Errors(t *testing.T) {
 	db, cleanup := setupJenisFileMySQL(t)
 	defer cleanup()
 

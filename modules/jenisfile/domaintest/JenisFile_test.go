@@ -13,7 +13,7 @@ import (
 // ====================
 // CREATE SUCCESS
 // ====================
-func NewJenisFile_Success(t *testing.T) {
+func TestNewJenisFile_Success(t *testing.T) {
 	nama := "Dokumen Pendukung"
 	res := domain.NewJenisFile(nama)
 
@@ -28,7 +28,7 @@ func NewJenisFile_Success(t *testing.T) {
 // ====================
 // UPDATE SUCCESS
 // ====================
-func UpdateJenisFile_Success(t *testing.T) {
+func TestUpdateJenisFile_Success(t *testing.T) {
 	// buat entity awal
 	res := domain.NewJenisFile("Awal")
 	require.True(t, res.IsSuccess)
@@ -46,7 +46,7 @@ func UpdateJenisFile_Success(t *testing.T) {
 // ====================
 // UPDATE FAIL CASES
 // ====================
-func UpdateJenisFile_Fail(t *testing.T) {
+func TestUpdateJenisFile_Fail(t *testing.T) {
 	prev := &domain.JenisFile{
 		UUID: uuid.New(),
 		Nama: "Awal",
@@ -88,7 +88,7 @@ func UpdateJenisFile_Fail(t *testing.T) {
 // ====================
 // EDGE CASES
 // ====================
-func JenisFile_EdgeCases(t *testing.T) {
+func TestJenisFile_EdgeCases(t *testing.T) {
 	// 1. Nama kosong
 	res := domain.NewJenisFile("")
 	require.True(t, res.IsSuccess)

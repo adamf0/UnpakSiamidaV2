@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func AccountErrors(t *testing.T) {
+func TestAccountErrors(t *testing.T) {
 
 	tests := []struct {
 		name         string

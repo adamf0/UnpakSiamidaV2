@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/dokumentambahan/infrastructure"
 )
 
-func GetDokumenTambahanDefaultByUuid_Success(t *testing.T) {
+func TestGetDokumenTambahanDefaultByUuid_Success(t *testing.T) {
 	db, cleanup := setupDokumenTambahanMySQL(t)
 	defer cleanup()
 
@@ -31,7 +31,7 @@ func GetDokumenTambahanDefaultByUuid_Success(t *testing.T) {
 	}
 }
 
-func GetDokumenTambahanDefaultByUuid_Errors(t *testing.T) {
+func TestGetDokumenTambahanDefaultByUuid_Errors(t *testing.T) {
 	db, cleanup := setupDokumenTambahanMySQL(t)
 	defer cleanup()
 

@@ -11,7 +11,7 @@ import (
 	infra "UnpakSiamida/modules/user/infrastructure"
 )
 
-func GetAllUsersIntegration(t *testing.T) {
+func TestGetAllUsersIntegration(t *testing.T) {
 	db, cleanup := setupUserMySQL(t)
 	defer cleanup()
 

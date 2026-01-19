@@ -18,7 +18,7 @@ func ptr(s string) *string {
 // ====================
 // CREATE
 // ====================
-func NewTemplateDokumenTambahan_Success(t *testing.T) {
+func TestNewTemplateDokumenTambahan_Success(t *testing.T) {
 	result := domain.NewTemplateDokumenTambahan(
 		"2025",       // tahun
 		1,            // jenisFileID
@@ -43,7 +43,7 @@ func NewTemplateDokumenTambahan_Success(t *testing.T) {
 // ====================
 // CREATE NEGATIVE (jenisFileID <=0)
 // ====================
-func NewTemplateDokumenTambahan_Fail_InvalidJenisFileID(t *testing.T) {
+func TestNewTemplateDokumenTambahan_Fail_InvalidJenisFileID(t *testing.T) {
 	result := domain.NewTemplateDokumenTambahan(
 		"2025", 0, "Pertanyaan", "Klasifikasi", "Kategori", "Tugas",
 	)
@@ -54,7 +54,7 @@ func NewTemplateDokumenTambahan_Fail_InvalidJenisFileID(t *testing.T) {
 // ====================
 // UPDATE POSITIVE
 // ====================
-func UpdateTemplateDokumenTambahan_Success(t *testing.T) {
+func TestUpdateTemplateDokumenTambahan_Success(t *testing.T) {
 	prev := domain.NewTemplateDokumenTambahan(
 		"2025", 1, "Pertanyaan Lama", "Klasifikasi", "Kategori", "Tugas",
 	).Value
@@ -62,8 +62,8 @@ func UpdateTemplateDokumenTambahan_Success(t *testing.T) {
 	result := domain.UpdateTemplateDokumenTambahan(
 		prev,
 		prev.UUID,
-		"2026", // tahun
-		2,      // jenisFileID
+		"2026",       // tahun
+		2,            // jenisFileID
 		"Pertanyaan Baru",
 		"Klasifikasi Baru",
 		"Kategori Baru",
@@ -83,7 +83,7 @@ func UpdateTemplateDokumenTambahan_Success(t *testing.T) {
 // ====================
 // UPDATE NEGATIVE
 // ====================
-func UpdateTemplateDokumenTambahan_NegativeCases(t *testing.T) {
+func TestUpdateTemplateDokumenTambahan_NegativeCases(t *testing.T) {
 	valid := domain.NewTemplateDokumenTambahan(
 		"2025", 1, "Pertanyaan", "Klasifikasi", "Kategori", "Tugas",
 	).Value

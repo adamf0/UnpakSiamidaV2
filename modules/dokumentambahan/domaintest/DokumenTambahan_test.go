@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func UpdateDokumenTambahan_Success(t *testing.T) {
+func TestUpdateDokumenTambahan_Success(t *testing.T) {
 	baseUUID := uuid.New()
 	renstraUUID := uuid.New()
 	link := "file.pdf"
@@ -76,7 +76,7 @@ func UpdateDokumenTambahan_Success(t *testing.T) {
 	}
 }
 
-func UpdateDokumenTambahan_FailAndEdgeCases(t *testing.T) {
+func TestUpdateDokumenTambahan_FailAndEdgeCases(t *testing.T) {
 	baseUUID := uuid.New()
 	renstraUUID := uuid.New()
 	prev := &domain.DokumenTambahan{

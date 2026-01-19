@@ -13,7 +13,7 @@ import (
 // ------------------------------
 // SUCCESS
 // ------------------------------
-func GetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
+func TestGetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 
@@ -38,7 +38,7 @@ func GetIndikatorRenstraDefaultByUuid_Success(t *testing.T) {
 // ------------------------------
 // ERROR CASES
 // ------------------------------
-func GetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
+func TestGetIndikatorRenstraDefaultByUuid_Errors(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 

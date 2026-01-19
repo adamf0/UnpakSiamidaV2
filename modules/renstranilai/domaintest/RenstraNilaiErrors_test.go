@@ -13,7 +13,7 @@ import (
 // =========================
 // RENSTRA NILAI ERROR TESTS
 // =========================
-func RenstraNilaiErrors(t *testing.T) {
+func TestRenstraNilaiErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

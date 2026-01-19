@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/tahunrenstra/infrastructure"
 )
 
-func GetAllTahunRenstras_Basic(t *testing.T) {
+func TestGetAllTahunRenstras_Basic(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
 	defer cleanup()
 
@@ -40,7 +40,7 @@ func GetAllTahunRenstras_Basic(t *testing.T) {
 	}
 }
 
-func GetAllTahunRenstras_Filter(t *testing.T) {
+func TestGetAllTahunRenstras_Filter(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
 	defer cleanup()
 
@@ -99,7 +99,7 @@ func GetAllTahunRenstras_Filter(t *testing.T) {
 	}
 }
 
-func GetAllTahunRenstras_GlobalSearch(t *testing.T) {
+func TestGetAllTahunRenstras_GlobalSearch(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
 	defer cleanup()
 

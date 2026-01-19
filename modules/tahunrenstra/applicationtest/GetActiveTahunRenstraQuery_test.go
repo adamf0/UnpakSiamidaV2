@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/tahunrenstra/infrastructure"
 )
 
-func GetActiveTahunRenstra_Success(t *testing.T) {
+func TestGetActiveTahunRenstra_Success(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
 	defer cleanup()
 
@@ -32,7 +32,7 @@ func GetActiveTahunRenstra_Success(t *testing.T) {
 	}
 }
 
-func GetActiveTahunRenstra_NotFound(t *testing.T) {
+func TestGetActiveTahunRenstra_NotFound(t *testing.T) {
 	db, cleanup := setupTahunRenstraMySQL(t)
 	resetDBOnlyTahunRenstra(t, db)
 	defer cleanup()

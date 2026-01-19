@@ -15,7 +15,7 @@ import (
 // ====================
 // UPDATE SUCCESS
 // ====================
-func UpdateRenstraNilai_Success_Auditee(t *testing.T) {
+func TestUpdateRenstraNilai_Success_Auditee(t *testing.T) {
 	renstraUUID := uuid.New()
 	nilaiUUID := uuid.New()
 
@@ -59,7 +59,7 @@ func UpdateRenstraNilai_Success_Auditee(t *testing.T) {
 // ====================
 // UPDATE SUCCESS AUDITOR
 // ====================
-func UpdateRenstraNilai_Success_Auditor(t *testing.T) {
+func TestUpdateRenstraNilai_Success_Auditor(t *testing.T) {
 	renstraUUID := uuid.New()
 	nilaiUUID := uuid.New()
 
@@ -98,7 +98,7 @@ func UpdateRenstraNilai_Success_Auditor(t *testing.T) {
 // ====================
 // UPDATE FAIL CASES
 // ====================
-func UpdateRenstraNilai_Fail(t *testing.T) {
+func TestUpdateRenstraNilai_Fail(t *testing.T) {
 	validUUID := uuid.New()
 	otherUUID := uuid.New()
 
@@ -202,7 +202,7 @@ func UpdateRenstraNilai_Fail(t *testing.T) {
 // ====================
 // EDGE CASES
 // ====================
-func UpdateRenstraNilai_EdgeCases(t *testing.T) {
+func TestUpdateRenstraNilai_EdgeCases(t *testing.T) {
 	renstraUUID := uuid.New()
 	prevUUID := uuid.New()
 

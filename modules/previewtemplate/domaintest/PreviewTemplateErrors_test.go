@@ -13,7 +13,7 @@ import (
 // ====================
 // PREVIEW TEMPLATE ERROR TESTS
 // ====================
-func PreviewTemplateErrors(t *testing.T) {
+func TestPreviewTemplateErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

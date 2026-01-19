@@ -3,14 +3,13 @@ package domaintest
 import (
 	"testing"
 
-	common "UnpakSiamida/common/domain"
 	"UnpakSiamida/modules/tahunrenstra/domain"
-
+	common "UnpakSiamida/common/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TahunRenstraErrors(t *testing.T) {
+func TestTahunRenstraErrors(t *testing.T) {
 
 	tests := []struct {
 		name         string

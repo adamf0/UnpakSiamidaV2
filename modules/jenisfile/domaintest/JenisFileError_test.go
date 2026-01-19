@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func JenisFileErrors(t *testing.T) {
+func TestJenisFileErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error

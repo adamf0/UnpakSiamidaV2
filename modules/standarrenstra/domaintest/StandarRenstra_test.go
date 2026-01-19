@@ -16,7 +16,7 @@ import (
 // ===============
 //
 
-func NewStandarRenstra_Success(t *testing.T) {
+func TestNewStandarRenstra_Success(t *testing.T) {
 	nama := "Standar Penelitian"
 
 	result := domain.NewStandarRenstra(nama)
@@ -34,7 +34,7 @@ func NewStandarRenstra_Success(t *testing.T) {
 // ===================
 //
 
-func UpdateStandarRenstra_Success(t *testing.T) {
+func TestUpdateStandarRenstra_Success(t *testing.T) {
 	namaAwal := "Standar Lama"
 	prev := domain.NewStandarRenstra(namaAwal).Value
 
@@ -55,7 +55,7 @@ func UpdateStandarRenstra_Success(t *testing.T) {
 // ====================
 //
 
-func UpdateStandarRenstra_NegativeCases(t *testing.T) {
+func TestUpdateStandarRenstra_NegativeCases(t *testing.T) {
 	valid := domain.NewStandarRenstra("X").Value
 
 	tests := []struct {

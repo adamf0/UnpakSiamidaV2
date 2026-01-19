@@ -11,7 +11,7 @@ import (
 	infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 )
 
-func GetAllIndikatorRenstrasIntegration(t *testing.T) {
+func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 
@@ -124,7 +124,7 @@ func GetAllIndikatorRenstrasIntegration(t *testing.T) {
 }
 
 //[pr] harusnya not found tapi dapatnya nil
-// func GetIndikatorRenstra_NotFound(t *testing.T) {
+// func TestGetIndikatorRenstra_NotFound(t *testing.T) {
 // 	db, cleanup := setupIndikatorRenstraMySQL(t)
 // 	defer cleanup()
 

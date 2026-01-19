@@ -3,18 +3,17 @@ package domaintest
 import (
 	"testing"
 
-	common "UnpakSiamida/common/domain"
 	"UnpakSiamida/modules/templaterenstra/domain"
-
+	common "UnpakSiamida/common/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TemplateRenstraError(t *testing.T) {
+func TestTemplateRenstraError(t *testing.T) {
 
 	tests := []struct {
-		name         string
-		err          common.Error
+		name        string
+		err         common.Error
 		expectedCode string
 		expectedDesc string
 	}{

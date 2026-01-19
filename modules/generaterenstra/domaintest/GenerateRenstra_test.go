@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NewGenerateRenstra_Success(t *testing.T) {
+func TestNewGenerateRenstra_Success(t *testing.T) {
 	validTahun := "2026"
 	validFakultasUnit := uint(1)
 	validRenstraId := uint(10)
@@ -36,7 +36,7 @@ func NewGenerateRenstra_Success(t *testing.T) {
 	assert.NotEqual(t, domain.GenerateRenstra{}.UUID, res.Value.UUID) // UUID harus terisi
 }
 
-func NewGenerateRenstra_FailAndEdgeCases(t *testing.T) {
+func TestNewGenerateRenstra_FailAndEdgeCases(t *testing.T) {
 	validTahun := "2026"
 	invalidTahun := "2025"
 	validFakultasUnit := uint(1)

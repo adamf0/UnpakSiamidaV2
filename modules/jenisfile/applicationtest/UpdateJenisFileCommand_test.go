@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func UpdateJenisFileCommandValidation_Success(t *testing.T) {
+func TestUpdateJenisFileCommandValidation_Success(t *testing.T) {
 	validCmd := app.UpdateJenisFileCommand{
 		Uuid: uuid.NewString(),
 		Nama: "Dokumen Valid",
@@ -23,7 +23,7 @@ func UpdateJenisFileCommandValidation_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func UpdateJenisFileCommandValidation_Fail(t *testing.T) {
+func TestUpdateJenisFileCommandValidation_Fail(t *testing.T) {
 	invalidCmd := app.UpdateJenisFileCommand{
 		Uuid: "",
 		Nama: "",
@@ -34,7 +34,7 @@ func UpdateJenisFileCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "Nama cannot be blank")
 }
 
-func UpdateJenisFileCommand_Success(t *testing.T) {
+func TestUpdateJenisFileCommand_Success(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -66,7 +66,7 @@ func UpdateJenisFileCommand_Success(t *testing.T) {
 	assert.Equal(t, "Dokumen Baru", saved.Nama)
 }
 
-func UpdateJenisFileCommand_Edge(t *testing.T) {
+func TestUpdateJenisFileCommand_Edge(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 
@@ -92,7 +92,7 @@ func UpdateJenisFileCommand_Edge(t *testing.T) {
 	assert.Equal(t, original.UUID.String(), updatedUUID)
 }
 
-func UpdateJenisFileCommand_Fail(t *testing.T) {
+func TestUpdateJenisFileCommand_Fail(t *testing.T) {
 	db, terminate := setupJenisFileMySQL(t)
 	defer terminate()
 

@@ -9,7 +9,7 @@ import (
 	infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 )
 
-func GetIndikatorRenstraByUuid_Success(t *testing.T) {
+func TestGetIndikatorRenstraByUuid_Success(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 
@@ -31,7 +31,7 @@ func GetIndikatorRenstraByUuid_Success(t *testing.T) {
 	}
 }
 
-func GetIndikatorRenstraByUuid_Errors(t *testing.T) {
+func TestGetIndikatorRenstraByUuid_Errors(t *testing.T) {
 	db, cleanup := setupIndikatorRenstraMySQL(t)
 	defer cleanup()
 
