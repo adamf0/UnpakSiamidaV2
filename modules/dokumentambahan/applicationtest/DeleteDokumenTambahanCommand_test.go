@@ -95,5 +95,5 @@ func TestDeleteDokumenTambahanCommandHandler_Fail(t *testing.T) {
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Equal(t, "DokumenTambahan.NotFound", commonErr.Code)
-	assert.Contains(t, commonErr.Description, fmt.Sprintf("Renstra with identifier %s not found", uuid))
+	assert.Contains(t, fmt.Sprintf("DokumenTambahan with identifier %s not found", uuid), commonErr.Description)
 }
