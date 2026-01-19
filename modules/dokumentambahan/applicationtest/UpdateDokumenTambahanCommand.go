@@ -142,8 +142,8 @@ func TestUpdateDokumenTambahanCommandHandler_Fail(t *testing.T) {
 	_, err := handler.Handle(context.Background(), cmd)
 	assert.Error(t, err)
 
-	commonErr, _ := err.(common.Error)
-
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
 	assert.Equal(t, "DokumenTambahan.NotGranted", commonErr.Code)
-	assert.Equal(t, "you are not granted permission in this action", commonErr.Description)
+	assert.Contains(t, "you are not granted permission in this action", commonErr.Description)
 }

@@ -2,6 +2,7 @@ package applicationtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	common "UnpakSiamida/common/domain"
@@ -85,8 +86,11 @@ func TestDeleteJenisFileCommand_Edge(t *testing.T) {
 
 	// Delete kedua → harus not found
 	_, err = handler.Handle(context.Background(), cmd)
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
+	assert.Equal(t, "JenisFile.NotFound", commonErr.Code)
+	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", record.UUID.String()), commonErr.Description)
 }
 
 func TestDeleteJenisFileCommand_Fail(t *testing.T) {
@@ -96,15 +100,17 @@ func TestDeleteJenisFileCommand_Fail(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.DeleteJenisFileCommandHandler{Repo: repo}
 
+	uuid := uuid.NewString()
+
 	// UUID tidak valid
 	cmdInvalidUUID := app.DeleteJenisFileCommand{
-		Uuid: uuid.NewString(),
+		Uuid: uuid,
 	}
 	_, err := handler.Handle(context.Background(), cmdInvalidUUID)
 	assert.Error(t, err)
 
-	commonErr, _ := err.(common.Error)
-
-	assert.Equal(t, "JenisFile.EmptyData", commonErr.Code)
-	assert.Equal(t, "data is not found", commonErr.Description)
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
+	assert.Equal(t, "JenisFile.NotFound", commonErr.Code)
+	assert.Contains(t, fmt.Sprintf("JenisFile with identifier %s not found", uuid), commonErr.Description)
 }

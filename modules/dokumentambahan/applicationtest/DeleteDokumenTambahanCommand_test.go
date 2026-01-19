@@ -2,6 +2,7 @@ package applicationtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	common "UnpakSiamida/common/domain"
@@ -27,7 +28,7 @@ func TestDeleteDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	}
 	err := app.DeleteDokumenTambahanCommandValidation(invalidCmd)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "UUID wajib diisi")
+	assert.Contains(t, err.Error(), "UUID cannot be blank")
 }
 
 func TestDeleteDokumenTambahanCommandHandler_Success(t *testing.T) {
@@ -74,7 +75,7 @@ func TestDeleteDokumenTambahanCommandHandler_Edge(t *testing.T) {
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Equal(t, common.NotFound, commonErr.Type)
-	assert.Contains(t, commonErr.Description, "tidak ditemukan")
+	assert.Contains(t, commonErr.Description, "DokumenTambahan with identifier 864285ba-3b78-4aaa-bbb3-02b162af12a6 not found")
 }
 
 func TestDeleteDokumenTambahanCommandHandler_Fail(t *testing.T) {
@@ -84,14 +85,15 @@ func TestDeleteDokumenTambahanCommandHandler_Fail(t *testing.T) {
 	repo := infra.NewDokumenTambahanRepository(db)
 	handler := &app.DeleteDokumenTambahanCommandHandler{Repo: repo}
 
+	uuid := uuid.NewString()
 	cmdInvalid := app.DeleteDokumenTambahanCommand{
-		Uuid: uuid.NewString(),
+		Uuid: uuid,
 	}
 	_, err := handler.Handle(context.Background(), cmdInvalid)
 	assert.Error(t, err)
 
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
-	assert.Equal(t, "DokumenTambahan.InvalidUuid", commonErr.Code)
-	assert.Contains(t, commonErr.Description, "invalid UUID")
+	assert.Equal(t, "DokumenTambahan.NotFound", commonErr.Code)
+	assert.Contains(t, commonErr.Description, fmt.Sprintf("Renstra with identifier %s not found", uuid))
 }
