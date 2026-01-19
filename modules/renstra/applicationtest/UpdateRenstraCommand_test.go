@@ -13,7 +13,6 @@ import (
 	infra "UnpakSiamida/modules/renstra/infrastructure"
 	infraUser "UnpakSiamida/modules/user/infrastructure"
 
-	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -137,8 +136,7 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 		PeriodeAssesmentLapanganAkhir: time.Now().Add(30 * time.Hour).Format("2006-01-02"),
 	}
 
-	x, err := handler.Handle(context.Background(), cmd)
-	godump.Dump(cmd, x, err)
+	_, err := handler.Handle(context.Background(), cmd)
 	assert.Error(t, err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)

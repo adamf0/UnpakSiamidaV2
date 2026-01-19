@@ -8,7 +8,6 @@ import (
 	domainuser "UnpakSiamida/modules/user/domain"
 	"time"
 
-	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -48,7 +47,6 @@ func (h *UpdateRenstraCommandHandler) Handle(
 	}
 
 	existingRenstra, err := h.Repo.GetByUuid(ctx, renstraUUID) // ← memastikan pakai nama interface yg benar
-	godump.Dump(existingRenstra)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return "", domainrenstra.NotFound(cmd.Uuid)

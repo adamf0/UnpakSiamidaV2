@@ -1,14 +1,15 @@
 package infrastructure
 
 import (
-	"context"
 	commondomain "UnpakSiamida/common/domain"
 	domaindokumentambahan "UnpakSiamida/modules/dokumentambahan/domain"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
-	"errors"
 )
 
 type DokumenTambahanRepository struct {
@@ -44,11 +45,11 @@ func (r *DokumenTambahanRepository) GetByUuid(ctx context.Context, uid uuid.UUID
 // GET DEFAULT BY UUID
 // ------------------------
 func (r *DokumenTambahanRepository) GetDefaultByUuid(
-    ctx context.Context,
-    id uuid.UUID,
+	ctx context.Context,
+	id uuid.UUID,
 ) (*domaindokumentambahan.DokumenTambahanDefault, error) {
 
-    query := `
+	query := `
         SELECT 
 			dt.id as ID,
 			dt.uuid as UUID,
@@ -75,36 +76,36 @@ func (r *DokumenTambahanRepository) GetDefaultByUuid(
 		join jenis_file_renstra jf on tdt.jenis_file = jf.id 
 		join renstra r on dt.id_renstra = r.id
 		join v_fakultas_unit fu on r.fakultas_unit = fu.id
-		where r.id = = ?
+		where r.uuid = = ?
         LIMIT 1
     `
 
-    var rowData domaindokumentambahan.DokumenTambahanDefault
+	var rowData domaindokumentambahan.DokumenTambahanDefault
 
-    res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-    if res.Error != nil {
-        if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-            return nil, gorm.ErrRecordNotFound
-        }
-        return nil, res.Error
-    }
+	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, res.Error
+	}
 
-    if rowData.ID == 0 {
-        return nil, gorm.ErrRecordNotFound
-    }
+	if rowData.ID == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
-    return &rowData, nil
+	return &rowData, nil
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-	"uuidrenstra":      "r.uuid",
-	"dokumen":        	"jf.nama",
-	"pertanyaan":   	"tdt.pertanyaan",
-	"tahun":           	"tdt.tahun",
-	"targetaudit":      "fu.nama_fak_prod_unit",
-	"jenjang":      	"fu.jenjang",
-	"tipe":      		"fu.type",
+	// key:param -> db column
+	"uuidrenstra": "r.uuid",
+	"dokumen":     "jf.nama",
+	"pertanyaan":  "tdt.pertanyaan",
+	"tahun":       "tdt.tahun",
+	"targetaudit": "fu.nama_fak_prod_unit",
+	"jenjang":     "fu.jenjang",
+	"tipe":        "fu.type",
 }
 
 func (r *DokumenTambahanRepository) GetAll(
@@ -289,7 +290,6 @@ func (r *DokumenTambahanRepository) GetAll(
 
 	return result, total, nil
 }
-
 
 // ------------------------
 // UPDATE
