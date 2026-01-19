@@ -76,7 +76,7 @@ func (r *DokumenTambahanRepository) GetDefaultByUuid(
 		join jenis_file_renstra jf on tdt.jenis_file = jf.id 
 		join renstra r on dt.id_renstra = r.id
 		join v_fakultas_unit fu on r.fakultas_unit = fu.id
-		where r.uuid = = ?
+		where dt.uuid = ?
         LIMIT 1
     `
 
