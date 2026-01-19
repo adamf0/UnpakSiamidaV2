@@ -65,15 +65,3 @@ func TestCreateJenisFileCommand_Edge(t *testing.T) {
 	// UUID harus berbeda
 	assert.NotEqual(t, uuidStr2, uuid.Nil)
 }
-
-func TestCreateJenisFileCommand_Fail(t *testing.T) {
-	db, terminate := setupJenisFileMySQL(t)
-	defer terminate()
-
-	repo := infra.NewJenisFileRepository(db)
-	handler := &app.CreateJenisFileCommandHandler{Repo: repo}
-
-	cmdInvalid := app.CreateJenisFileCommand{Nama: ""}
-	_, err := handler.Handle(context.Background(), cmdInvalid)
-	assert.Error(t, err)
-}

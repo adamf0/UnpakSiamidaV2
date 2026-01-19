@@ -4,8 +4,10 @@ import (
 	"context"
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type UpdateJenisFileCommandHandler struct {
@@ -32,10 +34,10 @@ func (h *UpdateJenisFileCommandHandler) Handle(
 	// -------------------------
 	existingJenisFile, err := h.Repo.GetByUuid(ctx, jenisfileUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", domainjenisfile.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingJenisFile == nil {
-		return "", domainjenisfile.NotFound(cmd.Uuid)
 	}
 
 	// -------------------------

@@ -1,16 +1,18 @@
 package application
 
 import (
-	"context"
-	"golang.org/x/sync/errgroup"
-	"github.com/google/uuid"
-	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	domaindokumentambahan "UnpakSiamida/modules/dokumentambahan/domain"
+	domainrenstra "UnpakSiamida/modules/renstra/domain"
+	"context"
 	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
-type UpdateDokumenTambahanCommandHandler struct{
-	Repo domaindokumentambahan.IDokumenTambahanRepository
+type UpdateDokumenTambahanCommandHandler struct {
+	Repo        domaindokumentambahan.IDokumenTambahanRepository
 	RepoRenstra domainrenstra.IRenstraRepository
 }
 
@@ -43,7 +45,10 @@ func (h *UpdateDokumenTambahanCommandHandler) Handle(
 		var err error
 		prev, err = h.Repo.GetByUuid(gctx, dokumenTambahanUUID)
 		if err != nil {
-			return domaindokumentambahan.NotFound(cmd.Uuid)
+			if err == gorm.ErrRecordNotFound {
+				return domaindokumentambahan.NotFound(cmd.Uuid)
+			}
+			return err
 		}
 		return nil
 	})
@@ -52,7 +57,10 @@ func (h *UpdateDokumenTambahanCommandHandler) Handle(
 		var err error
 		renstra, err = h.RepoRenstra.GetByUuid(gctx, renstraUUID)
 		if err != nil {
-			return domaindokumentambahan.NotFoundRenstra(cmd.UuidRenstra)
+			if err == gorm.ErrRecordNotFound {
+				return domaindokumentambahan.NotFoundRenstra(cmd.Uuid)
+			}
+			return err
 		}
 		return nil
 	})

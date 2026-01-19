@@ -4,8 +4,10 @@ import (
 	"context"
 
 	domaindokumentambahan "UnpakSiamida/modules/dokumentambahan/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteDokumenTambahanCommandHandler struct {
@@ -26,12 +28,12 @@ func (h *DeleteDokumenTambahanCommandHandler) Handle(
 	}
 
 	// Get existing dokumentambahan
-	existingDokumenTambahan, err := h.Repo.GetByUuid(ctx, dokumentambahanUUID)
+	_, err = h.Repo.GetByUuid(ctx, dokumentambahanUUID)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", domaindokumentambahan.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingDokumenTambahan == nil {
-		return "", domaindokumentambahan.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

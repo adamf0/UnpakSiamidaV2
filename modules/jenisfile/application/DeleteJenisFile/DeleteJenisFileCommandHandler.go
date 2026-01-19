@@ -4,8 +4,10 @@ import (
 	"context"
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteJenisFileCommandHandler struct {
@@ -26,12 +28,12 @@ func (h *DeleteJenisFileCommandHandler) Handle(
 	}
 
 	// Get existing jenisfile
-	existingJenisFile, err := h.Repo.GetByUuid(ctx, jenisfileUUID)
+	_, err = h.Repo.GetByUuid(ctx, jenisfileUUID)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", domainjenisfile.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingJenisFile == nil {
-		return "", domainjenisfile.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID
