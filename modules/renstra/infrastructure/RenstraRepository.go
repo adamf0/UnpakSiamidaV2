@@ -1,13 +1,14 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainrenstra "UnpakSiamida/common/domain"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
 )
 
 type RenstraRepository struct {
@@ -137,7 +138,7 @@ var allowedSearchColumns = map[string]string{
 	"uuidauditor1":  "a1.uuid",
 	"uuidauditor2":  "a2.uuid",
 	"kodeakses":     "r.kodeAkses",
-	"jenjang":     	 "vfu.jenjang",
+	"jenjang":       "vfu.jenjang",
 	"fakultas":      "vfu.fakultas",
 }
 
@@ -207,7 +208,7 @@ func (r *RenstraRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -288,7 +289,7 @@ func (r *RenstraRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------
@@ -322,7 +323,6 @@ func (r *RenstraRepository) GetAll(
 
 	return renstras, total, nil
 }
-
 
 // ------------------------
 // CREATE

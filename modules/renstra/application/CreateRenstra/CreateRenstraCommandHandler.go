@@ -2,18 +2,19 @@ package application
 
 import (
 	"context"
-	
-	domainrenstra "UnpakSiamida/modules/renstra/domain"
+
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type CreateRenstraCommandHandler struct{
-	Repo domainrenstra.IRenstraRepository
+type CreateRenstraCommandHandler struct {
+	Repo             domainrenstra.IRenstraRepository
 	FakultasUnitRepo domainfakultasunit.IFakultasUnitRepository
-	UserRepo domainuser.IUserRepository
+	UserRepo         domainuser.IUserRepository
 }
 
 func (h *CreateRenstraCommandHandler) Handle(
@@ -40,7 +41,6 @@ func (h *CreateRenstraCommandHandler) Handle(
 		return "", domainrenstra.InvalidParsing("auditor2")
 	}
 
-
 	fakultasUnit, err := h.FakultasUnitRepo.GetDefaultByUuid(ctx, uuidFakultasUnit)
 	if err != nil {
 		return "", domainrenstra.InvalidFakultasUnit()
@@ -58,7 +58,6 @@ func (h *CreateRenstraCommandHandler) Handle(
 		return "", domainrenstra.MissingAuditor2()
 	}
 
-
 	isUnique, err := h.Repo.IsUnique(ctx, fakultasUnit.ID, cmd.Tahun)
 	if err != nil {
 		return "", err
@@ -67,14 +66,14 @@ func (h *CreateRenstraCommandHandler) Handle(
 	result := domainrenstra.NewRenstra(
 		cmd.Tahun,
 		fakultasUnit.ID,
-		cmd.PeriodeUploadMulai, 
+		cmd.PeriodeUploadMulai,
 		cmd.PeriodeUploadAkhir,
-		cmd.PeriodeAssesmentDokumenMulai, 
+		cmd.PeriodeAssesmentDokumenMulai,
 		cmd.PeriodeAssesmentDokumenAkhir,
-		cmd.PeriodeAssesmentLapanganMulai, 
+		cmd.PeriodeAssesmentLapanganMulai,
 		cmd.PeriodeAssesmentLapanganAkhir,
-		auditee.ID, 
-		auditor1.ID, 
+		auditee.ID,
+		auditor1.ID,
 		auditor2.ID,
 		isUnique,
 	)
