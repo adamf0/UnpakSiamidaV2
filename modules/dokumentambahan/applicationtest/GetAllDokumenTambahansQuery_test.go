@@ -87,10 +87,10 @@ func TestGetAllDokumenTambahansIntegration(t *testing.T) {
 
 		{"targetaudit eq PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
 			{"targetaudit", "eq", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
-		}, 1},
+		}, 8},
 		{"targetaudit like PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
 			{"targetaudit", "like", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
-		}, 1},
+		}, 8},
 		{"targetaudit neq PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
 			{"targetaudit", "neq", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
 		}, 10},

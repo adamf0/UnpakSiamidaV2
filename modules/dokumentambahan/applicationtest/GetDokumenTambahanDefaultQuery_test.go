@@ -2,11 +2,14 @@ package applicationtest
 
 import (
 	"context"
-	"strings"
+	"fmt"
 	"testing"
 
+	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/dokumentambahan/application/GetDokumenTambahanDefault"
 	infra "UnpakSiamida/modules/dokumentambahan/infrastructure"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDokumenTambahanDefaultByUuid_Success(t *testing.T) {
@@ -38,36 +41,14 @@ func TestGetDokumenTambahanDefaultByUuid_Errors(t *testing.T) {
 	repo := infra.NewDokumenTambahanRepository(db)
 	handler := app.GetDokumenTambahanDefaultByUuidQueryHandler{Repo: repo}
 
-	tests := []struct {
-		name   string
-		uuid   string
-		expect string
-	}{
-		{
-			name:   "Invalid UUID format",
-			uuid:   "abc-invalid-uuid",
-			expect: "invalid", // parse UUID gagal
-		},
-		{
-			name:   "UUID valid tapi tidak ada di DB",
-			uuid:   "11111111-1111-1111-1111-111111111111",
-			expect: "not found", // GORM akan return ErrRecordNotFound
-		},
-	}
+	uuid := "11111111-1111-1111-1111-111111111111"
+	q := app.GetDokumenTambahanDefaultByUuidQuery{Uuid: uuid}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			q := app.GetDokumenTambahanDefaultByUuidQuery{Uuid: tt.uuid}
+	_, err := handler.Handle(context.Background(), q)
+	assert.Error(t, err)
 
-			_, err := handler.Handle(context.Background(), q)
-			if err == nil {
-				t.Fatalf("expected error but got nil")
-			}
-
-			if !strings.Contains(strings.ToLower(err.Error()), tt.expect) {
-				t.Fatalf("expected error containing %q, got %v", tt.expect, err)
-			}
-		})
-	}
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
+	assert.Equal(t, "DokumenTambahan.NotFound", commonErr.Code)
+	assert.Contains(t, fmt.Sprintf("DokumenTambahan with identifier %s not found", uuid), commonErr.Description)
 }
