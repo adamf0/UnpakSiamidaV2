@@ -23,7 +23,7 @@ func TestDeleteRenstraCommandHandler_Success(t *testing.T) {
 		Repo: repo,
 	}
 
-	uuid, _ := uuid.Parse("c67a37c3-7f25-43de-835d-e4bece0eb308")
+	uuid, _ := uuid.Parse("dea9a83f-70b3-4295-85ed-459eb1a9f6a0")
 
 	cmd := app.DeleteRenstraCommand{
 		Uuid: uuid.String(),

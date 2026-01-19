@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type CreateRenstraCommandHandler struct {
@@ -43,19 +44,34 @@ func (h *CreateRenstraCommandHandler) Handle(
 
 	fakultasUnit, err := h.FakultasUnitRepo.GetDefaultByUuid(ctx, uuidFakultasUnit)
 	if err != nil {
-		return "", domainrenstra.InvalidFakultasUnit()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.InvalidFakultasUnit()
+		}
+		return "", err
 	}
+
 	auditee, err := h.UserRepo.GetByUuid(ctx, uuidAuditee)
 	if err != nil {
-		return "", domainrenstra.MissingAuditee()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditee()
+		}
+		return "", err
 	}
+
 	auditor1, err := h.UserRepo.GetByUuid(ctx, uuidAuditor1)
 	if err != nil {
-		return "", domainrenstra.MissingAuditor1()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditor1()
+		}
+		return "", err
 	}
+
 	auditor2, err := h.UserRepo.GetByUuid(ctx, uuidAuditor2)
 	if err != nil {
-		return "", domainrenstra.MissingAuditor2()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditor2()
+		}
+		return "", err
 	}
 
 	isUnique, err := h.Repo.IsUnique(ctx, fakultasUnit.ID, cmd.Tahun)

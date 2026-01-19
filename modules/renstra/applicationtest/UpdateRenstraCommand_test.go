@@ -22,11 +22,11 @@ import (
 func TestUpdateRenstraCommandValidation_Success(t *testing.T) {
 	cmd := app.UpdateRenstraCommand{
 		Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
-		FakultasUnit:                  "0d2fa3f8-6df3-45b8-8985-654cb49d5d03",
-		Auditee:                       "495fe283-3e42-4323-a172-c110036b0c60",
+		FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+		Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
-		Auditor2:                      "b15f4b66-c696-40a4-a047-c51d2be63d4b",
-		Tahun:                         "2025",
+		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+		Tahun:                         "2031",
 		PeriodeUploadMulai:            time.Now().String(),
 		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
 		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),
@@ -87,11 +87,11 @@ func TestUpdateRenstraCommandHandler_Success(t *testing.T) {
 
 	cmd := app.UpdateRenstraCommand{
 		Uuid:                          "c67a37c3-7f25-43de-835d-e4bece0eb308",
-		FakultasUnit:                  "0d2fa3f8-6df3-45b8-8985-654cb49d5d03",
-		Auditee:                       "495fe283-3e42-4323-a172-c110036b0c60",
+		FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+		Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
-		Auditor2:                      "b15f4b66-c696-40a4-a047-c51d2be63d4b",
-		Tahun:                         "2025",
+		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+		Tahun:                         "2031",
 		PeriodeUploadMulai:            time.Now().String(),
 		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
 		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),
@@ -129,11 +129,11 @@ func TestUpdateRenstraCommandHandler_Fail(t *testing.T) {
 	// UUID renstra tidak ditemukan
 	cmd := app.UpdateRenstraCommand{
 		Uuid:                          uuid,
-		FakultasUnit:                  "0d2fa3f8-6df3-45b8-8985-654cb49d5d03",
-		Auditee:                       "495fe283-3e42-4323-a172-c110036b0c60",
+		FakultasUnit:                  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+		Auditee:                       "c7fd1d83-2d34-42a7-9cfe-38fa5f813188",
 		Auditor1:                      "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
-		Auditor2:                      "b15f4b66-c696-40a4-a047-c51d2be63d4b",
-		Tahun:                         "2025",
+		Auditor2:                      "63b1c4b2-5e13-407f-a9fc-a8c775d9ecaa",
+		Tahun:                         "2031",
 		PeriodeUploadMulai:            time.Now().String(),
 		PeriodeUploadAkhir:            time.Now().Add(24 * time.Hour).String(),
 		PeriodeAssesmentDokumenMulai:  time.Now().Add(25 * time.Hour).String(),

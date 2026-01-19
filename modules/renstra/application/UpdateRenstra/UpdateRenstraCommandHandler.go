@@ -2,18 +2,20 @@ package application
 
 import (
 	"context"
-	
-	domainrenstra "UnpakSiamida/modules/renstra/domain"
+
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type UpdateRenstraCommandHandler struct {
-	Repo domainrenstra.IRenstraRepository
+	Repo             domainrenstra.IRenstraRepository
 	FakultasUnitRepo domainfakultasunit.IFakultasUnitRepository
-	UserRepo domainuser.IUserRepository
+	UserRepo         domainuser.IUserRepository
 }
 
 func (h *UpdateRenstraCommandHandler) Handle(
@@ -44,30 +46,44 @@ func (h *UpdateRenstraCommandHandler) Handle(
 		return "", domainrenstra.InvalidParsing("auditor2")
 	}
 
-
-
 	existingRenstra, err := h.Repo.GetByUuid(ctx, renstraUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
 	}
-	if existingRenstra == nil {
-		return "", domainrenstra.NotFound(cmd.Uuid)
-	}
+
 	fakultasUnit, err := h.FakultasUnitRepo.GetDefaultByUuid(ctx, uuidFakultasUnit)
 	if err != nil {
-		return "", domainrenstra.InvalidFakultasUnit()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.InvalidFakultasUnit()
+		}
+		return "", err
 	}
+
 	auditee, err := h.UserRepo.GetByUuid(ctx, uuidAuditee)
 	if err != nil {
-		return "", domainrenstra.MissingAuditee()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditee()
+		}
+		return "", err
 	}
+
 	auditor1, err := h.UserRepo.GetByUuid(ctx, uuidAuditor1)
 	if err != nil {
-		return "", domainrenstra.MissingAuditor1()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditor1()
+		}
+		return "", err
 	}
+
 	auditor2, err := h.UserRepo.GetByUuid(ctx, uuidAuditor2)
 	if err != nil {
-		return "", domainrenstra.MissingAuditor2()
+		if err == gorm.ErrRecordNotFound {
+			return "", domainrenstra.MissingAuditor2()
+		}
+		return "", err
 	}
 
 	// -------------------------
@@ -78,14 +94,14 @@ func (h *UpdateRenstraCommandHandler) Handle(
 		renstraUUID,
 		cmd.Tahun,
 		fakultasUnit.ID,
-		cmd.PeriodeUploadMulai, 
+		cmd.PeriodeUploadMulai,
 		cmd.PeriodeUploadAkhir,
-		cmd.PeriodeAssesmentDokumenMulai, 
+		cmd.PeriodeAssesmentDokumenMulai,
 		cmd.PeriodeAssesmentDokumenAkhir,
-		cmd.PeriodeAssesmentLapanganMulai, 
+		cmd.PeriodeAssesmentLapanganMulai,
 		cmd.PeriodeAssesmentLapanganAkhir,
-		auditee.ID, 
-		auditor1.ID, 
+		auditee.ID,
+		auditor1.ID,
 		auditor2.ID,
 	)
 
