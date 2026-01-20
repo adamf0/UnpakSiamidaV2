@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
@@ -46,45 +45,71 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 		preview []domainpreviewtemplate.PreviewTemplate
 	)
 
-	g, ctxg := errgroup.WithContext(ctx)
-
-	g.Go(func() error {
-		var err error
-		tree, err = h.RepoIndikator.GetIndikatorTree(ctxg, q.Tahun)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domainpreviewtemplate.NotFoundTreeIndikator()
-			}
-			return err
+	tree, err = h.RepoIndikator.GetIndikatorTree(ctx, q.Tahun)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domainpreviewtemplate.NotFoundTreeIndikator()
 		}
-		return nil
-	})
-
-	g.Go(func() error {
-		var err error
-		if q.Tipe == "renstra" {
-			preview, err = h.Repo.GetByTahunFakultasUnit(ctxg, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10))
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return domainpreviewtemplate.NotFound()
-				}
-				return err
-			}
-		} else {
-			preview, err = h.Repo.GetByTahunTag(ctxg, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type))
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return domainpreviewtemplate.NotFound()
-				}
-				return err
-			}
-		}
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
 		return nil, err
 	}
+
+	if q.Tipe == "renstra" {
+		preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, domainpreviewtemplate.NotFound()
+			}
+			return nil, err
+		}
+	} else {
+		preview, err = h.Repo.GetByTahunTag(ctx, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, domainpreviewtemplate.NotFound()
+			}
+			return nil, err
+		}
+	}
+
+	// g, ctxg := errgroup.WithContext(ctx)
+
+	// g.Go(func() error {
+	// 	var err error
+	// 	tree, err = h.RepoIndikator.GetIndikatorTree(ctxg, q.Tahun)
+	// 	if err != nil {
+	// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 			return domainpreviewtemplate.NotFoundTreeIndikator()
+	// 		}
+	// 		return err
+	// 	}
+	// 	return nil
+	// })
+
+	// g.Go(func() error {
+	// 	var err error
+	// 	if q.Tipe == "renstra" {
+	// 		preview, err = h.Repo.GetByTahunFakultasUnit(ctxg, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10))
+	// 		if err != nil {
+	// 			if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 				return domainpreviewtemplate.NotFound()
+	// 			}
+	// 			return err
+	// 		}
+	// 	} else {
+	// 		preview, err = h.Repo.GetByTahunTag(ctxg, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type))
+	// 		if err != nil {
+	// 			if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 				return domainpreviewtemplate.NotFound()
+	// 			}
+	// 			return err
+	// 		}
+	// 	}
+	// 	return nil
+	// })
+
+	// if err := g.Wait(); err != nil {
+	// 	return nil, err
+	// }
 
 	return mapPointing(preview, tree), nil
 }
