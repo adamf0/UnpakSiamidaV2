@@ -92,11 +92,11 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Fail(t *testing.T) {
 			expectedErr:  "PreviewTemplate.NotFoundFakultasUnit",
 		},
 		{
-			name:         "NotFoundTreeIndikator",
+			name:         "NotFound",
 			tahun:        "2080",
 			FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0", // ADA tapi tidak punya tree
 			tipe:         "fakultas",
-			expectedErr:  "PreviewTemplate.NotFoundTreeIndikator",
+			expectedErr:  "PreviewTemplate.NotFound",
 		},
 	}
 

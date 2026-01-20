@@ -306,6 +306,14 @@ func resetDBOnlyPreviewTemplate(t *testing.T, gdb *gorm.DB) {
 	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
 }
 
+func resetDBSpesific(t *testing.T, gdb *gorm.DB, table string) {
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=0")
+
+	gdb.Exec("TRUNCATE TABLE " + table)
+
+	gdb.Exec("SET FOREIGN_KEY_CHECKS=1")
+}
+
 func seedAllPreviewTemplate(t *testing.T, gdb *gorm.DB) {
 	err := gdb.Exec(`
         INSERT INTO m_fakultas (kode_fakultas, kode_pt, nama_fakultas, pejabat, jabatan, wakil_pejabat, wakil_pejabat_adm, logo) VALUES
