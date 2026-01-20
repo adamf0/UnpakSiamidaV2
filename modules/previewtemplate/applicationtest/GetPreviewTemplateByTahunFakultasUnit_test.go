@@ -98,20 +98,20 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Fail(t *testing.T) {
 			tipe:         "renstra",
 			expectedErr:  "PreviewTemplate.NotFoundTreeIndikator",
 		},
-		// { //[pr] ini belum tercover karena datanya tidak ada yg bisa di uji coba
-		// 	name:         "NotFound",
-		// 	tahun:        "2024", // TAHUN BELUM ADA DATA
-		// 	FakultasUnit: "e00f35c9-f679-4584-a0c5-8f4ae4e69b0f",
-		// 	tipe:         "renstra",
-		// 	expectedErr:  "PreviewTemplate.NotFound",
-		// },
-		// {
-		// 	name:         "NotFound",
-		// 	tahun:        "2024", // TAHUN BELUM ADA DATA
-		// 	FakultasUnit: "fakultas",
-		// 	tipe:         "tambahan",
-		// 	expectedErr:  "PreviewTemplate.NotFound",
-		// },
+		{
+			name:         "NotFound",
+			tahun:        "2024", // TAHUN BELUM ADA DATA
+			FakultasUnit: "e00f35c9-f679-4584-a0c5-8f4ae4e69b0f",
+			tipe:         "renstra",
+			expectedErr:  "PreviewTemplate.NotFound",
+		},
+		{
+			name:         "NotFound",
+			tahun:        "2024", // TAHUN BELUM ADA DATA
+			FakultasUnit: "fakultas",
+			tipe:         "tambahan",
+			expectedErr:  "PreviewTemplate.NotFound",
+		},
 	}
 
 	for _, tt := range tests {
