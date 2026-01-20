@@ -54,5 +54,9 @@ func RequiredKeteranganTolak() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("Kts.NotFound", fmt.Sprintf("Kts with identifier %s not found", id) )
+	return domain.NotFoundError("Kts.NotFound", fmt.Sprintf("Kts with identifier %s not found", id))
+}
+
+func NotFoundUser() domain.Error {
+	return domain.NotFoundError("Kts.NotFoundUser", "user not found")
 }

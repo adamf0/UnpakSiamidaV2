@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainuser "UnpakSiamida/modules/user/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteUserCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteUserCommandHandler) Handle(
 	}
 
 	// Get existing user
-	existingUser, err := h.Repo.GetByUuid(ctx, userUUID)
+	_, err = h.Repo.GetByUuid(ctx, userUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainuser.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingUser == nil {
-		return "", domainuser.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

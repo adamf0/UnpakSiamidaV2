@@ -2,18 +2,23 @@ package application
 
 import (
 	"context"
+	"errors"
+
 	// "strconv"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+
 	// helper "UnpakSiamida/common/helper"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+
 	// "errors"
-    // "gorm.io/gorm"
+	// "gorm.io/gorm"
 	"time"
 )
 
 type UpdateIndikatorRenstraCommandHandler struct {
-	Repo domainindikatorrenstra.IIndikatorRenstraRepository
+	Repo               domainindikatorrenstra.IIndikatorRenstraRepository
 	RepoStandarRenstra domainstandarrenstra.IStandarRenstraRepository
 }
 
@@ -31,10 +36,10 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 
 	existingIndikatorRenstra, err := h.Repo.GetByUuid(ctx, indikatorrenstraUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainindikatorrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingIndikatorRenstra == nil {
-		return "", domainindikatorrenstra.NotFound(cmd.Uuid)
 	}
 
 	standarrenstraUUID, err := uuid.Parse(cmd.StandarRenstra)
@@ -55,12 +60,12 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 		parsed, err := uuid.Parse(*cmd.Parent)
 		if err != nil {
 			parentUUID = uuid.Nil
-		} else{
+		} else {
 			parentUUID = parsed
 		}
 	} else {
 		parentUUID = uuid.Nil
-	} 
+	}
 
 	var parent *uint
 	parentIndikator, err := h.Repo.GetDefaultByUuid(ctx, parentUUID)

@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteTemplateDokumenTambahanCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteTemplateDokumenTambahanCommandHandler) Handle(
 	}
 
 	// Get existing templatedokumentambahan
-	existingTemplateDokumenTambahan, err := h.Repo.GetByUuid(ctx, templatedokumentambahanUUID)
+	_, err = h.Repo.GetByUuid(ctx, templatedokumentambahanUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domaintemplatedokumentambahan.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingTemplateDokumenTambahan == nil {
-		return "", domaintemplatedokumentambahan.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

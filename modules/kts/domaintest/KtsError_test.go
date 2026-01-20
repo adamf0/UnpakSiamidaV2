@@ -98,6 +98,12 @@ func TestKtsErrors(t *testing.T) {
 			expectedCode: "Kts.NotFound",
 			expectedDesc: "Kts with identifier ABC123 not found",
 		},
+		{
+			name:         "NotFoundUser_ReturnsCorrectError",
+			err:          domain.NotFound("ABC123"),
+			expectedCode: "Kts.NotFoundUser",
+			expectedDesc: "user not found",
+		},
 	}
 
 	for _, tt := range tests {

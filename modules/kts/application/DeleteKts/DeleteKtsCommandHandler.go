@@ -2,11 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainkts "UnpakSiamida/modules/kts/domain"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteKtsCommandHandler struct {
@@ -27,12 +29,12 @@ func (h *DeleteKtsCommandHandler) Handle(
 	}
 
 	// Get existing kts
-	existingKts, err := h.Repo.GetByUuid(ctx, ktsUUID)
+	_, err = h.Repo.GetByUuid(ctx, ktsUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainkts.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingKts == nil {
-		return "", domainkts.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

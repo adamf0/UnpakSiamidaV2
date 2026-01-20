@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteTemplateRenstraCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteTemplateRenstraCommandHandler) Handle(
 	}
 
 	// Get existing templaterenstra
-	existingTemplateRenstra, err := h.Repo.GetByUuid(ctx, templaterenstraUUID)
+	_, err = h.Repo.GetByUuid(ctx, templaterenstraUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domaintemplaterenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingTemplateRenstra == nil {
-		return "", domaintemplaterenstra.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

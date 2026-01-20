@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteIndikatorRenstraCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteIndikatorRenstraCommandHandler) Handle(
 	}
 
 	// Get existing indikatorrenstra
-	existingIndikatorRenstra, err := h.Repo.GetByUuid(ctx, indikatorrenstraUUID)
+	_, err = h.Repo.GetByUuid(ctx, indikatorrenstraUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainindikatorrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingIndikatorRenstra == nil {
-		return "", domainindikatorrenstra.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

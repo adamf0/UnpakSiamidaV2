@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteStandarRenstraCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteStandarRenstraCommandHandler) Handle(
 	}
 
 	// Get existing standarrenstra
-	existingStandarRenstra, err := h.Repo.GetByUuid(ctx, standarrenstraUUID)
+	_, err = h.Repo.GetByUuid(ctx, standarrenstraUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainstandarrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingStandarRenstra == nil {
-		return "", domainstandarrenstra.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

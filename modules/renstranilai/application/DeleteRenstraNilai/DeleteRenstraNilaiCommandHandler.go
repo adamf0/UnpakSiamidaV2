@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainrenstranilai "UnpakSiamida/modules/renstranilai/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type DeleteRenstraNilaiCommandHandler struct {
@@ -26,12 +29,12 @@ func (h *DeleteRenstraNilaiCommandHandler) Handle(
 	}
 
 	// Get existing renstranilai
-	existingRenstraNilai, err := h.Repo.GetByUuid(ctx, renstranilaiUUID)
+	_, err = h.Repo.GetByUuid(ctx, renstranilaiUUID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainrenstranilai.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingRenstraNilai == nil {
-		return "", domainrenstranilai.NotFound(cmd.Uuid)
 	}
 
 	// Delete by UUID

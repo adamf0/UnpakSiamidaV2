@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type UpdateStandarRenstraCommandHandler struct {
@@ -32,10 +35,10 @@ func (h *UpdateStandarRenstraCommandHandler) Handle(
 	// -------------------------
 	existingStandarRenstra, err := h.Repo.GetByUuid(ctx, standarrenstraUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainstandarrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingStandarRenstra == nil {
-		return "", domainstandarrenstra.NotFound(cmd.Uuid)
 	}
 
 	// -------------------------

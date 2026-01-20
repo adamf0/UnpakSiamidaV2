@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
-	
+	"errors"
+
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type GiveCodeAccessRenstraCommandHandler struct {
@@ -26,10 +29,10 @@ func (h *GiveCodeAccessRenstraCommandHandler) Handle(
 
 	existingRenstra, err := h.Repo.GetByUuid(ctx, renstraUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainrenstra.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingRenstra == nil {
-		return "", domainrenstra.NotFound(cmd.Uuid)
 	}
 
 	// -------------------------

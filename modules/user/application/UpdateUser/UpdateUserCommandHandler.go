@@ -41,10 +41,10 @@ func (h *UpdateUserCommandHandler) Handle(
 	// -------------------------
 	existingUser, err := h.Repo.GetByUuid(ctx, userUUID) // ← memastikan pakai nama interface yg benar
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", domainuser.NotFound(cmd.Uuid)
+		}
 		return "", err
-	}
-	if existingUser == nil {
-		return "", domainuser.NotFound(cmd.Uuid)
 	}
 
 	// -------------------------

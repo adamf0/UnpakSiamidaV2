@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
 type UpdateKtsCommandHandler struct {
@@ -50,18 +51,36 @@ func (h *UpdateKtsCommandHandler) Handle(
 	g.Go(func() error {
 		var err error
 		existingUser, err = h.RepoUser.GetByUuid(ctxg, accUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return domainkts.NotFoundUser()
+			}
+			return err
+		}
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
 		existingKts, err = h.Repo.GetByUuid(ctxg, ktsUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return domainkts.NotFound(cmd.Uuid)
+			}
+			return err
+		}
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
 		existingKtsDefault, err = h.Repo.GetDefaultByUuid(ctxg, ktsUUID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return domainkts.NotFound(cmd.Uuid)
+			}
+			return err
+		}
 		return err
 	})
 
