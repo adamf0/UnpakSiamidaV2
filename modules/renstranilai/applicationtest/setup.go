@@ -162,7 +162,7 @@ func setupRenstraNilaiMySQL(t *testing.T) (*gorm.DB, func()) {
             uuid varchar(36) DEFAULT NULL,
             id_renstra_nilai int(11) DEFAULT NULL,
             id_dokumen_tambahan int(11) DEFAULT NULL,
-            status text NULL DEFAULT 'draf',
+            status text DEFAULT NULL,
             nomor_laporan text DEFAULT NULL,
             tanggal_laporan date DEFAULT NULL,
             auditor bigint(20) UNSIGNED DEFAULT NULL,
