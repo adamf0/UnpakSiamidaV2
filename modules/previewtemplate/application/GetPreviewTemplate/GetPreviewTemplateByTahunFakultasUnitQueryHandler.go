@@ -1,22 +1,23 @@
 package application
 
 import (
-    "context"
-	"golang.org/x/sync/errgroup"
-    domainpreviewtemplate "UnpakSiamida/modules/previewtemplate/domain"
-	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
-    "errors"
-    "gorm.io/gorm"
-	"github.com/google/uuid"
-	"strconv"
+	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	domainpreviewtemplate "UnpakSiamida/modules/previewtemplate/domain"
+	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
 type GetPreviewTemplateByTahunFakultasUnitQueryHandler struct {
-    Repo domainpreviewtemplate.IPreviewTemplateRepository
-	RepoIndikator domainindikatorrenstra.IIndikatorRenstraRepository
+	Repo             domainpreviewtemplate.IPreviewTemplateRepository
+	RepoIndikator    domainindikatorrenstra.IIndikatorRenstraRepository
 	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository
 }
 
@@ -61,16 +62,16 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 
 	g.Go(func() error {
 		var err error
-		if q.Tipe=="renstra"{
-			preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10) )
+		if q.Tipe == "renstra" {
+			preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10))
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return domainpreviewtemplate.NotFound()
 				}
 				return err
 			}
-		} else{
-			preview, err = h.Repo.GetByTahunTag(ctx, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type) )
+		} else {
+			preview, err = h.Repo.GetByTahunTag(ctx, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type))
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return domainpreviewtemplate.NotFound()

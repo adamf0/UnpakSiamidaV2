@@ -46,6 +46,7 @@ var allowedSearchColumns = map[string]string{
 	"tahun":         "dt.tahun",
 	"pertanyaan":    "dt.pertanyaan",
 	"kategori":      "dt.fakultas_prodi_unit",
+	"jenisfile":     "jf.nama",
 	"jenisfileuuid": "jf.uuid",
 }
 
