@@ -154,3 +154,49 @@ func TestUpdateTemplateDokumenTambahanCommandHandler_Fail(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateTemplateDokumenTambahanCommandHandler_Duplicate(t *testing.T) {
+	db, cleanup := setupTemplateDokumenTambahanMySQL(t)
+	defer cleanup()
+
+	jenisFileRepo := infraJenisFile.NewJenisFileRepository(db)
+	repo := infra.NewTemplateDokumenTambahanRepository(db)
+
+	handler := &app.UpdateTemplateDokumenTambahanCommandHandler{
+		Repo:          repo,
+		JenisFileRepo: jenisFileRepo,
+	}
+
+	cmd := app.UpdateTemplateDokumenTambahanCommand{
+		Uuid:        "9b354f31-be71-4173-9e26-c319d163660d",
+		Tahun:       "2031",
+		JenisFile:   "14212231-792f-4935-bb1c-9a38695a4b6b",
+		Pertanyaan:  "Apa yang harus dilakukan?",
+		Klasifikasi: "minor",
+		Kategori:    "fakultas#all",
+		Tugas:       "auditor1",
+	}
+
+	res, err := handler.Handle(context.Background(), cmd)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, res)
+
+	//
+
+	cmd = app.UpdateTemplateDokumenTambahanCommand{
+		Uuid:        "9cc38a80-d11b-44c9-9b81-f394816eaa96",
+		Tahun:       "2031",
+		JenisFile:   "14212231-792f-4935-bb1c-9a38695a4b6b",
+		Pertanyaan:  "Apa yang harus dilakukan?",
+		Klasifikasi: "minor",
+		Kategori:    "fakultas#all",
+		Tugas:       "auditor1",
+	}
+
+	res, err = handler.Handle(context.Background(), cmd)
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
+	assert.Error(t, err)
+	assert.Equal(t, "TemplateDokumenTambahan.DuplicateData", commonErr.Code)
+	assert.Contains(t, "data not allowed duplicate", commonErr.Description)
+}

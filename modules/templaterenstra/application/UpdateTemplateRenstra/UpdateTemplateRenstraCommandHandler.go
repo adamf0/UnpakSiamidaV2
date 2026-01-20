@@ -2,21 +2,24 @@ package application
 
 import (
 	"context"
-	"golang.org/x/sync/errgroup"
+
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
-	
-	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
-	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	"golang.org/x/sync/errgroup"
+
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
+	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
 	"errors"
-    "gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UpdateTemplateRenstraCommandHandler struct {
-	Repo                	domaintemplaterenstra.ITemplateRenstraRepository
-	IndikatorRenstraRepo    domainindikatorrenstra.IIndikatorRenstraRepository
-	FakultasUnitRepo    	domainfakultasunit.IFakultasUnitRepository
+	Repo                 domaintemplaterenstra.ITemplateRenstraRepository
+	IndikatorRenstraRepo domainindikatorrenstra.IIndikatorRenstraRepository
+	FakultasUnitRepo     domainfakultasunit.IFakultasUnitRepository
 }
 
 func (h *UpdateTemplateRenstraCommandHandler) Handle(
@@ -46,9 +49,9 @@ func (h *UpdateTemplateRenstraCommandHandler) Handle(
 	// GET EXISTING templaterenstra
 	// -------------------------
 	var (
-		indikatorDefault     		 *domainindikatorrenstra.IndikatorRenstraDefault
-		fakultasunitDefault  		 *domainfakultasunit.FakultasUnit
-		existingTemplateRenstra 	 *domaintemplaterenstra.TemplateRenstra
+		indikatorDefault        *domainindikatorrenstra.IndikatorRenstraDefault
+		fakultasunitDefault     *domainfakultasunit.FakultasUnit
+		existingTemplateRenstra *domaintemplaterenstra.TemplateRenstra
 	)
 
 	g, gctx := errgroup.WithContext(context.Background())
@@ -59,7 +62,7 @@ func (h *UpdateTemplateRenstraCommandHandler) Handle(
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domaintemplaterenstra.IndikatorNotFound()
 			}
-			return err;
+			return err
 		}
 		indikatorDefault = r
 		return nil
@@ -101,7 +104,7 @@ func (h *UpdateTemplateRenstraCommandHandler) Handle(
 		templaterenstraUUID,
 		cmd.Tahun,
 		indikatorDefault.Id,
-		cmd.IsPertanyaan=="1",
+		cmd.IsPertanyaan == "1",
 		fakultasunitDefault.ID,
 		cmd.Kategori,
 		cmd.Klasifikasi,
@@ -122,6 +125,13 @@ func (h *UpdateTemplateRenstraCommandHandler) Handle(
 	// SAVE TO REPOSITORY
 	// -------------------------
 	if err := h.Repo.Update(ctx, updatedTemplateRenstra); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintemplaterenstra.DuplicateData()
+			}
+		}
+
 		return "", err
 	}
 

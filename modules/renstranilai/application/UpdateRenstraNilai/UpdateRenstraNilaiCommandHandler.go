@@ -1,16 +1,19 @@
 package application
 
 import (
-	"context"
-	"golang.org/x/sync/errgroup"
-	"github.com/google/uuid"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	domainrenstranilai "UnpakSiamida/modules/renstranilai/domain"
+	"context"
+	"errors"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
-type UpdateRenstraNilaiCommandHandler struct{
-	Repo domainrenstranilai.IRenstraNilaiRepository
+type UpdateRenstraNilaiCommandHandler struct {
+	Repo        domainrenstranilai.IRenstraNilaiRepository
 	RepoRenstra domainrenstra.IRenstraRepository
 }
 
@@ -83,6 +86,16 @@ func (h *UpdateRenstraNilaiCommandHandler) Handle(
 	renstraNilai := result.Value
 
 	if err := h.Repo.Update(ctx, renstraNilai); err != nil {
+		//[pr] ini harusnya ada di generate renstra bagian create + update
+		//ini rule mustahil masuk, tapi memungkinan jika datanya hardcode oleh developer untuk duplicate lalu di update baru kena ini
+		//ini tidak dapat di tes karena di domainnya ada rule pengecekan prev data
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domainrenstranilai.DuplicateData()
+			}
+		}
+
 		return "", err
 	}
 

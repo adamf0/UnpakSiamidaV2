@@ -45,6 +45,12 @@ func TestTemplateDokumenTambahanErrors(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
+			name:         "DuplicateData_ReturnsCorrectError",
+			err:          domain.DuplicateData(),
+			expectedCode: "TemplateDokumenTambahan.DuplicateData",
+			expectedDesc: "data not allowed duplicate",
+		},
+		{
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
 			err:          domain.NotFound("TD-001"),
 			expectedCode: "TemplateDokumenTambahan.NotFound",

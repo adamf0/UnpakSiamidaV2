@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
@@ -59,6 +60,13 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 	// SAVE REPOSITORY
 	// --------------------------
 	if err := h.Repo.Create(ctx, templateDokumenTambahan); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintemplatedokumentambahan.DuplicateData()
+			}
+		}
+
 		return "", err
 	}
 

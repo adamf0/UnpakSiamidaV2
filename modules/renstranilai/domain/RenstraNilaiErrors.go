@@ -30,8 +30,12 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("RenstraNilai.NotFound", fmt.Sprintf("RenstraNilai with identifier %s not found", id) )
+	return domain.NotFoundError("RenstraNilai.NotFound", fmt.Sprintf("RenstraNilai with identifier %s not found", id))
 }
 func NotFoundRenstra(id string) domain.Error {
-	return domain.NotFoundError("RenstraNilai.NotFoundRenstra", fmt.Sprintf("Renstra with identifier %s not found", id) )
+	return domain.NotFoundError("RenstraNilai.NotFoundRenstra", fmt.Sprintf("Renstra with identifier %s not found", id))
+}
+
+func DuplicateData() domain.Error {
+	return domain.NotFoundError("RenstraNilai.DuplicateData", "data not allowed duplicate")
 }

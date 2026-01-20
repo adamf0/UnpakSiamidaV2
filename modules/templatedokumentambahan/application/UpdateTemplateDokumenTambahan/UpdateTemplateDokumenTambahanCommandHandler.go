@@ -2,19 +2,22 @@ package application
 
 import (
 	"context"
-	"golang.org/x/sync/errgroup"
+
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
-	
-	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
+	"golang.org/x/sync/errgroup"
+
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
+	domaintemplatedokumentambahan "UnpakSiamida/modules/templatedokumentambahan/domain"
 	"errors"
-    "gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UpdateTemplateDokumenTambahanCommandHandler struct {
-	Repo                	domaintemplatedokumentambahan.ITemplateDokumenTambahanRepository
-	JenisFileRepo    		domainjenisfile.IJenisFileRepository
+	Repo          domaintemplatedokumentambahan.ITemplateDokumenTambahanRepository
+	JenisFileRepo domainjenisfile.IJenisFileRepository
 }
 
 func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
@@ -40,8 +43,8 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
 	// GET EXISTING templatedokumentambahan
 	// -------------------------
 	var (
-		jenisfile     		 				 *domainjenisfile.JenisFileDefault
-		existingTemplateDokumenTambahan 	 *domaintemplatedokumentambahan.TemplateDokumenTambahan
+		jenisfile                       *domainjenisfile.JenisFileDefault
+		existingTemplateDokumenTambahan *domaintemplatedokumentambahan.TemplateDokumenTambahan
 	)
 
 	g, gctx := errgroup.WithContext(context.Background())
@@ -52,7 +55,7 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domaintemplatedokumentambahan.JenisFileNotFound()
 			}
-			return err;
+			return err
 		}
 		jenisfile = r
 		return nil
@@ -98,6 +101,13 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
 	// SAVE TO REPOSITORY
 	// -------------------------
 	if err := h.Repo.Update(ctx, updatedTemplateDokumenTambahan); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintemplatedokumentambahan.DuplicateData()
+			}
+		}
+
 		return "", err
 	}
 

@@ -3,8 +3,9 @@ package domaintest
 import (
 	"testing"
 
-	"UnpakSiamida/modules/templaterenstra/domain"
 	common "UnpakSiamida/common/domain"
+	"UnpakSiamida/modules/templaterenstra/domain"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,8 +13,8 @@ import (
 func TestTemplateRenstraError(t *testing.T) {
 
 	tests := []struct {
-		name        string
-		err         common.Error
+		name         string
+		err          common.Error
 		expectedCode string
 		expectedDesc string
 	}{
@@ -52,6 +53,12 @@ func TestTemplateRenstraError(t *testing.T) {
 			err:          domain.InvalidData(),
 			expectedCode: "TemplateRenstra.InvalidData",
 			expectedDesc: "data is invalid",
+		},
+		{
+			name:         "DuplicateData",
+			err:          domain.DuplicateData(),
+			expectedCode: "TemplateRenstra.DuplicateData",
+			expectedDesc: "data not allowed duplicate",
 		},
 		{
 			name:         "NotFound_with_dynamic_id",

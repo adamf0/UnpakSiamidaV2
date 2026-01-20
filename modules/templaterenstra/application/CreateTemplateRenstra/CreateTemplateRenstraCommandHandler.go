@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 
@@ -97,6 +98,13 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 	// SAVE REPOSITORY
 	// --------------------------
 	if err := h.Repo.Create(ctx, templateRenstra); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintemplaterenstra.DuplicateData()
+			}
+		}
+
 		return "", err
 	}
 

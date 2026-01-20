@@ -100,7 +100,7 @@ func TestKtsErrors(t *testing.T) {
 		},
 		{
 			name:         "NotFoundUser_ReturnsCorrectError",
-			err:          domain.NotFound("ABC123"),
+			err:          domain.NotFoundUser(),
 			expectedCode: "Kts.NotFoundUser",
 			expectedDesc: "user not found",
 		},

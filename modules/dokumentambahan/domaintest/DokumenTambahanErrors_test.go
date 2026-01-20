@@ -49,6 +49,12 @@ func TestDokumenTambahanErrors(t *testing.T) {
 			expectedDesc: "you are not granted permission in this action",
 		},
 		{
+			name:         "DuplicateData_ReturnsCorrectError",
+			err:          domain.DuplicateData(),
+			expectedCode: "DokumenTambahan.DuplicateData",
+			expectedDesc: "data not allowed duplicate",
+		},
+		{
 			name:         "InvalidData_ReturnsCorrectError",
 			err:          domain.InvalidData(),
 			expectedCode: "DokumenTambahan.InvalidData",

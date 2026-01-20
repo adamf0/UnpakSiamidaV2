@@ -24,3 +24,7 @@ func InvalidData() domain.Error {
 func NotFound(id string) domain.Error {
 	return domain.NotFoundError("TemplateDokumenTambahan.NotFound", fmt.Sprintf("TemplateDokumenTambahan with identifier %s not found", id))
 }
+
+func DuplicateData() domain.Error {
+	return domain.NotFoundError("TemplateDokumenTambahan.DuplicateData", "data not allowed duplicate")
+}

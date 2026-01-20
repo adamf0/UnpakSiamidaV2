@@ -30,5 +30,9 @@ func InvalidData() domain.Error {
 }
 
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("TemplateRenstra.NotFound", fmt.Sprintf("TemplateRenstra with identifier %s not found", id) )
+	return domain.NotFoundError("TemplateRenstra.NotFound", fmt.Sprintf("TemplateRenstra with identifier %s not found", id))
+}
+
+func DuplicateData() domain.Error {
+	return domain.NotFoundError("TemplateRenstra.DuplicateData", "data not alowed duplicate")
 }

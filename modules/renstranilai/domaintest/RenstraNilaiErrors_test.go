@@ -57,6 +57,12 @@ func TestRenstraNilaiErrors(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
+			name:         "DuplicateData_ReturnsCorrectError",
+			err:          domain.DuplicateData(),
+			expectedCode: "RenstraNilai.DuplicateData",
+			expectedDesc: "data not allowed duplicate",
+		},
+		{
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
 			err:          domain.NotFound("RN-001"),
 			expectedCode: "RenstraNilai.NotFound",
