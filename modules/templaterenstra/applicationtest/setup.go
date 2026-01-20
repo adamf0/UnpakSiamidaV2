@@ -115,7 +115,7 @@ func setupTemplateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS sijamu_fakultas_unit;
         CREATE TABLE sijamu_fakultas_unit (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             kode_fakultas char(9) DEFAULT NULL,
             kode_prodi char(10) DEFAULT NULL,
@@ -149,7 +149,7 @@ func setupTemplateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 
 		DROP TABLE IF EXISTS template_renstra;
 		CREATE TABLE template_renstra (
-			id int(11) NOT NULL,
+			id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
 			uuid varchar(36) DEFAULT NULL,
 			tahun year(4) NOT NULL,
 			indikator int(11) NOT NULL,
