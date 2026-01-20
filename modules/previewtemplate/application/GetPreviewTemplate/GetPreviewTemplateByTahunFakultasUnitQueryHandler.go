@@ -50,14 +50,17 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 
 	g.Go(func() error {
 		// var err error
-		tree, err = h.RepoIndikator.GetIndikatorTree(ctxg, q.Tahun)
+		if q.Tipe == "renstra" {
+			tree, err = h.RepoIndikator.GetIndikatorTree(ctxg, q.Tahun)
+			return err
+		}
 		// if err != nil {
 		// 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// 		return domainpreviewtemplate.NotFoundTreeIndikator()
 		// 	}
 		// 	return err
 		// }
-		return err
+		return nil
 	})
 
 	g.Go(func() error {

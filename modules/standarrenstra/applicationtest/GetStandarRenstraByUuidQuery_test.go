@@ -17,7 +17,7 @@ func TestGetStandarRenstraByUuid_Success(t *testing.T) {
 	handler := app.GetStandarRenstraByUuidQueryHandler{Repo: repo}
 
 	// UUID fix yang kamu tentukan
-	fixedUUID := "14212231-792f-4935-bb1c-9a38695a4b6b"
+	fixedUUID := "5fd713d0-adfe-4086-a000-21c948faf84d"
 
 	q := app.GetStandarRenstraByUuidQuery{Uuid: fixedUUID}
 

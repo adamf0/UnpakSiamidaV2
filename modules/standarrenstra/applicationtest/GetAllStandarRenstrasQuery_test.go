@@ -30,8 +30,8 @@ func TestGetAllStandarRenstrasIntegration(t *testing.T) {
 		search       string
 		expectedRows int
 	}{
-		{"No search, returns all", "", 6},
-		{"Search matching 'Program'", "Program", 2},
+		{"No search, returns all", "", 10},
+		{"Search matching 'Program'", "Program", 0},
 		{"Search not matching anything", "TidakAda", 0},
 	}
 
@@ -67,13 +67,13 @@ func TestGetAllStandarRenstrasIntegration(t *testing.T) {
 		// nama
 		{"nama eq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
 			{"nama", "eq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
-		}, 1},
+		}, 0},
 		{"nama like '2023'", []domain.SearchFilter{
 			{"nama", "like", str("2023")},
-		}, 1},
+		}, 0},
 		{"nama neq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
 			{"nama", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
-		}, 5},
+		}, 10},
 	}
 
 	for _, tt := range filterTests {

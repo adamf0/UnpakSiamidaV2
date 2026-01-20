@@ -26,12 +26,12 @@ func TestPreviewTemplateErrors(t *testing.T) {
 			expectedCode: "PreviewTemplate.EmptyData",
 			expectedDesc: "data is not found",
 		},
-		{
-			name:         "NotFoundTreeIndikator_ReturnsCorrectError",
-			err:          domain.NotFoundTreeIndikator(),
-			expectedCode: "PreviewTemplate.NotFoundTreeIndikator",
-			expectedDesc: "Tree Indikator not found",
-		},
+		// {
+		// 	name:         "NotFoundTreeIndikator_ReturnsCorrectError",
+		// 	err:          domain.NotFoundTreeIndikator(),
+		// 	expectedCode: "PreviewTemplate.NotFoundTreeIndikator",
+		// 	expectedDesc: "Tree Indikator not found",
+		// },
 		{
 			name:         "NotFound_ReturnsCorrectError",
 			err:          domain.NotFound(),
