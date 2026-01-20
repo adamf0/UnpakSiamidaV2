@@ -124,7 +124,7 @@ func TestUpdateTemplateDokumenTambahanCommandHandler_Fail(t *testing.T) {
 				Tugas:       "auditor1",
 			},
 			expectErrCode: "TemplateDokumenTambahan.JenisFileNotFound",
-			expectErrText: fmt.Sprintf("JenisFile with identifier %s not found", invalidUuidJenisFile),
+			expectErrText: "JenisFile is not found",
 		},
 		{
 			name: "NotFound",

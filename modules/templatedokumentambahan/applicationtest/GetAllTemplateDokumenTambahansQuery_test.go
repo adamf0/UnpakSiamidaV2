@@ -72,7 +72,7 @@ func TestGetAllTemplateDokumenTambahansIntegration(t *testing.T) {
 			{"jenisfile", "like", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 3},
 		{"jenisfile neq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"jenisfile", "neq", str("Program Kerja Sesuai Dengan Template 20210 disertai Monev")},
+			{"jenisfile", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 10},
 	}
 

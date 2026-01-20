@@ -2,7 +2,6 @@ package applicationtest
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -114,7 +113,7 @@ func TestCreateTemplateDokumenTambahanCommandHandler_FailJenisFileNotFound(t *te
 	assert.True(t, ok)
 	assert.Error(t, err)
 	assert.Equal(t, "TemplateDokumenTambahan.JenisFileNotFound", commonErr.Code)
-	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", uuid), commonErr.Description)
+	assert.Equal(t, "JenisFile is not found", commonErr.Description)
 }
 
 //[note] mustihal masuk duplicate karena simpannya saja sudah pasang onconflic to update
