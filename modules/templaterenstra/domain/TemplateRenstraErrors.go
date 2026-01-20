@@ -34,5 +34,5 @@ func NotFound(id string) domain.Error {
 }
 
 func DuplicateData() domain.Error {
-	return domain.NotFoundError("TemplateRenstra.DuplicateData", "data not alowed duplicate")
+	return domain.NotFoundError("TemplateRenstra.DuplicateData", "data not allowed duplicate")
 }
