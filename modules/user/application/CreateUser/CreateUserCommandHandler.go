@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type CreateUserCommandHandler struct {
@@ -37,14 +35,11 @@ func (h *CreateUserCommandHandler) Handle(
 	}
 
 	var fu *int
+	fuId := 0
 	target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, fakultasUnitUUID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", domainuser.NotFoundFakultasUnit(*cmd.UuidFakultasUnit)
-		}
-		return "", err
+	if target != nil {
+		fuId = int(target.ID)
 	}
-	fuId := int(target.ID)
 	fu = &fuId
 
 	// if cmd.FakultasUnit != nil {

@@ -379,6 +379,10 @@ func (r *IndikatorRenstraRepository) GetIndikatorTree(
 		return nil, err
 	}
 
+	if len(items) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
 	applyIndikatorNumbering(items)
 
 	return items, nil

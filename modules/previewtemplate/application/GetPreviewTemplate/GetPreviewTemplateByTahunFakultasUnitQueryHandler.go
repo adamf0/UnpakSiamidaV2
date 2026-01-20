@@ -51,9 +51,6 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 	g.Go(func() error {
 		var err error
 		tree, err = h.RepoIndikator.GetIndikatorTree(ctx, q.Tahun)
-		if len(tree) == 0 {
-			return domainpreviewtemplate.NotFoundTreeIndikator()
-		}
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domainpreviewtemplate.NotFoundTreeIndikator()
@@ -67,9 +64,6 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 		var err error
 		if q.Tipe == "renstra" {
 			preview, err = h.Repo.GetByTahunFakultasUnit(ctx, q.Tahun, strconv.FormatUint(uint64(fakultasunit.ID), 10))
-			if len(preview) == 0 {
-				return domainpreviewtemplate.NotFound()
-			}
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return domainpreviewtemplate.NotFound()
@@ -78,9 +72,6 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 			}
 		} else {
 			preview, err = h.Repo.GetByTahunTag(ctx, q.Tahun, fmt.Sprintf("%s#all", fakultasunit.Type))
-			if len(preview) == 0 {
-				return domainpreviewtemplate.NotFound()
-			}
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return domainpreviewtemplate.NotFound()

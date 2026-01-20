@@ -74,7 +74,7 @@ func TestCreateUserCommand_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCreateUserCommand_Fail(t *testing.T) {
+func TestCreateUserCommand_FailEmail(t *testing.T) {
 	db, terminate := setupUserMySQL(t)
 	defer terminate()
 
@@ -97,4 +97,29 @@ func TestCreateUserCommand_Fail(t *testing.T) {
 
 	assert.Equal(t, "User.InvalidEmail", commonErr.Code)
 	assert.Equal(t, "email tidak valid atau tidak diperbolehkan", commonErr.Description)
+}
+
+func TestCreateUserCommand_FailFakultasUnit(t *testing.T) {
+	db, terminate := setupUserMySQL(t)
+	defer terminate()
+
+	repo := infra.NewUserRepository(db)
+	handler := &app.CreateUserCommandHandler{Repo: repo}
+	uuidFakultas := "dea9a83f-70b3-4295-85ed-000000000000"
+
+	cmdSame := app.CreateUserCommand{
+		Name:             "adminf",
+		Username:         "adminf",
+		Password:         "123",
+		Email:            "adminf@unpak.ac.id",
+		Level:            "fakultas",
+		UuidFakultasUnit: &uuidFakultas,
+	}
+	_, err := handler.Handle(context.Background(), cmdSame)
+	assert.Error(t, err)
+
+	commonErr, _ := err.(common.Error)
+
+	assert.Equal(t, "User.InvalidFakultasUnit", commonErr.Code)
+	assert.Equal(t, "fakultas unit tidak valid", commonErr.Description)
 }

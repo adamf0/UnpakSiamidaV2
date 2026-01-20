@@ -70,6 +70,10 @@ func (r *PreviewTemplateRepository) GetByTahunFakultasUnit(
 		return nil, err
 	}
 
+	if len(results) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
 	return results, nil
 }
 
@@ -114,6 +118,10 @@ func (r *PreviewTemplateRepository) GetByTahunTag(
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(results) == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return results, nil

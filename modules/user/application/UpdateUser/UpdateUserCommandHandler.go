@@ -71,15 +71,12 @@ func (h *UpdateUserCommandHandler) Handle(
 		fakultasUnitUUID = parsed
 	}
 
-	var fu *int = nil
+	var fu *int
+	fuId := 0
 	target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, fakultasUnitUUID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", domainuser.NotFoundFakultasUnit(*cmd.UuidFakultasUnit)
-		}
-		return "", err
+	if target != nil {
+		fuId = int(target.ID)
 	}
-	fuId := int(target.ID)
 	fu = &fuId
 
 	// -------------------------
