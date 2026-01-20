@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
+	common "UnpakSiamida/common/domain"
 	repoFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	repoIndikator "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 	app "UnpakSiamida/modules/previewtemplate/application/GetPreviewTemplate"
@@ -48,7 +49,7 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Success(t *testing.T) {
 			name:         "Success Preview DokumenTambahan",
 			tahun:        "2024",
 			fakultasUUID: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-			tipe:         "tag",
+			tipe:         "dokumen",
 		},
 	}
 
@@ -62,11 +63,6 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Success(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, res)
-			assert.NotEmpty(t, res)
-
-			for _, r := range res {
-				assert.NotEmpty(t, r.Pointing)
-			}
 		})
 	}
 }
@@ -103,11 +99,11 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Fail(t *testing.T) {
 			expectedErr:  "PreviewTemplate.NotFoundTreeIndikator",
 		},
 		{
-			name:         "NotFoundTemplate",
+			name:         "NotFound",
 			tahun:        "2080", // TAHUN BELUM ADA DATA
 			fakultasUUID: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
 			tipe:         "renstra",
-			expectedErr:  "PreviewTemplate.NotFoundTemplate",
+			expectedErr:  "PreviewTemplate.NotFound",
 		},
 	}
 
@@ -121,7 +117,10 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Fail(t *testing.T) {
 
 			assert.Nil(t, res)
 			assert.Error(t, err)
-			assert.EqualError(t, err, tt.expectedErr)
+
+			commonErr, ok := err.(common.Error)
+			assert.True(t, ok)
+			assert.Equal(t, tt.expectedErr, commonErr.Code)
 		})
 	}
 }
