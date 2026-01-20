@@ -10,6 +10,7 @@ import (
 	app "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
 	infra "UnpakSiamida/modules/templaterenstra/infrastructure"
 
+	"github.com/goforj/godump"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -243,6 +244,7 @@ func TestCreateTemplateRenstraCommandValidation_Duplicate(t *testing.T) {
 	}
 
 	err = app.CreateTemplateRenstraCommandValidation(cmd)
+	godump.Dump(err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Error(t, err)

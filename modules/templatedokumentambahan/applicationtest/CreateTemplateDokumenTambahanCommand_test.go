@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -154,6 +155,7 @@ func TestCreateTemplateDokumenTambahanCommandHandler_Duplicate(t *testing.T) {
 	}
 
 	res, err = handler.Handle(context.Background(), cmd)
+	godump.Dump(res, err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Error(t, err)

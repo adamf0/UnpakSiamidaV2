@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -124,7 +125,7 @@ func TestUpdateTemplateDokumenTambahanCommandHandler_Fail(t *testing.T) {
 				Tugas:       "auditor1",
 			},
 			expectErrCode: "TemplateDokumenTambahan.JenisFileNotFound",
-			expectErrText: "JenisFile is not found",
+			expectErrText: fmt.Sprintf("JenisFile with identifier %s not found", invalidUuidJenisFile),
 		},
 		{
 			name: "NotFound",
@@ -194,6 +195,7 @@ func TestUpdateTemplateDokumenTambahanCommandHandler_Duplicate(t *testing.T) {
 	}
 
 	res, err = handler.Handle(context.Background(), cmd)
+	godump.Dump(res, err)
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Error(t, err)
