@@ -134,7 +134,7 @@ func TestUpdateUserCommand_Fail2FakultasUnit(t *testing.T) {
 		Name:             "adminf",
 		Username:         "adminf",
 		Password:         &password,
-		Email:            "adminf@gmail.com",
+		Email:            "adminf@unpak.ac.id",
 		Level:            "fakultas",
 		UuidFakultasUnit: &uuidFakultas,
 	}

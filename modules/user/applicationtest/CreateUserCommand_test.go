@@ -86,7 +86,7 @@ func TestCreateUserCommand_FailEmail(t *testing.T) {
 		Name:             "adminf",
 		Username:         "adminf",
 		Password:         "123",
-		Email:            "adminf@gamil.com",
+		Email:            "adminf@gmail.com",
 		Level:            "fakultas",
 		UuidFakultasUnit: &uuidFakultas,
 	}
