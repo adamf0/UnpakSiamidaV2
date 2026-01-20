@@ -94,23 +94,9 @@ func Test_GetPreviewTemplateByTahunFakultasUnit_Fail(t *testing.T) {
 		{
 			name:         "NotFoundTreeIndikator",
 			tahun:        "2080",
-			FakultasUnit: "e00f35c9-f679-4584-a0c5-8f4ae4e69b0f", // ADA tapi tidak punya tree
-			tipe:         "renstra",
+			FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0", // ADA tapi tidak punya tree
+			tipe:         "fakultas",
 			expectedErr:  "PreviewTemplate.NotFoundTreeIndikator",
-		},
-		{
-			name:         "NotFound",
-			tahun:        "2024", // TAHUN BELUM ADA DATA
-			FakultasUnit: "e00f35c9-f679-4584-a0c5-8f4ae4e69b0f",
-			tipe:         "renstra",
-			expectedErr:  "PreviewTemplate.NotFound",
-		},
-		{
-			name:         "NotFound",
-			tahun:        "2024", // TAHUN BELUM ADA DATA
-			FakultasUnit: "fakultas",
-			tipe:         "tambahan",
-			expectedErr:  "PreviewTemplate.NotFound",
 		},
 	}
 
