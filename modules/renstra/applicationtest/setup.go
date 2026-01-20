@@ -175,7 +175,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             updated_at datetime DEFAULT NULL
         );
 
-        DROP TABLE IF EXISTS renstra;
+        DROP TABLE IF EXISTS renstra_nilai;
         CREATE TABLE renstra_nilai (
             id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
