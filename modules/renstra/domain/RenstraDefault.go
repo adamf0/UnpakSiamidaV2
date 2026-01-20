@@ -5,16 +5,16 @@ import (
 )
 
 type RenstraDefault struct {
-	ID     uint      `json:"ID"`
-	UUID   uuid.UUID `json:"UUID"`
-	Tahun  string    `json:"Tahun"`
+	ID    uint      `json:"ID"`
+	UUID  uuid.UUID `json:"UUID"`
+	Tahun string    `json:"Tahun"`
 
-	FakultasUnitId   uint        `json:"FakultasUnitId"`
+	FakultasUnitId   uint       `json:"FakultasUnitId"`
 	FakultasUnitUUID *uuid.UUID `json:"FakultasUnitUuid"`
 	FakultasUnit     string     `json:"FakultasUnit"`
 
-	PeriodeUploadMulai   string `json:"PeriodeUploadMulai"`
-	PeriodeUploadAkhir   string `json:"PeriodeUploadAkhir"`
+	PeriodeUploadMulai            string `json:"PeriodeUploadMulai"`
+	PeriodeUploadAkhir            string `json:"PeriodeUploadAkhir"`
 	PeriodeAssesmentDokumenMulai  string `json:"PeriodeAssesmentDokumenMulai"`
 	PeriodeAssesmentDokumenAkhir  string `json:"PeriodeAssesmentDokumenAkhir"`
 	PeriodeAssesmentLapanganMulai string `json:"PeriodeAssesmentLapanganMulai"`
@@ -40,4 +40,10 @@ type RenstraDefault struct {
 	Jenjang  *string `json:"Jenjang"`
 	Type     string  `json:"Type"`
 	Fakultas *string `json:"Fakultas"`
+
+	TotalRenstraAuditee string `json:"TotalRenstraAuditee"`
+	TotalRenstraAuditor string `json:"TotalRenstraAuditor"`
+	TotalDokumen        string `json:"TotalDokumen"`
+	TotalDokumenAuditee string `json:"TotalDokumenAuditee"`
+	TotalDokumenAuditor string `json:"TotalDokumenAuditor"`
 }

@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
@@ -106,6 +107,9 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
 			if mysqlErr.Number == 1062 {
 				return "", domaintemplatedokumentambahan.DuplicateData()
 			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domaintemplatedokumentambahan.DuplicateData()
 		}
 
 		return "", err

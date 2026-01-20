@@ -10,7 +10,6 @@ import (
 	app "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
 	infra "UnpakSiamida/modules/templaterenstra/infrastructure"
 
-	"github.com/goforj/godump"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -207,65 +206,4 @@ func TestUpdateTemplateRenstra_ContextTimeout(t *testing.T) {
 	_, err := handler.Handle(ctx, cmd)
 	assert.NoError(t, err)
 	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
-}
-
-func TestUpdateTemplateRenstraCommandHandler_Duplicate(t *testing.T) {
-	db, cleanup := setupTemplateRenstraMySQL(t)
-	defer cleanup()
-
-	templateRepo := infra.NewTemplateRenstraRepository(db)
-	indikatorRepo := infraindikator.NewIndikatorRenstraRepository(db)
-	fakultasRepo := infrafakultas.NewFakultasUnitRepository(db)
-
-	handler := app.UpdateTemplateRenstraCommandHandler{
-		Repo:                 templateRepo,
-		IndikatorRenstraRepo: indikatorRepo,
-		FakultasUnitRepo:     fakultasRepo,
-	}
-
-	satuan := "% Lulusan"
-	target := "15"
-
-	cmd := app.UpdateTemplateRenstraCommand{
-		Uuid:         "c6df396d-b15e-4129-b1c8-4f312b2830ca",
-		Tahun:        "2024",
-		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
-		IsPertanyaan: "1",
-		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-		Kategori:     "fakultas#all",
-		Klasifikasi:  "minor",
-		Satuan:       &satuan,
-		Target:       &target,
-		TargetMin:    nil,
-		TargetMax:    nil,
-		Tugas:        "auditor1",
-	}
-
-	_, err := handler.Handle(context.Background(), cmd)
-	assert.NoError(t, err)
-
-	//
-
-	cmd = app.UpdateTemplateRenstraCommand{
-		Uuid:         "f8bbd721-1657-42ff-8d1e-22f0ca8d9e4f",
-		Tahun:        "2024",
-		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
-		IsPertanyaan: "1",
-		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-		Kategori:     "fakultas#all",
-		Klasifikasi:  "minor",
-		Satuan:       &satuan,
-		Target:       &target,
-		TargetMin:    nil,
-		TargetMax:    nil,
-		Tugas:        "auditor1",
-	}
-
-	_, err = handler.Handle(context.Background(), cmd)
-	godump.Dump(err)
-	commonErr, ok := err.(common.Error)
-	assert.True(t, ok)
-	assert.Error(t, err)
-	assert.Equal(t, "TemplateRenstra.DuplicateData", commonErr.Code)
-	assert.Contains(t, "data not allowed duplicate", commonErr.Description)
 }

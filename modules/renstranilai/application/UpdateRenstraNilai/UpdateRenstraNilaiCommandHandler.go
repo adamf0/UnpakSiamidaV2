@@ -5,6 +5,7 @@ import (
 	domainrenstranilai "UnpakSiamida/modules/renstranilai/domain"
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -86,7 +87,7 @@ func (h *UpdateRenstraNilaiCommandHandler) Handle(
 	renstraNilai := result.Value
 
 	if err := h.Repo.Update(ctx, renstraNilai); err != nil {
-		//[pr] ini harusnya ada di generate renstra bagian create + update
+		//[note] ini harusnya ada di generate renstra bagian create + update
 		//ini rule mustahil masuk, tapi memungkinan jika datanya hardcode oleh developer untuk duplicate lalu di update baru kena ini
 		//ini tidak dapat di tes karena di domainnya ada rule pengecekan prev data
 		var mysqlErr *mysql.MySQLError
@@ -94,6 +95,9 @@ func (h *UpdateRenstraNilaiCommandHandler) Handle(
 			if mysqlErr.Number == 1062 {
 				return "", domainrenstranilai.DuplicateData()
 			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domainrenstranilai.DuplicateData()
 		}
 
 		return "", err

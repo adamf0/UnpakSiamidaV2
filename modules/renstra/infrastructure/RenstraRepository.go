@@ -104,7 +104,56 @@ func (r *RenstraRepository) GetDefaultByUuid(
 
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
-			vfu.fakultas as Fakultas
+			vfu.fakultas as Fakultas,
+
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id
+			) AS TotalRenstra,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
+			) AS TotalRenstraAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
+			) AS TotalRenstraAuditor,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id
+			) AS TotalDokumen,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
+			) AS TotalDokumenAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
+			) AS TotalDokumenAuditor
 		FROM renstra r
 		JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id
 		LEFT JOIN users a0 ON r.auditee = a0.id
@@ -191,7 +240,56 @@ func (r *RenstraRepository) GetAll(
 
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
-			vfu.fakultas as Fakultas
+			vfu.fakultas as Fakultas,
+
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id
+			) AS TotalRenstra,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
+			) AS TotalRenstraAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
+			) AS TotalRenstraAuditor,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id
+			) AS TotalDokumen,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
+			) AS TotalDokumenAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
+			) AS TotalDokumenAuditor
 		`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
 		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").

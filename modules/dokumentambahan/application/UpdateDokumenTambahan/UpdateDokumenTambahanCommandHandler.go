@@ -5,6 +5,7 @@ import (
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -91,7 +92,7 @@ func (h *UpdateDokumenTambahanCommandHandler) Handle(
 	dokumenTambahan := result.Value
 
 	if err := h.Repo.Update(ctx, dokumenTambahan); err != nil {
-		//[pr] ini harusnya ada di generate renstra bagian create + update
+		//[note] ini harusnya ada di generate renstra bagian create + update
 		//ini rule mustahil masuk, tapi memungkinan jika datanya hardcode oleh developer untuk duplicate lalu di update baru kena ini
 		//ini tidak dapat di tes karena di domainnya ada rule pengecekan prev data
 		var mysqlErr *mysql.MySQLError
@@ -99,6 +100,9 @@ func (h *UpdateDokumenTambahanCommandHandler) Handle(
 			if mysqlErr.Number == 1062 {
 				return "", domaindokumentambahan.DuplicateData()
 			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domaindokumentambahan.DuplicateData()
 		}
 
 		return "", err

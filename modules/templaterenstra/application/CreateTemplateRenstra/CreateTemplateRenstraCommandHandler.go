@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
@@ -103,6 +104,9 @@ func (h *CreateTemplateRenstraCommandHandler) Handle(
 			if mysqlErr.Number == 1062 {
 				return "", domaintemplaterenstra.DuplicateData()
 			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domaintemplaterenstra.DuplicateData()
 		}
 
 		return "", err

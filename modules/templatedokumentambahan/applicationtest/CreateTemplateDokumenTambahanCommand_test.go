@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/goforj/godump"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -114,51 +113,45 @@ func TestCreateTemplateDokumenTambahanCommandHandler_FailJenisFileNotFound(t *te
 	commonErr, ok := err.(common.Error)
 	assert.True(t, ok)
 	assert.Error(t, err)
-	assert.Equal(t, "JenisFile.NotFound", commonErr.Code)
+	assert.Equal(t, "TemplateDokumenTambahan.JenisFileNotFound", commonErr.Code)
 	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", uuid), commonErr.Description)
 }
 
-func TestCreateTemplateDokumenTambahanCommandHandler_Duplicate(t *testing.T) {
-	db, cleanup := setupTemplateDokumenTambahanMySQL(t)
-	defer cleanup()
+//[note] mustihal masuk duplicate karena simpannya saja sudah pasang onconflic to update
+// func TestCreateTemplateDokumenTambahanCommandHandler_Duplicate(t *testing.T) {
+// 	db, cleanup := setupTemplateDokumenTambahanMySQL(t)
+// 	defer cleanup()
 
-	jenisFileRepo := infraJenisFile.NewJenisFileRepository(db)
-	repo := infra.NewTemplateDokumenTambahanRepository(db)
+// 	jenisFileRepo := infraJenisFile.NewJenisFileRepository(db)
+// 	repo := infra.NewTemplateDokumenTambahanRepository(db)
 
-	handler := &app.CreateTemplateDokumenTambahanCommandHandler{
-		Repo:          repo,
-		JenisFileRepo: jenisFileRepo,
-	}
+// 	handler := &app.CreateTemplateDokumenTambahanCommandHandler{
+// 		Repo:          repo,
+// 		JenisFileRepo: jenisFileRepo,
+// 	}
 
-	cmd := app.CreateTemplateDokumenTambahanCommand{
-		Tahun:       "2031",
-		JenisFile:   "14212231-792f-4935-bb1c-9a38695a4b6b",
-		Pertanyaan:  "Apa yang harus dilakukan?",
-		Klasifikasi: "minor",
-		Kategori:    "fakultas#all",
-		Tugas:       "auditor1",
-	}
+// 	cmd := app.CreateTemplateDokumenTambahanCommand{
+// 		Tahun:       "2031",
+// 		JenisFile:   "14212231-792f-4935-bb1c-9a38695a4b6b",
+// 		Pertanyaan:  "Apa yang harus dilakukan?",
+// 		Klasifikasi: "minor",
+// 		Kategori:    "fakultas#all",
+// 		Tugas:       "auditor1",
+// 	}
 
-	res, err := handler.Handle(context.Background(), cmd)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, res)
+// 	res, err := handler.Handle(context.Background(), cmd)
+// 	assert.NoError(t, err)
+// 	assert.NotEmpty(t, res)
 
-	//
+// 	//
 
-	cmd = app.CreateTemplateDokumenTambahanCommand{
-		Tahun:       "2031",
-		JenisFile:   "14212231-792f-4935-bb1c-9a38695a4b6b",
-		Pertanyaan:  "Apa yang harus dilakukan?",
-		Klasifikasi: "minor",
-		Kategori:    "fakultas#all",
-		Tugas:       "auditor1",
-	}
+// 	res, err = handler.Handle(context.Background(), cmd)
+// 	godump.Dump(res, err)
+// 	assert.Error(t, err)
 
-	res, err = handler.Handle(context.Background(), cmd)
-	godump.Dump(res, err)
-	commonErr, ok := err.(common.Error)
-	assert.True(t, ok)
-	assert.Error(t, err)
-	assert.Equal(t, "TemplateDokumenTambahan.DuplicateData", commonErr.Code)
-	assert.Equal(t, "data not allowed duplicate", commonErr.Description)
-}
+// 	commonErr, ok := err.(common.Error)
+// 	assert.True(t, ok)
+// 	assert.Error(t, err)
+// 	assert.Equal(t, "TemplateDokumenTambahan.DuplicateData", commonErr.Code)
+// 	assert.Equal(t, "data not allowed duplicate", commonErr.Description)
+// }

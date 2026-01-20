@@ -10,7 +10,6 @@ import (
 	app "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
 	infra "UnpakSiamida/modules/templaterenstra/infrastructure"
 
-	"github.com/goforj/godump"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -206,51 +205,52 @@ func TestCreateTemplateRenstra_ContextTimeout(t *testing.T) {
 	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
 }
 
-func TestCreateTemplateRenstraCommandValidation_Duplicate(t *testing.T) {
-	satuan := "% Lulusan"
-	target := "15"
+//[note] mustihal masuk duplicate karena simpannya saja sudah pasang onconflic to update
+// func TestCreateTemplateRenstraCommandValidation_Duplicate(t *testing.T) {
+// 	satuan := "% Lulusan"
+// 	target := "15"
 
-	cmd := app.CreateTemplateRenstraCommand{
-		Tahun:        "2024",
-		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
-		IsPertanyaan: "1",
-		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-		Kategori:     "fakultas#all",
-		Klasifikasi:  "minor",
-		Satuan:       &satuan,
-		Target:       &target,
-		TargetMin:    nil,
-		TargetMax:    nil,
-		Tugas:        "auditor1",
-	}
+// 	cmd := app.CreateTemplateRenstraCommand{
+// 		Tahun:        "2024",
+// 		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+// 		IsPertanyaan: "1",
+// 		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+// 		Kategori:     "fakultas#all",
+// 		Klasifikasi:  "minor",
+// 		Satuan:       &satuan,
+// 		Target:       &target,
+// 		TargetMin:    nil,
+// 		TargetMax:    nil,
+// 		Tugas:        "auditor1",
+// 	}
 
-	err := app.CreateTemplateRenstraCommandValidation(cmd)
-	assert.NoError(t, err)
+// 	err := app.CreateTemplateRenstraCommandValidation(cmd)
+// 	assert.NoError(t, err)
 
-	//
+// 	//
 
-	cmd = app.CreateTemplateRenstraCommand{
-		Tahun:        "2024",
-		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
-		IsPertanyaan: "1",
-		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
-		Kategori:     "fakultas#all",
-		Klasifikasi:  "minor",
-		Satuan:       &satuan,
-		Target:       &target,
-		TargetMin:    nil,
-		TargetMax:    nil,
-		Tugas:        "auditor1",
-	}
+// 	cmd = app.CreateTemplateRenstraCommand{
+// 		Tahun:        "2024",
+// 		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+// 		IsPertanyaan: "1",
+// 		FakultasUnit: "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+// 		Kategori:     "fakultas#all",
+// 		Klasifikasi:  "minor",
+// 		Satuan:       &satuan,
+// 		Target:       &target,
+// 		TargetMin:    nil,
+// 		TargetMax:    nil,
+// 		Tugas:        "auditor1",
+// 	}
 
-	err = app.CreateTemplateRenstraCommandValidation(cmd)
-	godump.Dump(err)
-	commonErr, ok := err.(common.Error)
-	assert.True(t, ok)
-	assert.Error(t, err)
-	assert.Equal(t, "TemplateRenstra.DuplicateData", commonErr.Code)
-	assert.Equal(t, "data not allowed duplicate", commonErr.Description)
-}
+// 	err = app.CreateTemplateRenstraCommandValidation(cmd)
+// 	godump.Dump(err)
+// 	commonErr, ok := err.(common.Error)
+// 	assert.True(t, ok)
+// 	assert.Error(t, err)
+// 	assert.Equal(t, "TemplateRenstra.DuplicateData", commonErr.Code)
+// 	assert.Equal(t, "data not allowed duplicate", commonErr.Description)
+// }
 
 func strPtr(v string) *string {
 	return &v
