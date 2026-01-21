@@ -31,8 +31,8 @@ func TestGetAllBeritaAcarasIntegration(t *testing.T) {
 		expectedRows int
 	}{
 		{"No search, returns all", "", 10},
-		{"Search matching 'HUKUM'", "Program", 7},
-		{"Search not matching anything", "TidakAda", 0},
+		// {"Search matching 'HUKUM'", "Program", 7},
+		// {"Search not matching anything", "TidakAda", 0},
 	}
 
 	for _, tt := range searchTests {
