@@ -33,9 +33,9 @@ func TestUpdateBeritaAcaraCommandValidation_Success(t *testing.T) {
 }
 
 func TestUpdateBeritaAcaraCommandValidation_Fail(t *testing.T) {
-	Tahun := "2080"
-	FakultasUnit := 1
-	Tanggal := "2021-01-01"
+	Tahun := ""
+	FakultasUnit := 0
+	Tanggal := ""
 	Auditee := 1
 	Auditor1 := 2
 	Auditor2 := 3

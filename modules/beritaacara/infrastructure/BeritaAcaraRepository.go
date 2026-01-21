@@ -71,7 +71,7 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
         LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id
         LEFT JOIN users u1 ON ba.auditee = u1.id
         LEFT JOIN users u2 ON ba.auditor1 = u2.id 
-        LEFT JOIN users u3 ON ba.auditor2 = u3.id;
+        LEFT JOIN users u3 ON ba.auditor2 = u3.id
         WHERE ba.uuid = ?
         LIMIT 1
     `
