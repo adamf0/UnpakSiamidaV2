@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	common "UnpakSiamida/common/domain"
+	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
 	app "UnpakSiamida/modules/user/application/CreateUser"
 	domain "UnpakSiamida/modules/user/domain"
 	infra "UnpakSiamida/modules/user/infrastructure"
@@ -53,7 +54,9 @@ func TestCreateUserCommand_Success(t *testing.T) {
 	defer terminate()
 
 	repo := infra.NewUserRepository(db)
-	handler := &app.CreateUserCommandHandler{Repo: repo}
+	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
+
+	handler := &app.CreateUserCommandHandler{Repo: repo, RepoFakultasUnit: repoFakultasUnit}
 	uuidFakultas := "dea9a83f-70b3-4295-85ed-459eb1a9f6a0"
 
 	cmd := app.CreateUserCommand{
@@ -79,7 +82,9 @@ func TestCreateUserCommand_FailEmail(t *testing.T) {
 	defer terminate()
 
 	repo := infra.NewUserRepository(db)
-	handler := &app.CreateUserCommandHandler{Repo: repo}
+	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
+
+	handler := &app.CreateUserCommandHandler{Repo: repo, RepoFakultasUnit: repoFakultasUnit}
 	uuidFakultas := "dea9a83f-70b3-4295-85ed-459eb1a9f6a0"
 
 	cmdSame := app.CreateUserCommand{
@@ -104,7 +109,9 @@ func TestCreateUserCommand_FailFakultasUnit(t *testing.T) {
 	defer terminate()
 
 	repo := infra.NewUserRepository(db)
-	handler := &app.CreateUserCommandHandler{Repo: repo}
+	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
+
+	handler := &app.CreateUserCommandHandler{Repo: repo, RepoFakultasUnit: repoFakultasUnit}
 	uuidFakultas := "dea9a83f-70b3-4295-85ed-000000000000"
 
 	cmdSame := app.CreateUserCommand{
