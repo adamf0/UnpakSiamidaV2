@@ -4,7 +4,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
-	event "UnpakSiamida/modules/BeritaAcara/event"
+	event "UnpakSiamida/modules/beritaacara/event"
 
 	"github.com/google/uuid"
 )
