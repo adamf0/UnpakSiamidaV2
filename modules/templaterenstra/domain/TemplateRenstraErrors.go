@@ -30,11 +30,11 @@ func OutRange() domain.Error {
 }
 
 func InvalidParseMin() domain.Error {
-	return domain.NotFoundError("TemplateRenstra.InvalidParseTarget", "invalid parse value TargetMin")
+	return domain.NotFoundError("TemplateRenstra.InvalidParseMin", "invalid parse value TargetMin")
 }
 
 func InvalidParseMax() domain.Error {
-	return domain.NotFoundError("TemplateRenstra.InvalidParseTarget", "invalid parse value TargetMax")
+	return domain.NotFoundError("TemplateRenstra.InvalidParseMax", "invalid parse value TargetMax")
 }
 
 func InvalidData() domain.Error {

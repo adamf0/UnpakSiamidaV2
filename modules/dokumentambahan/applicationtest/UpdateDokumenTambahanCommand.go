@@ -46,10 +46,10 @@ func TestUpdateDokumenTambahanCommandValidation_Fail(t *testing.T) {
 	}
 	err := app.UpdateDokumenTambahanCommandValidation(invalidCmd)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "UUID wajib diisi")
-	assert.Contains(t, err.Error(), "UUID Renstra wajib diisi")
-	assert.Contains(t, err.Error(), "Tahun wajib diisi")
-	assert.Contains(t, err.Error(), "Mode harus auditee, auditor1 atau auditor2")
+	assert.Contains(t, err.Error(), "UUID cannot be blank")
+	assert.Contains(t, err.Error(), "UUID Renstra cannot be blank")
+	assert.Contains(t, err.Error(), "Tahun cannot be blank")
+	assert.Contains(t, err.Error(), "Mode must be auditee, auditor1 or auditor2")
 }
 
 func TestUpdateDokumenTambahanCommandHandler_Success(t *testing.T) {

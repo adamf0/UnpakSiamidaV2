@@ -38,21 +38,13 @@ func TestDeleteJenisFileCommand_Success(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.DeleteJenisFileCommandHandler{Repo: repo}
 
-	// Insert record dulu
-	record := domain.JenisFile{
-		UUID: uuid.New(),
-		Nama: "Dokumen Untuk Delete",
-	}
-	err := repo.Create(context.Background(), &record)
-	assert.NoError(t, err)
-
 	cmd := app.DeleteJenisFileCommand{
-		Uuid: record.UUID.String(),
+		Uuid: "14212231-792f-4935-bb1c-9a38695a4b6b",
 	}
 
 	deletedUUID, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
-	assert.Equal(t, record.UUID.String(), deletedUUID)
+	assert.Equal(t, "14212231-792f-4935-bb1c-9a38695a4b6b", deletedUUID)
 
 	// Pastikan DB sudah terhapus
 	var saved domain.JenisFile
@@ -67,22 +59,14 @@ func TestDeleteJenisFileCommand_Edge(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.DeleteJenisFileCommandHandler{Repo: repo}
 
-	// Insert record
-	record := domain.JenisFile{
-		UUID: uuid.New(),
-		Nama: "Dokumen Edge Delete",
-	}
-	err := repo.Create(context.Background(), &record)
-	assert.NoError(t, err)
-
 	cmd := app.DeleteJenisFileCommand{
-		Uuid: record.UUID.String(),
+		Uuid: "14212231-792f-4935-bb1c-9a38695a4b6b",
 	}
 
 	// Delete pertama → sukses
 	deletedUUID, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
-	assert.Equal(t, record.UUID.String(), deletedUUID)
+	assert.Equal(t, "14212231-792f-4935-bb1c-9a38695a4b6b", deletedUUID)
 
 	// Delete kedua → harus not found
 	_, err = handler.Handle(context.Background(), cmd)
@@ -90,7 +74,7 @@ func TestDeleteJenisFileCommand_Edge(t *testing.T) {
 	assert.True(t, ok)
 	assert.Error(t, err)
 	assert.Equal(t, "JenisFile.NotFound", commonErr.Code)
-	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", record.UUID.String()), commonErr.Description)
+	assert.Equal(t, fmt.Sprintf("JenisFile with identifier %s not found", "14212231-792f-4935-bb1c-9a38695a4b6b"), commonErr.Description)
 }
 
 func TestDeleteJenisFileCommand_Fail(t *testing.T) {

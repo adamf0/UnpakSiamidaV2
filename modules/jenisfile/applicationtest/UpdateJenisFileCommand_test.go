@@ -41,23 +41,15 @@ func TestUpdateJenisFileCommand_Success(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.UpdateJenisFileCommandHandler{Repo: repo}
 
-	// Insert dulu record awal
-	original := domain.JenisFile{
-		UUID: uuid.New(),
-		Nama: "Dokumen Lama",
-	}
-	err := repo.Create(context.Background(), &original)
-	assert.NoError(t, err)
-
 	// Update record
 	cmd := app.UpdateJenisFileCommand{
-		Uuid: original.UUID.String(),
+		Uuid: "14212231-792f-4935-bb1c-9a38695a4b6b",
 		Nama: "Dokumen Baru",
 	}
 
 	updatedUUID, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
-	assert.Equal(t, original.UUID.String(), updatedUUID)
+	assert.Equal(t, "14212231-792f-4935-bb1c-9a38695a4b6b", updatedUUID)
 
 	// Pastikan DB sudah terupdate
 	var saved domain.JenisFile
@@ -73,23 +65,15 @@ func TestUpdateJenisFileCommand_Edge(t *testing.T) {
 	repo := infra.NewJenisFileRepository(db)
 	handler := &app.UpdateJenisFileCommandHandler{Repo: repo}
 
-	// Insert record awal
-	original := domain.JenisFile{
-		UUID: uuid.New(),
-		Nama: "Dokumen Edge",
-	}
-	err := repo.Create(context.Background(), &original)
-	assert.NoError(t, err)
-
 	// Update dengan nama sangat panjang (boundary)
 	longName := "Dokumen " + string(make([]byte, 500))
 	cmdLong := app.UpdateJenisFileCommand{
-		Uuid: original.UUID.String(),
+		Uuid: "14212231-792f-4935-bb1c-9a38695a4b6b",
 		Nama: longName,
 	}
 	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
 	assert.NoError(t, err)
-	assert.Equal(t, original.UUID.String(), updatedUUID)
+	assert.Equal(t, "14212231-792f-4935-bb1c-9a38695a4b6b", updatedUUID)
 }
 
 func TestUpdateJenisFileCommand_Fail(t *testing.T) {

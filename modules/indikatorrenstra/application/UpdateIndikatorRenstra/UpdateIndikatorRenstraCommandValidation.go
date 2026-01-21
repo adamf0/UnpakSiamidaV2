@@ -1,8 +1,9 @@
 package application
 
 import (
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	helper "UnpakSiamida/common/helper"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) error {
@@ -14,14 +15,13 @@ func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) 
 		),
 
 		validation.Field(&cmd.StandarRenstra,
-			validation.Required.Error("Standar Renstra wajib diisi"),
+			validation.Required.Error("Standar Renstra cannot be blank"),
 			validation.By(helper.ValidateUUIDv4),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
 		validation.Field(&cmd.Indikator,
-			validation.Required.Error("Indikator wajib diisi"),
-			validation.By(helper.ValidateUUIDv4),
+			validation.Required.Error("Indikator cannot be blank"),
 		),
 
 		validation.Field(&cmd.Parent,
@@ -30,12 +30,12 @@ func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) 
 		),
 
 		validation.Field(&cmd.Tahun,
-			validation.Required.Error("Tahun wajib diisi"),
+			validation.Required.Error("Tahun cannot be blank"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
 		validation.Field(&cmd.TipeTarget,
-			validation.Required.Error("Tipe Target wajib diisi"),
+			validation.Required.Error("Tipe Target cannot be blank"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)
