@@ -94,7 +94,7 @@ func TestUpdateIndikatorRenstraCommand_Fail(t *testing.T) {
 		{
 			name: "NotUniqueIndikator",
 			cmd: app.UpdateIndikatorRenstraCommand{
-				Uuid:           "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+				Uuid:           "c9e5f716-57e4-4349-a95c-83e264db62a1",
 				StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
 				Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
 				Tahun:          "2024",

@@ -16,6 +16,10 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	beritaacaraInfrastructure "UnpakSiamida/modules/beritaacara/infrastructure"
+
+	beritaacaraPresentation "UnpakSiamida/modules/beritaacara/presentation"
+
 	userInfrastructure "UnpakSiamida/modules/user/infrastructure"
 
 	userPresentation "UnpakSiamida/modules/user/presentation"
@@ -77,6 +81,12 @@ import (
 	ktsPresentation "UnpakSiamida/modules/kts/presentation"
 
 	login "UnpakSiamida/modules/account/application/Login"
+
+	createBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
+
+	updateBeritaAcara "UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara"
+
+	deleteBeritaAcara "UnpakSiamida/modules/beritaacara/application/DeleteBeritaAcara"
 
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 
@@ -197,23 +207,27 @@ func main() {
 
 	var tg commoninfra.TelegramSender
 
-	mustStart("Telegram Service", func() error {
-		factory := &commoninfra.DefaultTelegramFactory{
-			UseFake: false,
-		}
+	// mustStart("Telegram Service", func() error {
+	// 	factory := &commoninfra.DefaultTelegramFactory{
+	// 		UseFake: false,
+	// 	}
 
-		client, err := factory.Create()
-		if err != nil {
-			return err
-		}
+	// 	client, err := factory.Create()
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		tg = client
-		return nil
-	})
+	// 	tg = client
+	// 	return nil
+	// })
 
 	//berlaku untuk startup bukan hot reload
 	mustStart("User Module", func() error {
 		return userInfrastructure.RegisterModuleUser(db, tg)
+	})
+
+	mustStart("Berita Acara Module", func() error {
+		return beritaacaraInfrastructure.RegisterModuleBeritaAcara(db)
 	})
 
 	mustStart("Standar Renstra Module", func() error {
@@ -288,6 +302,7 @@ func main() {
 	commoninfra.RegisterEvent[eventUser.UserCreatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
 
+	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app)
 	standarrenstraPresentation.ModuleStandarRenstra(app)
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
@@ -334,6 +349,20 @@ func (b *ValidationBehavior) Handle(
 ) (interface{}, error) {
 
 	switch cmd := request.(type) {
+	// === berita acara Commands ===
+	case createBeritaAcara.CreateBeritaAcaraCommand:
+		if err := createBeritaAcara.CreateBeritaAcaraCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("BeritaAcaraCreate.Validation", err)
+		}
+	case updateBeritaAcara.UpdateBeritaAcaraCommand:
+		if err := updateBeritaAcara.UpdateBeritaAcaraCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("UseUpdate.Validation", err)
+		}
+	case deleteBeritaAcara.DeleteBeritaAcaraCommand:
+		if err := deleteBeritaAcara.DeleteBeritaAcaraCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("BeritaAcaraDelete.Validation", err)
+		}
+
 	// === User Commands ===
 	case createUser.CreateUserCommand:
 		if err := createUser.CreateUserCommandValidation(cmd); err != nil {
