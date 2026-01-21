@@ -122,12 +122,48 @@ func TestCreateTemplateRenstraCommandHandler_Fail(t *testing.T) {
 		},
 		{
 			name:          "InvalidValueTarget",
-			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c", // valid
-			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0", // tidak ada
+			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
 			target:        nil,
 			targetMin:     strPtr("80"),
-			targetMax:     strPtr("120"),
+			targetMax:     nil,
 			expectedCode:  "TemplateRenstra.InvalidValueTarget",
+		},
+		{
+			name:          "InvalidParseMin",
+			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+			target:        nil,
+			targetMin:     strPtr("abc"),
+			targetMax:     strPtr("1"),
+			expectedCode:  "TemplateRenstra.InvalidParseMin",
+		},
+		{
+			name:          "InvalidParseMax",
+			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+			target:        nil,
+			targetMin:     strPtr("1"),
+			targetMax:     strPtr("abc"),
+			expectedCode:  "TemplateRenstra.InvalidParseMax",
+		},
+		{
+			name:          "OutRange",
+			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+			target:        nil,
+			targetMin:     strPtr("1"),
+			targetMax:     strPtr("-10"),
+			expectedCode:  "TemplateRenstra.OutRange",
+		},
+		{
+			name:          "OutRange",
+			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0",
+			target:        nil,
+			targetMin:     strPtr("1"),
+			targetMax:     strPtr("1e309"),
+			expectedCode:  "TemplateRenstra.OutRange",
 		},
 	}
 
@@ -201,7 +237,7 @@ func TestCreateTemplateRenstra_ContextTimeout(t *testing.T) {
 	cancel()
 
 	_, err := handler.Handle(ctx, cmd)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
 }
 

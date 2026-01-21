@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"math"
+	"strconv"
 	"time"
 
 	common "UnpakSiamida/common/domain"
@@ -54,6 +56,25 @@ func NewTemplateRenstra(
 	if !((hasTarget && !hasTargetMin && !hasTargetMax) ||
 		(!hasTarget && hasTargetMin && hasTargetMax)) {
 		return common.FailureValue[*TemplateRenstra](InvalidValueTarget())
+	}
+	if hasTargetMin && hasTargetMax {
+		minVal, err := strconv.ParseFloat(*targetMin, 64)
+		if err != nil {
+			return common.FailureValue[*TemplateRenstra](InvalidParseMin())
+		}
+
+		maxVal, err := strconv.ParseFloat(*targetMax, 64)
+		if err != nil {
+			return common.FailureValue[*TemplateRenstra](InvalidParseMax())
+		}
+
+		if math.IsNaN(minVal) || math.IsNaN(maxVal) || math.IsInf(minVal, 0) || math.IsInf(maxVal, 0) {
+			return common.FailureValue[*TemplateRenstra](OutRange())
+		}
+
+		if minVal < 0 || maxVal < 0 || minVal > maxVal {
+			return common.FailureValue[*TemplateRenstra](OutRange())
+		}
 	}
 	if indikatorRenstraID <= 0 {
 		return common.FailureValue[*TemplateRenstra](IndikatorNotFound())

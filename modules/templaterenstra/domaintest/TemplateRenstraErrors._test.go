@@ -55,6 +55,24 @@ func TestTemplateRenstraError(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
+			name:         "InvalidParseMin",
+			err:          domain.InvalidParseMin(),
+			expectedCode: "TemplateRenstra.InvalidParseMin",
+			expectedDesc: "invalid parse value TargetMin",
+		},
+		{
+			name:         "InvalidParseMax",
+			err:          domain.InvalidParseMax(),
+			expectedCode: "TemplateRenstra.InvalidParseMax",
+			expectedDesc: "invalid parse value TargetMax",
+		},
+		{
+			name:         "OutRange",
+			err:          domain.OutRange(),
+			expectedCode: "TemplateRenstra.OutRange",
+			expectedDesc: "TargetMin & TargetMax is out of range",
+		},
+		{
 			name:         "DuplicateData",
 			err:          domain.DuplicateData(),
 			expectedCode: "TemplateRenstra.DuplicateData",

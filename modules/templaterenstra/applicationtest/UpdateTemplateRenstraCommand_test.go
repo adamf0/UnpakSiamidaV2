@@ -186,7 +186,7 @@ func TestUpdateTemplateRenstra_ContextTimeout(t *testing.T) {
 	target := "15"
 
 	cmd := app.UpdateTemplateRenstraCommand{
-		Uuid:         "",
+		Uuid:         "c6df396d-b15e-4129-b1c8-4f312b2830ca",
 		Tahun:        "2024",
 		Indikator:    "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
 		IsPertanyaan: "1",
@@ -204,6 +204,6 @@ func TestUpdateTemplateRenstra_ContextTimeout(t *testing.T) {
 	cancel()
 
 	_, err := handler.Handle(ctx, cmd)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.True(t, err == context.Canceled || err == context.DeadlineExceeded, "expected context canceled or timeout error")
 }

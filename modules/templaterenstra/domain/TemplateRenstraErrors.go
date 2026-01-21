@@ -25,6 +25,18 @@ func InvalidValueTarget() domain.Error {
 	return domain.NotFoundError("TemplateRenstra.InvalidValueTarget", "invalid target combination, either provide Target only or provide both TargetMin and TargetMax")
 }
 
+func OutRange() domain.Error {
+	return domain.NotFoundError("TemplateRenstra.OutRange", "TargetMin & TargetMax is out of range")
+}
+
+func InvalidParseMin() domain.Error {
+	return domain.NotFoundError("TemplateRenstra.InvalidParseTarget", "invalid parse value TargetMin")
+}
+
+func InvalidParseMax() domain.Error {
+	return domain.NotFoundError("TemplateRenstra.InvalidParseTarget", "invalid parse value TargetMax")
+}
+
 func InvalidData() domain.Error {
 	return domain.NotFoundError("TemplateRenstra.InvalidData", "data is invalid")
 }
