@@ -92,7 +92,7 @@ func setupGenerateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         );
 
         CREATE TABLE renstra_nilai (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             id_renstra_old int(11) DEFAULT NULL,
             id_renstra int(11) NOT NULL,
@@ -111,7 +111,7 @@ func setupGenerateRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         ADD PRIMARY KEY (id);
 
         CREATE TABLE template_renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             indikator int(11) NOT NULL,

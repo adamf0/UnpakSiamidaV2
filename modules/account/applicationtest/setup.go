@@ -58,7 +58,7 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
 	err = gdb.Exec(`
         DROP TABLE IF EXISTS renstra;
         CREATE TABLE renstra (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             tahun year(4) NOT NULL,
             fakultas_unit_old int(11) DEFAULT NULL,
@@ -190,7 +190,7 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS users;
         CREATE TABLE users (
-            id bigint(20) UNSIGNED NOT NULL,
+            id bigint(20) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             nidn_username varchar(255) NOT NULL,
             password varchar(255) NOT NULL,

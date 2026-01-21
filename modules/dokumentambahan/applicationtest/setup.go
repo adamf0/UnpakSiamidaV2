@@ -125,7 +125,7 @@ func setupDokumenTambahanMySQL(t *testing.T) (*gorm.DB, func()) {
 
         DROP TABLE IF EXISTS sijamu_fakultas_unit;
         CREATE TABLE sijamu_fakultas_unit (
-            id int(11) NOT NULL,
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
             uuid varchar(36) DEFAULT NULL,
             kode_fakultas char(9) DEFAULT NULL,
             kode_prodi char(10) DEFAULT NULL,
