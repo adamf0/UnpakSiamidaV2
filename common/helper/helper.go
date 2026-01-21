@@ -123,7 +123,7 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 		return nil
 	}
 
-	return ValidateUUIDv4(value)
+	return ValidateUUIDv4(s)
 }
 
 func ValidateParent(value interface{}) error {
