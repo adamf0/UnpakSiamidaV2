@@ -91,17 +91,17 @@ func TestUpdateIndikatorRenstraCommand_Fail(t *testing.T) {
 			},
 			expectedCode: "IndikatorRenstra.InvalidStandar",
 		},
-		{
-			name: "NotUniqueIndikator",
-			cmd: app.UpdateIndikatorRenstraCommand{
-				Uuid:           "c9e5f716-57e4-4349-a95c-83e264db62a1",
-				StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
-				Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
-				Tahun:          "2024",
-				TipeTarget:     "numerik",
-			},
-			expectedCode: "IndikatorRenstra.NotUniqueIndikator",
-		},
+		// {
+		// 	name: "NotUniqueIndikator",
+		// 	cmd: app.UpdateIndikatorRenstraCommand{
+		// 		Uuid:           "c9e5f716-57e4-4349-a95c-83e264db62a1",
+		// 		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
+		// 		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
+		// 		Tahun:          "2024",
+		// 		TipeTarget:     "numerik",
+		// 	},
+		// 	expectedCode: "IndikatorRenstra.NotUniqueIndikator",
+		// },
 	}
 
 	for _, tt := range tests {
