@@ -106,20 +106,59 @@ func (r *RenstraRepository) GetDefaultByUuid(
 			vfu.type as Type,
 			vfu.fakultas as Fakultas,
 
-			COUNT(DISTINCT rn.id) AS TotalRenstra,
-			SUM(CASE WHEN rn.capaian IS NOT NULL THEN 1 ELSE 0 END) AS TotalRenstraAuditee,
-			SUM(CASE WHEN rn.capaian_auditor IS NOT NULL THEN 1 ELSE 0 END) AS TotalRenstraAuditor,
-
-			COUNT(DISTINCT dt.id) AS TotalDokumen,
-			SUM(CASE WHEN dt.file IS NOT NULL THEN 1 ELSE 0 END) AS TotalDokumenAuditee,
-			SUM(CASE WHEN dt.capaian_auditor IS NOT NULL THEN 1 ELSE 0 END) AS TotalDokumenAuditor
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id
+			) AS TotalRenstra,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
+			) AS TotalRenstraAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
+			) AS TotalRenstraAuditor,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id
+			) AS TotalDokumen,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
+			) AS TotalDokumenAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
+			) AS TotalDokumenAuditor
 		FROM renstra r
 		JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id
 		LEFT JOIN users a0 ON r.auditee = a0.id
 		LEFT JOIN users a1 ON r.auditor1 = a1.id
 		LEFT JOIN users a2 ON r.auditor2 = a2.id
-		LEFT JOIN renstra_nilai rn  ON rn.id_renstra = r.id
-		LEFT JOIN dokumen_tambahan dt ON dt.id_renstra = r.id
 		WHERE r.uuid = ?
 		LIMIT 1
 	`
@@ -203,19 +242,59 @@ func (r *RenstraRepository) GetAll(
 			vfu.type as Type,
 			vfu.fakultas as Fakultas,
 
-			COUNT(DISTINCT rn.id) AS TotalRenstra,
-			SUM(CASE WHEN rn.capaian IS NOT NULL THEN 1 ELSE 0 END) AS TotalRenstraAuditee,
-			SUM(CASE WHEN rn.capaian_auditor IS NOT NULL THEN 1 ELSE 0 END) AS TotalRenstraAuditor,
-
-			COUNT(DISTINCT dt.id) AS TotalDokumen,
-			SUM(CASE WHEN dt.file IS NOT NULL THEN 1 ELSE 0 END) AS TotalDokumenAuditee,
-			SUM(CASE WHEN dt.capaian_auditor IS NOT NULL THEN 1 ELSE 0 END) AS TotalDokumenAuditor
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id
+			) AS TotalRenstra,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
+			) AS TotalRenstraAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					renstra_nilai
+				WHERE
+					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
+			) AS TotalRenstraAuditor,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id
+			) AS TotalDokumen,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
+			) AS TotalDokumenAuditee,
+			(
+				SELECT
+					COUNT(*)
+				FROM
+					dokumen_tambahan
+				WHERE
+					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
+			) AS TotalDokumenAuditor
 		`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
 		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
 		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
-		Joins("LEFT JOIN renstra_nilai rn  ON rn.id_renstra = r.id").
-		Joins("LEFT JOIN dokumen_tambahan dt ON dt.id_renstra = r.id")
+		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
