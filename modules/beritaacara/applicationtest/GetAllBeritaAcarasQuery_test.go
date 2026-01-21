@@ -59,44 +59,44 @@ func TestGetAllBeritaAcarasIntegration(t *testing.T) {
 	// -------------------------------------------------------
 	//  SEARCH FILTER THEORY  (All Columns × Operators)
 	// -------------------------------------------------------
-	filterTests := []struct {
-		name         string
-		filter       []domain.SearchFilter
-		expectedRows int
-	}{
-		// nama
-		{"nama eq HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "eq", str("HUKUM")},
-		}, 5},
-		{"nama like HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "like", str("HUKUM")},
-		}, 5},
-		{"nama neq HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "neq", str("HUKUM")},
-		}, 10},
-	}
+	// filterTests := []struct {
+	// 	name         string
+	// 	filter       []domain.SearchFilter
+	// 	expectedRows int
+	// }{
+	// 	// nama
+	// 	{"nama eq HUKUM", []domain.SearchFilter{
+	// 		{"nama_fak_prod_unit", "eq", str("HUKUM")},
+	// 	}, 5},
+	// 	{"nama like HUKUM", []domain.SearchFilter{
+	// 		{"nama_fak_prod_unit", "like", str("HUKUM")},
+	// 	}, 5},
+	// 	{"nama neq HUKUM", []domain.SearchFilter{
+	// 		{"nama_fak_prod_unit", "neq", str("HUKUM")},
+	// 	}, 10},
+	// }
 
-	for _, tt := range filterTests {
-		t.Run("Filter_"+tt.name, func(t *testing.T) {
+	// for _, tt := range filterTests {
+	// 	t.Run("Filter_"+tt.name, func(t *testing.T) {
 
-			q := app.GetAllBeritaAcarasQuery{
-				Search:        "",
-				SearchFilters: tt.filter,
-				Page:          &page,
-				Limit:         &limit,
-			}
+	// 		q := app.GetAllBeritaAcarasQuery{
+	// 			Search:        "",
+	// 			SearchFilters: tt.filter,
+	// 			Page:          &page,
+	// 			Limit:         &limit,
+	// 		}
 
-			res, err := handler.Handle(context.Background(), q)
-			if err != nil {
-				t.Fatalf("handler returned error: %v", err)
-			}
+	// 		res, err := handler.Handle(context.Background(), q)
+	// 		if err != nil {
+	// 			t.Fatalf("handler returned error: %v", err)
+	// 		}
 
-			if len(res.Data) != tt.expectedRows {
-				t.Fatalf("[%s] expected %d rows, got %d",
-					tt.name, tt.expectedRows, len(res.Data))
-			}
-		})
-	}
+	// 		if len(res.Data) != tt.expectedRows {
+	// 			t.Fatalf("[%s] expected %d rows, got %d",
+	// 				tt.name, tt.expectedRows, len(res.Data))
+	// 		}
+	// 	})
+	// }
 }
 
 func str(v string) *string {

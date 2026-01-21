@@ -70,7 +70,7 @@ func setupBeritaAcaraMySQL(t *testing.T) (*gorm.DB, func()) {
 			updated_at timestamp NULL DEFAULT NULL
 		);
 
-        INSERT INTO berita_acara (id, tahun, fakultas_unit_old, fakultas_unit, tanggal, auditee, auditor1, auditor2, created_at, updated_at) VALUES
+        INSERT INTO berita_acara (id, uuid, tahun, fakultas_unit_old, fakultas_unit, tanggal, auditee, auditor1, auditor2, created_at, updated_at) VALUES
 		(16, '14212231-792f-4935-bb1c-9a38695a4b6b', '2023', NULL, 9, '2023-10-28', 271, 376, 151, '2023-10-27 13:42:59', '2023-10-27 13:42:59'),
 		(19, 'ba9f4f89-41bd-4737-acf4-48554ed9210e', '2023', NULL, 2, '2023-10-28', 247, 118, 151, '2023-10-27 13:58:26', '2023-10-27 13:58:26'),
 		(22, 'ccab56fa-c290-4497-8248-657937802ae0', '2023', NULL, 3, '2023-12-20', 250, 70, 211, '2023-10-28 03:43:34', '2023-12-20 03:40:48'),

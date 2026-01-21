@@ -50,7 +50,7 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 
 	// Ambil hanya kolom yang benar-benar ada di struct BeritaAcaraDefault
 	query := `
-		SELECT id, uuid, nama
+		SELECT *
 		FROM berita_acara
 		WHERE uuid = ?
 		LIMIT 1
@@ -73,7 +73,7 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"nama": "nama",
+	// "nama_fak_prod_unit": "nama",
 }
 
 // ------------------------
