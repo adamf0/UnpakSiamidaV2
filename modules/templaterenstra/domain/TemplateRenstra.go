@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"math"
 	"strconv"
 	"time"
@@ -60,19 +61,21 @@ func NewTemplateRenstra(
 	if hasTargetMin && hasTargetMax {
 		minVal, err := strconv.ParseFloat(*targetMin, 64)
 		if err != nil {
+			if errors.Is(err, strconv.ErrRange) {
+				return common.FailureValue[*TemplateRenstra](OutRange())
+			}
 			return common.FailureValue[*TemplateRenstra](InvalidParseMin())
 		}
 
 		maxVal, err := strconv.ParseFloat(*targetMax, 64)
 		if err != nil {
+			if errors.Is(err, strconv.ErrRange) {
+				return common.FailureValue[*TemplateRenstra](OutRange())
+			}
 			return common.FailureValue[*TemplateRenstra](InvalidParseMax())
 		}
 
-		if math.IsNaN(minVal) || math.IsNaN(maxVal) || math.IsInf(minVal, 0) || math.IsInf(maxVal, 0) {
-			return common.FailureValue[*TemplateRenstra](OutRange())
-		}
-
-		if minVal < 0 || maxVal < 0 || minVal > maxVal {
+		if math.IsNaN(minVal) || math.IsNaN(maxVal) || math.IsInf(minVal, 0) || math.IsInf(maxVal, 0) || minVal < 0 || maxVal < 0 || minVal > maxVal {
 			return common.FailureValue[*TemplateRenstra](OutRange())
 		}
 	}
