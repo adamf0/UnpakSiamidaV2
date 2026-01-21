@@ -142,6 +142,17 @@ func setupUserMySQL(t *testing.T) (*gorm.DB, func()) {
             standalone tinyint(4) DEFAULT 0
         );
 
+        DROP TABLE IF EXISTS outbox_messages;
+        CREATE TABLE outbox_messages (
+            id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+            type varchar(255) NOT NULL,
+            payload longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(payload)),
+            occurred_on_utc datetime(6) NOT NULL,
+            processed_at datetime(6) DEFAULT NULL,
+            error text DEFAULT NULL,
+            created_at datetime(6) NOT NULL DEFAULT current_timestamp(6)
+        );
+
 		CREATE OR REPLACE VIEW v_fakultas_unit AS
         SELECT
             sfu.id AS id,
