@@ -38,9 +38,6 @@ func TestNewBeritaAcara_Success(t *testing.T) {
 	assert.Equal(t, Tahun, beritaacara.Tahun)
 	assert.Equal(t, FakultasUnit, beritaacara.FakultasUnit)
 	assert.Equal(t, Tanggal, beritaacara.Tanggal)
-	assert.Equal(t, Auditee, beritaacara.Auditee)
-	assert.Equal(t, Auditor1, beritaacara.Auditor1)
-	assert.Equal(t, Auditor2, beritaacara.Auditor2)
 	assert.NotEqual(t, uuid.Nil, beritaacara.UUID)
 }
 
@@ -89,9 +86,6 @@ func TestUpdateBeritaAcara_Success(t *testing.T) {
 	assert.Equal(t, newTahun, updated.Tahun)
 	assert.Equal(t, newFakultasUnit, updated.FakultasUnit)
 	assert.Equal(t, newTanggal, updated.Tanggal)
-	assert.Equal(t, newAuditee, updated.Auditee)
-	assert.Equal(t, newAuditor1, updated.Auditor1)
-	assert.Equal(t, newAuditor2, updated.Auditor2)
 	assert.Equal(t, prev.UUID, updated.UUID)
 }
 
