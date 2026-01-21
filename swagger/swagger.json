@@ -9,6 +9,86 @@
     "host": "localhost:3000",
     "basePath": "/",
     "paths": {
+        "/BeritaAcara/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BeritaAcara"
+                ],
+                "summary": "Get BeritaAcara by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "BeritaAcara UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.BeritaAcara"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/BeritaAcaras": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BeritaAcara"
+                ],
+                "summary": "Get all BeritaAcaras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedBeritaAcaras"
+                        }
+                    }
+                }
+            }
+        },
         "/JenisFile/{uuid}": {
             "get": {
                 "produces": [
@@ -226,6 +306,230 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/beritaacara": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BeritaAcara"
+                ],
+                "summary": "Create new BeritaAcara",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nama Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas Unit",
+                        "name": "fakultasunit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal",
+                        "name": "tanggal",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditee",
+                        "name": "auditee",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor1",
+                        "name": "auditor1",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor2",
+                        "name": "auditor2",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created BeritaAcara",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/beritaacara/{uuid}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BeritaAcara"
+                ],
+                "summary": "Update existing BeritaAcara",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "BeritaAcara UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Nama Tahun",
+                        "name": "tahun",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas Unit",
+                        "name": "fakultasunit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal",
+                        "name": "tanggal",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditee",
+                        "name": "auditee",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor1",
+                        "name": "auditor1",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Auditor2",
+                        "name": "auditor2",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated BeritaAcara",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BeritaAcara"
+                ],
+                "summary": "Delete a BeritaAcara",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "BeritaAcara UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted BeritaAcara",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
                         }
                     }
                 }
@@ -3096,6 +3400,76 @@
         }
     },
     "definitions": {
+        "domain.BeritaAcara": {
+            "type": "object",
+            "properties": {
+                "auditee": {
+                    "type": "integer"
+                },
+                "auditor1": {
+                    "type": "integer"
+                },
+                "auditor2": {
+                    "type": "integer"
+                },
+                "fakultasUnit": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tanggal": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.BeritaAcaraDefault": {
+            "type": "object",
+            "properties": {
+                "auditee": {
+                    "type": "string"
+                },
+                "auditeeId": {
+                    "type": "integer"
+                },
+                "auditor1": {
+                    "type": "string"
+                },
+                "auditor1Id": {
+                    "type": "integer"
+                },
+                "auditor2": {
+                    "type": "string"
+                },
+                "auditor2ID": {
+                    "type": "integer"
+                },
+                "fakultasUnit": {
+                    "type": "string"
+                },
+                "fakultasUnitId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "tahun": {
+                    "type": "string"
+                },
+                "tanggal": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.DokumenTambahan": {
             "type": "object",
             "properties": {
@@ -3540,6 +3914,26 @@
                 }
             }
         },
+        "domain.PagedBeritaAcaras": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.BeritaAcaraDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.PagedDokumenTambahans": {
             "type": "object",
             "properties": {
@@ -3910,6 +4304,21 @@
                     "type": "string"
                 },
                 "Tahun": {
+                    "type": "string"
+                },
+                "TotalDokumen": {
+                    "type": "string"
+                },
+                "TotalDokumenAuditee": {
+                    "type": "string"
+                },
+                "TotalDokumenAuditor": {
+                    "type": "string"
+                },
+                "TotalRenstraAuditee": {
+                    "type": "string"
+                },
+                "TotalRenstraAuditor": {
                     "type": "string"
                 },
                 "Type": {
