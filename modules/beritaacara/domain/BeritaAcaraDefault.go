@@ -10,13 +10,14 @@ type BeritaAcaraDefault struct {
 	Id   uint
 	UUID uuid.UUID
 
-	Tahun        string
-	FakultasUnit int
-	Tanggal      time.Time
-	Auditee      *int
-	NamaAuditee  *string
-	Auditor1     *int
-	NamaAuditor1 *string
-	Auditor2     *int
-	NamaAuditor2 *string
+	Tahun          string
+	FakultasUnitId int
+	FakultasUnit   string
+	Tanggal        time.Time
+	AuditeeId      *int
+	Auditee        *string
+	Auditor1Id     *int
+	Auditor1       *string
+	Auditor2ID     *int
+	Auditor2       *string
 }

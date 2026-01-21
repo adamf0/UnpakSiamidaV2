@@ -1,9 +1,10 @@
 package infrastructure
 
 import (
-	commondomainBeritaAcara "UnpakSiamida/common/domain"
-	domainBeritaAcara "UnpakSiamida/modules/beritaacara/domain"
+	commondomainberitaacara "UnpakSiamida/common/domain"
+	domainberitaacara "UnpakSiamida/modules/beritaacara/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,15 +16,15 @@ type BeritaAcaraRepository struct {
 	db *gorm.DB
 }
 
-func NewBeritaAcaraRepository(db *gorm.DB) domainBeritaAcara.IBeritaAcaraRepository {
+func NewBeritaAcaraRepository(db *gorm.DB) domainberitaacara.IBeritaAcaraRepository {
 	return &BeritaAcaraRepository{db: db}
 }
 
 // ------------------------
 // GET BY UUID
 // ------------------------
-func (r *BeritaAcaraRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainBeritaAcara.BeritaAcara, error) {
-	var BeritaAcara domainBeritaAcara.BeritaAcara
+func (r *BeritaAcaraRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainberitaacara.BeritaAcara, error) {
+	var BeritaAcara domainberitaacara.BeritaAcara
 
 	err := r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
@@ -46,24 +47,45 @@ func (r *BeritaAcaraRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*
 func (r *BeritaAcaraRepository) GetDefaultByUuid(
 	ctx context.Context,
 	id uuid.UUID,
-) (*domainBeritaAcara.BeritaAcaraDefault, error) {
+) (*domainberitaacara.BeritaAcaraDefault, error) {
 
-	// Ambil hanya kolom yang benar-benar ada di struct BeritaAcaraDefault
 	query := `
-		SELECT *
-		FROM berita_acara
-		WHERE uuid = ?
-		LIMIT 1
-	`
+        SELECT 
+            ba.id as Id,
+            ba.uuid as Uuid,
+            
+            ba.tahun as Tahun,
+            ba.fakultas_unit as FakultasUnitId,
+            fu.nama_fak_prod_unit as FakultasUnit,
+            ba.tanggal as Tanggal,
+            
+            ba.auditee as AuditeeId,
+            u1.name as NamaAuditee,
+            
+            ba.auditor1 as Auditor1,
+            u2.name as NamaAuditor1,
+            
+            ba.auditor2 as Auditor2,
+            u3.name as NamaAuditor2
+        FROM berita_acara ba
+        LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id
+        LEFT JOIN users u1 ON ba.auditee = u1.id
+        LEFT JOIN users u2 ON ba.auditor1 = u2.id 
+        LEFT JOIN users u3 ON ba.auditor2 = u3.id;
+        WHERE ba.uuid = ?
+        LIMIT 1
+    `
 
-	var rowData domainBeritaAcara.BeritaAcaraDefault
+	var rowData domainberitaacara.BeritaAcaraDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
+	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, res.Error
 	}
 
-	// Jika tidak ada row → struct kosong → anggap record not found
 	if rowData.Id == 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
@@ -73,7 +95,7 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	// "nama_fak_prod_unit": "nama",
+	"nama_fak_prod_unit": "fu.nama_fak_prod_unit",
 }
 
 // ------------------------
@@ -82,126 +104,118 @@ var allowedSearchColumns = map[string]string{
 func (r *BeritaAcaraRepository) GetAll(
 	ctx context.Context,
 	search string,
-	searchFilters []commondomainBeritaAcara.SearchFilter,
+	searchFilters []commondomainberitaacara.SearchFilter,
 	page, limit *int,
-) ([]domainBeritaAcara.BeritaAcara, int64, error) {
+) ([]domainberitaacara.BeritaAcaraDefault, int64, error) {
 
-	var BeritaAcaras []domainBeritaAcara.BeritaAcara
+	var rows []domainberitaacara.BeritaAcaraDefault
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&domainBeritaAcara.BeritaAcara{})
+	db := r.db.WithContext(ctx).
+		Table("berita_acara ba").
+		Select(`
+			ba.id AS id,
+			ba.uuid AS uuid,
 
-	// -------------------------------
-	// SEARCH FILTERS (ADVANCED)
-	// -------------------------------
-	if len(searchFilters) > 0 {
-		for _, f := range searchFilters {
-			field := strings.TrimSpace(strings.ToLower(f.Field))
-			operator := strings.TrimSpace(strings.ToLower(f.Operator))
+			ba.tahun AS tahun,
+			ba.fakultas_unit AS fakultas_unit_id,
+			fu.nama_fak_prod_unit AS fakultas_unit,
+			ba.tanggal AS tanggal,
 
-			var value string
-			if f.Value != nil {
-				value = strings.TrimSpace(*f.Value)
-			} else {
-				value = "" // nil dianggap kosong
-			}
+			ba.auditee AS auditee_id,
+			u1.name AS nama_auditee,
 
-			// if value == "" {
-			// 	continue
-			// }
+			ba.auditor1 AS auditor1,
+			u2.name AS nama_auditor1,
 
-			// Validate allowed column
-			col, ok := allowedSearchColumns[field]
-			if !ok {
-				continue // skip unknown field
-			}
+			ba.auditor2 AS auditor2,
+			u3.name AS nama_auditor2
+		`).
+		Joins(`LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id`).
+		Joins(`LEFT JOIN users u1 ON ba.auditee = u1.id`).
+		Joins(`LEFT JOIN users u2 ON ba.auditor1 = u2.id`).
+		Joins(`LEFT JOIN users u3 ON ba.auditor2 = u3.id`)
 
-			switch operator {
-			case "eq":
-				db = db.Where(fmt.Sprintf("%s = ?", col), value)
-			case "neq":
-				db = db.Where(fmt.Sprintf("%s <> ?", col), value)
-			case "like":
-				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-			case "gt":
-				db = db.Where(fmt.Sprintf("%s > ?", col), value)
-			case "gte":
-				db = db.Where(fmt.Sprintf("%s >= ?", col), value)
-			case "lt":
-				db = db.Where(fmt.Sprintf("%s < ?", col), value)
-			case "lte":
-				db = db.Where(fmt.Sprintf("%s <= ?", col), value)
-			case "in":
-				db = db.Where(fmt.Sprintf("%s IN (?)", col), strings.Split(value, ","))
-			default:
-				// default fallback → LIKE
-				db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
-			}
+	// -----------------------------------
+	// ADVANCED FILTERS
+	// -----------------------------------
+	for _, f := range searchFilters {
+		col, ok := allowedSearchColumns[strings.ToLower(f.Field)]
+		if !ok {
+			continue
 		}
 
-	}
-	if strings.TrimSpace(search) != "" {
+		val := ""
+		if f.Value != nil {
+			val = strings.TrimSpace(*f.Value)
+		}
 
-		// -------------------------------
-		// GLOBAL SEARCH
-		// -------------------------------
+		switch strings.ToLower(f.Operator) {
+		case "eq":
+			db = db.Where(col+" = ?", val)
+		case "neq":
+			db = db.Where(col+" <> ?", val)
+		case "like":
+			db = db.Where(col+" LIKE ?", "%"+val+"%")
+		case "in":
+			db = db.Where(col+" IN ?", strings.Split(val, ","))
+		}
+	}
+
+	// -----------------------------------
+	// GLOBAL SEARCH
+	// -----------------------------------
+	if strings.TrimSpace(search) != "" {
 		like := "%" + search + "%"
-		var orParts []string
-		var params []interface{}
+		var or []string
+		var args []interface{}
 
 		for _, col := range allowedSearchColumns {
-			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
-			params = append(params, like)
+			or = append(or, col+" LIKE ?")
+			args = append(args, like)
 		}
 
-		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
+		db = db.Where("("+strings.Join(or, " OR ")+")", args...)
 	}
 
-	// -------------------------------
-	// COUNT
-	// -------------------------------
+	// -----------------------------------
+	// COUNT (AMAN)
+	// -----------------------------------
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	db = db.Order("id DESC")
+	// -----------------------------------
+	// ORDER + PAGINATION
+	// -----------------------------------
+	db = db.Order("ba.id DESC")
 
-	// -------------------------------
-	// PAGINATION
-	// -------------------------------
 	if page != nil && limit != nil && *limit > 0 {
-		p := *page
-		l := *limit
-
-		if p < 1 {
-			p = 1
-		}
-
-		offset := (p - 1) * l
-		db = db.Offset(offset).Limit(l)
+		offset := (*page - 1) * (*limit)
+		db = db.Offset(offset).Limit(*limit)
 	}
 
-	// -------------------------------
-	// EXECUTE QUERY
-	// -------------------------------
-	if err := db.Find(&BeritaAcaras).Error; err != nil {
+	// -----------------------------------
+	// EXECUTE
+	// -----------------------------------
+	if err := db.Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 
-	return BeritaAcaras, total, nil
+	return rows, total, nil
 }
 
 // ------------------------
 // CREATE
 // ------------------------
-func (r *BeritaAcaraRepository) Create(ctx context.Context, jenisfile *domainBeritaAcara.BeritaAcara) error {
+func (r *BeritaAcaraRepository) Create(ctx context.Context, jenisfile *domainberitaacara.BeritaAcara) error {
 	return r.db.WithContext(ctx).Create(jenisfile).Error
 }
 
 // ------------------------
 // UPDATE
 // ------------------------
-func (r *BeritaAcaraRepository) Update(ctx context.Context, jenisfile *domainBeritaAcara.BeritaAcara) error {
+func (r *BeritaAcaraRepository) Update(ctx context.Context, jenisfile *domainberitaacara.BeritaAcara) error {
 	return r.db.WithContext(ctx).Save(jenisfile).Error
 }
 
@@ -211,7 +225,7 @@ func (r *BeritaAcaraRepository) Update(ctx context.Context, jenisfile *domainBer
 func (r *BeritaAcaraRepository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("uuid = ?", uid).
-		Delete(&domainBeritaAcara.BeritaAcara{}).Error
+		Delete(&domainberitaacara.BeritaAcara{}).Error
 }
 
 func (r *BeritaAcaraRepository) SetupUuid(ctx context.Context) error {
@@ -219,7 +233,7 @@ func (r *BeritaAcaraRepository) SetupUuid(ctx context.Context) error {
 
 	var ids []uint
 	if err := r.db.WithContext(ctx).
-		Model(&domainBeritaAcara.BeritaAcara{}).
+		Model(&domainberitaacara.BeritaAcara{}).
 		Where("uuid IS NULL OR uuid = ''").
 		Pluck("id", &ids).Error; err != nil {
 		return err

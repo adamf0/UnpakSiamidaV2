@@ -15,7 +15,7 @@ type IBeritaAcaraRepository interface {
 		search string,
 		searchFilters []commonDomain.SearchFilter,
 		page, limit *int,
-	) ([]BeritaAcara, int64, error)
+	) ([]BeritaAcaraDefault, int64, error)
 	Create(ctx context.Context, BeritaAcara *BeritaAcara) error
 	Update(ctx context.Context, BeritaAcara *BeritaAcara) error
 	Delete(ctx context.Context, uid uuid.UUID) error
