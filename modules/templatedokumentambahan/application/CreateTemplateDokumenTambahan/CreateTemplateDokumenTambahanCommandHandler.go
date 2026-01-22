@@ -2,9 +2,7 @@ package application
 
 import (
 	"context"
-	"strings"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 
 	domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
@@ -61,15 +59,15 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
 	// SAVE REPOSITORY
 	// --------------------------
 	if err := h.Repo.Create(ctx, templateDokumenTambahan); err != nil {
-		var mysqlErr *mysql.MySQLError
-		if errors.As(err, &mysqlErr) { //gagal masuk kesini
-			if mysqlErr.Number == 1062 {
-				return "", domaintemplatedokumentambahan.DuplicateData()
-			}
-		}
-		if strings.Contains(err.Error(), "Duplicate entry") { //gagal masuk kesini
-			return "", domaintemplatedokumentambahan.DuplicateData()
-		}
+		// var mysqlErr *mysql.MySQLError
+		// if errors.As(err, &mysqlErr) { //gagal masuk kesini
+		// 	if mysqlErr.Number == 1062 {
+		// 		return "", domaintemplatedokumentambahan.DuplicateData()
+		// 	}
+		// }
+		// if strings.Contains(err.Error(), "Duplicate entry") { //gagal masuk kesini
+		// 	return "", domaintemplatedokumentambahan.DuplicateData()
+		// }
 
 		return "", err
 	}
