@@ -259,7 +259,7 @@
 				
 				<option value="file101">UnpakSiamida/modules/tahunrenstra/domain/TahunRenstraErrors.go (100.0%)</option>
 				
-				<option value="file102">UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan/CreateTemplateDokumenTambahanCommandHandler.go (56.5%)</option>
+				<option value="file102">UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan/CreateTemplateDokumenTambahanCommandHandler.go (76.5%)</option>
 				
 				<option value="file103">UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan/CreateTemplateDokumenTambahanCommandValidation.go (100.0%)</option>
 				
@@ -1237,11 +1237,8 @@ import (
         domaindokumentambahan "UnpakSiamida/modules/dokumentambahan/domain"
         domainrenstra "UnpakSiamida/modules/renstra/domain"
         "context"
-        "errors"
-        "strings"
         "time"
 
-        "github.com/go-sql-driver/mysql"
         "github.com/google/uuid"
         "golang.org/x/sync/errgroup"
         "gorm.io/gorm"
@@ -1328,18 +1325,18 @@ func (h *UpdateDokumenTambahanCommandHandler) Handle(
                 //[note] ini harusnya ada di generate renstra bagian create + update
                 //ini rule mustahil masuk, tapi memungkinan jika datanya hardcode oleh developer untuk duplicate lalu di update baru kena ini
                 //ini tidak dapat di tes karena di domainnya ada rule pengecekan prev data
-                var mysqlErr *mysql.MySQLError
-                if errors.As(err, &amp;mysqlErr) </span><span class="cov0" title="0">{
-                        if mysqlErr.Number == 1062 </span><span class="cov0" title="0">{
-                                return "", domaindokumentambahan.DuplicateData()
-                        }</span>
-                }
-                <span class="cov0" title="0">if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{
-                        return "", domaindokumentambahan.DuplicateData()
-                }</span>
+                // var mysqlErr *mysql.MySQLError
+                // if errors.As(err, &amp;mysqlErr) {
+                //         if mysqlErr.Number == 1062 {
+                //                 return "", domaindokumentambahan.DuplicateData()
+                //         }
+                // }
+                // if strings.Contains(err.Error(), "Duplicate entry") {
+                //         return "", domaindokumentambahan.DuplicateData()
+                // }
 
-                <span class="cov0" title="0">return "", err</span>
-        }
+                return "", err
+        }</span>
 
         <span class="cov0" title="0">return dokumenTambahan.UUID.String(), nil</span>
 }
@@ -6153,9 +6150,7 @@ func NotFound(id string) domain.Error <span class="cov8" title="1">{
 
 import (
         "context"
-        "strings"
 
-        "github.com/go-sql-driver/mysql"
         "github.com/google/uuid"
 
         domainjenisfile "UnpakSiamida/modules/jenisfile/domain"
@@ -6212,18 +6207,18 @@ func (h *CreateTemplateDokumenTambahanCommandHandler) Handle(
         // SAVE REPOSITORY
         // --------------------------
         if err := h.Repo.Create(ctx, templateDokumenTambahan); err != nil </span><span class="cov0" title="0">{
-                var mysqlErr *mysql.MySQLError
-                if errors.As(err, &amp;mysqlErr) </span><span class="cov0" title="0">{ //gagal masuk kesini
-                        if mysqlErr.Number == 1062 </span><span class="cov0" title="0">{
-                                return "", domaintemplatedokumentambahan.DuplicateData()
-                        }</span>
-                }
-                <span class="cov0" title="0">if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{ //gagal masuk kesini
-                        return "", domaintemplatedokumentambahan.DuplicateData()
-                }</span>
+                // var mysqlErr *mysql.MySQLError
+                // if errors.As(err, &amp;mysqlErr) { //gagal masuk kesini
+                //         if mysqlErr.Number == 1062 {
+                //                 return "", domaintemplatedokumentambahan.DuplicateData()
+                //         }
+                // }
+                // if strings.Contains(err.Error(), "Duplicate entry") { //gagal masuk kesini
+                //         return "", domaintemplatedokumentambahan.DuplicateData()
+                // }
 
-                <span class="cov0" title="0">return "", err</span>
-        }
+                return "", err
+        }</span>
 
         <span class="cov8" title="1">return templateDokumenTambahan.UUID.String(), nil</span>
 }
