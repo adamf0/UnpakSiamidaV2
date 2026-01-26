@@ -273,7 +273,7 @@
 				
 				<option value="file108">UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan/SetupUuidTemplateDokumenTambahanCommandHandler.go (0.0%)</option>
 				
-				<option value="file109">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (70.7%)</option>
+				<option value="file109">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (73.2%)</option>
 				
 				<option value="file110">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandValidation.go (100.0%)</option>
 				
@@ -3572,7 +3572,7 @@ func UpdateKtsStep3(
         }</span>
 
         <span class="cov8" title="1">prev.TanggalPenyelesaian = tgl
-        prev.Status = "menunggu_closing_auditor"
+        prev.Status = "menunggu_penyelesaian"
 
         if prev.DokumenTambahan != nil </span><span class="cov0" title="0">{
                 prev.Raise(event.KtsUpdatedEvent{
@@ -3600,7 +3600,7 @@ func UpdateKtsStep3(
                         TindakanPerbaikan: prev.TindakanPerbaikan,
 
                         TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-                        Status:              StringPtr("menunggu_closing_auditor"),
+                        Status:              StringPtr("menunggu_penyelesaian"),
                 })
         }</span> else<span class="cov8" title="1"> {
                 prev.Raise(event.KtsUpdatedEvent{
@@ -3630,7 +3630,7 @@ func UpdateKtsStep3(
                         TindakanPerbaikan: prev.TindakanPerbaikan,
 
                         TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-                        Status:              StringPtr("menunggu_closing_auditor"),
+                        Status:              StringPtr("menunggu_penyelesaian"),
                 })
         }</span>
 
@@ -3672,7 +3672,7 @@ func UpdateKtsStep4(
         <span class="cov8" title="1">prev.TinjauanTindakanPerbaikan = StringPtr(tinjauan)
         prev.TanggalClosing = tgl
         prev.AccFinal = UintPtr(accFinal)
-        prev.Status = "closing_auditor"
+        prev.Status = "tindakan_penyelesaian"
 
         if prev.DokumenTambahan != nil </span><span class="cov0" title="0">{
                 prev.Raise(event.KtsUpdatedEvent{
@@ -3702,7 +3702,7 @@ func UpdateKtsStep4(
                         TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
 
                         TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-                        Status:         StringPtr("closing_auditor"),
+                        Status:         StringPtr("tindakan_penyelesaian"),
                 })
         }</span> else<span class="cov8" title="1"> {
                 prev.Raise(event.KtsUpdatedEvent{
@@ -3734,7 +3734,7 @@ func UpdateKtsStep4(
                         TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
 
                         TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-                        Status:         StringPtr("closing_auditor"),
+                        Status:         StringPtr("tindakan_penyelesaian"),
                 })
         }</span>
 
@@ -6500,7 +6500,7 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
                         if errors.Is(err, gorm.ErrRecordNotFound) </span><span class="cov8" title="1">{
                                 return domaintemplatedokumentambahan.JenisFileNotFound()
                         }</span>
-                        <span class="cov0" title="0">return err</span>
+                        <span class="cov8" title="1">return err</span>
                 }
                 <span class="cov8" title="1">jenisfile = r
                 return nil</span>

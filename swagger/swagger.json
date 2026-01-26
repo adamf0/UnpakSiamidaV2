@@ -4383,30 +4383,36 @@
                     "type": "string"
                 },
                 "id": {
+                    "description": "Renstra Nilai",
                     "type": "integer"
                 },
-                "indikator": {
+                "indikatorID": {
+                    "description": "Indikator",
+                    "type": "integer"
+                },
+                "indikatorUUID": {
                     "type": "string"
+                },
+                "isPertanyaan": {
+                    "type": "boolean"
                 },
                 "jenjang": {
-                    "type": "string"
-                },
-                "kategori": {
-                    "type": "string"
-                },
-                "klasifikasi": {
                     "type": "string"
                 },
                 "linkBukti": {
                     "type": "string"
                 },
-                "namaStandarRenstra": {
+                "namaIndikator": {
+                    "type": "string"
+                },
+                "namaStandar": {
                     "type": "string"
                 },
                 "operator": {
                     "type": "string"
                 },
-                "renstraId": {
+                "renstraID": {
+                    "description": "Renstra",
                     "type": "integer"
                 },
                 "renstraUUID": {
@@ -4415,16 +4421,27 @@
                 "satuan": {
                     "type": "string"
                 },
+                "standarID": {
+                    "description": "Standar",
+                    "type": "integer"
+                },
+                "standarUUID": {
+                    "type": "string"
+                },
                 "tahunIndikator": {
                     "type": "string"
                 },
                 "tahunRenstra": {
                     "type": "string"
                 },
+                "tahunTemplate": {
+                    "type": "string"
+                },
                 "target": {
                     "type": "string"
                 },
                 "targetAudit": {
+                    "description": "Fakultas / Unit",
                     "type": "string"
                 },
                 "targetMax": {
@@ -4433,10 +4450,21 @@
                 "targetMin": {
                     "type": "string"
                 },
+                "templateRenstraId": {
+                    "description": "Template Renstra",
+                    "type": "integer"
+                },
                 "templateRenstraUUID": {
                     "type": "string"
                 },
+                "tipeTarget": {
+                    "type": "string"
+                },
                 "tugas": {
+                    "description": "Nilai",
+                    "type": "string"
+                },
+                "tugasTemplate": {
                     "type": "string"
                 },
                 "type": {
