@@ -458,7 +458,7 @@ func UpdateKtsStep3(
 	}
 
 	prev.TanggalPenyelesaian = tgl
-	prev.Status = "menunggu_closing_auditor"
+	prev.Status = "menunggu_penyelesaian"
 
 	if prev.DokumenTambahan != nil {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -486,7 +486,7 @@ func UpdateKtsStep3(
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
 			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-			Status:              StringPtr("menunggu_closing_auditor"),
+			Status:              StringPtr("menunggu_penyelesaian"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -516,7 +516,7 @@ func UpdateKtsStep3(
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
 			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-			Status:              StringPtr("menunggu_closing_auditor"),
+			Status:              StringPtr("menunggu_penyelesaian"),
 		})
 	}
 
@@ -558,7 +558,7 @@ func UpdateKtsStep4(
 	prev.TinjauanTindakanPerbaikan = StringPtr(tinjauan)
 	prev.TanggalClosing = tgl
 	prev.AccFinal = UintPtr(accFinal)
-	prev.Status = "closing_auditor"
+	prev.Status = "tindakan_penyelesaian"
 
 	if prev.DokumenTambahan != nil {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -588,7 +588,7 @@ func UpdateKtsStep4(
 			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
 
 			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-			Status:         StringPtr("closing_auditor"),
+			Status:         StringPtr("tindakan_penyelesaian"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -620,7 +620,7 @@ func UpdateKtsStep4(
 			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
 
 			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-			Status:         StringPtr("closing_auditor"),
+			Status:         StringPtr("tindakan_penyelesaian"),
 		})
 	}
 

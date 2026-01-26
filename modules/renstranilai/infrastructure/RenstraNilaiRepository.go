@@ -50,73 +50,57 @@ func (r *RenstraNilaiRepository) GetDefaultByUuid( //[pr] ini salah, ini tanpa k
 ) (*domainrenstranilai.RenstraNilaiDefault, error) {
 
 	query := `
-        SELECT 
-			k.id AS ID,
-			k.uuid AS UUID,
-			r.id AS RenstraId,
-			k.id_renstra_nilai AS RenstraNilai,
-			k.id_dokumen_tambahan AS DokumenTambahan,
-			k.status AS Status,
-			r.tahun AS Tahun,
-			r.fakultas_unit AS IdTarget,
-			CASE 
-				WHEN fu.type = 'prodi' 
-					THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')')
-				ELSE fu.nama_fak_prod_unit
-			END AS Target,
-			dt.id_template_dokumen_tambahan AS TemplateDokumen,
-			tdt.pertanyaan AS Pertanyaan,
-			jf.nama AS JenisFile,
-			rn.template_renstra AS TemplateRenstra,
-			sr.nama AS Standar,
-			mir.indikator AS Indikator,
-
-			k.nomor_laporan                    AS NomorLaporan,
-			k.tanggal_laporan                  AS TanggalLaporan,
-			k.auditor                          AS Auditor,
-
-			k.uraian_ketidaksesuaian_p         AS KetidaksesuaianP,
-			k.uraian_ketidaksesuaian_l         AS KetidaksesuaianL,
-			k.uraian_ketidaksesuaian_o         AS KetidaksesuaianO,
-			k.uraian_ketidaksesuaian_r         AS KetidaksesuaianR,
-
-			k.akar_masalah                     AS AkarMasalah,
-			k.tindakan_koreksi                 AS TindakanKoreksi,
-			k.acc_auditor                      AS AccAuditor,
-
-			k.status_acc_auditee               AS StatusAccAuditee,
-			k.acc_auditee                      AS AccAuditee,
-			k.keterangan_tolak_auditee         AS KeteranganTolak,
-			k.tindakan_perbaikan               AS TindakanPerbaikan,
-
-			k.tanggal_penyelesaian             AS TanggalPenyelesaian,
-			k.tinjauan_tindakan_perbaikan      AS TinjauanTindakanPerbaikan,
-			k.tanggal_closing_auditee          AS TanggalClosing,
-
-			k.acc_auditor_final                AS AccFinal,
-			k.tanggal_closing                  AS TanggalClosingFinal,
-			k.wmm_upmf_upmps                   AS WmmUpmfUpmps,
-			k.closingBy                        AS ClosingBy
-		FROM kts_renstra k
-		LEFT JOIN renstra_nilai rn 
-			ON k.id_renstra_nilai = rn.id
-		LEFT JOIN dokumen_tambahan dt 
-			ON k.id_dokumen_tambahan = dt.id
-		JOIN renstra r 
-			ON r.id = COALESCE(rn.id_renstra, dt.id_renstra)
-		JOIN v_fakultas_unit fu 
-			ON r.fakultas_unit = fu.id
-		LEFT JOIN template_renstra tr 
-			ON rn.template_renstra = tr.id
-		LEFT JOIN master_indikator_renstra mir 
-			ON tr.indikator = mir.id
-		LEFT JOIN master_standar_renstra sr 
-			ON mir.id_master_standar = sr.id
-		LEFT JOIN template_dokumen_tambahan tdt 
-			ON dt.id_template_dokumen_tambahan = tdt.id
-		LEFT JOIN jenis_file_renstra jf 
-			ON tdt.jenis_file = jf.id
-        WHERE k.uuid = ?
+        SELECT
+			r.id as RenstraId,
+			r.uuid as RenstraUUID,
+			r.tahun as TahunRenstra,
+			
+			rn.id as ID,
+			rn.uuid as UUID,
+			fu.nama_fak_prod_unit AS TargetAudit,
+			fu.jenjang AS Jenjang,
+			fu.fakultas AS Fakultas,
+			fu.type AS Type,
+			
+			sr.id as StandarId,
+			sr.uuid as StandarUUID,
+			sr.nama as NamaStandar,
+			
+			mir.id as IndikatorId,
+			mir.uuid as IndikatorUUID,
+			mir.indikator as NamaIndikator,
+			mir.tahun as TahunIndikator,
+			mir.tipe_target as TipeTarget,
+			mir.operator as Operator,
+			
+			tr.id as TemplateRenstraId,
+            tr.uuid as TemplateRenstraUUID,
+			tr.satuan as Satuan,
+			tr.target as Target,
+			tr.target_min as TargetMin,
+			tr.target_max as TargetMax,
+			tr.tugas as TugasTemplate,
+			tr.tahun as TahunTemplate,
+			tr.pertanyaan as IsPertanyaan,
+			
+			rn.tugas as Tugas,
+			rn.capaian as CapaianAuditee,
+			rn.catatan as CatatanAuditee,
+			rn.link_bukti as LinkBukti,
+			rn.capaian_auditor as CapaianAuditor,
+			rn.catatan_auditor as CatatanAuditor
+		FROM
+			renstra_nilai rn
+		JOIN renstra r ON
+			rn.id_renstra = r.id
+		JOIN template_renstra tr ON
+			rn.template_renstra = tr.id
+		JOIN master_indikator_renstra mir ON
+			tr.indikator = mir.id
+		join master_standar_renstra sr on mir.id_master_standar = sr.id
+		JOIN v_fakultas_unit fu ON
+			r.fakultas_unit = fu.id
+        WHERE rn.uuid = ?
         LIMIT 1
     `
 
@@ -139,7 +123,7 @@ func (r *RenstraNilaiRepository) GetDefaultByUuid( //[pr] ini salah, ini tanpa k
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	// "uuidrenstra":      "r.uuid",
+	"uuidrenstra": "r.uuid",
 }
 
 func (r *RenstraNilaiRepository) GetAll(
@@ -159,26 +143,19 @@ func (r *RenstraNilaiRepository) GetAll(
 	// =====================================================
 	// BASE FROM + JOIN (WAJIB PAKAI INI)
 	// =====================================================
+	//COALESCE(rn.id_renstra, dt.id_renstra)
 	baseFrom := `
-		FROM kts_renstra k
-		LEFT JOIN renstra_nilai rn 
-			ON k.id_renstra_nilai = rn.id
-		LEFT JOIN dokumen_tambahan dt 
-			ON k.id_dokumen_tambahan = dt.id
-		JOIN renstra r 
-			ON r.id = COALESCE(rn.id_renstra, dt.id_renstra)
-		JOIN v_fakultas_unit fu 
-			ON r.fakultas_unit = fu.id
-		LEFT JOIN template_renstra tr 
-			ON rn.template_renstra = tr.id
-		LEFT JOIN master_indikator_renstra mir 
-			ON tr.indikator = mir.id
-		LEFT JOIN master_standar_renstra sr 
-			ON mir.id_master_standar = sr.id
-		LEFT JOIN template_dokumen_tambahan tdt 
-			ON dt.id_template_dokumen_tambahan = tdt.id
-		LEFT JOIN jenis_file_renstra jf 
-			ON tdt.jenis_file = jf.id
+		FROM
+			renstra_nilai rn
+		JOIN renstra r ON
+			rn.id_renstra = r.id
+		JOIN template_renstra tr ON
+			rn.template_renstra = tr.id
+		JOIN master_indikator_renstra mir ON
+			tr.indikator = mir.id
+		join master_standar_renstra sr on mir.id_master_standar = sr.id
+		JOIN v_fakultas_unit fu ON
+			r.fakultas_unit = fu.id
 	`
 
 	// =====================================================
@@ -301,59 +278,51 @@ func (r *RenstraNilaiRepository) GetAll(
 		args = append(args, l, offset)
 	}
 
-	orderBy := " ORDER BY r.tahun DESC, k.id DESC"
+	orderBy := " ORDER BY r.tahun DESC, r.id DESC"
 
 	// =====================================================
 	// SELECT QUERY (INI YANG KAMU MINTA)
 	// =====================================================
 	selectQuery := `
 		SELECT
-			k.id AS ID,
-			k.uuid AS UUID,
-			r.id AS RenstraId,
-			k.id_renstra_nilai AS RenstraNilai,
-			k.id_dokumen_tambahan AS DokumenTambahan,
-			k.status AS Status,
-			r.tahun AS Tahun,
-			r.fakultas_unit AS IdTarget,
-			CASE 
-				WHEN fu.type = 'prodi' 
-					THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')')
-				ELSE fu.nama_fak_prod_unit
-			END AS Target,
-			dt.id_template_dokumen_tambahan AS TemplateDokumen,
-			tdt.pertanyaan AS Pertanyaan,
-			jf.nama AS JenisFile,
-			rn.template_renstra AS TemplateRenstra,
-			sr.nama AS Standar,
-			mir.indikator AS Indikator,
-
-			k.nomor_laporan                    AS NomorLaporan,
-			k.tanggal_laporan                  AS TanggalLaporan,
-			k.auditor                          AS Auditor,
-
-			k.uraian_ketidaksesuaian_p         AS KetidaksesuaianP,
-			k.uraian_ketidaksesuaian_l         AS KetidaksesuaianL,
-			k.uraian_ketidaksesuaian_o         AS KetidaksesuaianO,
-			k.uraian_ketidaksesuaian_r         AS KetidaksesuaianR,
-
-			k.akar_masalah                     AS AkarMasalah,
-			k.tindakan_koreksi                 AS TindakanKoreksi,
-			k.acc_auditor                      AS AccAuditor,
-
-			k.status_acc_auditee               AS StatusAccAuditee,
-			k.acc_auditee                      AS AccAuditee,
-			k.keterangan_tolak_auditee         AS KeteranganTolak,
-			k.tindakan_perbaikan               AS TindakanPerbaikan,
-
-			k.tanggal_penyelesaian             AS TanggalPenyelesaian,
-			k.tinjauan_tindakan_perbaikan      AS TinjauanTindakanPerbaikan,
-			k.tanggal_closing_auditee          AS TanggalClosing,
-
-			k.acc_auditor_final                AS AccFinal,
-			k.tanggal_closing                  AS TanggalClosingFinal,
-			k.wmm_upmf_upmps                   AS WmmUpmfUpmps,
-			k.closingBy                        AS ClosingBy
+			r.id as RenstraId,
+			r.uuid as RenstraUUID,
+			r.tahun as TahunRenstra,
+			
+			rn.id as ID,
+			rn.uuid as UUID,
+			fu.nama_fak_prod_unit AS TargetAudit,
+			fu.jenjang AS Jenjang,
+			fu.fakultas AS Fakultas,
+			fu.type AS Type,
+			
+			sr.id as StandarId,
+			sr.uuid as StandarUUID,
+			sr.nama as NamaStandar,
+			
+			mir.id as IndikatorId,
+			mir.uuid as IndikatorUUID,
+			mir.indikator as NamaIndikator,
+			mir.tahun as TahunIndikator,
+			mir.tipe_target as TipeTarget,
+			mir.operator as Operator,
+			
+			tr.id as TemplateRenstraId,
+            tr.uuid as TemplateRenstraUUID,
+			tr.satuan as Satuan,
+			tr.target as Target,
+			tr.target_min as TargetMin,
+			tr.target_max as TargetMax,
+			tr.tugas as TugasTemplate,
+			tr.tahun as TahunTemplate,
+			tr.pertanyaan as IsPertanyaan,
+			
+			rn.tugas as Tugas,
+			rn.capaian as CapaianAuditee,
+			rn.catatan as CatatanAuditee,
+			rn.link_bukti as LinkBukti,
+			rn.capaian_auditor as CapaianAuditor,
+			rn.catatan_auditor as CatatanAuditor
 	` + baseFrom + whereClause + orderBy + pagination
 
 	if err := r.db.WithContext(ctx).

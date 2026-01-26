@@ -5,33 +5,50 @@ import (
 )
 
 type RenstraNilaiDefault struct {
-	ID                  uint
-	UUID                uuid.UUID
-	RenstraId           *uint
-	RenstraUUID         uuid.UUID
-	TemplateRenstraUUID uuid.UUID
-	TargetAudit         string
-	Jenjang             *string
-	Fakultas            *string
-	Type                string
+	// Renstra
+	RenstraID    int
+	RenstraUUID  uuid.UUID
+	TahunRenstra string
 
-	NamaStandarRenstra *string
-	Indikator          *string
-	Kategori           string
-	Klasifikasi        string
-	Satuan             *string
-	Target             *string
-	TargetMin          *string
-	TargetMax          *string
-	Operator           *string
+	// Renstra Nilai
+	ID   int
+	UUID string
 
-	TahunRenstra   string
+	// Fakultas / Unit
+	TargetAudit string
+	Jenjang     *string
+	Fakultas    *string
+	Type        string
+
+	// Standar
+	StandarID   int
+	StandarUUID uuid.UUID
+	NamaStandar string
+
+	// Indikator
+	IndikatorID    int
+	IndikatorUUID  uuid.UUID
+	NamaIndikator  string
 	TahunIndikator string
+	TipeTarget     string
+	Operator       string
+
+	// Template Renstra
+	TemplateRenstraId   int
+	TemplateRenstraUUID uuid.UUID
+	Satuan              string
+	Target              *string
+	TargetMin           *string
+	TargetMax           *string
+	TugasTemplate       string
+	TahunTemplate       string
+	IsPertanyaan        bool
+
+	// Nilai
 	Tugas          string
 	CapaianAuditee *string
 	CatatanAuditee *string
 	LinkBukti      *string
 	CapaianAuditor *string
 	CatatanAuditor *string
-	// Version				*string
 }

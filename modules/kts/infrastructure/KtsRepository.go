@@ -165,6 +165,8 @@ var allowedSearchColumns = map[string]string{
 	"standar":    "sr.nama",
 	"indikator":  "mir.indikator",
 	"target":     "CASE WHEN fu.type COLLATE utf8mb4_unicode_ci = 'prodi' THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')') ELSE fu.nama_fak_prod_unit END",
+	"targetuuid": "fu.uuid",
+	"tahun":      "r.tahun",
 }
 
 // ------------------------

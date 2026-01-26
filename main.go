@@ -206,20 +206,21 @@ func main() {
 	})
 
 	var tg commoninfra.TelegramSender
+	modeTelegram := os.Getenv("TELEGRAM_MODE")
 
-	// mustStart("Telegram Service", func() error {
-	// 	factory := &commoninfra.DefaultTelegramFactory{
-	// 		UseFake: false,
-	// 	}
+	mustStart("Telegram Service", func() error {
+		factory := &commoninfra.DefaultTelegramFactory{
+			UseFake: modeTelegram != "dev",
+		}
 
-	// 	client, err := factory.Create()
-	// 	if err != nil {
-	// 		return err
-	// 	}
+		client, err := factory.Create()
+		if err != nil {
+			return err
+		}
 
-	// 	tg = client
-	// 	return nil
-	// })
+		tg = client
+		return nil
+	})
 
 	//berlaku untuk startup bukan hot reload
 	mustStart("User Module", func() error {

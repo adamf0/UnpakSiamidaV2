@@ -21,11 +21,13 @@ func (h UserCreatedEventHandler) Handle(
 	ctx context.Context,
 	event UserCreatedEvent,
 ) error {
-	// godump.Dump(event)
-	msg := RenderUserCreatedTemplate(event)
+	if h.Telegram != nil {
+		// godump.Dump(event)
+		msg := RenderUserCreatedTemplate(event)
 
-	if err := h.Telegram.SendHTML(msg); err != nil {
-		return err
+		if err := h.Telegram.SendHTML(msg); err != nil {
+			return err
+		}
 	}
 
 	return nil
