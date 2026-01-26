@@ -16,6 +16,14 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	tahunprokerInfrastructure "UnpakSiamida/modules/tahunproker/infrastructure"
+
+	tahunprokerPresentation "UnpakSiamida/modules/tahunproker/presentation"
+
+	mataprogramInfrastructure "UnpakSiamida/modules/mataprogram/infrastructure"
+
+	mataprogramPresentation "UnpakSiamida/modules/mataprogram/presentation"
+
 	beritaacaraInfrastructure "UnpakSiamida/modules/beritaacara/infrastructure"
 
 	beritaacaraPresentation "UnpakSiamida/modules/beritaacara/presentation"
@@ -81,6 +89,18 @@ import (
 	ktsPresentation "UnpakSiamida/modules/kts/presentation"
 
 	login "UnpakSiamida/modules/account/application/Login"
+
+	createTahunProker "UnpakSiamida/modules/tahunproker/application/CreateTahunProker"
+
+	updateTahunProker "UnpakSiamida/modules/tahunproker/application/UpdateTahunProker"
+
+	deleteTahunProker "UnpakSiamida/modules/tahunproker/application/DeleteTahunProker"
+
+	createMataProgram "UnpakSiamida/modules/mataprogram/application/CreateMataProgram"
+
+	updateMataProgram "UnpakSiamida/modules/mataprogram/application/UpdateMataProgram"
+
+	deleteMataProgram "UnpakSiamida/modules/mataprogram/application/DeleteMataProgram"
 
 	createBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 
@@ -287,6 +307,14 @@ func main() {
 		return ktsInfrastructure.RegisterModuleKts(db, tg)
 	})
 
+	mustStart("Tahun Proker Module", func() error { //buat audit
+		return tahunprokerInfrastructure.RegisterModuleTahunProker(db)
+	})
+
+	mustStart("Mata Program Module", func() error { //buat audit
+		return mataprogramInfrastructure.RegisterModuleMataProgram(db)
+	})
+
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{
@@ -319,6 +347,8 @@ func main() {
 	renstranilaiPresentation.ModuleRenstraNilai(app)
 	dokumentambahanPresentation.ModuleDokumenTambahan(app)
 	ktsPresentation.ModuleKts(app)
+	tahunprokerPresentation.ModuleTahunProker(app)
+	mataprogramPresentation.ModuleMataProgram(app)
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -350,6 +380,34 @@ func (b *ValidationBehavior) Handle(
 ) (interface{}, error) {
 
 	switch cmd := request.(type) {
+	// === tahun proker Commands ===
+	case createTahunProker.CreateTahunProkerCommand:
+		if err := createTahunProker.CreateTahunProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("TahunProkerCreate.Validation", err)
+		}
+	case updateTahunProker.UpdateTahunProkerCommand:
+		if err := updateTahunProker.UpdateTahunProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("TahunProker.Validation", err)
+		}
+	case deleteTahunProker.DeleteTahunProkerCommand:
+		if err := deleteTahunProker.DeleteTahunProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("TahunProkerDelete.Validation", err)
+		}
+
+		// === mata program Commands ===
+	case createMataProgram.CreateMataProgramCommand:
+		if err := createMataProgram.CreateMataProgramCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("MataProgramCreate.Validation", err)
+		}
+	case updateMataProgram.UpdateMataProgramCommand:
+		if err := updateMataProgram.UpdateMataProgramCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("MataProgram.Validation", err)
+		}
+	case deleteMataProgram.DeleteMataProgramCommand:
+		if err := deleteMataProgram.DeleteMataProgramCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("MataProgramDelete.Validation", err)
+		}
+
 	// === berita acara Commands ===
 	case createBeritaAcara.CreateBeritaAcaraCommand:
 		if err := createBeritaAcara.CreateBeritaAcaraCommandValidation(cmd); err != nil {
@@ -357,7 +415,7 @@ func (b *ValidationBehavior) Handle(
 		}
 	case updateBeritaAcara.UpdateBeritaAcaraCommand:
 		if err := updateBeritaAcara.UpdateBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("UseUpdate.Validation", err)
+			return nil, wrapValidationError("BeritaAcaraUpdate.Validation", err)
 		}
 	case deleteBeritaAcara.DeleteBeritaAcaraCommand:
 		if err := deleteBeritaAcara.DeleteBeritaAcaraCommandValidation(cmd); err != nil {
@@ -371,7 +429,7 @@ func (b *ValidationBehavior) Handle(
 		}
 	case updateUser.UpdateUserCommand:
 		if err := updateUser.UpdateUserCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("UseUpdate.Validation", err)
+			return nil, wrapValidationError("UserUpdate.Validation", err)
 		}
 	case deleteUser.DeleteUserCommand:
 		if err := deleteUser.DeleteUserCommandValidation(cmd); err != nil {
