@@ -59,7 +59,7 @@ func TestUpdateTahunProkerCommand_Success(t *testing.T) {
 	var saved domain.TahunProker
 	err = db.Where("uuid = ?", updatedUUID).First(&saved).Error
 	assert.NoError(t, err)
-	assert.Equal(t, "Dokumen Baru", saved.Tahun)
+	assert.Equal(t, "2080", saved.Tahun)
 }
 
 func TestUpdateTahunProkerCommand_Edge(t *testing.T) {

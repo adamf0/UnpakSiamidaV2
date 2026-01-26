@@ -57,7 +57,7 @@ func setupTahunProkerMySQL(t *testing.T) (*gorm.DB, func()) {
 	// Buat table & data contoh
 	err = gdb.Exec(`
        CREATE TABLE master_tahun (
-			id int(11) NOT NULL,
+			id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
 			uuid varchar(36) DEFAULT NULL,
 			tahun varchar(100) DEFAULT NULL,
 			status varchar(100) DEFAULT NULL,

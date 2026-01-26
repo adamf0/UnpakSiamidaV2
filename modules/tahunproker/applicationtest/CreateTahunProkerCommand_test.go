@@ -37,7 +37,7 @@ func TestCreateTahunProkerCommand_Success(t *testing.T) {
 	repo := infra.NewTahunProkerRepository(db)
 	handler := &app.CreateTahunProkerCommandHandler{Repo: repo}
 
-	cmd := app.CreateTahunProkerCommand{Tahun: "Dokumen Baru"}
+	cmd := app.CreateTahunProkerCommand{Tahun: "2080"}
 	uuidStr, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uuidStr)
@@ -46,7 +46,7 @@ func TestCreateTahunProkerCommand_Success(t *testing.T) {
 	var saved domain.TahunProker
 	err = db.Where("uuid = ?", uuidStr).First(&saved).Error
 	assert.NoError(t, err)
-	assert.Equal(t, "Dokumen Baru", saved.Tahun)
+	assert.Equal(t, "2080", saved.Tahun)
 }
 
 // func TestCreateTahunProkerCommand_Edge(t *testing.T) {
