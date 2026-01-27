@@ -31,9 +31,15 @@ var (
 	// 	"about:", "chrome:", "chrome-extension:", "moz-extension:", "view-source:",
 	// }
 	dangerousProtoRe = regexp.MustCompile(`(?i)\b(javascript|data|vbscript|file|filesystem|blob|about|chrome|chrome-extension|moz-extension|view-source):`)
-	sqlKeywordRe     = regexp.MustCompile(`(?i)\b(select|union|insert|update|delete|drop|sleep|benchmark|or\s+1=1)\b`)
-	lfiRe            = regexp.MustCompile(`(?i)(\.\./|\.\.\\|/etc/passwd|boot.ini|win.ini|.env)`)
-	asciiAllowRe     = regexp.MustCompile(
+	sqlKeywordRe     = regexp.MustCompile(
+		`(?i)(['"` + "`" + `]\s*(or|and)\s+|` +
+			`['"` + "`" + `]\s*\)|` +
+			`['"` + "`" + `]\s*--|` +
+			`['"` + "`" + `]\s*#|` +
+			`['"` + "`" + `]\s*(select|union|insert|update|delete|drop|sleep|benchmark|or\s+1=1)\b)`,
+	)
+	lfiRe        = regexp.MustCompile(`(?i)(\.\./|\.\.\\|/etc/passwd|boot.ini|win.ini|.env)`)
+	asciiAllowRe = regexp.MustCompile(
 		`^[A-Za-z0-9 .,:;'"()\[\]{}+\-*/=<>&!?%#@_~^]*$`,
 	)
 	cssPatterns = []string{
@@ -77,6 +83,7 @@ var (
 	domSinkRe       = regexp.MustCompile(`(?i)\b(location|document|window)\.(hash|href|cookie|write)\b`)
 	sqlTimeRe       = regexp.MustCompile(`(?i)\b(waitfor\s+delay|sleep\s*\(|benchmark\s*\()\b`)
 	encodedJsCallRe = regexp.MustCompile(`(?i)(alert|eval|prompt|confirm)[^a-z0-9]*\(`)
+	xmlDeclRe       = regexp.MustCompile(`(?i)<\?(xml|xsl|php)`)
 )
 
 // deprecated
@@ -178,8 +185,10 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 	var parts []string
 	for _, tag := range blacklistTags {
 		// match <tag or &lt;tag (case-insensitive)
-		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
-		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+		parts = append(parts,
+			`(?i)<\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
+			`(?i)&lt;\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
+		)
 	}
 	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
 
@@ -211,6 +220,9 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 		}
 		if encodedJsCallRe.MatchString(unescaped) {
 			return errors.New("encoded javascript execution detected")
+		}
+		if xmlDeclRe.MatchString(unescaped) {
+			return errors.New("xml execution detected")
 		}
 
 		// 3) dangerous protocols
