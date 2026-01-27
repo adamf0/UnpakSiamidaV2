@@ -72,8 +72,9 @@ func TestUpdateTahunProkerCommand_Edge(t *testing.T) {
 	// Update dengan nama sangat panjang (boundary)
 	longName := "Dokumen " + string(make([]byte, 500))
 	cmdLong := app.UpdateTahunProkerCommand{
-		Uuid:  "666a6b72-d2b4-481f-adb8-298d807e9e20",
-		Tahun: longName,
+		Uuid:   "666a6b72-d2b4-481f-adb8-298d807e9e20",
+		Tahun:  longName,
+		Status: "aktif",
 	}
 	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
 	assert.NoError(t, err)
@@ -89,8 +90,9 @@ func TestUpdateTahunProkerCommand_Fail(t *testing.T) {
 
 	// Insert record awal
 	original := domain.TahunProker{
-		UUID:  uuid.New(),
-		Tahun: "Dokumen Edge",
+		UUID:   uuid.New(),
+		Tahun:  "2080",
+		Status: "non-aktif",
 	}
 	err := repo.Create(context.Background(), &original)
 	assert.NoError(t, err)
@@ -98,8 +100,9 @@ func TestUpdateTahunProkerCommand_Fail(t *testing.T) {
 	uuid := uuid.NewString()
 	// Update dengan nama yang sama
 	cmdSame := app.UpdateTahunProkerCommand{
-		Uuid:  uuid,
-		Tahun: "Dokumen Edge",
+		Uuid:   uuid,
+		Tahun:  "2080",
+		Status: "non-aktif",
 	}
 	_, err = handler.Handle(context.Background(), cmdSame)
 	assert.Error(t, err)

@@ -73,7 +73,7 @@ func (r *TahunProkerRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"nama": "nama",
+	"tahun": "tahun",
 }
 
 // ------------------------

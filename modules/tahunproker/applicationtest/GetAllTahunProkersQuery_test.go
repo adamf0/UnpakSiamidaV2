@@ -30,8 +30,8 @@ func TestGetAllTahunProkersIntegration(t *testing.T) {
 		search       string
 		expectedRows int
 	}{
-		{"No search, returns all", "", 6},
-		{"Search matching 'Program'", "Program", 2},
+		{"No search, returns all", "", 3},
+		{"Search matching '2024'", "2024", 1},
 		{"Search not matching anything", "TidakAda", 0},
 	}
 
@@ -64,16 +64,16 @@ func TestGetAllTahunProkersIntegration(t *testing.T) {
 		filter       []domain.SearchFilter
 		expectedRows int
 	}{
-		// nama
-		{"nama eq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "eq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+		// tahun
+		{"tahun eq '2080'", []domain.SearchFilter{
+			{"tahun", "eq", str("2080")},
+		}, 0},
+		{"tahun like '2025'", []domain.SearchFilter{
+			{"tahun", "like", str("2025")},
 		}, 1},
-		{"nama like '2023'", []domain.SearchFilter{
-			{"nama", "like", str("2023")},
-		}, 1},
-		{"nama neq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
-		}, 5},
+		{"tahun neq '2023'", []domain.SearchFilter{
+			{"tahun", "neq", str("2023")},
+		}, 2},
 	}
 
 	for _, tt := range filterTests {

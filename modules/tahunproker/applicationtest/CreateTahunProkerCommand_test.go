@@ -37,7 +37,7 @@ func TestCreateTahunProkerCommand_Success(t *testing.T) {
 	repo := infra.NewTahunProkerRepository(db)
 	handler := &app.CreateTahunProkerCommandHandler{Repo: repo}
 
-	cmd := app.CreateTahunProkerCommand{Tahun: "2080"}
+	cmd := app.CreateTahunProkerCommand{Tahun: "2080", Status: "aktif"}
 	uuidStr, err := handler.Handle(context.Background(), cmd)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uuidStr)
