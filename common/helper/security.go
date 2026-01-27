@@ -17,15 +17,15 @@ import (
 // Lists (abridged but extensive)
 // -----------------------------
 var (
-	// blacklistTags = []string{
-	// 	"html", "head", "body", "title", "meta", "base", "link", "style", "script", "noscript", "template",
-	// 	"form", "input", "textarea", "select", "option", "button", "datalist",
-	// 	"img", "picture", "source", "video", "audio", "track", "canvas",
-	// 	"iframe", "frame", "frameset", "object", "embed", "param", "applet",
-	// 	"svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "use", "defs", "symbol", "image", "text", "tspan",
-	// 	"math", "mrow", "mi", "mn", "mo", "mtext", "mglyph", "ms", "mtable", "mtr", "mtd", "annotation",
-	// 	"iframe", "object", "embed", "isindex", "layer", "ilayer", "noframes", "blink", "xmp", "plaintext",
-	// }
+	blacklistTags = []string{
+		"html", "head", "body", "title", "meta", "base", "link", "style", "script", "noscript", "template",
+		"form", "input", "textarea", "select", "option", "button", "datalist",
+		"img", "picture", "source", "video", "audio", "track", "canvas",
+		"iframe", "frame", "frameset", "object", "embed", "param", "applet",
+		"svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "use", "defs", "symbol", "image", "text", "tspan",
+		"math", "mrow", "mi", "mn", "mo", "mtext", "mglyph", "ms", "mtable", "mtr", "mtd", "annotation",
+		"iframe", "object", "embed", "isindex", "layer", "ilayer", "noframes", "blink", "xmp", "plaintext",
+	}
 	// protoList = []string{
 	// 	"javascript:", "data:", "vbscript:", "file:", "filesystem:", "blob:",
 	// 	"about:", "chrome:", "chrome-extension:", "moz-extension:", "view-source:",
@@ -80,17 +80,7 @@ var (
 )
 
 // deprecated
-// var compiledTagRegex *regexp.Regexp
-
-// func init() {
-// 	var parts []string
-// 	for _, tag := range blacklistTags {
-// 		// match <tag or &lt;tag (case-insensitive)
-// 		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
-// 		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
-// 	}
-// 	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
-// }
+var compiledTagRegex *regexp.Regexp
 
 // -----------------------------
 // Decoding helpers
@@ -185,6 +175,14 @@ func deepDecode(input string) string {
 // NoXSSFullScanWithDecode returns an ozzo-validation RuleFunc with deep decoding normalization
 // and aggressive detection. It returns an error with a short reason.
 func NoXSSFullScanWithDecode() validation.RuleFunc {
+	var parts []string
+	for _, tag := range blacklistTags {
+		// match <tag or &lt;tag (case-insensitive)
+		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+	}
+	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
+
 	return func(value interface{}) error {
 		s, _ := value.(string)
 		if s == "" {
@@ -250,7 +248,7 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 
 		// 6) fallback generic tag-like (last resort)
 		stripped := allowedTagsRe.ReplaceAllString(unescaped, "")
-		if anyTagRe.MatchString(stripped) {
+		if compiledTagRegex.MatchString(stripped) {
 			return errors.New("contains disallowed HTML tag")
 		}
 
