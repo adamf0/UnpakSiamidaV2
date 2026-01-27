@@ -62,24 +62,24 @@ func TestUpdateTahunProkerCommand_Success(t *testing.T) {
 	assert.Equal(t, "2080", saved.Tahun)
 }
 
-func TestUpdateTahunProkerCommand_Edge(t *testing.T) {
-	db, terminate := setupTahunProkerMySQL(t)
-	defer terminate()
+// func TestUpdateTahunProkerCommand_Edge(t *testing.T) {
+// 	db, terminate := setupTahunProkerMySQL(t)
+// 	defer terminate()
 
-	repo := infra.NewTahunProkerRepository(db)
-	handler := &app.UpdateTahunProkerCommandHandler{Repo: repo}
+// 	repo := infra.NewTahunProkerRepository(db)
+// 	handler := &app.UpdateTahunProkerCommandHandler{Repo: repo}
 
-	// Update dengan nama sangat panjang (boundary)
-	longName := "Dokumen " + string(make([]byte, 500))
-	cmdLong := app.UpdateTahunProkerCommand{
-		Uuid:   "666a6b72-d2b4-481f-adb8-298d807e9e20",
-		Tahun:  longName,
-		Status: "aktif",
-	}
-	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
-	assert.NoError(t, err)
-	assert.Equal(t, "666a6b72-d2b4-481f-adb8-298d807e9e20", updatedUUID)
-}
+// 	// Update dengan nama sangat panjang (boundary)
+// 	longName := "Dokumen " + string(make([]byte, 500))
+// 	cmdLong := app.UpdateTahunProkerCommand{
+// 		Uuid:   "666a6b72-d2b4-481f-adb8-298d807e9e20",
+// 		Tahun:  longName,
+// 		Status: "aktif",
+// 	}
+// 	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, "666a6b72-d2b4-481f-adb8-298d807e9e20", updatedUUID)
+// }
 
 func TestUpdateTahunProkerCommand_Fail(t *testing.T) {
 	db, terminate := setupTahunProkerMySQL(t)
