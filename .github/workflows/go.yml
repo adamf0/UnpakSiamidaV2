@@ -71,16 +71,16 @@ jobs:
       #       fi
       #     done
 
-      - name: Run Common Security Tests (commontest)
+      - name: Run Common Security Tests (helpertest)
         run: |
-          echo "▶ COMMON TESTS"
+          echo "▶ COMMON SECURITY TESTS"
           mkdir -p coverage/common
 
           go test -v \
             -covermode=set \
-            -coverpkg="UnpakSiamida/common/..." \
-            -coverprofile="coverage/common/common.out" \
-            ./common
+            -coverpkg="UnpakSiamida/common/helper" \
+            -coverprofile="coverage/common/helpertest.out" \
+            ./common/helpertest
 
       - name: Run Common Benchmarks
         run: |
@@ -89,12 +89,13 @@ jobs:
             -run=^$ \
             -bench=. \
             -benchmem \
-            ./common
+            ./common/helpertest
+
 
       - name: Compile fuzz targets
         run: |
           echo "▶ FUZZ TARGET COMPILE CHECK"
-          go test ./common -run=Fuzz -count=1
+          go test ./common/helpertest -run=Fuzz -count=1
 
       - name: Merge coverage files
         run: |
