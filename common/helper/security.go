@@ -55,7 +55,7 @@ var (
 		`(?i)utf-7`,       // UTF-7 marker attempts
 	}
 	eventAttrPattern = regexp.MustCompile(`(?i)\bon[a-z]+\s*=`)
-	anyTagRe         = regexp.MustCompile(`(?i)<\s*/?\s*[a-z][a-z0-9]*[^>]*>`)
+	anyTagRe         = regexp.MustCompile(`(?i)<\s*/?\s*[a-z][a-z0-9]*\b[^>]*>`)
 	hexEntityRe      = regexp.MustCompile(`&#x([0-9A-Fa-f]+);?`)
 	decEntityRe      = regexp.MustCompile(`&#([0-9]+);?`)
 	zeroWidthRe      = regexp.MustCompile(string([]rune{
@@ -71,6 +71,12 @@ var (
 	allowedTagsRe = regexp.MustCompile(
 		`(?i)</?(p|b|i|ul|ol|li)\s*>`,
 	)
+
+	jsExecRe        = regexp.MustCompile(`(?i)\b(alert|eval|prompt|confirm|settimeout|setinterval|function)\s*\(`)
+	jsPrototypeRe   = regexp.MustCompile(`(?i)\b(object|array|string|number|regexp)\.prototype\b`)
+	domSinkRe       = regexp.MustCompile(`(?i)\b(location|document|window)\.(hash|href|cookie|write)\b`)
+	sqlTimeRe       = regexp.MustCompile(`(?i)\b(waitfor\s+delay|sleep\s*\(|benchmark\s*\()\b`)
+	encodedJsCallRe = regexp.MustCompile(`(?i)(alert|eval|prompt|confirm)[^a-z0-9]*\(`)
 )
 
 // deprecated
@@ -192,6 +198,21 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 		// 2) event attributes
 		if eventAttrPattern.MatchString(unescaped) {
 			return errors.New("contains event handler attribute (on...=)")
+		}
+		if jsExecRe.MatchString(lower) {
+			return errors.New("javascript execution detected")
+		}
+		if jsPrototypeRe.MatchString(lower) {
+			return errors.New("javascript prototype manipulation detected")
+		}
+		if domSinkRe.MatchString(lower) {
+			return errors.New("dom sink detected")
+		}
+		if sqlTimeRe.MatchString(lower) {
+			return errors.New("sql time-based injection detected")
+		}
+		if encodedJsCallRe.MatchString(unescaped) {
+			return errors.New("encoded javascript execution detected")
 		}
 
 		// 3) dangerous protocols
