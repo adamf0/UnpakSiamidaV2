@@ -251,7 +251,7 @@
 				
 				<option value="file97">UnpakSiamida/modules/standarrenstra/domain/StandarRenstraErrors.go (100.0%)</option>
 				
-				<option value="file98">UnpakSiamida/modules/tahunproker/application/CreateTahunProker/CreateTahunProkerCommandHandler.go (77.8%)</option>
+				<option value="file98">UnpakSiamida/modules/tahunproker/application/CreateTahunProker/CreateTahunProkerCommandHandler.go (73.3%)</option>
 				
 				<option value="file99">UnpakSiamida/modules/tahunproker/application/CreateTahunProker/CreateTahunProkerCommandValidation.go (100.0%)</option>
 				
@@ -267,13 +267,13 @@
 				
 				<option value="file105">UnpakSiamida/modules/tahunproker/application/SetupUuidTahunProker/SetupUuidTahunProkerCommandHandler.go (0.0%)</option>
 				
-				<option value="file106">UnpakSiamida/modules/tahunproker/application/UpdateTahunProker/UpdateTahunProkerCommandHandler.go (76.5%)</option>
+				<option value="file106">UnpakSiamida/modules/tahunproker/application/UpdateTahunProker/UpdateTahunProkerCommandHandler.go (78.3%)</option>
 				
 				<option value="file107">UnpakSiamida/modules/tahunproker/application/UpdateTahunProker/UpdateTahunProkerCommandValidation.go (100.0%)</option>
 				
-				<option value="file108">UnpakSiamida/modules/tahunproker/domain/TahunProker.go (87.5%)</option>
+				<option value="file108">UnpakSiamida/modules/tahunproker/domain/TahunProker.go (80.0%)</option>
 				
-				<option value="file109">UnpakSiamida/modules/tahunproker/domain/TahunProkerErrors.go (100.0%)</option>
+				<option value="file109">UnpakSiamida/modules/tahunproker/domain/TahunProkerErrors.go (87.5%)</option>
 				
 				<option value="file110">UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra/GetActiveTahunRenstraQueryHandler.go (87.5%)</option>
 				
@@ -6061,9 +6061,13 @@ func NotFound(id string) domain.Error <span class="cov8" title="1">{
 
 import (
         "context"
+        "errors"
+        "strings"
 
         domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
         "time"
+
+        "github.com/go-sql-driver/mysql"
 )
 
 type CreateTahunProkerCommandHandler struct {
@@ -6087,9 +6091,19 @@ func (h *CreateTahunProkerCommandHandler) Handle(
         }</span>
 
         <span class="cov8" title="1">createTahunProker := result.Value
-        if err := h.Repo.Create(ctx, createTahunProker); err != nil </span><span class="cov0" title="0">{
-                return "", err
-        }</span>
+        if err := h.Repo.Create(ctx, createTahunProker); err != nil </span><span class="cov8" title="1">{
+                var mysqlErr *mysql.MySQLError
+                if errors.As(err, &amp;mysqlErr) </span><span class="cov8" title="1">{
+                        if mysqlErr.Number == 1062 </span><span class="cov8" title="1">{
+                                return "", domaintahunproker.DuplicateData()
+                        }</span>
+                }
+                <span class="cov0" title="0">if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{
+                        return "", domaintahunproker.DuplicateData()
+                }</span>
+
+                <span class="cov0" title="0">return "", err</span>
+        }
 
         <span class="cov8" title="1">return result.Value.UUID.String(), nil</span>
 }
@@ -6344,10 +6358,13 @@ func (h *SetupUuidTahunProkerCommandHandler) Handle(
 
 import (
         "context"
+        "errors"
+        "strings"
 
         domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
         "time"
 
+        "github.com/go-sql-driver/mysql"
         "github.com/google/uuid"
         "gorm.io/gorm"
 )
@@ -6392,7 +6409,7 @@ func (h *UpdateTahunProkerCommandHandler) Handle(
                 cmd.Status,
         )
 
-        if !result.IsSuccess </span><span class="cov0" title="0">{
+        if !result.IsSuccess </span><span class="cov8" title="1">{
                 return "", result.Error
         }</span>
 
@@ -6401,9 +6418,19 @@ func (h *UpdateTahunProkerCommandHandler) Handle(
         // -------------------------
         // SAVE TO REPOSITORY
         // -------------------------
-        if err := h.Repo.Update(ctx, updatedTahunProker); err != nil </span><span class="cov0" title="0">{
-                return "", err
-        }</span>
+        if err := h.Repo.Update(ctx, updatedTahunProker); err != nil </span><span class="cov8" title="1">{
+                var mysqlErr *mysql.MySQLError
+                if errors.As(err, &amp;mysqlErr) </span><span class="cov8" title="1">{
+                        if mysqlErr.Number == 1062 </span><span class="cov8" title="1">{
+                                return "", domaintahunproker.DuplicateData()
+                        }</span>
+                }
+                <span class="cov0" title="0">if strings.Contains(err.Error(), "Duplicate entry") </span><span class="cov0" title="0">{
+                        return "", domaintahunproker.DuplicateData()
+                }</span>
+
+                <span class="cov0" title="0">return "", err</span>
+        }
 
         <span class="cov8" title="1">return updatedTahunProker.UUID.String(), nil</span>
 }
@@ -6442,10 +6469,10 @@ func UpdateTahunProkerCommandValidation(cmd UpdateTahunProkerCommand) error <spa
 
 import (
         "slices"
-        "strconv"
         "time"
 
         common "UnpakSiamida/common/domain"
+        "UnpakSiamida/common/helper"
         event "UnpakSiamida/modules/tahunproker/event"
 
         "github.com/google/uuid"
@@ -6466,9 +6493,15 @@ func (TahunProker) TableName() string <span class="cov0" title="0">{
 
 // === CREATE ===
 func NewTahunProker(tahun string, status string) common.ResultValue[*TahunProker] <span class="cov8" title="1">{
-        tahunint, err := strconv.ParseInt(tahun, 10, 64)
-        if err != nil || tahunint &lt;= 2000 </span><span class="cov0" title="0">{
+        tahunint, err := helper.ParseInt64(tahun)
+        if err != nil &amp;&amp; err.Error() == "Number out of range" </span><span class="cov0" title="0">{
+                return common.FailureValue[*TahunProker](TahunOOR())
+        }</span>
+        <span class="cov8" title="1">if (err != nil &amp;&amp; (err.Error() == "Must be a number" || err.Error() == "Invalid number")) || tahunint &lt;= 2000 </span><span class="cov0" title="0">{
                 return common.FailureValue[*TahunProker](InvalidTahun())
+        }</span>
+        <span class="cov8" title="1">if !hasValidStatus(status) </span><span class="cov0" title="0">{
+                return common.FailureValue[*TahunProker](InvalidStatus())
         }</span>
         <span class="cov8" title="1">if !hasValidStatus(status) </span><span class="cov0" title="0">{
                 return common.FailureValue[*TahunProker](InvalidStatus())
@@ -6505,11 +6538,13 @@ func UpdateTahunProker(
                 return common.FailureValue[*TahunProker](InvalidData())
         }</span>
 
-        <span class="cov8" title="1">tahunint, err := strconv.ParseInt(tahun, 10, 64)
-        if err != nil || tahunint &lt;= 2000 </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">tahunint, err := helper.ParseInt64(tahun)
+        if err != nil &amp;&amp; err.Error() == "Number out of range" </span><span class="cov0" title="0">{
+                return common.FailureValue[*TahunProker](TahunOOR())
+        }</span>
+        <span class="cov8" title="1">if (err != nil &amp;&amp; (err.Error() == "Must be a number" || err.Error() == "Invalid number")) || tahunint &lt;= 2000 </span><span class="cov8" title="1">{
                 return common.FailureValue[*TahunProker](InvalidTahun())
         }</span>
-
         <span class="cov8" title="1">if !hasValidStatus(status) </span><span class="cov8" title="1">{
                 return common.FailureValue[*TahunProker](InvalidStatus())
         }</span>
@@ -6553,6 +6588,14 @@ func InvalidData() domain.Error <span class="cov8" title="1">{
 
 func InvalidTahun() domain.Error <span class="cov8" title="1">{
         return domain.NotFoundError("TahunProker.InvalidTahun", "tahun is invalid")
+}</span>
+
+func TahunOOR() domain.Error <span class="cov0" title="0">{
+        return domain.NotFoundError("TahunProker.TahunOOR", "tahun value is Out Of Range")
+}</span>
+
+func DuplicateData() domain.Error <span class="cov8" title="1">{
+        return domain.NotFoundError("TahunProker.DuplicateData", "data not allowed duplicate")
 }</span>
 
 func InvalidStatus() domain.Error <span class="cov8" title="1">{
