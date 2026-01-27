@@ -32,12 +32,15 @@ var (
 	// }
 	dangerousProtoRe = regexp.MustCompile(`(?i)\b(javascript|data|vbscript|file|filesystem|blob|about|chrome|chrome-extension|moz-extension|view-source):`)
 	sqlKeywordRe     = regexp.MustCompile(
-		`(?i)(['"` + "`" + `]\s*(or|and)\s+|` +
-			`['"` + "`" + `]\s*\)|` +
-			`['"` + "`" + `]\s*--|` +
-			`['"` + "`" + `]\s*#|` +
-			`['"` + "`" + `]\s*(select|union|insert|update|delete|drop|sleep|benchmark|or\s+1=1)\b)`,
+		`(?i)(
+		(['"` + "`" + `]\s*(or|and)\b)|
+		((or|and)\s*[\d'"]?\s*=\s*[\d'"])|
+		((or|and)\s*(sleep|benchmark|replace)\s*\()|
+		(['"` + "`" + `]\s*--)|
+		(['"` + "`" + `]\s*#)
+	)`,
 	)
+
 	lfiRe        = regexp.MustCompile(`(?i)(\.\./|\.\.\\|/etc/passwd|boot.ini|win.ini|.env)`)
 	asciiAllowRe = regexp.MustCompile(
 		`^[A-Za-z0-9 .,:;'"()\[\]{}+\-*/=<>&!?%#@_~^]*$`,
@@ -184,7 +187,6 @@ func deepDecode(input string) string {
 func NoXSSFullScanWithDecode() validation.RuleFunc {
 	var parts []string
 	for _, tag := range blacklistTags {
-		// match <tag or &lt;tag (case-insensitive)
 		parts = append(parts,
 			`(?i)<\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
 			`(?i)&lt;\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
@@ -198,80 +200,94 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 			return nil
 		}
 
-		// 1) pre-normalize decode
-		unescaped := deepDecode(s)
-		lower := strings.ToLower(unescaped)
+		// =========================
+		// 1. FULL NORMALIZATION
+		// =========================
+		decoded := deepDecode(s)
+		lower := strings.ToLower(decoded)
 
-		// 2) event attributes
-		if eventAttrPattern.MatchString(unescaped) {
-			return errors.New("contains event handler attribute (on...=)")
+		// =========================
+		// 2. ACTIVE XSS
+		// =========================
+		if eventAttrPattern.MatchString(decoded) {
+			return errors.New("xss: event handler detected")
 		}
 		if jsExecRe.MatchString(lower) {
-			return errors.New("javascript execution detected")
+			return errors.New("xss: javascript execution")
 		}
 		if jsPrototypeRe.MatchString(lower) {
-			return errors.New("javascript prototype manipulation detected")
+			return errors.New("xss: prototype pollution")
 		}
 		if domSinkRe.MatchString(lower) {
-			return errors.New("dom sink detected")
+			return errors.New("xss: dom sink")
+		}
+		if encodedJsCallRe.MatchString(decoded) {
+			return errors.New("xss: encoded js call")
+		}
+		if xmlDeclRe.MatchString(decoded) {
+			return errors.New("xss: xml execution")
+		}
+		if dangerousProtoRe.MatchString(lower) {
+			return errors.New("xss: dangerous protocol")
+		}
+
+		// =========================
+		// 3. SQL INJECTION (CONTEXTUAL)
+		// =========================
+		// ' " ` ALLOWED unless forming SQL pattern
+		if sqlKeywordRe.MatchString(lower) {
+			return errors.New("sqli: keyword pattern")
 		}
 		if sqlTimeRe.MatchString(lower) {
-			return errors.New("sql time-based injection detected")
-		}
-		if encodedJsCallRe.MatchString(unescaped) {
-			return errors.New("encoded javascript execution detected")
-		}
-		if xmlDeclRe.MatchString(unescaped) {
-			return errors.New("xml execution detected")
+			return errors.New("sqli: time-based")
 		}
 
-		// 3) dangerous protocols
-		// for _, p := range protoList {
-		// 	if strings.Contains(lower, p) {
-		// 		return errors.New("contains dangerous protocol: " + p)
-		// 	}
-		// }
-		if dangerousProtoRe.MatchString(lower) {
-			return errors.New("dangerous protocol detected")
-		}
-		if sqlKeywordRe.MatchString(lower) {
-			return errors.New("sql keyword detected")
-		}
+		// =========================
+		// 4. LFI / PATH TRAVERSAL
+		// =========================
 		if lfiRe.MatchString(lower) {
-			return errors.New("lfi pattern detected")
-		}
-		if !asciiAllowRe.MatchString(unescaped) {
-			return errors.New("non-ascii or disallowed character")
+			return errors.New("lfi: path traversal")
 		}
 
-		// 4) css constructs
+		// =========================
+		// 5. CSS ATTACKS
+		// =========================
 		for _, cp := range cssPatterns {
-			if matched, _ := regexp.MatchString(cp, unescaped); matched {
-				return errors.New("contains dangerous CSS construct")
+			if matched, _ := regexp.MatchString(cp, decoded); matched {
+				return errors.New("xss: css injection")
 			}
 		}
 
-		// 5) special patterns
+		// =========================
+		// 6. SPECIAL ENCODING
+		// =========================
 		for _, sp := range specialPatterns {
-			if matched, _ := regexp.MatchString(sp, unescaped); matched {
-				return errors.New("contains suspicious token or encoding")
+			if matched, _ := regexp.MatchString(sp, decoded); matched {
+				return errors.New("attack: suspicious encoding")
 			}
 		}
 
-		// 6) fallback generic tag-like (last resort)
-		stripped := allowedTagsRe.ReplaceAllString(unescaped, "")
+		// =========================
+		// 7. HTML TAG FALLBACK
+		// =========================
+		stripped := allowedTagsRe.ReplaceAllString(decoded, "")
 		if compiledTagRegex.MatchString(stripped) {
-			return errors.New("contains disallowed HTML tag")
+			return errors.New("xss: disallowed html tag")
 		}
 
-		// 7) UTF-8 validity check
-		if !utf8.ValidString(s) {
-			return errors.New("contains invalid UTF-8")
+		// =========================
+		// 8. UTF-8 VALIDITY
+		// =========================
+		if !utf8.ValidString(decoded) {
+			return errors.New("encoding: invalid utf-8")
 		}
 
-		// 8) Latin-only + safe punctuation
-		if !latinSafeRe.MatchString(s) {
-			return errors.New("contains non-latin or disallowed characters")
+		// =========================
+		// 9. SAFE CHAR SET (LAST)
+		// =========================
+		// Quotes allowed here
+		if !latinSafeRe.MatchString(decoded) {
+			return errors.New("charset: disallowed characters")
 		}
 
 		return nil
