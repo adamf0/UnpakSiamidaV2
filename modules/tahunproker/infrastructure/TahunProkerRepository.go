@@ -50,7 +50,7 @@ func (r *TahunProkerRepository) GetDefaultByUuid(
 
 	// Ambil hanya kolom yang benar-benar ada di struct TahunProkerDefault
 	query := `
-		SELECT id, uuid, nama
+		SELECT id, uuid, tahun
 		FROM master_tahun
 		WHERE uuid = ?
 		LIMIT 1
