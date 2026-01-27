@@ -36,6 +36,12 @@ func TestTahunProkerErrors(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
+			name:         "DuplicateData_ReturnsCorrectError",
+			err:          domain.DuplicateData(),
+			expectedCode: "TahunProker.DuplicateData",
+			expectedDesc: "data not allowed duplicate",
+		},
+		{
 			name:         "InvalidTahun_ReturnsCorrectError",
 			err:          domain.InvalidTahun(),
 			expectedCode: "TahunProker.InvalidTahun",

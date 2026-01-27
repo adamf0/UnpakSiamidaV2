@@ -2,10 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -60,6 +63,16 @@ func (h *UpdateTahunProkerCommandHandler) Handle(
 	// SAVE TO REPOSITORY
 	// -------------------------
 	if err := h.Repo.Update(ctx, updatedTahunProker); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintahunproker.DuplicateData()
+			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domaintahunproker.DuplicateData()
+		}
+
 		return "", err
 	}
 

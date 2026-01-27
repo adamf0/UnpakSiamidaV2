@@ -2,10 +2,10 @@ package domain
 
 import (
 	"slices"
-	"strconv"
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	event "UnpakSiamida/modules/tahunproker/event"
 
 	"github.com/google/uuid"
@@ -26,9 +26,15 @@ func (TahunProker) TableName() string {
 
 // === CREATE ===
 func NewTahunProker(tahun string, status string) common.ResultValue[*TahunProker] {
-	tahunint, err := strconv.ParseInt(tahun, 10, 64)
-	if err != nil || tahunint <= 2000 {
+	tahunint, err := helper.ParseInt64(tahun)
+	if err != nil && err.Error() == "Number out of range" {
+		return common.FailureValue[*TahunProker](TahunOOR())
+	}
+	if (err != nil && (err.Error() == "Must be a number" || err.Error() == "Invalid number")) || tahunint <= 2000 {
 		return common.FailureValue[*TahunProker](InvalidTahun())
+	}
+	if !hasValidStatus(status) {
+		return common.FailureValue[*TahunProker](InvalidStatus())
 	}
 	if !hasValidStatus(status) {
 		return common.FailureValue[*TahunProker](InvalidStatus())
@@ -65,11 +71,13 @@ func UpdateTahunProker(
 		return common.FailureValue[*TahunProker](InvalidData())
 	}
 
-	tahunint, err := strconv.ParseInt(tahun, 10, 64)
-	if err != nil || tahunint <= 2000 {
+	tahunint, err := helper.ParseInt64(tahun)
+	if err != nil && err.Error() == "Number out of range" {
+		return common.FailureValue[*TahunProker](TahunOOR())
+	}
+	if (err != nil && (err.Error() == "Must be a number" || err.Error() == "Invalid number")) || tahunint <= 2000 {
 		return common.FailureValue[*TahunProker](InvalidTahun())
 	}
-
 	if !hasValidStatus(status) {
 		return common.FailureValue[*TahunProker](InvalidStatus())
 	}

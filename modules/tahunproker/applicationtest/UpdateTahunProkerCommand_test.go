@@ -2,7 +2,6 @@ package applicationtest
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	common "UnpakSiamida/common/domain"
@@ -62,53 +61,67 @@ func TestUpdateTahunProkerCommand_Success(t *testing.T) {
 	assert.Equal(t, "2080", saved.Tahun)
 }
 
-// func TestUpdateTahunProkerCommand_Edge(t *testing.T) {
-// 	db, terminate := setupTahunProkerMySQL(t)
-// 	defer terminate()
-
-// 	repo := infra.NewTahunProkerRepository(db)
-// 	handler := &app.UpdateTahunProkerCommandHandler{Repo: repo}
-
-// 	// Update dengan nama sangat panjang (boundary)
-// 	longName := "Dokumen " + string(make([]byte, 500))
-// 	cmdLong := app.UpdateTahunProkerCommand{
-// 		Uuid:   "666a6b72-d2b4-481f-adb8-298d807e9e20",
-// 		Tahun:  longName,
-// 		Status: "aktif",
-// 	}
-// 	updatedUUID, err := handler.Handle(context.Background(), cmdLong)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, "666a6b72-d2b4-481f-adb8-298d807e9e20", updatedUUID)
-// }
-
 func TestUpdateTahunProkerCommand_Fail(t *testing.T) {
-	db, terminate := setupTahunProkerMySQL(t)
-	defer terminate()
-
-	repo := infra.NewTahunProkerRepository(db)
-	handler := &app.UpdateTahunProkerCommandHandler{Repo: repo}
-
-	// Insert record awal
-	original := domain.TahunProker{
-		UUID:   uuid.New(),
-		Tahun:  "2080",
-		Status: "non-aktif",
+	tests := []struct {
+		name      string
+		uuid      string
+		tahun     string
+		status    string
+		errorCode string
+	}{
+		{
+			name:      "not found",
+			uuid:      uuid.NewString(),
+			tahun:     "2080",
+			status:    "non-aktif",
+			errorCode: "TahunProker.NotFound",
+		},
+		{
+			name:      "invalid tahun",
+			uuid:      "666a6b72-d2b4-481f-adb8-298d807e9e20",
+			tahun:     "1900",
+			status:    "non-aktif",
+			errorCode: "TahunProker.InvalidTahun",
+		},
+		{
+			name:      "invalid status",
+			uuid:      "666a6b72-d2b4-481f-adb8-298d807e9e20",
+			tahun:     "2001",
+			status:    "no-aktif",
+			errorCode: "TahunProker.InvalidStatus",
+		},
+		{
+			name:      "invalid status",
+			uuid:      "666a6b72-d2b4-481f-adb8-298d807e9e20",
+			tahun:     "2024",
+			status:    "non-aktif",
+			errorCode: "TahunProker.DuplicateData",
+		},
 	}
-	err := repo.Create(context.Background(), &original)
-	assert.NoError(t, err)
 
-	uuid := uuid.NewString()
-	// Update dengan nama yang sama
-	cmdSame := app.UpdateTahunProkerCommand{
-		Uuid:   uuid,
-		Tahun:  "2080",
-		Status: "non-aktif",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, terminate := setupTahunProkerMySQL(t)
+			defer terminate()
+
+			repo := infra.NewTahunProkerRepository(db)
+			handler := &app.UpdateTahunProkerCommandHandler{
+				Repo: repo,
+			}
+
+			cmd := app.UpdateTahunProkerCommand{
+				Uuid:   tt.uuid,
+				Tahun:  tt.tahun,
+				Status: tt.status,
+			}
+
+			_, err := handler.Handle(context.Background(), cmd)
+			assert.Error(t, err)
+
+			commonErr, ok := err.(common.Error)
+			assert.True(t, ok)
+
+			assert.Equal(t, tt.errorCode, commonErr.Code)
+		})
 	}
-	_, err = handler.Handle(context.Background(), cmdSame)
-	assert.Error(t, err)
-
-	commonErr, _ := err.(common.Error)
-
-	assert.Equal(t, "TahunProker.NotFound", commonErr.Code)
-	assert.Equal(t, fmt.Sprintf("TahunProker with identifier %s not found", uuid), commonErr.Description)
 }

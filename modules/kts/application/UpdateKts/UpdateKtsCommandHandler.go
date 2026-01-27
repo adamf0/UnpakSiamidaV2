@@ -2,14 +2,13 @@ package application
 
 import (
 	common "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domainkts "UnpakSiamida/modules/kts/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
 	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -227,11 +226,7 @@ func (h *UpdateKtsCommandHandler) Handle(
 }
 
 func StringPtrToUint(ptr *string) (uint, error) {
-	if ptr == nil || *ptr == "" {
-		return 0, errors.New("value is empty")
-	}
-
-	v, err := strconv.ParseUint(*ptr, 10, 64)
+	v, err := helper.ParseInt64(*ptr)
 	if err != nil {
 		return 0, err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	common "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/tahunproker/application/CreateTahunProker"
 	domain "UnpakSiamida/modules/tahunproker/domain"
 	infra "UnpakSiamida/modules/tahunproker/infrastructure"
@@ -49,30 +50,31 @@ func TestCreateTahunProkerCommand_Success(t *testing.T) {
 	assert.Equal(t, "2080", saved.Tahun)
 }
 
-// func TestCreateTahunProkerCommand_Edge(t *testing.T) {
-// 	db, terminate := setupTahunProkerMySQL(t)
-// 	defer terminate()
+func TestCreateTahunProkerCommand_Edge(t *testing.T) {
+	db, terminate := setupTahunProkerMySQL(t)
+	defer terminate()
 
-// 	repo := infra.NewTahunProkerRepository(db)
-// 	handler := &app.CreateTahunProkerCommandHandler{Repo: repo}
+	repo := infra.NewTahunProkerRepository(db)
+	handler := &app.CreateTahunProkerCommandHandler{Repo: repo}
 
-// 	// Insert satu record dulu
-// 	firstCmd := app.CreateTahunProkerCommand{
-// 		Tahun:  "2080",
-// 		Status: "aktif",
-// 	}
-// 	_, err := handler.Handle(context.Background(), firstCmd)
-// 	assert.NoError(t, err)
+	// Insert satu record dulu
+	firstCmd := app.CreateTahunProkerCommand{
+		Tahun:  "2080",
+		Status: "aktif",
+	}
+	_, err := handler.Handle(context.Background(), firstCmd)
+	assert.NoError(t, err)
 
-// 	// Insert lagi dengan nama yang sama
-// 	secondCmd := app.CreateTahunProkerCommand{
-// 		Tahun:  "2080",
-// 		Status: "aktif",
-// 	}
-// 	uuidStr2, err := handler.Handle(context.Background(), secondCmd)
-// 	assert.NoError(t, err)
-// 	assert.NotEmpty(t, uuidStr2)
+	// Insert lagi dengan nama yang sama
+	secondCmd := app.CreateTahunProkerCommand{
+		Tahun:  "2080",
+		Status: "aktif",
+	}
+	_, err = handler.Handle(context.Background(), secondCmd)
+	assert.Error(t, err)
 
-// 	// UUID harus berbeda
-// 	assert.NotEqual(t, uuidStr2, uuid.Nil)
-// }
+	commonErr, ok := err.(common.Error)
+	assert.True(t, ok)
+
+	assert.Equal(t, "TahunProker.DuplicateData", commonErr.Code)
+}

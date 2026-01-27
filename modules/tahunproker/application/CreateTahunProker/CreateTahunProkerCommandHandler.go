@@ -2,9 +2,13 @@ package application
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 type CreateTahunProkerCommandHandler struct {
@@ -29,6 +33,16 @@ func (h *CreateTahunProkerCommandHandler) Handle(
 
 	createTahunProker := result.Value
 	if err := h.Repo.Create(ctx, createTahunProker); err != nil {
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) {
+			if mysqlErr.Number == 1062 {
+				return "", domaintahunproker.DuplicateData()
+			}
+		}
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return "", domaintahunproker.DuplicateData()
+		}
+
 		return "", err
 	}
 

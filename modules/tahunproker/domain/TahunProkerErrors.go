@@ -21,6 +21,14 @@ func InvalidTahun() domain.Error {
 	return domain.NotFoundError("TahunProker.InvalidTahun", "tahun is invalid")
 }
 
+func TahunOOR() domain.Error {
+	return domain.NotFoundError("TahunProker.TahunOOR", "tahun value is Out Of Range")
+}
+
+func DuplicateData() domain.Error {
+	return domain.NotFoundError("TahunProker.DuplicateData", "data not allowed duplicate")
+}
+
 func InvalidStatus() domain.Error {
 	return domain.NotFoundError("TahunProker.InvalidStatus", "status is invalid")
 }

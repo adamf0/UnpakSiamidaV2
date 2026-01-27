@@ -62,7 +62,8 @@ func setupTahunProkerMySQL(t *testing.T) (*gorm.DB, func()) {
 			tahun varchar(100) DEFAULT NULL,
 			status varchar(100) DEFAULT NULL,
 			created_at timestamp NULL DEFAULT NULL,
-			updated_at timestamp NULL DEFAULT NULL
+			updated_at timestamp NULL DEFAULT NULL,
+			UNIQUE KEY uk_master_tahun_tahun (tahun)
 		);
 
         INSERT INTO master_tahun (id, uuid, tahun, status, created_at, updated_at) VALUES
