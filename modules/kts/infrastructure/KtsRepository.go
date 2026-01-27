@@ -46,7 +46,7 @@ func (r *KtsRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainKt
 // ------------------------
 // GET DEFAULT BY UUID
 // ------------------------
-func (r *KtsRepository) GetDefaultByUuid( //[pr] masih belum sesuai contract
+func (r *KtsRepository) GetDefaultByUuid(
 	ctx context.Context,
 	id uuid.UUID,
 ) (*domainKts.KtsDefault, error) {

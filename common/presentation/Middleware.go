@@ -2,23 +2,24 @@ package presentation
 
 import (
 	"context"
+	"errors"
 	"html"
 	"net"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
-	"errors"
-	
+
+	commoninfra "UnpakSiamida/common/infrastructure"
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/text/unicode/norm"
-	"strconv"
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
-	"log"
-	commoninfra "UnpakSiamida/common/infrastructure"
 )
 
 // =======================
@@ -45,7 +46,7 @@ func DefaultBlacklistedHeaderNames() map[string]bool {
 		"host", "x-host", "x-rewrite-url", "x-original-url",
 		"x-request-url", "x-request-uri", "redirect", "location",
 		"authorization", "proxy-authorization", "x-api-key",
-		"metadata", "x-aws-ec2-metadata","referer",
+		"metadata", "x-aws-ec2-metadata", "referer",
 	}
 	out := map[string]bool{}
 	for _, v := range names {
@@ -57,7 +58,7 @@ func DefaultBlacklistedHeaderNames() map[string]bool {
 func DefaultHeaderSecurityConfig() *HeaderSecurityConfig {
 	return &HeaderSecurityConfig{
 		BlacklistedHeaderNames: DefaultBlacklistedHeaderNames(),
-		AllowDomains:           []string{"siamida.unpak.ac.id","localhost:3000","thunderclient.com"},
+		AllowDomains:           []string{"siamida.unpak.ac.id", "localhost:3000", "thunderclient.com"},
 		MaxHeaderLen:           8192,
 		ResolveAndCheck:        false,
 		LookupTimeout:          1 * time.Second,
@@ -79,17 +80,17 @@ var (
 )
 
 type Account struct {
-	UUID         string       `json:"uuid"`
-	NidnUsername string       `json:"nidn_username"`
-	Password     string       `json:"password"`
-	Level        string       `json:"level"`
-	Name         string       `json:"name"`
-	Email        string       `json:"email"`
-	FakultasUnit string       `json:"fakultas_unit"`
-	ExtraRole    []ExtraRole  `gorm:"-"; json:"extrarole,omitempty"`
+	UUID         string      `json:"uuid"`
+	NidnUsername string      `json:"nidn_username"`
+	Password     string      `json:"password"`
+	Level        string      `json:"level"`
+	Name         string      `json:"name"`
+	Email        string      `json:"email"`
+	FakultasUnit string      `json:"fakultas_unit"`
+	ExtraRole    []ExtraRole `gorm:"-"; json:"extrarole,omitempty"`
 }
 type ExtraRole struct {
-	Tahun string    `json:"tahun"`
+	Tahun string `json:"tahun"`
 	Role  string `json:"role"`
 }
 
@@ -172,12 +173,55 @@ func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 					}
 				}
 
-				//[pr] review kembali
 				// 9) Cek embedded domain dalam text
-				// hosts := extractHosts(decoded)
+				// hosts := extractHosts(decoded) //ini kenapa null
+				// godump.Dd(hosts, cfg.AllowDomains)
 				// for _, h := range hosts {
 				// 	if !domainAllowed(h, cfg.AllowDomains) {
 				// 		return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+9]", "embedded domain not allowed: "+h))
+				// 	}
+				// }
+
+				// =======================
+				// 1) Embedded domain check hanya untuk header URL
+				// =======================
+				urlHeaders := []string{"referer", "origin", "location", "refferer", "referrer", "redirect", "url", "http-url", "x-rewrite-url", "x-http-destinationurl", "x-http-host-override", "x-forwarded-host"}
+				for _, h := range urlHeaders {
+					val := c.Get(h)
+					if val == "" {
+						continue
+					}
+
+					decoded := multiUnescape(html.UnescapeString(val), 3)
+					decoded = zeroWidthRe.ReplaceAllString(decoded, "")
+					decoded = norm.NFKC.String(decoded)
+
+					hosts := extractHostsFromText(decoded)
+					// godump.Dd(hosts, cfg.AllowDomains)
+
+					for _, host := range hosts {
+						if !domainAllowed(host, cfg.AllowDomains) {
+							return c.Status(400).JSON(commoninfra.NewResponseError(
+								"common.check[A+9]", "embedded domain not allowed: "+host))
+						}
+					}
+				}
+
+				// =======================
+				// 2) IP check untuk header IP
+				// =======================
+				// ipHeaders := []string{"client-ip", "x-client-ip", "x-forwarded-for", "x-forwarder-for", "x-real-ip", "x-remote-addr", "x-remote-ip", "x-originating-ip", "x-true-ip", "x-original-remote-addr", "proxy-host", "proxy-url"}
+				// for _, h := range ipHeaders {
+				// 	val := c.Get(h)
+				// 	if val == "" {
+				// 		continue
+				// 	}
+
+				// 	// jika ada blocked CIDR
+				// 	ip := net.ParseIP(val)
+				// 	if ip != nil && ipInNets(ip, blocked) {
+				// 		return c.Status(400).JSON(commoninfra.NewResponseError(
+				// 			"common.check[A+10]", "IP blocked: "+val))
 				// 	}
 				// }
 			}
@@ -313,7 +357,7 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		for _, r := range user.ExtraRole {
 			key := r.Tahun + "#" + r.Role
 			grantedAccess = append(grantedAccess, key)
-			
+
 			log.Printf("[RBAC] Acces data: %s = %s", r.Tahun, tahun)
 			if r.Tahun == tahun {
 				role := strings.ToLower(strings.TrimSpace(r.Role))
@@ -339,7 +383,7 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		log.Println("[RBAC] Middleware passed, continue to handler")
 		grantedAccessStr := strings.Join(grantedAccess, ", ")
 		c.Request().PostArgs().Set("grantedaccess", grantedAccessStr)
-		
+
 		return c.Next()
 	}
 }
@@ -348,47 +392,75 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 // HELPERS
 // =======================
 
-// func domainAllowed(host string, allow []string) bool {
-// 	host = strings.ToLower(host)
-// 	for _, a := range allow {
-// 		if strings.HasSuffix(host, strings.ToLower(a)) {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
+//	func domainAllowed(host string, allow []string) bool {
+//		host = strings.ToLower(host)
+//		for _, a := range allow {
+//			if strings.HasSuffix(host, strings.ToLower(a)) {
+//				return true
+//			}
+//		}
+//		return false
+//	}
 func domainAllowed(host string, allow []string) bool {
-    host = strings.ToLower(host)
-    for _, a := range allow {
-        u, err := url.Parse(a)
-        var domain string
-        if err == nil && u.Host != "" {
-            domain = u.Hostname()
-        } else {
-            domain = strings.ToLower(a)
-        }
-        if strings.HasSuffix(host, domain) {
-            return true
-        }
-    }
-    return false
+	host = strings.ToLower(host)
+	for _, a := range allow {
+		u, err := url.Parse(a)
+		var domain string
+		if err == nil && u.Host != "" {
+			domain = u.Hostname()
+		} else {
+			domain = strings.ToLower(a)
+		}
+		if strings.HasSuffix(host, domain) {
+			return true
+		}
+	}
+	return false
 }
 
-
-func extractHosts(s string) []string {
+//	func extractHosts(s string) []string {
+//		out := []string{}
+//		words := strings.Fields(s)
+//		for _, w := range words {
+//			u, err := url.Parse(w)
+//			if err == nil && u.Host != "" {
+//				out = append(out, u.Hostname())
+//				continue
+//			}
+//			m := hostExtract.FindStringSubmatch(w)
+//			if len(m) > 1 {
+//				out = append(out, m[1])
+//			}
+//		}
+//		return out
+//	}
+func extractHostsFromText(s string) []string {
 	out := []string{}
-	words := strings.Fields(s)
+
+	// Split string berdasarkan spasi, koma, titik koma, newline
+	words := regexp.MustCompile(`[ \t\r\n,;]+`).Split(s, -1)
+
 	for _, w := range words {
-		u, err := url.Parse(w)
-		if err == nil && u.Host != "" {
-			out = append(out, u.Hostname())
+		if w == "" {
 			continue
 		}
+
+		// Hanya parsing kata yang terlihat seperti URL
+		if strings.Contains(w, "://") {
+			u, err := url.Parse(w)
+			if err == nil && u.Host != "" {
+				out = append(out, u.Hostname())
+				continue
+			}
+		}
+
+		// Fallback regex: cocokkan host sederhana (domain.tld)
 		m := hostExtract.FindStringSubmatch(w)
 		if len(m) > 1 {
 			out = append(out, m[1])
 		}
 	}
+
 	return out
 }
 

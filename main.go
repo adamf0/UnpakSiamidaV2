@@ -214,7 +214,7 @@ func main() {
 		AllowHeaders: "*",
 	}))
 	app.Use(commonpresentation.LoggerMiddleware)
-	// app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
+	app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
 
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 

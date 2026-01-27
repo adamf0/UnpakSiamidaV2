@@ -44,7 +44,7 @@ func (r *RenstraNilaiRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (
 // ------------------------
 // GET DEFAULT BY UUID
 // ------------------------
-func (r *RenstraNilaiRepository) GetDefaultByUuid( //[pr] ini salah, ini tanpa kts
+func (r *RenstraNilaiRepository) GetDefaultByUuid(
 	ctx context.Context,
 	id uuid.UUID,
 ) (*domainrenstranilai.RenstraNilaiDefault, error) {
