@@ -100,7 +100,7 @@ func ValidateUUIDv4(value interface{}) error {
 	}
 
 	if len(s) != 36 {
-		return fmt.Errorf("UUID length invalid")
+		return fmt.Errorf("UUID must be a valid UUIDv4 format")
 	}
 
 	// format regex UUID v4
