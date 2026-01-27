@@ -31,16 +31,7 @@ var (
 	// 	"about:", "chrome:", "chrome-extension:", "moz-extension:", "view-source:",
 	// }
 	dangerousProtoRe = regexp.MustCompile(`(?i)\b(javascript|data|vbscript|file|filesystem|blob|about|chrome|chrome-extension|moz-extension|view-source):`)
-	sqlKeywordRe     = regexp.MustCompile(
-		`(?i)(
-		(['"` + "`" + `]\s*(or|and)\b)|
-		((or|and)\s*[\d'"]?\s*=\s*[\d'"])|
-		((or|and)\s*(sleep|benchmark|replace)\s*\()|
-		(['"` + "`" + `]\s*--)|
-		(['"` + "`" + `]\s*#)
-	)`,
-	)
-
+	// sqlKeywordRe     = regexp.MustCompile(`(?i)\b(select|union|insert|update|delete|drop|sleep|benchmark|or\s+1=1)\b`)
 	lfiRe        = regexp.MustCompile(`(?i)(\.\./|\.\.\\|/etc/passwd|boot.ini|win.ini|.env)`)
 	asciiAllowRe = regexp.MustCompile(
 		`^[A-Za-z0-9 .,:;'"()\[\]{}+\-*/=<>&!?%#@_~^]*$`,
@@ -81,12 +72,11 @@ var (
 		`(?i)</?(p|b|i|ul|ol|li)\s*>`,
 	)
 
-	jsExecRe        = regexp.MustCompile(`(?i)\b(alert|eval|prompt|confirm|settimeout|setinterval|function)\s*\(`)
-	jsPrototypeRe   = regexp.MustCompile(`(?i)\b(object|array|string|number|regexp)\.prototype\b`)
-	domSinkRe       = regexp.MustCompile(`(?i)\b(location|document|window)\.(hash|href|cookie|write)\b`)
-	sqlTimeRe       = regexp.MustCompile(`(?i)\b(waitfor\s+delay|sleep\s*\(|benchmark\s*\()\b`)
+	jsExecRe      = regexp.MustCompile(`(?i)\b(alert|eval|prompt|confirm|settimeout|setinterval|function)\s*\(`)
+	jsPrototypeRe = regexp.MustCompile(`(?i)\b(object|array|string|number|regexp)\.prototype\b`)
+	domSinkRe     = regexp.MustCompile(`(?i)\b(location|document|window)\.(hash|href|cookie|write)\b`)
+	// sqlTimeRe       = regexp.MustCompile(`(?i)\b(waitfor\s+delay|sleep\s*\(|benchmark\s*\()\b`)
 	encodedJsCallRe = regexp.MustCompile(`(?i)(alert|eval|prompt|confirm)[^a-z0-9]*\(`)
-	xmlDeclRe       = regexp.MustCompile(`(?i)<\?(xml|xsl|php)`)
 )
 
 // deprecated
@@ -185,25 +175,13 @@ func deepDecode(input string) string {
 // NoXSSFullScanWithDecode returns an ozzo-validation RuleFunc with deep decoding normalization
 // and aggressive detection. It returns an error with a short reason.
 func NoXSSFullScanWithDecode() validation.RuleFunc {
-
-	// aggressive tag-like detection (even malformed)
-	tagLikeRe := regexp.MustCompile(`(?i)<[^>]*[a-z][^>]*>`)
-
-	// raw <something (for <;SCRIPT, <XML, etc)
-	rawAngleRe := regexp.MustCompile(`(?i)<\s*[^>]*`)
-
-	// SQL keywords ANYWHERE
-	sqlAggressiveRe := regexp.MustCompile(
-		`(?i)\b(select|union|insert|update|delete|drop|sleep|benchmark|replace|into|from|where|and|or)\b`,
-	)
-
-	// JS words even without (
-	jsWordRe := regexp.MustCompile(
-		`(?i)\b(alert|eval|prompt|confirm|settimeout|setinterval|function|document|window|navigator)\b`,
-	)
-
-	// protocol anywhere
-	protoAnywhereRe := regexp.MustCompile(`(?i)(javascript|data|vbscript|file|blob|about|http|https):`)
+	var parts []string
+	for _, tag := range blacklistTags {
+		// match <tag or &lt;tag (case-insensitive)
+		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+	}
+	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
 
 	return func(value interface{}) error {
 		s, _ := value.(string)
@@ -211,77 +189,77 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 			return nil
 		}
 
-		// decode hard
-		decoded := deepDecode(s)
-		lower := strings.ToLower(decoded)
+		// 1) pre-normalize decode
+		unescaped := deepDecode(s)
+		lower := strings.ToLower(unescaped)
 
-		// 1. invalid utf8
-		if !utf8.ValidString(s) {
-			return errors.New("invalid utf-8")
+		// 2) event attributes
+		if eventAttrPattern.MatchString(unescaped) {
+			return errors.New("contains event handler attribute (on...=)")
 		}
-
-		// 2. NULL / control
-		if strings.Contains(decoded, "\x00") {
-			return errors.New("null byte detected")
-		}
-
-		// 3. ANY angle bracket = reject (HTML forbidden)
-		if strings.ContainsAny(decoded, "<>") {
-			return errors.New("html content detected")
-		}
-
-		// 4. malformed tag attempts (<;script etc)
-		if rawAngleRe.MatchString(decoded) || tagLikeRe.MatchString(decoded) {
-			return errors.New("html tag-like content detected")
-		}
-
-		// 5. JS execution words
-		if jsExecRe.MatchString(lower) || jsWordRe.MatchString(lower) {
+		if jsExecRe.MatchString(lower) {
 			return errors.New("javascript execution detected")
 		}
-
-		// 6. DOM sinks
+		if jsPrototypeRe.MatchString(lower) {
+			return errors.New("javascript prototype manipulation detected")
+		}
 		if domSinkRe.MatchString(lower) {
 			return errors.New("dom sink detected")
 		}
-
-		// 7. SQL time-based
-		if sqlTimeRe.MatchString(lower) {
-			return errors.New("sql time-based injection detected")
+		// if sqlTimeRe.MatchString(lower) {
+		// 	return errors.New("sql time-based injection detected")
+		// }
+		if encodedJsCallRe.MatchString(unescaped) {
+			return errors.New("encoded javascript execution detected")
 		}
 
-		// 8. SQL keywords ANYWHERE (critical)
-		if sqlAggressiveRe.MatchString(lower) {
-			return errors.New("sql keyword detected")
-		}
-
-		// 9. dangerous protocol anywhere
-		if protoAnywhereRe.MatchString(lower) {
+		// 3) dangerous protocols
+		// for _, p := range protoList {
+		// 	if strings.Contains(lower, p) {
+		// 		return errors.New("contains dangerous protocol: " + p)
+		// 	}
+		// }
+		if dangerousProtoRe.MatchString(lower) {
 			return errors.New("dangerous protocol detected")
 		}
-
-		// 10. LFI
+		// if sqlKeywordRe.MatchString(lower) {
+		// 	return errors.New("sql keyword detected")
+		// }
 		if lfiRe.MatchString(lower) {
-			return errors.New("lfi detected")
+			return errors.New("lfi pattern detected")
+		}
+		if !asciiAllowRe.MatchString(unescaped) {
+			return errors.New("non-ascii or disallowed character")
 		}
 
-		// 11. CSS vectors
+		// 4) css constructs
 		for _, cp := range cssPatterns {
-			if regexp.MustCompile(cp).MatchString(lower) {
-				return errors.New("css injection detected")
+			if matched, _ := regexp.MatchString(cp, unescaped); matched {
+				return errors.New("contains dangerous CSS construct")
 			}
 		}
 
-		// 12. special encodings
+		// 5) special patterns
 		for _, sp := range specialPatterns {
-			if regexp.MustCompile(sp).MatchString(lower) {
-				return errors.New("suspicious encoding detected")
+			if matched, _ := regexp.MatchString(sp, unescaped); matched {
+				return errors.New("contains suspicious token or encoding")
 			}
 		}
 
-		// 13. strict charset (quotes allowed, but no HTML)
-		if !latinSafeRe.MatchString(decoded) {
-			return errors.New("invalid characters detected")
+		// 6) fallback generic tag-like (last resort)
+		stripped := allowedTagsRe.ReplaceAllString(unescaped, "")
+		if compiledTagRegex.MatchString(stripped) {
+			return errors.New("contains disallowed HTML tag")
+		}
+
+		// 7) UTF-8 validity check
+		if !utf8.ValidString(s) {
+			return errors.New("contains invalid UTF-8")
+		}
+
+		// 8) Latin-only + safe punctuation
+		if !latinSafeRe.MatchString(s) {
+			return errors.New("contains non-latin or disallowed characters")
 		}
 
 		return nil
