@@ -5,8 +5,8 @@ import (
 	"html"
 	"net/url"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -16,73 +16,79 @@ import (
 // -----------------------------
 // Lists (abridged but extensive)
 // -----------------------------
-var blacklistTags = []string{
-	"html", "head", "body", "title", "meta", "base", "link", "style", "script", "noscript", "template",
-	"form", "input", "textarea", "select", "option", "button", "datalist",
-	"img", "picture", "source", "video", "audio", "track", "canvas",
-	"iframe", "frame", "frameset", "object", "embed", "param", "applet",
-	"svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "use", "defs", "symbol", "image", "text", "tspan",
-	"math", "mrow", "mi", "mn", "mo", "mtext", "mglyph", "ms", "mtable", "mtr", "mtd", "annotation",
-	"iframe", "object", "embed", "isindex", "layer", "ilayer", "noframes", "blink", "xmp", "plaintext",
-}
-
-var protoList = []string{
-	"javascript:", "data:", "vbscript:", "file:", "filesystem:", "blob:",
-	"about:", "chrome:", "chrome-extension:", "moz-extension:", "view-source:",
-}
-
-var cssPatterns = []string{
-	`(?i)expression\s*\(`,        // expression(
-	`(?i)-moz-binding\s*:`,       // -moz-binding
-	`(?i)url\s*\(\s*data:`,       // url(data:
-	`(?i)url\s*\(\s*javascript:`, // url(javascript:
-	`(?i)@import\s+`,             // @import
-}
-
-var specialPatterns = []string{
-	`(?i)<!doctype`,    // doctype
-	`(?i)<!--`,         // comment
-	`(?i)<!\[CDATA\[`,  // cdata
-	`\x00`,             // null byte
-	`%00`,              // url-encoded null
-	`\\u0000`,          // escaped null
-	`%3c`,              // %3c == <
-	`%3e`,              // %3e == >
-	`(?i)utf-7`,        // UTF-7 marker attempts
-}
-
-// event attribute
-var eventAttrPattern = regexp.MustCompile(`(?i)on[a-z]+\s*=`)
-
-// generic fallback tag detection
-var genericTagFallback = regexp.MustCompile(`<[^>]+>`)
-
-// compiledTagRegex built in init
-var compiledTagRegex *regexp.Regexp
-
-func init() {
-	var parts []string
-	for _, tag := range blacklistTags {
-		// match <tag or &lt;tag (case-insensitive)
-		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
-		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+var (
+	// blacklistTags = []string{
+	// 	"html", "head", "body", "title", "meta", "base", "link", "style", "script", "noscript", "template",
+	// 	"form", "input", "textarea", "select", "option", "button", "datalist",
+	// 	"img", "picture", "source", "video", "audio", "track", "canvas",
+	// 	"iframe", "frame", "frameset", "object", "embed", "param", "applet",
+	// 	"svg", "g", "path", "rect", "circle", "ellipse", "line", "polyline", "polygon", "use", "defs", "symbol", "image", "text", "tspan",
+	// 	"math", "mrow", "mi", "mn", "mo", "mtext", "mglyph", "ms", "mtable", "mtr", "mtd", "annotation",
+	// 	"iframe", "object", "embed", "isindex", "layer", "ilayer", "noframes", "blink", "xmp", "plaintext",
+	// }
+	// protoList = []string{
+	// 	"javascript:", "data:", "vbscript:", "file:", "filesystem:", "blob:",
+	// 	"about:", "chrome:", "chrome-extension:", "moz-extension:", "view-source:",
+	// }
+	dangerousProtoRe = regexp.MustCompile(`(?i)\b(javascript|data|vbscript|file|filesystem|blob|about|chrome|chrome-extension|moz-extension|view-source):`)
+	sqlKeywordRe     = regexp.MustCompile(`(?i)\b(select|union|insert|update|delete|drop|sleep|benchmark|or\s+1=1)\b`)
+	lfiRe            = regexp.MustCompile(`(?i)(\.\./|\.\.\\|/etc/passwd|boot.ini|win.ini|.env)`)
+	asciiAllowRe     = regexp.MustCompile(
+		`^[A-Za-z0-9 .,:;'"()\[\]{}+\-*/=<>&!?%#@_~^]*$`,
+	)
+	cssPatterns = []string{
+		`(?i)expression\s*\(`,        // expression(
+		`(?i)-moz-binding\s*:`,       // -moz-binding
+		`(?i)url\s*\(\s*data:`,       // url(data:
+		`(?i)url\s*\(\s*javascript:`, // url(javascript:
+		`(?i)@import\s+`,             // @import
 	}
-	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
-}
+	specialPatterns = []string{
+		`(?i)<!doctype`,   // doctype
+		`(?i)<!--`,        // comment
+		`(?i)<!\[CDATA\[`, // cdata
+		`\x00`,            // null byte
+		`%00`,             // url-encoded null
+		`\\u0000`,         // escaped null
+		`%3c`,             // %3c == <
+		`%3e`,             // %3e == >
+		`(?i)utf-7`,       // UTF-7 marker attempts
+	}
+	eventAttrPattern = regexp.MustCompile(`(?i)\bon[a-z]+\s*=`)
+	anyTagRe         = regexp.MustCompile(`<[^>]+>`)
+	hexEntityRe      = regexp.MustCompile(`&#x([0-9A-Fa-f]+);?`)
+	decEntityRe      = regexp.MustCompile(`&#([0-9]+);?`)
+	zeroWidthRe      = regexp.MustCompile(string([]rune{
+		'\u200B',
+		'\u200C',
+		'\u200D',
+		'\uFEFF',
+		'\u2060',
+	}))
+	latinSafeRe = regexp.MustCompile(
+		`^[A-Za-z0-9 .,;:_\-+*/=()!%&@#?$'"<>/\n\r\t]*$`,
+	)
+	allowedTagsRe = regexp.MustCompile(
+		`(?i)</?(p|b|i|ul|ol|li)\s*>`,
+	)
+)
+
+// deprecated
+// var compiledTagRegex *regexp.Regexp
+
+// func init() {
+// 	var parts []string
+// 	for _, tag := range blacklistTags {
+// 		// match <tag or &lt;tag (case-insensitive)
+// 		parts = append(parts, `(?i)<\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+// 		parts = append(parts, `(?i)&lt;\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`)
+// 	}
+// 	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
+// }
 
 // -----------------------------
 // Decoding helpers
 // -----------------------------
-
-var hexEntityRe = regexp.MustCompile(`&#x([0-9A-Fa-f]+);?`)
-var decEntityRe = regexp.MustCompile(`&#([0-9]+);?`)
-var zeroWidthRe = regexp.MustCompile(string([]rune{
-	'\u200B',
-	'\u200C',
-	'\u200D',
-	'\uFEFF',
-	'\u2060',
-})) // common zero-widths
 
 // decodeNumericEntities converts both hex (&#xHH;) and decimal (&#DDD;) numeric entities to runes.
 func decodeNumericEntities(s string) string {
@@ -91,26 +97,25 @@ func decodeNumericEntities(s string) string {
 		if len(parts) < 2 {
 			return m
 		}
-		// parse hex
-		var r rune
-		_, err := fmtSscanfHex(parts[1], &r)
+		v, err := strconv.ParseUint(parts[1], 16, 32)
 		if err != nil {
 			return m
 		}
-		return string(r)
+		return string(rune(v))
 	})
+
 	s = decEntityRe.ReplaceAllStringFunc(s, func(m string) string {
 		parts := decEntityRe.FindStringSubmatch(m)
 		if len(parts) < 2 {
 			return m
 		}
-		var r rune
-		_, err := fmtSscanfDec(parts[1], &r)
+		v, err := strconv.ParseUint(parts[1], 10, 32)
 		if err != nil {
 			return m
 		}
-		return string(r)
+		return string(rune(v))
 	})
+
 	return s
 }
 
@@ -145,29 +150,23 @@ func strconvParseUint(s string, base int) (uint64, error) {
 	return strconv.ParseUint(s, base, 64)
 }
 
-// deepDecode does multiple decoding & normalization steps:
-//  - html.UnescapeString (handles &lt; &gt; &amp; etc.)
-//  - URL query unescape (handles %3C %3E ...)
-//  - numeric entity decode (&#x..; &#...;)
-//  - remove zero-width chars often used to obfuscate
-//  - unicode normalization (NFKC)
 func deepDecode(input string) string {
 
-	// 1) HTML unescape
+	// 1) HTML entities
 	s := html.UnescapeString(input)
 
-	// 2) URL-decode (QueryUnescape). If fails, keep original.
+	// 2) URL encoding
 	if u, err := url.QueryUnescape(s); err == nil {
 		s = u
 	}
 
-	// 3) numeric entities
+	// 3) Numeric entities
 	s = decodeNumericEntities(s)
 
-	// 4) remove zero-width characters
+	// 4) Zero-width chars
 	s = zeroWidthRe.ReplaceAllString(s, "")
 
-	// 5) normalize unicode (NFKC)
+	// 5) Unicode normalization
 	s = norm.NFKC.String(s)
 
 	return s
@@ -190,49 +189,57 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 		unescaped := deepDecode(s)
 		lower := strings.ToLower(unescaped)
 
-		// 2) tag detection
-		if compiledTagRegex.MatchString(unescaped) {
-			return errors.New("contains forbidden tag (html/svg/mathml/etc)")
-		}
-
-		// 3) event attributes
+		// 2) event attributes
 		if eventAttrPattern.MatchString(unescaped) {
 			return errors.New("contains event handler attribute (on...=)")
 		}
 
-		// 4) dangerous protocols
-		for _, p := range protoList {
-			if strings.Contains(lower, p) {
-				return errors.New("contains dangerous protocol: " + p)
-			}
+		// 3) dangerous protocols
+		// for _, p := range protoList {
+		// 	if strings.Contains(lower, p) {
+		// 		return errors.New("contains dangerous protocol: " + p)
+		// 	}
+		// }
+		if dangerousProtoRe.MatchString(lower) {
+			return errors.New("dangerous protocol detected")
+		}
+		if sqlKeywordRe.MatchString(lower) {
+			return errors.New("sql keyword detected")
+		}
+		if lfiRe.MatchString(lower) {
+			return errors.New("lfi pattern detected")
+		}
+		if !asciiAllowRe.MatchString(unescaped) {
+			return errors.New("non-ascii or disallowed character")
 		}
 
-		// 5) css constructs
+		// 4) css constructs
 		for _, cp := range cssPatterns {
 			if matched, _ := regexp.MatchString(cp, unescaped); matched {
 				return errors.New("contains dangerous CSS construct")
 			}
 		}
 
-		// 6) special patterns
+		// 5) special patterns
 		for _, sp := range specialPatterns {
 			if matched, _ := regexp.MatchString(sp, unescaped); matched {
 				return errors.New("contains suspicious token or encoding")
 			}
 		}
 
-		// 7) fallback generic tag-like (last resort)
-		if genericTagFallback.MatchString(unescaped) {
-			return errors.New("contains HTML-like tag")
+		// 6) fallback generic tag-like (last resort)
+		stripped := allowedTagsRe.ReplaceAllString(unescaped, "")
+		if anyTagRe.MatchString(stripped) {
+			return errors.New("contains disallowed HTML tag")
 		}
 
-		// 8) UTF-8 validity check
+		// 7) UTF-8 validity check
 		if !utf8.ValidString(s) {
 			return errors.New("contains invalid UTF-8")
 		}
 
-		var latinWithPunctRe = regexp.MustCompile(`^[A-Za-z0-9 .,_\-+$'"()!%&@#~/]`)
-		if !latinWithPunctRe.MatchString(s) {
+		// 8) Latin-only + safe punctuation
+		if !latinSafeRe.MatchString(s) {
 			return errors.New("contains non-latin or disallowed characters")
 		}
 

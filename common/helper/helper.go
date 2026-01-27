@@ -9,42 +9,60 @@ import (
 	"time"
 )
 
-func IsValidUnpakEmail(email string) bool {
-
-	// 1. Base pattern
-	reg := regexp.MustCompile(
+var (
+	reUnpakEmail = regexp.MustCompile(
 		`^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?@unpak\.ac\.id$`,
 	)
+
+	reUUIDv4 = regexp.MustCompile(
+		`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$`,
+	)
+
+	rePlus        = regexp.MustCompile(`\+`)
+	reDoubleSep   = regexp.MustCompile(`(\.\.|__|--)`)
+	reWhitespace  = regexp.MustCompile(`\s`)
+	reURLEncoded  = regexp.MustCompile(`%[0-9A-Fa-f]{2}`)
+	reURLEncoded2 = regexp.MustCompile(`%25[0-9A-Fa-f]{2}`)
+	reNonASCII    = regexp.MustCompile(`[^\x20-\x7F]`)
+)
+
+func IsValidUnpakEmail(email string) bool {
+	if len(email) > 254 { //[note] dalam pemantauan
+		return false
+	}
+
+	// 1. Base pattern
+	reg := regexp.MustCompile(reUnpakEmail.String())
 
 	if !reg.MatchString(email) {
 		return false
 	}
 
 	// 2. No plus (+)
-	if regexp.MustCompile(`\+`).MatchString(email) {
+	if regexp.MustCompile(rePlus.String()).MatchString(email) {
 		return false
 	}
 
 	// 3. Double separator
-	if regexp.MustCompile(`(\.\.|__|--)`).MatchString(email) {
+	if regexp.MustCompile(reDoubleSep.String()).MatchString(email) {
 		return false
 	}
 
 	// 4. No whitespace
-	if regexp.MustCompile(`\s`).MatchString(email) {
+	if regexp.MustCompile(reWhitespace.String()).MatchString(email) {
 		return false
 	}
 
 	// 5. No URL-encoded chars
-	if regexp.MustCompile(`%[0-9A-Fa-f]{2}`).MatchString(email) {
+	if regexp.MustCompile(reURLEncoded.String()).MatchString(email) {
 		return false
 	}
-	if regexp.MustCompile(`%25[0-9A-Fa-f]{2}`).MatchString(email) {
+	if regexp.MustCompile(reURLEncoded2.String()).MatchString(email) {
 		return false
 	}
 
 	// 6. No non-ASCII
-	if regexp.MustCompile(`[^\x20-\x7F]`).MatchString(email) {
+	if regexp.MustCompile(reNonASCII.String()).MatchString(email) {
 		return false
 	}
 
@@ -81,10 +99,12 @@ func ValidateUUIDv4(value interface{}) error {
 		return fmt.Errorf("UUID contains invalid null padding")
 	}
 
-	// format regex UUID v4
-	regexV4 := `^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$`
+	if len(s) != 36 {
+		return fmt.Errorf("UUID length invalid")
+	}
 
-	matched := regexp.MustCompile(regexV4).MatchString(s)
+	// format regex UUID v4
+	matched := regexp.MustCompile(reUUIDv4.String()).MatchString(s)
 	if !matched {
 		return fmt.Errorf("UUID must be a valid UUIDv4 format")
 	}

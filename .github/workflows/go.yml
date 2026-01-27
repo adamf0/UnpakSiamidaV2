@@ -71,6 +71,31 @@ jobs:
             fi
           done
 
+      - name: Run Common Security Tests (commontest)
+        run: |
+          echo "▶ COMMON TESTS"
+          mkdir -p coverage/common
+
+          go test -v \
+            -covermode=set \
+            -coverpkg="UnpakSiamida/common/..." \
+            -coverprofile="coverage/common/common.out" \
+            ./common/commontest
+
+      - name: Run Common Benchmarks
+        run: |
+          echo "▶ COMMON BENCHMARKS"
+          go test \
+            -run=^$ \
+            -bench=. \
+            -benchmem \
+            ./common/commontest
+
+      - name: Compile fuzz targets
+        run: |
+          echo "▶ FUZZ TARGET COMPILE CHECK"
+          go test ./common/commontest -run=Fuzz -count=1
+
       - name: Merge coverage files
         run: |
           echo "mode: set" > coverage/coverage_all.out
