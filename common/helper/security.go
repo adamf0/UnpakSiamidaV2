@@ -55,7 +55,7 @@ var (
 		`(?i)utf-7`,       // UTF-7 marker attempts
 	}
 	eventAttrPattern = regexp.MustCompile(`(?i)\bon[a-z]+\s*=`)
-	anyTagRe         = regexp.MustCompile(`(?i)<\s*/?\s*[a-z][a-z0-9]*\b[^>]*>`)
+	anyTagRe         = regexp.MustCompile(`(?i)<\s*/?\s*[a-z][a-z0-9]*(?:\s+[^>]+)?>`)
 	hexEntityRe      = regexp.MustCompile(`&#x([0-9A-Fa-f]+);?`)
 	decEntityRe      = regexp.MustCompile(`&#([0-9]+);?`)
 	zeroWidthRe      = regexp.MustCompile(string([]rune{
