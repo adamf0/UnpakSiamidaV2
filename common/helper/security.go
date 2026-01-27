@@ -185,14 +185,25 @@ func deepDecode(input string) string {
 // NoXSSFullScanWithDecode returns an ozzo-validation RuleFunc with deep decoding normalization
 // and aggressive detection. It returns an error with a short reason.
 func NoXSSFullScanWithDecode() validation.RuleFunc {
-	var parts []string
-	for _, tag := range blacklistTags {
-		parts = append(parts,
-			`(?i)<\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
-			`(?i)&lt;\s*/?\s*`+regexp.QuoteMeta(tag)+`(\b|[^a-z0-9])`,
-		)
-	}
-	compiledTagRegex = regexp.MustCompile(strings.Join(parts, "|"))
+
+	// aggressive tag-like detection (even malformed)
+	tagLikeRe := regexp.MustCompile(`(?i)<[^>]*[a-z][^>]*>`)
+
+	// raw <something (for <;SCRIPT, <XML, etc)
+	rawAngleRe := regexp.MustCompile(`(?i)<\s*[^>]*`)
+
+	// SQL keywords ANYWHERE
+	sqlAggressiveRe := regexp.MustCompile(
+		`(?i)\b(select|union|insert|update|delete|drop|sleep|benchmark|replace|into|from|where|and|or)\b`,
+	)
+
+	// JS words even without (
+	jsWordRe := regexp.MustCompile(
+		`(?i)\b(alert|eval|prompt|confirm|settimeout|setinterval|function|document|window|navigator)\b`,
+	)
+
+	// protocol anywhere
+	protoAnywhereRe := regexp.MustCompile(`(?i)(javascript|data|vbscript|file|blob|about|http|https):`)
 
 	return func(value interface{}) error {
 		s, _ := value.(string)
@@ -200,94 +211,77 @@ func NoXSSFullScanWithDecode() validation.RuleFunc {
 			return nil
 		}
 
-		// =========================
-		// 1. FULL NORMALIZATION
-		// =========================
+		// decode hard
 		decoded := deepDecode(s)
 		lower := strings.ToLower(decoded)
 
-		// =========================
-		// 2. ACTIVE XSS
-		// =========================
-		if eventAttrPattern.MatchString(decoded) {
-			return errors.New("xss: event handler detected")
+		// 1. invalid utf8
+		if !utf8.ValidString(s) {
+			return errors.New("invalid utf-8")
 		}
-		if jsExecRe.MatchString(lower) {
-			return errors.New("xss: javascript execution")
+
+		// 2. NULL / control
+		if strings.Contains(decoded, "\x00") {
+			return errors.New("null byte detected")
 		}
-		if jsPrototypeRe.MatchString(lower) {
-			return errors.New("xss: prototype pollution")
+
+		// 3. ANY angle bracket = reject (HTML forbidden)
+		if strings.ContainsAny(decoded, "<>") {
+			return errors.New("html content detected")
 		}
+
+		// 4. malformed tag attempts (<;script etc)
+		if rawAngleRe.MatchString(decoded) || tagLikeRe.MatchString(decoded) {
+			return errors.New("html tag-like content detected")
+		}
+
+		// 5. JS execution words
+		if jsExecRe.MatchString(lower) || jsWordRe.MatchString(lower) {
+			return errors.New("javascript execution detected")
+		}
+
+		// 6. DOM sinks
 		if domSinkRe.MatchString(lower) {
-			return errors.New("xss: dom sink")
-		}
-		if encodedJsCallRe.MatchString(decoded) {
-			return errors.New("xss: encoded js call")
-		}
-		if xmlDeclRe.MatchString(decoded) {
-			return errors.New("xss: xml execution")
-		}
-		if dangerousProtoRe.MatchString(lower) {
-			return errors.New("xss: dangerous protocol")
+			return errors.New("dom sink detected")
 		}
 
-		// =========================
-		// 3. SQL INJECTION (CONTEXTUAL)
-		// =========================
-		// ' " ` ALLOWED unless forming SQL pattern
-		if sqlKeywordRe.MatchString(lower) {
-			return errors.New("sqli: keyword pattern")
-		}
+		// 7. SQL time-based
 		if sqlTimeRe.MatchString(lower) {
-			return errors.New("sqli: time-based")
+			return errors.New("sql time-based injection detected")
 		}
 
-		// =========================
-		// 4. LFI / PATH TRAVERSAL
-		// =========================
+		// 8. SQL keywords ANYWHERE (critical)
+		if sqlAggressiveRe.MatchString(lower) {
+			return errors.New("sql keyword detected")
+		}
+
+		// 9. dangerous protocol anywhere
+		if protoAnywhereRe.MatchString(lower) {
+			return errors.New("dangerous protocol detected")
+		}
+
+		// 10. LFI
 		if lfiRe.MatchString(lower) {
-			return errors.New("lfi: path traversal")
+			return errors.New("lfi detected")
 		}
 
-		// =========================
-		// 5. CSS ATTACKS
-		// =========================
+		// 11. CSS vectors
 		for _, cp := range cssPatterns {
-			if matched, _ := regexp.MatchString(cp, decoded); matched {
-				return errors.New("xss: css injection")
+			if regexp.MustCompile(cp).MatchString(lower) {
+				return errors.New("css injection detected")
 			}
 		}
 
-		// =========================
-		// 6. SPECIAL ENCODING
-		// =========================
+		// 12. special encodings
 		for _, sp := range specialPatterns {
-			if matched, _ := regexp.MatchString(sp, decoded); matched {
-				return errors.New("attack: suspicious encoding")
+			if regexp.MustCompile(sp).MatchString(lower) {
+				return errors.New("suspicious encoding detected")
 			}
 		}
 
-		// =========================
-		// 7. HTML TAG FALLBACK
-		// =========================
-		stripped := allowedTagsRe.ReplaceAllString(decoded, "")
-		if compiledTagRegex.MatchString(stripped) {
-			return errors.New("xss: disallowed html tag")
-		}
-
-		// =========================
-		// 8. UTF-8 VALIDITY
-		// =========================
-		if !utf8.ValidString(decoded) {
-			return errors.New("encoding: invalid utf-8")
-		}
-
-		// =========================
-		// 9. SAFE CHAR SET (LAST)
-		// =========================
-		// Quotes allowed here
+		// 13. strict charset (quotes allowed, but no HTML)
 		if !latinSafeRe.MatchString(decoded) {
-			return errors.New("charset: disallowed characters")
+			return errors.New("invalid characters detected")
 		}
 
 		return nil
