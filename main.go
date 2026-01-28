@@ -24,6 +24,10 @@ import (
 
 	mataprogramPresentation "UnpakSiamida/modules/mataprogram/presentation"
 
+	jadwalprokerInfrastructure "UnpakSiamida/modules/jadwalproker/infrastructure"
+
+	jadwalprokerPresentation "UnpakSiamida/modules/jadwalproker/presentation"
+
 	beritaacaraInfrastructure "UnpakSiamida/modules/beritaacara/infrastructure"
 
 	beritaacaraPresentation "UnpakSiamida/modules/beritaacara/presentation"
@@ -101,6 +105,12 @@ import (
 	updateMataProgram "UnpakSiamida/modules/mataprogram/application/UpdateMataProgram"
 
 	deleteMataProgram "UnpakSiamida/modules/mataprogram/application/DeleteMataProgram"
+
+	createJadwalProker "UnpakSiamida/modules/jadwalproker/application/CreateJadwalProker"
+
+	updateJadwalProker "UnpakSiamida/modules/jadwalproker/application/UpdateJadwalProker"
+
+	deleteJadwalProker "UnpakSiamida/modules/jadwalproker/application/DeleteJadwalProker"
 
 	createBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 
@@ -315,6 +325,10 @@ func main() {
 		return mataprogramInfrastructure.RegisterModuleMataProgram(db)
 	})
 
+	mustStart("Jadwal Proker Module", func() error { //buat audit
+		return jadwalprokerInfrastructure.RegisterModuleJadwalProker(db)
+	})
+
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{
@@ -349,6 +363,7 @@ func main() {
 	ktsPresentation.ModuleKts(app)
 	tahunprokerPresentation.ModuleTahunProker(app)
 	mataprogramPresentation.ModuleMataProgram(app)
+	jadwalprokerPresentation.ModuleJadwalProker(app)
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -394,7 +409,7 @@ func (b *ValidationBehavior) Handle(
 			return nil, wrapValidationError("TahunProkerDelete.Validation", err)
 		}
 
-		// === mata program Commands ===
+	// === mata program Commands ===
 	case createMataProgram.CreateMataProgramCommand:
 		if err := createMataProgram.CreateMataProgramCommandValidation(cmd); err != nil {
 			return nil, wrapValidationError("MataProgramCreate.Validation", err)
@@ -406,6 +421,20 @@ func (b *ValidationBehavior) Handle(
 	case deleteMataProgram.DeleteMataProgramCommand:
 		if err := deleteMataProgram.DeleteMataProgramCommandValidation(cmd); err != nil {
 			return nil, wrapValidationError("MataProgramDelete.Validation", err)
+		}
+
+	// === JadwalProker Commands ===
+	case createJadwalProker.CreateJadwalProkerCommand:
+		if err := createJadwalProker.CreateJadwalProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("JadwalProkerCreate.Validation", err)
+		}
+	case updateJadwalProker.UpdateJadwalProkerCommand:
+		if err := updateJadwalProker.UpdateJadwalProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("JadwalProkerUpdate.Validation", err)
+		}
+	case deleteJadwalProker.DeleteJadwalProkerCommand:
+		if err := deleteJadwalProker.DeleteJadwalProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("JadwalProkerDelete.Validation", err)
 		}
 
 	// === berita acara Commands ===

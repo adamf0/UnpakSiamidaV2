@@ -38,38 +38,38 @@ jobs:
         with:
           go-version: '1.25.4'
 
-      # - name: Run Domain & Application Tests with Coverage
-      #   run: |
-      #     set -e
-      #     mkdir -p coverage/domain coverage/application
+      - name: Run Domain & Application Tests with Coverage
+        run: |
+          set -e
+          mkdir -p coverage/domain coverage/application
 
-      #     for moduledir in ./modules/*; do
-      #       modulename=$(basename "$moduledir")
+          for moduledir in ./modules/*; do
+            modulename=$(basename "$moduledir")
 
-      #       # =========================
-      #       # DOMAIN
-      #       # =========================
-      #       if [[ -d "$moduledir/domaintest" ]]; then
-      #         echo "▶ DOMAIN $modulename"
-      #         go test -v \
-      #           -covermode=set \
-      #           -coverpkg="UnpakSiamida/modules/${modulename}/domain" \
-      #           -coverprofile="coverage/domain/${modulename}.out" \
-      #           "./modules/${modulename}/domaintest"
-      #       fi
+            # =========================
+            # DOMAIN
+            # =========================
+            if [[ -d "$moduledir/domaintest" ]]; then
+              echo "▶ DOMAIN $modulename"
+              go test -v \
+                -covermode=set \
+                -coverpkg="UnpakSiamida/modules/${modulename}/domain" \
+                -coverprofile="coverage/domain/${modulename}.out" \
+                "./modules/${modulename}/domaintest"
+            fi
 
-      #       # =========================
-      #       # APPLICATION
-      #       # =========================
-      #       if [[ -d "$moduledir/applicationtest" ]]; then
-      #         echo "▶ APPLICATION $modulename"
-      #         go test -v \
-      #           -covermode=set \
-      #           -coverpkg="UnpakSiamida/modules/${modulename}/application/..." \
-      #           -coverprofile="coverage/application/${modulename}.out" \
-      #           "./modules/${modulename}/applicationtest"
-      #       fi
-      #     done
+            # =========================
+            # APPLICATION
+            # =========================
+            if [[ -d "$moduledir/applicationtest" ]]; then
+              echo "▶ APPLICATION $modulename"
+              go test -v \
+                -covermode=set \
+                -coverpkg="UnpakSiamida/modules/${modulename}/application/..." \
+                -coverprofile="coverage/application/${modulename}.out" \
+                "./modules/${modulename}/applicationtest"
+            fi
+          done
 
       - name: Run Common Security Tests (helpertest)
         run: |
@@ -90,7 +90,6 @@ jobs:
             -bench=. \
             -benchmem \
             ./common/helpertest
-
 
       - name: Compile fuzz targets
         run: |

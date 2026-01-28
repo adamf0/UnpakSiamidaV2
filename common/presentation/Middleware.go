@@ -206,24 +206,6 @@ func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 						}
 					}
 				}
-
-				// =======================
-				// 2) IP check untuk header IP
-				// =======================
-				// ipHeaders := []string{"client-ip", "x-client-ip", "x-forwarded-for", "x-forwarder-for", "x-real-ip", "x-remote-addr", "x-remote-ip", "x-originating-ip", "x-true-ip", "x-original-remote-addr", "proxy-host", "proxy-url"}
-				// for _, h := range ipHeaders {
-				// 	val := c.Get(h)
-				// 	if val == "" {
-				// 		continue
-				// 	}
-
-				// 	// jika ada blocked CIDR
-				// 	ip := net.ParseIP(val)
-				// 	if ip != nil && ipInNets(ip, blocked) {
-				// 		return c.Status(400).JSON(commoninfra.NewResponseError(
-				// 			"common.check[A+10]", "IP blocked: "+val))
-				// 	}
-				// }
 			}
 		}
 
