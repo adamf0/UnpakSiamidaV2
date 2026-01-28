@@ -108,5 +108,5 @@ func UpdateJadwalProker(
 }
 
 func isOverlap(start1, end1 time.Time) bool {
-	return !end1.Before(start1)
+	return !end1.After(start1)
 }
