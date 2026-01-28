@@ -9,6 +9,86 @@
     "host": "localhost:3000",
     "basePath": "/",
     "paths": {
+        "/AktivitasProker/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AktivitasProker"
+                ],
+                "summary": "Get AktivitasProker by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "AktivitasProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AktivitasProker"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/AktivitasProkers": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AktivitasProker"
+                ],
+                "summary": "Get all AktivitasProkers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedAktivitasProkers"
+                        }
+                    }
+                }
+            }
+        },
         "/BeritaAcara/{uuid}": {
             "get": {
                 "produces": [
@@ -546,6 +626,230 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/aktivitasproker": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AktivitasProker"
+                ],
+                "summary": "Create new AktivitasProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit Uuid",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mata Program Uuid",
+                        "name": "mata_program",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Aktivitas",
+                        "name": "aktivitas",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "pic",
+                        "name": "pic",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal RK Awal",
+                        "name": "tangga_rk_awal",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal RK Akhir",
+                        "name": "tanggal_rk_akhir",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created AktivitasProker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/aktivitasproker/{uuid}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AktivitasProker"
+                ],
+                "summary": "Update existing AktivitasProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "AktivitasProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit Uuid",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mata Program Uuid",
+                        "name": "mata_program",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Aktivitas",
+                        "name": "aktivitas",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "pic",
+                        "name": "pic",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal RK Awal",
+                        "name": "tangga_rk_awal",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tanggal RK Akhir",
+                        "name": "tanggal_rk_akhir",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated AktivitasProker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AktivitasProker"
+                ],
+                "summary": "Delete a AktivitasProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "AktivitasProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted AktivitasProker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
                         }
                     }
                 }
@@ -4146,6 +4450,85 @@
         }
     },
     "definitions": {
+        "domain.AktivitasProker": {
+            "type": "object",
+            "properties": {
+                "aktivitas": {
+                    "type": "string"
+                },
+                "fakultasUnit": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mataProgram": {
+                    "type": "integer"
+                },
+                "pic": {
+                    "type": "string"
+                },
+                "tanggalRKAkhir": {
+                    "type": "string"
+                },
+                "tanggalRKAwal": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AktivitasProkerDefault": {
+            "type": "object",
+            "properties": {
+                "Fakultas": {
+                    "type": "string"
+                },
+                "FakultasUnit": {
+                    "type": "string"
+                },
+                "FakultasUnitId": {
+                    "type": "integer"
+                },
+                "FakultasUnitUuid": {
+                    "type": "string"
+                },
+                "Jenjang": {
+                    "type": "string"
+                },
+                "MataProgramId": {
+                    "type": "integer"
+                },
+                "MataProgramUuid": {
+                    "type": "string"
+                },
+                "Type": {
+                    "type": "string"
+                },
+                "aktivitas": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mataProgram": {
+                    "type": "string"
+                },
+                "pic": {
+                    "type": "string"
+                },
+                "tanggalRKAkhir": {
+                    "type": "string"
+                },
+                "tanggalRKAwal": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.BeritaAcara": {
             "type": "object",
             "properties": {
@@ -4729,6 +5112,26 @@
                 },
                 "uuid": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.PagedAktivitasProkers": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.AktivitasProkerDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
