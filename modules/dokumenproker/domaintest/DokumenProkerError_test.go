@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	common "UnpakSiamida/common/domain"
-	"UnpakSiamida/modules/aktivitasproker/domain"
+	"UnpakSiamida/modules/dokumenproker/domain"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAktivitasErrors(t *testing.T) {
+func TestDokumenProkerErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          common.Error
@@ -20,62 +20,62 @@ func TestAktivitasErrors(t *testing.T) {
 		{
 			name:         "EmptyData_ReturnsCorrectError",
 			err:          domain.EmptyData(),
-			expectedCode: "AktivitasProker.EmptyData",
+			expectedCode: "DokumenProker.EmptyData",
 			expectedDesc: "data is not found",
 		},
 		{
 			name:         "InvalidUuid_ReturnsCorrectError",
 			err:          domain.InvalidUuid(),
-			expectedCode: "AktivitasProker.InvalidUuid",
+			expectedCode: "DokumenProker.InvalidUuid",
 			expectedDesc: "uuid is invalid",
 		},
 		{
 			name:         "InvalidData_ReturnsCorrectError",
 			err:          domain.InvalidData(),
-			expectedCode: "AktivitasProker.InvalidData",
+			expectedCode: "DokumenProker.InvalidData",
 			expectedDesc: "data is invalid",
 		},
 		{
 			name:         "InvalidFakultas_ReturnsCorrectError",
 			err:          domain.InvalidFakultas(),
-			expectedCode: "AktivitasProker.InvalidFakultas",
+			expectedCode: "DokumenProker.InvalidFakultas",
 			expectedDesc: "fakultas is invalid",
 		},
 		{
 			name:         "InvalidMataProgram_ReturnsCorrectError",
 			err:          domain.InvalidMataProgram(),
-			expectedCode: "AktivitasProker.InvalidMataProgram",
+			expectedCode: "DokumenProker.InvalidMataProgram",
 			expectedDesc: "mata program is invalid",
+		},
+		{
+			name:         "InvalidJenisDokumen_ReturnsCorrectError",
+			err:          domain.InvalidJenisDokumen(),
+			expectedCode: "DokumenProker.InvalidJenisDokumen",
+			expectedDesc: "jenis dokumen is invalid",
+		},
+		{
+			name:         "InvalidStatus_ReturnsCorrectError",
+			err:          domain.InvalidStatus(),
+			expectedCode: "DokumenProker.InvalidStatus",
+			expectedDesc: "status is invalid",
 		},
 		{
 			name:         "NotFoundFakultas_ReturnsCorrectError",
 			err:          domain.NotFoundFakultas(),
-			expectedCode: "AktivitasProker.NotFoundFakultas",
+			expectedCode: "DokumenProker.NotFoundFakultas",
 			expectedDesc: "fakultas is not found",
 		},
 		{
 			name:         "NotFoundMataProgram_ReturnsCorrectError",
 			err:          domain.NotFoundMataProgram(),
-			expectedCode: "AktivitasProker.NotFoundMataProgram",
+			expectedCode: "DokumenProker.NotFoundMataProgram",
 			expectedDesc: "mata program is not found",
 		},
 		{
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
 			err:          domain.NotFound("XYZ99"),
-			expectedCode: "AktivitasProker.NotFound",
-			expectedDesc: "Aktivitas with identifier XYZ99 not found",
-		},
-		{
-			name:         "InvalidDate_WithTarget_ReturnsCorrectError",
-			err:          domain.InvalidDate("Periode"),
-			expectedCode: "AktivitasProker.InvalidDate",
-			expectedDesc: "Periode period have wrong date format",
-		},
-		{
-			name:         "InvalidDateRange_ReturnsCorrectError",
-			err:          domain.InvalidDateRange(),
-			expectedCode: "AktivitasProker.InvalidDateRange",
-			expectedDesc: "tanggal rk akhir must not be earlier than tanggal rk awal",
+			expectedCode: "DokumenProker.NotFound",
+			expectedDesc: "DokumenProker with identifier XYZ99 not found",
 		},
 	}
 
