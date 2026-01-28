@@ -169,6 +169,86 @@
                 }
             }
         },
+        "/DokumenProker/{uuid}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenProker"
+                ],
+                "summary": "Get DokumenProker by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.DokumenProker"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/DokumenProkers": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenProker"
+                ],
+                "summary": "Get all DokumenProkers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "paging | all | ndjson | sse",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PagedDokumenProkers"
+                        }
+                    }
+                }
+            }
+        },
         "/JadwalProker/{uuid}": {
             "get": {
                 "produces": [
@@ -1063,6 +1143,228 @@
                 "responses": {
                     "200": {
                         "description": "uuid of deleted BeritaAcara",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/dokumenproker": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenProker"
+                ],
+                "summary": "Create new DokumenProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit Uuid",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mata Program Uuid",
+                        "name": "mata_program",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis Dokumen",
+                        "name": "jenis_dokumen",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan",
+                        "name": "catatan",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of created DokumenProker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dokumenproker/{uuid}": {
+            "put": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenProker"
+                ],
+                "summary": "Update existing DokumenProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fakultas/Unit Uuid",
+                        "name": "fakultas_unit",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Mata Program Uuid",
+                        "name": "mata_program",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Jenis Dokumen",
+                        "name": "jenis_dokumen",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Catatan",
+                        "name": "catatan",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of updated DokumenProker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DokumenProker"
+                ],
+                "summary": "Delete a DokumenProker",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "DokumenProker UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of deleted DokumenProker",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4599,6 +4901,85 @@
                 }
             }
         },
+        "domain.DokumenProker": {
+            "type": "object",
+            "properties": {
+                "catatan": {
+                    "type": "string"
+                },
+                "fakultasUnit": {
+                    "type": "integer"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenisDokumen": {
+                    "type": "string"
+                },
+                "mataProgram": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.DokumenProkerDefault": {
+            "type": "object",
+            "properties": {
+                "Fakultas": {
+                    "type": "string"
+                },
+                "FakultasUnit": {
+                    "type": "string"
+                },
+                "FakultasUnitId": {
+                    "type": "integer"
+                },
+                "FakultasUnitUuid": {
+                    "type": "string"
+                },
+                "Jenjang": {
+                    "type": "string"
+                },
+                "MataProgramId": {
+                    "type": "integer"
+                },
+                "MataProgramUuid": {
+                    "type": "string"
+                },
+                "Type": {
+                    "type": "string"
+                },
+                "catatan": {
+                    "type": "string"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "jenisDokumen": {
+                    "type": "string"
+                },
+                "mataProgram": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.DokumenTambahan": {
             "type": "object",
             "properties": {
@@ -5145,6 +5526,26 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.BeritaAcaraDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.PagedDokumenProkers": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.DokumenProkerDefault"
                     }
                 },
                 "total": {
