@@ -224,7 +224,6 @@ func main() {
 		// DisableStartupMessage: true,
 		ReadBufferSize: 16 * 1024,
 		// Prefork:        true, // gunakan semua CPU cores
-		ServerHeader: "Fiber",
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  10 * time.Second,
@@ -246,6 +245,10 @@ func main() {
 	}))
 	app.Use(commonpresentation.LoggerMiddleware)
 	app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
+	app.Use(func(c *fiber.Ctx) error {
+		c.Response().Header.Del("X-Powered-By")
+		return c.Next()
+	})
 
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 
