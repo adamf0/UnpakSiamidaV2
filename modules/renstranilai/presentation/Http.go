@@ -247,8 +247,8 @@ func ModuleRenstraNilai(app *fiber.App) {
 	app.Put("/renstranilai/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateRenstraNilaiHandlerfunc)
 
 	//private
-	app.Get("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), GetRenstraNilaiHandlerfunc)
-	app.Get("/renstranilais", commonpresentation.JWTMiddleware(), GetAllRenstraNilaisHandlerfunc)
+	app.Get("/renstranilai/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetRenstraNilaiHandlerfunc)
+	app.Get("/renstranilais", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllRenstraNilaisHandlerfunc)
 }
 
 // ====================================================================

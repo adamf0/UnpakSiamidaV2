@@ -257,6 +257,6 @@ func ModuleJadwalProker(app *fiber.App) {
 	app.Post("/jadwalproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJadwalProkerHandlerfunc)
 	app.Put("/jadwalproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJadwalProkerHandlerfunc)
 	app.Delete("/jadwalproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteJadwalProkerHandlerfunc)
-	app.Get("/JadwalProker/:uuid", commonpresentation.JWTMiddleware(), GetJadwalProkerHandlerfunc)
-	app.Get("/JadwalProkers", commonpresentation.JWTMiddleware(), GetAllJadwalProkersHandlerfunc)
+	app.Get("/JadwalProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetJadwalProkerHandlerfunc)
+	app.Get("/JadwalProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllJadwalProkersHandlerfunc)
 }

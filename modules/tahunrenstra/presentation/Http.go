@@ -1,19 +1,20 @@
 package presentation
 
 import (
-    "context"
-    "github.com/gofiber/fiber/v2"
-    "github.com/mehdihadeli/go-mediatr"
-    "strings"
-    
-    // "UnpakSiamida/common/domain"
-    commoninfra "UnpakSiamida/common/infrastructure"
-    commonpresentation "UnpakSiamida/common/presentation"
-    commondomain "UnpakSiamida/common/domain"
-    
-    TahunRenstradomain "UnpakSiamida/modules/tahunrenstra/domain"
-    GetActiveTahunRenstra "UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra"
-    GetAllTahunRenstras "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
+	"context"
+	"strings"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/mehdihadeli/go-mediatr"
+
+	// "UnpakSiamida/common/domain"
+	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
+	commonpresentation "UnpakSiamida/common/presentation"
+
+	GetActiveTahunRenstra "UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra"
+	GetAllTahunRenstras "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
+	TahunRenstradomain "UnpakSiamida/modules/tahunrenstra/domain"
 )
 
 // =======================================================
@@ -28,18 +29,18 @@ import (
 // @Failure 404 {object} commondomain.Error
 // @Router /tahunrenstra/active [get]
 func GetActiveTahunRenstraHandlerfunc(c *fiber.Ctx) error {
-    query := GetActiveTahunRenstra.GetActiveTahunRenstraQuery{}
+	query := GetActiveTahunRenstra.GetActiveTahunRenstraQuery{}
 
-    TahunRenstra, err := mediatr.Send[GetActiveTahunRenstra.GetActiveTahunRenstraQuery, *TahunRenstradomain.TahunRenstra](context.Background(), query)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	TahunRenstra, err := mediatr.Send[GetActiveTahunRenstra.GetActiveTahunRenstraQuery, *TahunRenstradomain.TahunRenstra](context.Background(), query)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    if TahunRenstra == nil {
-        return c.Status(404).JSON(fiber.Map{"error": "TahunRenstra not found"})
-    }
+	if TahunRenstra == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "TahunRenstra not found"})
+	}
 
-    return c.JSON(TahunRenstra)
+	return c.JSON(TahunRenstra)
 }
 
 // =======================================================
@@ -57,67 +58,67 @@ func GetActiveTahunRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} TahunRenstradomain.PagedTahunRenstras
 // @Router /tahunrenstras [get]
 func GetAllTahunRenstrasHandlerfunc(c *fiber.Ctx) error {
-    mode := c.Query("mode", "paging") // default mode = paging
-    page := c.QueryInt("page", 1)
-    limit := c.QueryInt("limit", 10)
-    search := c.Query("search", "")
+	mode := c.Query("mode", "paging") // default mode = paging
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	search := c.Query("search", "")
 
-    // Parse filters
-    filtersRaw := c.Query("filters", "")
-    var filters []commondomain.SearchFilter
-    if filtersRaw != "" {
-        parts := strings.Split(filtersRaw, ";")
-        for _, p := range parts {
-            tokens := strings.SplitN(p, ":", 3)
-            if len(tokens) != 3 {
-                continue
-            }
-            field := strings.TrimSpace(tokens[0])
-            op := strings.TrimSpace(tokens[1])
-            rawValue := strings.TrimSpace(tokens[2])
+	// Parse filters
+	filtersRaw := c.Query("filters", "")
+	var filters []commondomain.SearchFilter
+	if filtersRaw != "" {
+		parts := strings.Split(filtersRaw, ";")
+		for _, p := range parts {
+			tokens := strings.SplitN(p, ":", 3)
+			if len(tokens) != 3 {
+				continue
+			}
+			field := strings.TrimSpace(tokens[0])
+			op := strings.TrimSpace(tokens[1])
+			rawValue := strings.TrimSpace(tokens[2])
 
-            var valuePtr *string
-            if rawValue != "" && rawValue != "null" {
-                valuePtr = &rawValue
-            }
-            filters = append(filters, commondomain.SearchFilter{
-                Field:    field,
-                Operator: op,
-                Value:    valuePtr,
-            })
-        }
-    }
+			var valuePtr *string
+			if rawValue != "" && rawValue != "null" {
+				valuePtr = &rawValue
+			}
+			filters = append(filters, commondomain.SearchFilter{
+				Field:    field,
+				Operator: op,
+				Value:    valuePtr,
+			})
+		}
+	}
 
-    query := GetAllTahunRenstras.GetAllTahunRenstrasQuery{
-        Search:        search,
-        SearchFilters: filters,
-    }
+	query := GetAllTahunRenstras.GetAllTahunRenstrasQuery{
+		Search:        search,
+		SearchFilters: filters,
+	}
 
-    // Pilih adapter sesuai mode
-    var adapter OutputAdapter
-    switch mode {
-    case "all":
-        adapter = &AllAdapter{}
-    case "ndjson":
-        adapter = &NDJSONAdapter{}
-    case "sse":
-        adapter = &SSEAdapter{}
-    default:
-        query.Page = &page
-        query.Limit = &limit
-        adapter = &PagingAdapter{}
-    }
+	// Pilih adapter sesuai mode
+	var adapter OutputAdapter
+	switch mode {
+	case "all":
+		adapter = &AllAdapter{}
+	case "ndjson":
+		adapter = &NDJSONAdapter{}
+	case "sse":
+		adapter = &SSEAdapter{}
+	default:
+		query.Page = &page
+		query.Limit = &limit
+		adapter = &PagingAdapter{}
+	}
 
-    // Ambil data
-    TahunRenstras, err := mediatr.Send[GetAllTahunRenstras.GetAllTahunRenstrasQuery, TahunRenstradomain.PagedTahunRenstras](context.Background(), query)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	// Ambil data
+	TahunRenstras, err := mediatr.Send[GetAllTahunRenstras.GetAllTahunRenstrasQuery, TahunRenstradomain.PagedTahunRenstras](context.Background(), query)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return adapter.Send(c, TahunRenstras)
+	return adapter.Send(c, TahunRenstras)
 }
 
 func ModuleTahunRenstra(app *fiber.App) {
-    app.Get("/tahunrenstra/active", commonpresentation.JWTMiddleware(), GetActiveTahunRenstraHandlerfunc)
-    app.Get("/tahunrenstras", commonpresentation.JWTMiddleware(), GetAllTahunRenstrasHandlerfunc)
+	app.Get("/tahunrenstra/active", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetActiveTahunRenstraHandlerfunc)
+	app.Get("/tahunrenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTahunRenstrasHandlerfunc)
 }

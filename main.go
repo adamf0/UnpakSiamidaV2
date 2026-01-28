@@ -13,6 +13,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -27,6 +28,10 @@ import (
 	jadwalprokerInfrastructure "UnpakSiamida/modules/jadwalproker/infrastructure"
 
 	jadwalprokerPresentation "UnpakSiamida/modules/jadwalproker/presentation"
+
+	aktivitasprokerInfrastructure "UnpakSiamida/modules/aktivitasproker/infrastructure"
+
+	aktivitasprokerPresentation "UnpakSiamida/modules/aktivitasproker/presentation"
 
 	beritaacaraInfrastructure "UnpakSiamida/modules/beritaacara/infrastructure"
 
@@ -111,6 +116,12 @@ import (
 	updateJadwalProker "UnpakSiamida/modules/jadwalproker/application/UpdateJadwalProker"
 
 	deleteJadwalProker "UnpakSiamida/modules/jadwalproker/application/DeleteJadwalProker"
+
+	createAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
+
+	updateAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/UpdateAktivitasProker"
+
+	deleteAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
 
 	createBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 
@@ -214,14 +225,24 @@ func main() {
 		ReadBufferSize: 16 * 1024,
 		// Prefork:        true, // gunakan semua CPU cores
 		ServerHeader: "Fiber",
-		// ReadTimeout: 10 * time.Second,
-		// WriteTimeout: 10 * time.Second,
-		// IdleTimeout: 10 * time.Second
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  10 * time.Second,
 	})
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders: "*",
+	}))
+	app.Use(helmet.New(helmet.Config{
+		XSSProtection:             "1; mode=block",
+		ContentTypeNosniff:        "nosniff",     // X-Content-Type-Options
+		XFrameOptions:             "DENY",        // X-Frame-Options
+		ReferrerPolicy:            "no-referrer", // Referrer-Policy
+		ContentSecurityPolicy:     "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'",
+		CrossOriginEmbedderPolicy: "require-corp",
+		CrossOriginOpenerPolicy:   "same-origin",
+		CrossOriginResourcePolicy: "same-origin",
 	}))
 	app.Use(commonpresentation.LoggerMiddleware)
 	app.Use(commonpresentation.HeaderSecurityMiddleware(cfg))
@@ -329,6 +350,10 @@ func main() {
 		return jadwalprokerInfrastructure.RegisterModuleJadwalProker(db)
 	})
 
+	mustStart("Aktivitas Proker Module", func() error { //buat audit
+		return aktivitasprokerInfrastructure.RegisterModuleAktivitasProker(db)
+	})
+
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{
@@ -364,6 +389,7 @@ func main() {
 	tahunprokerPresentation.ModuleTahunProker(app)
 	mataprogramPresentation.ModuleMataProgram(app)
 	jadwalprokerPresentation.ModuleJadwalProker(app)
+	aktivitasprokerPresentation.ModuleAktivitasProker(app)
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -435,6 +461,20 @@ func (b *ValidationBehavior) Handle(
 	case deleteJadwalProker.DeleteJadwalProkerCommand:
 		if err := deleteJadwalProker.DeleteJadwalProkerCommandValidation(cmd); err != nil {
 			return nil, wrapValidationError("JadwalProkerDelete.Validation", err)
+		}
+
+	// === AktivitasProker Commands ===
+	case createAktivitasProker.CreateAktivitasProkerCommand:
+		if err := createAktivitasProker.CreateAktivitasProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("AktivitasProkerCreate.Validation", err)
+		}
+	case updateAktivitasProker.UpdateAktivitasProkerCommand:
+		if err := updateAktivitasProker.UpdateAktivitasProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("AktivitasProkerUpdate.Validation", err)
+		}
+	case deleteAktivitasProker.DeleteAktivitasProkerCommand:
+		if err := deleteAktivitasProker.DeleteAktivitasProkerCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("AktivitasProkerDelete.Validation", err)
 		}
 
 	// === berita acara Commands ===

@@ -60,5 +60,5 @@ func ModulePreviewTemplate(app *fiber.App) {
 	admin := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/preview/audit/:tipe/:tahun/:fakultasUnit", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GetPreviewTemplateHandler)
+	app.Get("/preview/audit/:tipe/:tahun/:fakultasUnit", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GetPreviewTemplateHandler)
 }

@@ -278,6 +278,6 @@ func ModuleTemplateDokumenTambahan(app *fiber.App) {
 	app.Post("/templatedokumentambahan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTemplateDokumenTambahanHandlerfunc)
 	// app.Put("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), UpdateTemplateDokumenTambahanHandlerfunc)
 	app.Delete("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTemplateDokumenTambahanHandlerfunc)
-	app.Get("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), GetTemplateDokumenTambahanHandlerfunc)
-	app.Get("/templatedokumentambahans", commonpresentation.JWTMiddleware(), GetAllTemplateDokumenTambahansHandlerfunc)
+	app.Get("/templatedokumentambahan/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTemplateDokumenTambahanHandlerfunc)
+	app.Get("/templatedokumentambahans", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTemplateDokumenTambahansHandlerfunc)
 }

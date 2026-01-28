@@ -3,17 +3,18 @@ package presentation
 import (
 	"context"
 	"strings"
-    "github.com/gofiber/fiber/v2"
+
+	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
 
+	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
-	commondomain "UnpakSiamida/common/domain"
 
-	fakultasunitdomain "UnpakSiamida/modules/fakultasunit/domain"
-	GetFakultasUnit "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
 	GetAllFakultasUnits "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
+	GetFakultasUnit "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
 	SetupUuidFakultasUnit "UnpakSiamida/modules/fakultasunit/application/SetupUuidFakultasUnit"
+	fakultasunitdomain "UnpakSiamida/modules/fakultasunit/domain"
 )
 
 // =======================================================
@@ -135,22 +136,22 @@ func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 }
 
 func SetupUuidFakultasUnitsHandlerfunc(c *fiber.Ctx) error {
-    cmd := SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand{}
+	cmd := SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand{}
 
-    message, err := mediatr.Send[SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand, string](context.Background(), cmd)
-    if err != nil {
-        return commoninfra.HandleError(c, err)
-    }
+	message, err := mediatr.Send[SetupUuidFakultasUnit.SetupUuidFakultasUnitCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
 
-    return c.JSON(fiber.Map{"message": message})
+	return c.JSON(fiber.Map{"message": message})
 }
 
 func ModuleFakultasUnit(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
-    
-    app.Get("/fakultasunit/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidFakultasUnitsHandlerfunc)
 
-	app.Get("/fakultasunit/:uuid", commonpresentation.JWTMiddleware(), GetFakultasUnitHandler)
-	app.Get("/fakultasunits", commonpresentation.JWTMiddleware(), GetAllFakultasUnitsHandler)
+	app.Get("/fakultasunit/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidFakultasUnitsHandlerfunc)
+
+	app.Get("/fakultasunit/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetFakultasUnitHandler)
+	app.Get("/fakultasunits", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllFakultasUnitsHandler)
 }

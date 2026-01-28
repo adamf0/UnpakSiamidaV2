@@ -63,7 +63,7 @@ func (r *JadwalProkerRepository) GetDefaultByUuid(
 			jp.tanggal_tutup_dokumen as TanggalTutupDokumen
 		FROM jadwal_proker jp
 		JOIN v_fakultas_unit vfu ON jp.id_fakultas_unit = vfu.id
-		WHERE uuid = ?
+		WHERE jp.uuid = ?
 		LIMIT 1
 	`
 

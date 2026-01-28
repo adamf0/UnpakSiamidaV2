@@ -39,33 +39,44 @@ func TestNewJadwalProker_Success(t *testing.T) {
 func TestNewJadwalProker_Fail(t *testing.T) {
 	tests := []struct {
 		name           string
+		fakultasunit   uint
 		entry          string
 		dokumen        string
 		expectedErrMsg string
 	}{
 		{
 			name:           "InvalidTanggalEntry",
+			fakultasunit:   1,
 			entry:          "2026-02-31", // tanggal salah
 			dokumen:        "2026-02-02",
 			expectedErrMsg: domain.InvalidDate("tanggal input").Code,
 		},
 		{
 			name:           "InvalidTanggalDokumen",
+			fakultasunit:   1,
 			entry:          "2026-02-01",
 			dokumen:        "2026-02-30", // tanggal salah
 			expectedErrMsg: domain.InvalidDate("tanggal upload dokumen").Code,
 		},
 		{
 			name:           "TanggalOverlap",
+			fakultasunit:   1,
 			entry:          "2026-02-02",
 			dokumen:        "2026-02-01", // dokumen sebelum entry
 			expectedErrMsg: domain.InvalidDateRange().Code,
+		},
+		{
+			name:           "NotFoundFakultas",
+			fakultasunit:   0,
+			entry:          "2026-02-01",
+			dokumen:        "2026-02-02", // dokumen sebelum entry
+			expectedErrMsg: domain.NotFoundFakultas().Code,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := domain.NewJadwalProker(1, tt.entry, tt.dokumen)
+			res := domain.NewJadwalProker(tt.fakultasunit, tt.entry, tt.dokumen)
 			require.False(t, res.IsSuccess)
 			assert.Equal(t, tt.expectedErrMsg, res.Error.Code)
 		})
@@ -107,6 +118,7 @@ func TestUpdateJadwalProker_Fail(t *testing.T) {
 		name           string
 		prev           *domain.JadwalProker
 		uid            uuid.UUID
+		fakultasunit   uint
 		entry          string
 		dokumen        string
 		expectedErrMsg string
@@ -115,49 +127,63 @@ func TestUpdateJadwalProker_Fail(t *testing.T) {
 			name:           "PrevNil",
 			prev:           nil,
 			uid:            uuid.New(),
+			fakultasunit:   1,
 			entry:          "2026-02-01",
 			dokumen:        "2026-02-02",
-			expectedErrMsg: domain.EmptyData().Description,
+			expectedErrMsg: domain.EmptyData().Code,
 		},
 		{
 			name:           "UUIDMismatch",
 			prev:           prev,
 			uid:            uuid.New(),
+			fakultasunit:   1,
 			entry:          "2026-02-01",
 			dokumen:        "2026-02-02",
-			expectedErrMsg: domain.InvalidData().Description,
+			expectedErrMsg: domain.InvalidData().Code,
 		},
 		{
 			name:           "InvalidTanggalEntry",
 			prev:           prev,
 			uid:            prev.UUID,
+			fakultasunit:   1,
 			entry:          "2026-02-30",
 			dokumen:        "2026-03-01",
-			expectedErrMsg: domain.InvalidDate("tanggal input").Description,
+			expectedErrMsg: domain.InvalidDate("tanggal input").Code,
 		},
 		{
 			name:           "InvalidTanggalDokumen",
 			prev:           prev,
 			uid:            prev.UUID,
+			fakultasunit:   1,
 			entry:          "2026-02-01",
 			dokumen:        "2026-02-30",
-			expectedErrMsg: domain.InvalidDate("tanggal upload dokumen").Description,
+			expectedErrMsg: domain.InvalidDate("tanggal upload dokumen").Code,
 		},
 		{
 			name:           "TanggalOverlap",
 			prev:           prev,
 			uid:            prev.UUID,
+			fakultasunit:   1,
 			entry:          "2026-03-02",
 			dokumen:        "2026-03-01",
-			expectedErrMsg: domain.InvalidDateRange().Description,
+			expectedErrMsg: domain.InvalidDateRange().Code,
+		},
+		{
+			name:           "NotFoundFakultas",
+			prev:           prev,
+			uid:            prev.UUID,
+			fakultasunit:   0,
+			entry:          "2026-03-01",
+			dokumen:        "2026-03-02",
+			expectedErrMsg: domain.NotFoundFakultas().Code,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := domain.UpdateJadwalProker(tt.prev, tt.uid, uint(1), tt.entry, tt.dokumen)
+			res := domain.UpdateJadwalProker(tt.prev, tt.uid, tt.fakultasunit, tt.entry, tt.dokumen)
 			require.False(t, res.IsSuccess)
-			assert.Equal(t, tt.expectedErrMsg, res.Error.Description)
+			assert.Equal(t, tt.expectedErrMsg, res.Error.Code)
 		})
 	}
 }

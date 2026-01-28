@@ -418,9 +418,9 @@ func ModuleRenstra(app *fiber.App) {
 	app.Put("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateRenstraHandlerfunc)
 	app.Put("/renstra/:uuid/code_access", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GiveCodeAccessRenstraHandlerfunc)
 	app.Delete("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraHandlerfunc)
-	app.Get("/renstra/:uuid", commonpresentation.JWTMiddleware(), GetRenstraHandlerfunc)
-	app.Get("/renstras", commonpresentation.JWTMiddleware(), GetAllRenstrasHandlerfunc)
+	app.Get("/renstra/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetRenstraHandlerfunc)
+	app.Get("/renstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllRenstrasHandlerfunc)
 
 	//untuk audit
-	app.Get("/renstra/audit/:tahun", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GetRenstraByTahunTargetHandlerfunc)
+	app.Get("/renstra/audit/:tahun", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GetRenstraByTahunTargetHandlerfunc)
 }

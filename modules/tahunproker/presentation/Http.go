@@ -250,6 +250,6 @@ func ModuleTahunProker(app *fiber.App) {
 	app.Post("/tahunproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTahunProkerHandlerfunc)
 	app.Put("/tahunproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateTahunProkerHandlerfunc)
 	app.Delete("/tahunproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTahunProkerHandlerfunc)
-	app.Get("/TahunProker/:uuid", commonpresentation.JWTMiddleware(), GetTahunProkerHandlerfunc)
-	app.Get("/TahunProkers", commonpresentation.JWTMiddleware(), GetAllTahunProkersHandlerfunc)
+	app.Get("/TahunProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTahunProkerHandlerfunc)
+	app.Get("/TahunProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTahunProkersHandlerfunc)
 }

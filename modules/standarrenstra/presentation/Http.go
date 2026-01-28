@@ -241,6 +241,6 @@ func ModuleStandarRenstra(app *fiber.App) {
 	app.Post("/standarrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateStandarRenstraHandlerfunc)
 	app.Put("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateStandarRenstraHandlerfunc)
 	app.Delete("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteStandarRenstraHandlerfunc)
-	app.Get("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), GetStandarRenstraHandlerfunc)
-	app.Get("/standarrenstras", commonpresentation.JWTMiddleware(), GetAllStandarRenstrasHandlerfunc)
+	app.Get("/standarrenstra/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetStandarRenstraHandlerfunc)
+	app.Get("/standarrenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllStandarRenstrasHandlerfunc)
 }

@@ -310,8 +310,8 @@ func ModuleIndikatorRenstra(app *fiber.App) {
 	app.Post("/indikatorrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateIndikatorRenstraHandlerfunc)
 	app.Put("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateIndikatorRenstraHandlerfunc)
 	app.Delete("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteIndikatorRenstraHandlerfunc)
-	app.Get("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), GetIndikatorRenstraHandlerfunc)
-	app.Get("/indikatorrenstras", commonpresentation.JWTMiddleware(), GetAllIndikatorRenstrasHandlerfunc)
+	app.Get("/indikatorrenstra/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetIndikatorRenstraHandlerfunc)
+	app.Get("/indikatorrenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllIndikatorRenstrasHandlerfunc)
 
 	// app.Get("/indikatorrenstra/tree/:uuidTahun", GetTreeIndikatorRenstraByTahunHandlerfunc)
 }

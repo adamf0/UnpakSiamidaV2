@@ -279,8 +279,8 @@ func ModuleUser(app *fiber.App) {
 	app.Post("/user", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateUserHandler)
 	app.Put("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateUserHandler)
 	app.Delete("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteUserHandler)
-	app.Get("/user/:uuid", commonpresentation.JWTMiddleware(), GetUserHandler)
-	app.Get("/users", commonpresentation.JWTMiddleware(), GetAllUsersHandler)
+	app.Get("/user/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetUserHandler)
+	app.Get("/users", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUsersHandler)
 }
 
 func nullableString(s string) *string {

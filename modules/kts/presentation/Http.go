@@ -261,8 +261,8 @@ func ModuleKts(app *fiber.App) {
 
 	app.Put("/kts/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateKtsHandlerfunc)
 
-	app.Get("/Kts/:uuid", commonpresentation.JWTMiddleware(), GetKtsHandlerfunc)
-	app.Get("/Ktss", commonpresentation.JWTMiddleware(), GetAllKtssHandlerfunc)
+	app.Get("/Kts/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetKtsHandlerfunc)
+	app.Get("/Ktss", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllKtssHandlerfunc)
 }
 
 func ptr(s string) *string {

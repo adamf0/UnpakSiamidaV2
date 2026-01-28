@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/text/unicode/norm"
 )
@@ -465,4 +466,20 @@ func ipInNets(ip net.IP, nets []*net.IPNet) bool {
 		}
 	}
 	return false
+}
+
+func SmartCompress() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ct := string(c.Response().Header.ContentType())
+
+		// Jangan compress streaming
+		if strings.Contains(ct, "text/event-stream") ||
+			strings.Contains(ct, "application/x-ndjson") {
+			return c.Next()
+		}
+
+		return compress.New(compress.Config{
+			Level: compress.LevelBestCompression,
+		})(c)
+	}
 }

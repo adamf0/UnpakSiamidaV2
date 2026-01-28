@@ -246,6 +246,6 @@ func ModuleJenisFile(app *fiber.App) {
 	app.Post("/jenisfile", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJenisFileHandlerfunc)
 	app.Put("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJenisFileHandlerfunc)
 	app.Delete("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteJenisFileHandlerfunc)
-	app.Get("/JenisFile/:uuid", commonpresentation.JWTMiddleware(), GetJenisFileHandlerfunc)
-	app.Get("/JenisFiles", commonpresentation.JWTMiddleware(), GetAllJenisFilesHandlerfunc)
+	app.Get("/JenisFile/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetJenisFileHandlerfunc)
+	app.Get("/JenisFiles", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllJenisFilesHandlerfunc)
 }

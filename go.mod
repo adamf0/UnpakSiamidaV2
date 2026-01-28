@@ -47,6 +47,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gofiber/fiber/v2 v2.52.10 // indirect
+	github.com/gofiber/helmet/v2 v2.2.26 // indirect
 	github.com/gofiber/swagger v1.1.1 // indirect
 	github.com/goforj/godump v1.9.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect

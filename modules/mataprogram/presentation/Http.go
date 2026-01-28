@@ -252,6 +252,6 @@ func ModuleMataProgram(app *fiber.App) {
 	app.Post("/mataprogram", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateMataProgramHandlerfunc)
 	app.Put("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateMataProgramHandlerfunc)
 	app.Delete("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteMataProgramHandlerfunc)
-	app.Get("/MataProgram/:uuid", commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
-	app.Get("/MataPrograms", commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
+	app.Get("/MataProgram/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
+	app.Get("/MataPrograms", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
 }

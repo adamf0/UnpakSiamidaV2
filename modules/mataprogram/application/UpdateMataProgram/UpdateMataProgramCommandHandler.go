@@ -2,12 +2,14 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	domainmataprogram "UnpakSiamida/modules/mataprogram/domain"
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
@@ -38,20 +40,38 @@ func (h *UpdateMataProgramCommandHandler) Handle(
 	// -------------------------
 	// GET EXISTING mataprogram
 	// -------------------------
-	existingMataProgram, err := h.Repo.GetByUuid(ctx, mataprogramUUID) // ← memastikan pakai nama interface yg benar
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", domainmataprogram.NotFound(cmd.Uuid)
-		}
-		return "", err
-	}
+	var (
+		existingMataProgram *domainmataprogram.MataProgram
+		tahunprokerId       uint
+	)
 
-	var tahunprokerId uint
-	tahunproker, err := h.RepoTahunProker.GetByUuid(ctx, tahunprokerUUID)
-	if err != nil {
-		tahunprokerId = tahunproker.ID
-	} else {
-		tahunprokerId = 0
+	g, ctxg := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		var err error
+		existingMataProgram, err = h.Repo.GetByUuid(ctxg, mataprogramUUID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainmataprogram.NotFound(cmd.Uuid)
+			}
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		tahunproker, err := h.RepoTahunProker.GetByUuid(ctxg, tahunprokerUUID)
+		if err != nil {
+			tahunprokerId = 0
+		} else {
+			tahunprokerId = tahunproker.ID
+		}
+		return nil
+	})
+
+	// tunggu semua selesai
+	if err := g.Wait(); err != nil {
+		return "", err
 	}
 
 	// -------------------------

@@ -243,8 +243,8 @@ func ModuleDokumenTambahan(app *fiber.App) {
 	app.Put("/dokumentambahan/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateDokumenTambahanHandlerfunc)
 
 	//private
-	app.Get("/dokumentambahan/:uuid", commonpresentation.JWTMiddleware(), GetDokumenTambahanHandlerfunc)
-	app.Get("/dokumentambahans", commonpresentation.JWTMiddleware(), GetAllDokumenTambahansHandlerfunc)
+	app.Get("/dokumentambahan/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetDokumenTambahanHandlerfunc)
+	app.Get("/dokumentambahans", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllDokumenTambahansHandlerfunc)
 }
 
 // ====================================================================
