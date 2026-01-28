@@ -55,7 +55,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">UnpakSiamida/common/helper/helper.go (20.2%)</option>
+				<option value="file0">UnpakSiamida/common/helper/helper.go (67.0%)</option>
 				
 				<option value="file1">UnpakSiamida/common/helper/jwt.go (0.0%)</option>
 				
@@ -315,7 +315,7 @@
 				
 				<option value="file129">UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan/SetupUuidTemplateDokumenTambahanCommandHandler.go (0.0%)</option>
 				
-				<option value="file130">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (73.2%)</option>
+				<option value="file130">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (70.7%)</option>
 				
 				<option value="file131">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandValidation.go (100.0%)</option>
 				
@@ -475,45 +475,45 @@ func ValidateUUIDv4(value interface{}) error <span class="cov8" title="1">{
         <span class="cov8" title="1">return nil</span>
 }
 
-func ValidateFakultasUnit(value interface{}, level interface{}) error <span class="cov0" title="0">{
+func ValidateFakultasUnit(value interface{}, level interface{}) error <span class="cov8" title="1">{
         levelStr, ok := level.(string)
         if !ok </span><span class="cov0" title="0">{
                 return fmt.Errorf("level invalid type")
         }</span>
 
-        <span class="cov0" title="0">var s string
+        <span class="cov8" title="1">var s string
         switch v := value.(type) </span>{
-        case string:<span class="cov0" title="0">
+        case string:<span class="cov8" title="1">
                 s = strings.TrimSpace(v)</span>
         case *string:<span class="cov0" title="0">
                 if v != nil </span><span class="cov0" title="0">{
                         s = strings.TrimSpace(*v)
                 }</span>
-        case nil:<span class="cov0" title="0">
+        case nil:<span class="cov8" title="1">
                 s = ""</span>
         default:<span class="cov0" title="0">
                 return fmt.Errorf("FakultasUnit invalid type")</span>
         }
 
-        <span class="cov0" title="0">if levelStr == "fakultas" &amp;&amp; s == "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if levelStr == "fakultas" &amp;&amp; s == "" </span><span class="cov8" title="1">{
                 return fmt.Errorf("FakultasUnit cannot be blank")
         }</span>
-        <span class="cov0" title="0">if (levelStr == "admin" || levelStr == "user") &amp;&amp; s != "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if (levelStr == "admin" || levelStr == "user") &amp;&amp; s != "" </span><span class="cov8" title="1">{
                 return fmt.Errorf("FakultasUnit required to be blank")
         }</span>
 
-        <span class="cov0" title="0">if s == "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if s == "" </span><span class="cov8" title="1">{
                 return nil
         }</span>
 
-        <span class="cov0" title="0">return ValidateUUIDv4(s)</span>
+        <span class="cov8" title="1">return ValidateUUIDv4(s)</span>
 }
 
-func ValidateParent(value interface{}) error <span class="cov0" title="0">{
+func ValidateParent(value interface{}) error <span class="cov8" title="1">{
         var s string
 
         switch v := value.(type) </span>{
-        case string:<span class="cov0" title="0">
+        case string:<span class="cov8" title="1">
                 s = strings.TrimSpace(v)</span>
 
         case *string:<span class="cov0" title="0">
@@ -521,73 +521,73 @@ func ValidateParent(value interface{}) error <span class="cov0" title="0">{
                         s = strings.TrimSpace(*v)
                 }</span>
 
-        case nil:<span class="cov0" title="0">
+        case nil:<span class="cov8" title="1">
                 return nil</span>
 
-        default:<span class="cov0" title="0">
+        default:<span class="cov8" title="1">
                 return fmt.Errorf("Parent invalid type")</span>
         }
 
-        <span class="cov0" title="0">if s == "" </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if s == "" </span><span class="cov8" title="1">{
                 return nil
         }</span>
 
-        <span class="cov0" title="0">return ValidateUUIDv4(value)</span>
+        <span class="cov8" title="1">return ValidateUUIDv4(value)</span>
 }
 
-func ValidateLevel(value interface{}) error <span class="cov0" title="0">{
+func ValidateLevel(value interface{}) error <span class="cov8" title="1">{
         val, ok := value.(string)
         if !ok </span><span class="cov0" title="0">{
                 return fmt.Errorf("level invalid type")
         }</span>
 
-        <span class="cov0" title="0">validLevels := map[string]struct{}{
+        <span class="cov8" title="1">validLevels := map[string]struct{}{
                 "admin":    {},
                 "user":     {},
                 "fakultas": {},
         }
 
-        if _, exists := validLevels[val]; !exists </span><span class="cov0" title="0">{
+        if _, exists := validLevels[val]; !exists </span><span class="cov8" title="1">{
                 return fmt.Errorf("level not exist")
         }</span>
 
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
-func ParseInt64(s string) (int64, error) <span class="cov0" title="0">{
+func ParseInt64(s string) (int64, error) <span class="cov8" title="1">{
         val, err := strconv.ParseInt(s, 10, 64)
-        if err != nil </span><span class="cov0" title="0">{
-                if numErr, ok := err.(*strconv.NumError); ok </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
+                if numErr, ok := err.(*strconv.NumError); ok </span><span class="cov8" title="1">{
                         switch numErr.Err </span>{
-                        case strconv.ErrRange:<span class="cov0" title="0">
+                        case strconv.ErrRange:<span class="cov8" title="1">
                                 return 0, fmt.Errorf("Number out of range")</span>
-                        case strconv.ErrSyntax:<span class="cov0" title="0">
+                        case strconv.ErrSyntax:<span class="cov8" title="1">
                                 return 0, fmt.Errorf("Must be a number")</span>
                         }
                 }
                 <span class="cov0" title="0">return 0, fmt.Errorf("Invalid number")</span>
         }
-        <span class="cov0" title="0">return val, nil</span>
+        <span class="cov8" title="1">return val, nil</span>
 }
 
-func IsValidTugas(tugas string) bool <span class="cov0" title="0">{
+func IsValidTugas(tugas string) bool <span class="cov8" title="1">{
         switch tugas </span>{
         case
                 "auditor1",
-                "auditor2":<span class="cov0" title="0">
+                "auditor2":<span class="cov8" title="1">
                 return true</span>
         }
-        <span class="cov0" title="0">return false</span>
+        <span class="cov8" title="1">return false</span>
 }
 
-func IsValidTypeGenerate(tipe string) bool <span class="cov0" title="0">{
+func IsValidTypeGenerate(tipe string) bool <span class="cov8" title="1">{
         switch tipe </span>{
         case
                 "renstra",
-                "dokumen_tambahan":<span class="cov0" title="0">
+                "dokumen_tambahan":<span class="cov8" title="1">
                 return true</span>
         }
-        <span class="cov0" title="0">return false</span>
+        <span class="cov8" title="1">return false</span>
 }
 
 func StringValue(s *string) string <span class="cov0" title="0">{
@@ -620,7 +620,7 @@ var bulanID = []string{
 
 var locWIB, _ = time.LoadLocation("Asia/Jakarta")
 
-func formatWIB(t time.Time) string <span class="cov0" title="0">{
+func formatWIB(t time.Time) string <span class="cov8" title="1">{
         t = t.In(locWIB)
 
         return fmt.Sprintf(
@@ -634,31 +634,31 @@ func formatWIB(t time.Time) string <span class="cov0" title="0">{
         )
 }</span>
 
-func FTime(t time.Time) string <span class="cov0" title="0">{
+func FTime(t time.Time) string <span class="cov8" title="1">{
         if t.IsZero() </span><span class="cov0" title="0">{
                 return "-"
         }</span>
-        <span class="cov0" title="0">return formatWIB(t)</span>
+        <span class="cov8" title="1">return formatWIB(t)</span>
 }
 
-func FTimeStr(v *string) string <span class="cov0" title="0">{
-        if v == nil || *v == "" </span><span class="cov0" title="0">{
+func FTimeStr(v *string) string <span class="cov8" title="1">{
+        if v == nil || *v == "" </span><span class="cov8" title="1">{
                 return "-"
         }</span>
 
-        <span class="cov0" title="0">layouts := []string{
+        <span class="cov8" title="1">layouts := []string{
                 time.RFC3339,
                 "2006-01-02 15:04:05",
                 "2006-01-02",
         }
 
-        for _, layout := range layouts </span><span class="cov0" title="0">{
-                if t, err := time.Parse(layout, *v); err == nil </span><span class="cov0" title="0">{
+        for _, layout := range layouts </span><span class="cov8" title="1">{
+                if t, err := time.Parse(layout, *v); err == nil </span><span class="cov8" title="1">{
                         return formatWIB(t)
                 }</span>
         }
 
-        <span class="cov0" title="0">return *v</span>
+        <span class="cov8" title="1">return *v</span>
 }
 </pre>
 		
@@ -8247,7 +8247,7 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
                         if errors.Is(err, gorm.ErrRecordNotFound) </span><span class="cov8" title="1">{
                                 return domaintemplatedokumentambahan.JenisFileNotFound()
                         }</span>
-                        <span class="cov8" title="1">return err</span>
+                        <span class="cov0" title="0">return err</span>
                 }
                 <span class="cov8" title="1">jenisfile = r
                 return nil</span>
