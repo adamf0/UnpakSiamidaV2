@@ -49,49 +49,42 @@ func (r *DokumenTambahanRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domaindokumentambahan.DokumenTambahanDefault, error) {
 
-	query := `
-        SELECT 
-			dt.id as ID,
-			dt.uuid as UUID,
-			r.id as RenstraId,
-			r.uuid as RenstraUUID,
-			tdt.uuid as TemplateDokumenTambahanUUID,
-			fu.nama_fak_prod_unit as TargetAudit,
-            fu.jenjang as Jenjang,
-            fu.fakultas as Fakultas,
-            fu.type as Type,
-
-			tdt.pertanyaan as Pertanyaan,
-			jf.nama as Dokumen,
-			tdt.klasifikasi as Klasifikasi,
-
-			r.tahun as TahunRenstra,
-			tdt.tahun as TahunDokumenTambahan,
-			tdt.tugas as Tugas,
-			file as Link,
-			dt.capaian_auditor as CapaianAuditor,
-			dt.catatan_auditor as CatatanAuditor 
-		FROM dokumen_tambahan dt
-		join template_dokumen_tambahan tdt on dt.id_template_dokumen_tambahan = tdt.id
-		join jenis_file_renstra jf on tdt.jenis_file = jf.id 
-		join renstra r on dt.id_renstra = r.id
-		join v_fakultas_unit fu on r.fakultas_unit = fu.id
-		where dt.uuid = ?
-        LIMIT 1
-    `
-
 	var rowData domaindokumentambahan.DokumenTambahanDefault
 
-	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	err := r.db.WithContext(ctx).
+		Table("dokumen_tambahan dt").
+		Select(`
+		dt.id as ID,
+		dt.uuid as UUID,
+		r.id as RenstraId,
+		r.uuid as RenstraUUID,
+		tdt.uuid as TemplateDokumenTambahanUUID,
+		fu.nama_fak_prod_unit as TargetAudit,
+		fu.jenjang as Jenjang,
+		fu.fakultas as Fakultas,
+		fu.type as Type,
+		tdt.pertanyaan as Pertanyaan,
+		jf.nama as Dokumen,
+		tdt.klasifikasi as Klasifikasi,
+		r.tahun as TahunRenstra,
+		tdt.tahun as TahunDokumenTambahan,
+		tdt.tugas as Tugas,
+		dt.file as Link,
+		dt.capaian_auditor as CapaianAuditor,
+		dt.catatan_auditor as CatatanAuditor
+	`).
+		Joins("JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id").
+		Joins("JOIN jenis_file_renstra jf ON tdt.jenis_file = jf.id").
+		Joins("JOIN renstra r ON dt.id_renstra = r.id").
+		Joins("JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id").
+		Where("dt.uuid = ?", id).
+		Take(&rowData).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, res.Error
-	}
-
-	if rowData.ID == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -116,22 +109,15 @@ func (r *DokumenTambahanRepository) GetAll(
 ) ([]domaindokumentambahan.DokumenTambahanDefault, int64, error) {
 
 	var (
-		result     []domaindokumentambahan.DokumenTambahanDefault
-		total      int64
-		conditions []string
-		args       []interface{}
+		result = make([]domaindokumentambahan.DokumenTambahanDefault, 0)
+		total  int64
+		args   []interface{}
+		db     = r.db.WithContext(ctx).Table("dokumen_tambahan dt").
+			Joins("JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id").
+			Joins("JOIN jenis_file_renstra jf ON tdt.jenis_file = jf.id").
+			Joins("JOIN renstra r ON dt.id_renstra = r.id").
+			Joins("JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id")
 	)
-
-	// =====================================================
-	// BASE FROM + JOIN (WAJIB PAKAI INI)
-	// =====================================================
-	baseFrom := `
-		FROM dokumen_tambahan dt
-		join template_dokumen_tambahan tdt on dt.id_template_dokumen_tambahan = tdt.id
-		join jenis_file_renstra jf on tdt.jenis_file = jf.id 
-		join renstra r on dt.id_renstra = r.id
-		join v_fakultas_unit fu on r.fakultas_unit = fu.id
-	`
 
 	// =====================================================
 	// ADVANCED FILTERS
@@ -139,152 +125,94 @@ func (r *DokumenTambahanRepository) GetAll(
 	for _, f := range searchFilters {
 		field := strings.TrimSpace(strings.ToLower(f.Field))
 		operator := strings.TrimSpace(strings.ToLower(f.Operator))
-
-		col, ok := allowedSearchColumns[field] // harus sudah pakai alias tr./i./fu.
-		if !ok {
+		col, ok := allowedSearchColumns[field]
+		if !ok || f.Value == nil {
 			continue
 		}
 
-		value := ""
-		if f.Value != nil {
-			value = strings.TrimSpace(*f.Value)
-		}
+		value := strings.TrimSpace(*f.Value)
 
 		switch operator {
 		case "eq":
-			conditions = append(conditions, fmt.Sprintf("%s = ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s = ?", col), value)
 		case "neq":
-			conditions = append(conditions, fmt.Sprintf("%s <> ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s <> ?", col), value)
 		case "like":
-			conditions = append(conditions, fmt.Sprintf("%s LIKE ?", col))
-			args = append(args, "%"+value+"%")
-
+			db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
 		case "gt":
-			conditions = append(conditions, fmt.Sprintf("%s > ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s > ?", col), value)
 		case "gte":
-			conditions = append(conditions, fmt.Sprintf("%s >= ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s >= ?", col), value)
 		case "lt":
-			conditions = append(conditions, fmt.Sprintf("%s < ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s < ?", col), value)
 		case "lte":
-			conditions = append(conditions, fmt.Sprintf("%s <= ?", col))
-			args = append(args, value)
-
+			db = db.Where(fmt.Sprintf("%s <= ?", col), value)
 		case "in":
 			values := strings.Split(value, ",")
-			if len(values) > 0 {
-				placeholders := strings.TrimRight(strings.Repeat("?,", len(values)), ",")
-				conditions = append(
-					conditions,
-					fmt.Sprintf("%s IN (%s)", col, placeholders),
-				)
-				for _, v := range values {
-					args = append(args, strings.TrimSpace(v))
-				}
-			}
-
+			db = db.Where(fmt.Sprintf("%s IN ?", col), values)
 		default:
-			conditions = append(conditions, fmt.Sprintf("%s LIKE ?", col))
-			args = append(args, "%"+value+"%")
+			db = db.Where(fmt.Sprintf("%s LIKE ?", col), "%"+value+"%")
 		}
 	}
 
 	// =====================================================
-	// GLOBAL SEARCH
+	// GLOBAL SEARCH (opsional)
 	// =====================================================
 	if strings.TrimSpace(search) != "" {
-		var orParts []string
 		like := "%" + search + "%"
-
+		var ors []string
 		for _, col := range allowedSearchColumns {
-			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
+			ors = append(ors, fmt.Sprintf("%s LIKE ?", col))
 			args = append(args, like)
 		}
-
-		conditions = append(
-			conditions,
-			"("+strings.Join(orParts, " OR ")+")",
-		)
+		db = db.Where("("+strings.Join(ors, " OR ")+")", args...)
 	}
 
 	// =====================================================
-	// WHERE CLAUSE
+	// COUNT TOTAL
 	// =====================================================
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = " WHERE " + strings.Join(conditions, " AND ")
-	}
-
-	// =====================================================
-	// COUNT QUERY (HARUS PAKAI JOIN JUGA)
-	// =====================================================
-	countQuery := `
-		SELECT COUNT(DISTINCT dt.id)
-	` + baseFrom + whereClause
-
-	if err := r.db.WithContext(ctx).
-		Raw(countQuery, args...).
-		Scan(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// =====================================================
 	// PAGINATION
 	// =====================================================
-	pagination := ""
 	if page != nil && limit != nil && *limit > 0 {
 		p := *page
 		l := *limit
 		if p < 1 {
 			p = 1
 		}
-
 		offset := (p - 1) * l
-		pagination = " LIMIT ? OFFSET ?"
-		args = append(args, l, offset)
+		db = db.Limit(l).Offset(offset)
 	}
 
-	orderBy := " ORDER BY r.tahun DESC, dt.id DESC"
-
 	// =====================================================
-	// SELECT QUERY (INI YANG KAMU MINTA)
+	// SELECT
 	// =====================================================
-	selectQuery := `
-		SELECT
-			dt.id as ID,
-			dt.uuid as UUID,
-			r.id as RenstraId,
-			r.uuid as RenstraUUID,
-			tdt.uuid as TemplateDokumenTambahanUUID,
-			fu.nama_fak_prod_unit as TargetAudit,
-            fu.jenjang as Jenjang,
-            fu.fakultas as Fakultas,
-            fu.type as Type,
+	db = db.Select(`
+		dt.id as ID,
+		dt.uuid as UUID,
+		r.id as RenstraId,
+		r.uuid as RenstraUUID,
+		tdt.uuid as TemplateDokumenTambahanUUID,
+		fu.nama_fak_prod_unit as TargetAudit,
+		fu.jenjang as Jenjang,
+		fu.fakultas as Fakultas,
+		fu.type as Type,
+		tdt.pertanyaan as Pertanyaan,
+		jf.nama as Dokumen,
+		tdt.klasifikasi as Klasifikasi,
+		r.tahun as TahunRenstra,
+		tdt.tahun as TahunDokumenTambahan,
+		tdt.tugas as Tugas,
+		dt.file as Link,
+		dt.capaian_auditor as CapaianAuditor,
+		dt.catatan_auditor as CatatanAuditor
+	`).Order("r.tahun DESC, dt.id DESC")
 
-			tdt.pertanyaan as Pertanyaan,
-			jf.nama as Dokumen,
-			tdt.klasifikasi as Klasifikasi,
-
-			r.tahun as TahunRenstra,
-			tdt.tahun as TahunDokumenTambahan,
-			tdt.tugas as Tugas,
-			file as Link,
-			dt.capaian_auditor as CapaianAuditor,
-			dt.catatan_auditor as CatatanAuditor 
-	` + baseFrom + whereClause + orderBy + pagination
-
-	if err := r.db.WithContext(ctx).
-		Raw(selectQuery, args...).
-		Scan(&result).Error; err != nil {
+	if err := db.Scan(&result).Error; err != nil {
 		return nil, 0, err
 	}
 

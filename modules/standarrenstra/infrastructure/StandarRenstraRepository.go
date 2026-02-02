@@ -1,13 +1,14 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainstandarrenstra "UnpakSiamida/common/domain"
 	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
 )
 
 type StandarRenstraRepository struct {
@@ -40,8 +41,8 @@ func (r *StandarRenstraRepository) GetByUuid(ctx context.Context, uid uuid.UUID)
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "nama":          "nama",
+	// key:param -> db column
+	"nama": "nama",
 }
 
 // ------------------------
@@ -54,7 +55,7 @@ func (r *StandarRenstraRepository) GetAll(
 	page, limit *int,
 ) ([]domainstandarrenstra.StandarRenstra, int64, error) {
 
-	var standarrenstras []domainstandarrenstra.StandarRenstra
+	var standarrenstras = make([]domainstandarrenstra.StandarRenstra, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainstandarrenstra.StandarRenstra{})
@@ -66,7 +67,7 @@ func (r *StandarRenstraRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -122,7 +123,7 @@ func (r *StandarRenstraRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------
@@ -156,7 +157,6 @@ func (r *StandarRenstraRepository) GetAll(
 
 	return standarrenstras, total, nil
 }
-
 
 // ------------------------
 // CREATE

@@ -42,8 +42,8 @@ func (h *GetPreviewTemplateByTahunFakultasUnitQueryHandler) Handle(
 	}
 
 	var (
-		tree    []domainindikatorrenstra.IndikatorTree
-		preview []domainpreviewtemplate.PreviewTemplate
+		tree    = make([]domainindikatorrenstra.IndikatorTree, 0)
+		preview = make([]domainpreviewtemplate.PreviewTemplate, 0)
 	)
 
 	g, ctxg := errgroup.WithContext(ctx)

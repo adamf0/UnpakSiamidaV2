@@ -49,47 +49,37 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainberitaacara.BeritaAcaraDefault, error) {
 
-	query := `
-        SELECT 
-            ba.id as Id,
-            ba.uuid as Uuid,
-            
-            ba.tahun as Tahun,
-            ba.fakultas_unit as FakultasUnitId,
-            fu.nama_fak_prod_unit as FakultasUnit,
-            ba.tanggal as Tanggal,
-            
-            ba.auditee as AuditeeId,
-            u1.name as NamaAuditee,
-            
-            ba.auditor1 as Auditor1,
-            u2.name as NamaAuditor1,
-            
-            ba.auditor2 as Auditor2,
-            u3.name as NamaAuditor2
-        FROM berita_acara ba
-        LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id
-        LEFT JOIN users u1 ON ba.auditee = u1.id
-        LEFT JOIN users u2 ON ba.auditor1 = u2.id 
-        LEFT JOIN users u3 ON ba.auditor2 = u3.id
-        WHERE ba.uuid = ?
-        LIMIT 1
-    `
-
 	var rowData domainberitaacara.BeritaAcaraDefault
 
-	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	err := r.db.WithContext(ctx).
+		Table("berita_acara ba").
+		Select(`
+		ba.id as Id,
+		ba.uuid as Uuid,
+		ba.tahun as Tahun,
+		ba.fakultas_unit as FakultasUnitId,
+		fu.nama_fak_prod_unit as FakultasUnit,
+		ba.tanggal as Tanggal,
+		ba.auditee as AuditeeId,
+		u1.name as NamaAuditee,
+		ba.auditor1 as Auditor1,
+		u2.name as NamaAuditor1,
+		ba.auditor2 as Auditor2,
+		u3.name as NamaAuditor2
+	`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id").
+		Joins("LEFT JOIN users u1 ON ba.auditee = u1.id").
+		Joins("LEFT JOIN users u2 ON ba.auditor1 = u2.id").
+		Joins("LEFT JOIN users u3 ON ba.auditor2 = u3.id").
+		Where("ba.uuid = ?", id).
+		Take(&rowData).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, res.Error
+		return nil, err
 	}
-
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-
 	return &rowData, nil
 }
 
@@ -108,7 +98,7 @@ func (r *BeritaAcaraRepository) GetAll(
 	page, limit *int,
 ) ([]domainberitaacara.BeritaAcaraDefault, int64, error) {
 
-	var rows []domainberitaacara.BeritaAcaraDefault
+	var rows = make([]domainberitaacara.BeritaAcaraDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).

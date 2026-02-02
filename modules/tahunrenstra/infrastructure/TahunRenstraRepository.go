@@ -60,7 +60,7 @@ func (r *TahunRenstraRepository) GetAll(
 	page, limit *int,
 ) ([]domainTahunRenstra.TahunRenstra, int64, error) {
 
-	var TahunRenstras []domainTahunRenstra.TahunRenstra
+	var TahunRenstras = make([]domainTahunRenstra.TahunRenstra, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainTahunRenstra.TahunRenstra{})

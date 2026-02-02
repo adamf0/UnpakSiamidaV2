@@ -63,7 +63,7 @@ func (r *TemplateRenstraRepository) GetAll(
 ) ([]domaintemplaterenstra.TemplateRenstraDefault, int64, error) {
 
 	var (
-		result     []domaintemplaterenstra.TemplateRenstraDefault
+		result     = make([]domaintemplaterenstra.TemplateRenstraDefault, 0)
 		total      int64
 		conditions []string
 		args       []interface{}
@@ -248,7 +248,7 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnit(
 	fakultasUnit uint,
 ) ([]domaintemplaterenstra.TemplateRenstra, error) {
 
-	var templaterenstras []domaintemplaterenstra.TemplateRenstra
+	var templaterenstras = make([]domaintemplaterenstra.TemplateRenstra, 0)
 
 	err := r.db.WithContext(ctx).
 		Where("tahun = ? AND fakultas_unit = ?", tahun, fakultasUnit).
@@ -270,77 +270,42 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 	fakultasUnit uint,
 ) ([]domaintemplaterenstra.TemplateRenstraDefault, error) {
 
-	query := `
-		SELECT
-			tr.id                     AS ID,
-			tr.uuid                   AS UUID,
-			tr.tahun                  AS Tahun,
-            
-			s.uuid                    AS StandarRenstraUuid,
-			s.id              		  AS StandarRenstraID,
-			s.nama               	  AS StandarRenstra,
+	var results = make([]domaintemplaterenstra.TemplateRenstraDefault, 0)
 
-			i.uuid              	  AS IndikatorRenstraUuid,
-			tr.indikator              AS IndikatorRenstraID,
-			i.indikator               AS Indikator,
+	err := r.db.WithContext(ctx).
+		Table("template_renstra tr").
+		Select(`
+		tr.id AS ID,
+		tr.uuid AS UUID,
+		tr.tahun AS Tahun,
 
-			tr.pertanyaan          	  AS IsPertanyaan,
-			tr.fakultas_unit          AS FakultasUnitID,
-			fu.nama_fak_prod_unit     AS FakultasUnit,
-			tr.kategori               AS Kategori,
-			tr.klasifikasi            AS Klasifikasi,
-			tr.satuan                 AS Satuan,
-			tr.target                 AS Target,
-			tr.target_min             AS TargetMin,
-			tr.target_max             AS TargetMax,
-			tr.tugas                  AS Tugas
-		FROM template_renstra tr
-		INNER JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id 
-		INNER JOIN master_indikator_renstra i ON tr.indikator = i.id 
-		INNER JOIN master_standar_renstra s ON i.id_master_standar = s.id
-		WHERE tr.tahun = ?
-		  AND tr.fakultas_unit = ?
-	`
+		s.uuid AS StandarRenstraUuid,
+		s.id AS StandarRenstraID,
+		s.nama AS StandarRenstra,
 
-	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasUnit).Rows()
+		i.uuid AS IndikatorRenstraUuid,
+		tr.indikator AS IndikatorRenstraID,
+		i.indikator AS Indikator,
+
+		tr.pertanyaan AS IsPertanyaan,
+		tr.fakultas_unit AS FakultasUnitID,
+		fu.nama_fak_prod_unit AS FakultasUnit,
+		tr.kategori AS Kategori,
+		tr.klasifikasi AS Klasifikasi,
+		tr.satuan AS Satuan,
+		tr.target AS Target,
+		tr.target_min AS TargetMin,
+		tr.target_max AS TargetMax,
+		tr.tugas AS Tugas
+	`).
+		Joins("INNER JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
+		Joins("INNER JOIN master_indikator_renstra i ON tr.indikator = i.id").
+		Joins("INNER JOIN master_standar_renstra s ON i.id_master_standar = s.id").
+		Where("tr.tahun = ? AND tr.fakultas_unit = ?", tahun, fakultasUnit).
+		Find(&results).Error
+
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-
-	results := make([]domaintemplaterenstra.TemplateRenstraDefault, 0)
-
-	for rows.Next() {
-		var item domaintemplaterenstra.TemplateRenstraDefault
-
-		err := rows.Scan(
-			&item.ID,
-			&item.UUID,
-			&item.Tahun,
-
-			&item.StandarRenstraUuid,
-			&item.StandarRenstraID,
-			&item.StandarRenstra,
-
-			&item.IndikatorRenstraUuid,
-			&item.IndikatorRenstraID,
-			&item.Indikator,
-
-			&item.IsPertanyaan,
-			&item.FakultasUnit,
-			&item.Kategori,
-			&item.Klasifikasi,
-			&item.Satuan,
-			&item.Target,
-			&item.TargetMin,
-			&item.TargetMax,
-			&item.Tugas,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, item)
 	}
 
 	return results, nil

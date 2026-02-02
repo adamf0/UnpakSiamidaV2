@@ -49,73 +49,63 @@ func (r *RenstraNilaiRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainrenstranilai.RenstraNilaiDefault, error) {
 
-	query := `
-        SELECT
-			r.id as RenstraId,
-			r.uuid as RenstraUUID,
-			r.tahun as TahunRenstra,
-			
-			rn.id as ID,
-			rn.uuid as UUID,
-			fu.nama_fak_prod_unit AS TargetAudit,
-			fu.jenjang AS Jenjang,
-			fu.fakultas AS Fakultas,
-			fu.type AS Type,
-			
-			sr.id as StandarId,
-			sr.uuid as StandarUUID,
-			sr.nama as NamaStandar,
-			
-			mir.id as IndikatorId,
-			mir.uuid as IndikatorUUID,
-			mir.indikator as NamaIndikator,
-			mir.tahun as TahunIndikator,
-			mir.tipe_target as TipeTarget,
-			mir.operator as Operator,
-			
-			tr.id as TemplateRenstraId,
-            tr.uuid as TemplateRenstraUUID,
-			tr.satuan as Satuan,
-			tr.target as Target,
-			tr.target_min as TargetMin,
-			tr.target_max as TargetMax,
-			tr.tugas as TugasTemplate,
-			tr.tahun as TahunTemplate,
-			tr.pertanyaan as IsPertanyaan,
-			
-			rn.tugas as Tugas,
-			rn.capaian as CapaianAuditee,
-			rn.catatan as CatatanAuditee,
-			rn.link_bukti as LinkBukti,
-			rn.capaian_auditor as CapaianAuditor,
-			rn.catatan_auditor as CatatanAuditor
-		FROM
-			renstra_nilai rn
-		JOIN renstra r ON
-			rn.id_renstra = r.id
-		JOIN template_renstra tr ON
-			rn.template_renstra = tr.id
-		JOIN master_indikator_renstra mir ON
-			tr.indikator = mir.id
-		join master_standar_renstra sr on mir.id_master_standar = sr.id
-		JOIN v_fakultas_unit fu ON
-			r.fakultas_unit = fu.id
-        WHERE rn.uuid = ?
-        LIMIT 1
-    `
-
 	var rowData domainrenstranilai.RenstraNilaiDefault
 
-	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	err := r.db.WithContext(ctx).
+		Table("renstra_nilai rn").
+		Select(`
+		r.id as RenstraId,
+		r.uuid as RenstraUUID,
+		r.tahun as TahunRenstra,
+		
+		rn.id as ID,
+		rn.uuid as UUID,
+		fu.nama_fak_prod_unit AS TargetAudit,
+		fu.jenjang AS Jenjang,
+		fu.fakultas AS Fakultas,
+		fu.type AS Type,
+		
+		sr.id as StandarId,
+		sr.uuid as StandarUUID,
+		sr.nama as NamaStandar,
+		
+		mir.id as IndikatorId,
+		mir.uuid as IndikatorUUID,
+		mir.indikator as NamaIndikator,
+		mir.tahun as TahunIndikator,
+		mir.tipe_target as TipeTarget,
+		mir.operator as Operator,
+		
+		tr.id as TemplateRenstraId,
+		tr.uuid as TemplateRenstraUUID,
+		tr.satuan as Satuan,
+		tr.target as Target,
+		tr.target_min as TargetMin,
+		tr.target_max as TargetMax,
+		tr.tugas as TugasTemplate,
+		tr.tahun as TahunTemplate,
+		tr.pertanyaan as IsPertanyaan,
+		
+		rn.tugas as Tugas,
+		rn.capaian as CapaianAuditee,
+		rn.catatan as CatatanAuditee,
+		rn.link_bukti as LinkBukti,
+		rn.capaian_auditor as CapaianAuditor,
+		rn.catatan_auditor as CatatanAuditor
+	`).
+		Joins("JOIN renstra r ON rn.id_renstra = r.id").
+		Joins("JOIN template_renstra tr ON rn.template_renstra = tr.id").
+		Joins("JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+		Joins("JOIN master_standar_renstra sr ON mir.id_master_standar = sr.id").
+		Joins("JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id").
+		Where("rn.uuid = ?", id).
+		Take(&rowData).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, res.Error
-	}
-
-	if rowData.ID == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -123,7 +113,8 @@ func (r *RenstraNilaiRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"uuidrenstra": "r.uuid",
+	"uuidrenstra":   "r.uuid",
+	"uuidindikator": "mir.uuid",
 }
 
 func (r *RenstraNilaiRepository) GetAll(
@@ -134,7 +125,7 @@ func (r *RenstraNilaiRepository) GetAll(
 ) ([]domainrenstranilai.RenstraNilaiDefault, int64, error) {
 
 	var (
-		result     []domainrenstranilai.RenstraNilaiDefault
+		result     = make([]domainrenstranilai.RenstraNilaiDefault, 0)
 		total      int64
 		conditions []string
 		args       []interface{}

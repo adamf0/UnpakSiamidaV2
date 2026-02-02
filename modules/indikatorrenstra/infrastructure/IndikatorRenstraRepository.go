@@ -70,38 +70,33 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainindikatorrenstra.IndikatorRenstraDefault, error) {
 
-	query := `
-        SELECT 
-            i.id as Id,
-            i.uuid as Uuid,
-            i.indikator as Indikator,
-            i.id_master_standar AS StandarID,
-            ms.uuid AS UuidStandar,
-			ms.nama AS Standar,
-            i.parent as Parent,
-            p.uuid AS UuidParent,
-            i.tahun as Tahun,
-            i.tipe_target as TipeTarget,
-            i.operator as Operator
-        FROM master_indikator_renstra i
-        LEFT JOIN master_standar_renstra ms ON i.id_master_standar = ms.id
-        LEFT JOIN master_indikator_renstra p ON i.parent = p.id
-        WHERE i.uuid = ?
-        LIMIT 1
-    `
-
 	var rowData domainindikatorrenstra.IndikatorRenstraDefault
 
-	res := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	err := r.db.WithContext(ctx).
+		Table("master_indikator_renstra AS i").
+		Select([]string{
+			"i.id AS Id",
+			"i.uuid AS Uuid",
+			"i.indikator AS Indikator",
+			"i.id_master_standar AS StandarID",
+			"ms.uuid AS UuidStandar",
+			"ms.nama AS Standar",
+			"i.parent AS Parent",
+			"p.uuid AS UuidParent",
+			"i.tahun AS Tahun",
+			"i.tipe_target AS TipeTarget",
+			"i.operator AS Operator",
+		}).
+		Joins("LEFT JOIN master_standar_renstra AS ms ON i.id_master_standar = ms.id").
+		Joins("LEFT JOIN master_indikator_renstra AS p ON i.parent = p.id").
+		Where("i.uuid = ?", id).
+		Take(&rowData).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, gorm.ErrRecordNotFound
 		}
-		return nil, res.Error
-	}
-
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -125,7 +120,7 @@ func (r *IndikatorRenstraRepository) GetAll(
 ) ([]domainindikatorrenstra.IndikatorRenstraDefault, int64, error) {
 
 	var (
-		result     []domainindikatorrenstra.IndikatorRenstraDefault
+		result     = make([]domainindikatorrenstra.IndikatorRenstraDefault, 0)
 		total      int64
 		conditions []string
 		args       []interface{}
@@ -318,16 +313,18 @@ func (r *IndikatorRenstraRepository) GetIndikatorTree(
 	tahun string,
 ) ([]domainindikatorrenstra.IndikatorTree, error) {
 
-	var items []domainindikatorrenstra.IndikatorTree
+	var items = make([]domainindikatorrenstra.IndikatorTree, 0)
 
 	sql := `
 		SELECT
 			q.id AS IndikatorId,
+			q.uuid AS IndikatorUuid,
 			q.indikator AS Indikator,
-			q.parent AS ParentIndikatorId
+			q.parent AS ParentIndikatorId 
 		FROM (
 			SELECT
 				mir.id,
+				mir.uuid,
 				mir.indikator,
 				mir.parent,
 				mir.tahun,

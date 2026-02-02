@@ -33,6 +33,10 @@ func InvalidData() domain.Error {
 	return domain.NotFoundError("IndikatorRenstra.InvalidData", "data is invalid")
 }
 
+func InvalidTahun() domain.Error {
+	return domain.NotFoundError("IndikatorRenstra.InvalidTahun", "tahun is invalid")
+}
+
 func NotFound(id string) domain.Error {
-	return domain.NotFoundError("IndikatorRenstra.NotFound", fmt.Sprintf("IndikatorRenstra with identifier %s not found", id) )
+	return domain.NotFoundError("IndikatorRenstra.NotFound", fmt.Sprintf("IndikatorRenstra with identifier %s not found", id))
 }

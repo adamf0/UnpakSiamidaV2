@@ -4,6 +4,7 @@ import (
 	commondomainaktivitasproker "UnpakSiamida/common/domain"
 	domainaktivitasproker "UnpakSiamida/modules/aktivitasproker/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,40 +50,37 @@ func (r *AktivitasProkerRepository) GetDefaultByUuid(
 ) (*domainaktivitasproker.AktivitasProkerDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct AktivitasProkerDefault
-	query := `
-		SELECT 
-			a.id as ID,
-			a.uuid as UUID,
-			a.id_fakultas_unit as FakultasUnitId,
-            vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
-			vfu.jenjang as Jenjang,
-			vfu.type as Type,
-			vfu.fakultas as Fakultas,
-            a.id_mata_program as MataProgramId,
-            mp.uuid as MataProgramUUID,
-            mp.mata_program as MataProgram,
-            a.aktivitas as Aktivitas,
-            a.PIC as PIC,
-			a.target_rk_awal as TanggalRKAwal,
-			a.target_rk_akhir as TanggalRKAkhir
-		FROM aktivitas a
-		JOIN v_fakultas_unit vfu ON a.id_fakultas_unit = vfu.id 
-        JOIN mata_program mp ON a.id_mata_program = mp.id
-		WHERE a.uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domainaktivitasproker.AktivitasProkerDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("aktivitas a").
+		Select(`
+		a.id as ID,
+		a.uuid as UUID,
+		a.id_fakultas_unit as FakultasUnitId,
+		vfu.uuid as FakultasUnitUuid,
+		vfu.nama_fak_prod_unit as FakultasUnit,
+		vfu.jenjang as Jenjang,
+		vfu.type as Type,
+		vfu.fakultas as Fakultas,
+		a.id_mata_program as MataProgramId,
+		mp.uuid as MataProgramUUID,
+		mp.mata_program as MataProgram,
+		a.aktivitas as Aktivitas,
+		a.PIC as PIC,
+		a.target_rk_awal as TanggalRKAwal,
+		a.target_rk_akhir as TanggalRKAkhir
+	`).
+		Joins("JOIN v_fakultas_unit vfu ON a.id_fakultas_unit = vfu.id").
+		Joins("JOIN mata_program mp ON a.id_mata_program = mp.id").
+		Where("a.uuid = ?", id).
+		Take(&rowData).Error
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -103,7 +101,7 @@ func (r *AktivitasProkerRepository) GetAll(
 	page, limit *int,
 ) ([]domainaktivitasproker.AktivitasProkerDefault, int64, error) {
 
-	var rows []domainaktivitasproker.AktivitasProkerDefault
+	var rows = make([]domainaktivitasproker.AktivitasProkerDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).

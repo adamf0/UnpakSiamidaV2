@@ -108,10 +108,10 @@ func (h *GenerateRenstraCommandHandler) Handle(
 	// LOAD TEMPLATE & AUDIT (PARALLEL)
 	// ===============================
 	var (
-		existingTemplateRenstra         []domaintemplaterenstra.TemplateRenstraDefault
-		existingTemplateDokumenTambahan []domaintemplatedokumentambahan.TemplateDokumenTambahanDefault
-		existingAuditRenstra            []domaingenerate.GenerateRenstraDefault
-		existingAuditDokumenTambahan    []domaingenerate.GenerateDokumenTambahanDefault
+		existingTemplateRenstra         = make([]domaintemplaterenstra.TemplateRenstraDefault, 0)
+		existingTemplateDokumenTambahan = make([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, 0)
+		existingAuditRenstra            = make([]domaingenerate.GenerateRenstraDefault, 0)
+		existingAuditDokumenTambahan    = make([]domaingenerate.GenerateDokumenTambahanDefault, 0)
 	)
 
 	g2, gctx2 := errgroup.WithContext(ctx)

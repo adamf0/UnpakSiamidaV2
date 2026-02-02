@@ -63,21 +63,21 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 
 // Ambil extrarole tetap pakai GORM
 func (r *AccountRepository) getExtraRole(ctx context.Context, idUser string) ([]domain.ExtraRole, error) {
-	var extraRoles []domain.ExtraRole
+	var extraRoles = make([]domain.ExtraRole, 0)
 
-	err := r.db.WithContext(ctx).
-		Raw(`SELECT 
-				tahun, 
-				(
-				case 
-					when auditee=? then "auditee"
-					when auditor1=? then "auditor1"
-					when auditor2=? then "auditor2"
-				end
-				) as role 
-			FROM renstra 
-			WHERE auditee = ? OR auditor1 = ? OR auditor2 = ? group by tahun, role`, idUser, idUser, idUser, idUser, idUser, idUser).
-		Scan(&extraRoles).Error
+	db := r.db.WithContext(ctx).Table("renstra").
+		Select(`
+		tahun,
+		CASE
+			WHEN auditee = ? THEN 'auditee'
+			WHEN auditor1 = ? THEN 'auditor1'
+			WHEN auditor2 = ? THEN 'auditor2'
+		END AS role
+	`, idUser, idUser, idUser).
+		Where("auditee = ? OR auditor1 = ? OR auditor2 = ?", idUser, idUser, idUser).
+		Group("tahun, role")
+
+	err := db.Scan(&extraRoles).Error
 	if err != nil {
 		return nil, err
 	}

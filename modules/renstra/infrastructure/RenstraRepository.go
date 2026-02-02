@@ -69,109 +69,89 @@ func (r *RenstraRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainrenstra.RenstraDefault, error) {
 
-	query := `
-		SELECT 
-			r.id as ID,
-			r.uuid as UUID,
-			r.tahun as Tahun,
-
-			r.fakultas_unit as FakultasUnitId,
-			vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
-
-			r.periode_upload_mulai as PeriodeUploadMulai,
-			r.periode_upload_akhir as PeriodeUploadAkhir,
-			r.periode_assesment_dokumen_mulai as PeriodeAssesmentDokumenMulai,
-			r.periode_assesment_dokumen_akhir as PeriodeAssesmentDokumenAkhir,
-			r.periode_assesment_lapangan_mulai as PeriodeAssesmentLapanganMulai,
-			r.periode_assesment_lapangan_akhir as PeriodeAssesmentLapanganAkhir,
-
-			r.auditee as AuditeeId,
-			r.auditor1 as Auditor1Id,
-			r.auditor2 as Auditor2Id,
-
-			r.kodeAkses as KodeAkses,
-			r.catatan as Catatan1,
-			r.catatan2 as Catatan2,
-
-			a0.name as Auditee,
-			a1.name as Auditor1,
-			a2.name as Auditor2,
-
-			a0.uuid as AuditeeUuid,
-			a1.uuid as Auditor1Uuid,
-			a2.uuid as Auditor2Uuid,
-
-			vfu.jenjang as Jenjang,
-			vfu.type as Type,
-			vfu.fakultas as Fakultas,
-
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					renstra_nilai
-				WHERE
-					renstra_nilai.id_renstra = r.id
-			) AS TotalRenstra,
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					renstra_nilai
-				WHERE
-					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
-			) AS TotalRenstraAuditee,
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					renstra_nilai
-				WHERE
-					renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
-			) AS TotalRenstraAuditor,
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					dokumen_tambahan
-				WHERE
-					dokumen_tambahan.id_renstra = r.id
-			) AS TotalDokumen,
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					dokumen_tambahan
-				WHERE
-					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
-			) AS TotalDokumenAuditee,
-			(
-				SELECT
-					COUNT(*)
-				FROM
-					dokumen_tambahan
-				WHERE
-					dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
-			) AS TotalDokumenAuditor
-		FROM renstra r
-		JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id
-		LEFT JOIN users a0 ON r.auditee = a0.id
-		LEFT JOIN users a1 ON r.auditor1 = a1.id
-		LEFT JOIN users a2 ON r.auditor2 = a2.id
-		WHERE r.uuid = ?
-		LIMIT 1
-	`
-
 	var result domainrenstra.RenstraDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&result).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("renstra r").
+		Select(`
+		r.id as ID,
+		r.uuid as UUID,
+		r.tahun as Tahun,
 
-	if result.ID == 0 {
-		return nil, gorm.ErrRecordNotFound
+		r.fakultas_unit as FakultasUnitId,
+		vfu.uuid as FakultasUnitUuid,
+		vfu.nama_fak_prod_unit as FakultasUnit,
+
+		r.periode_upload_mulai as PeriodeUploadMulai,
+		r.periode_upload_akhir as PeriodeUploadAkhir,
+		r.periode_assesment_dokumen_mulai as PeriodeAssesmentDokumenMulai,
+		r.periode_assesment_dokumen_akhir as PeriodeAssesmentDokumenAkhir,
+		r.periode_assesment_lapangan_mulai as PeriodeAssesmentLapanganMulai,
+		r.periode_assesment_lapangan_akhir as PeriodeAssesmentLapanganAkhir,
+
+		r.auditee as AuditeeId,
+		r.auditor1 as Auditor1Id,
+		r.auditor2 as Auditor2Id,
+
+		r.kodeAkses as KodeAkses,
+		r.catatan as Catatan1,
+		r.catatan2 as Catatan2,
+
+		a0.name as Auditee,
+		a1.name as Auditor1,
+		a2.name as Auditor2,
+
+		a0.uuid as AuditeeUuid,
+		a1.uuid as Auditor1Uuid,
+		a2.uuid as Auditor2Uuid,
+
+		vfu.jenjang as Jenjang,
+		vfu.type as Type,
+		vfu.fakultas as Fakultas,
+
+		(
+			SELECT COUNT(*)
+			FROM renstra_nilai
+			WHERE renstra_nilai.id_renstra = r.id
+		) AS TotalRenstra,
+		(
+			SELECT COUNT(*)
+			FROM renstra_nilai
+			WHERE renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian IS NOT NULL
+		) AS TotalRenstraAuditee,
+		(
+			SELECT COUNT(*)
+			FROM renstra_nilai
+			WHERE renstra_nilai.id_renstra = r.id AND renstra_nilai.capaian_auditor IS NOT NULL
+		) AS TotalRenstraAuditor,
+		(
+			SELECT COUNT(*)
+			FROM dokumen_tambahan
+			WHERE dokumen_tambahan.id_renstra = r.id
+		) AS TotalDokumen,
+		(
+			SELECT COUNT(*)
+			FROM dokumen_tambahan
+			WHERE dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.file IS NOT NULL
+		) AS TotalDokumenAuditee,
+		(
+			SELECT COUNT(*)
+			FROM dokumen_tambahan
+			WHERE dokumen_tambahan.id_renstra = r.id AND dokumen_tambahan.capaian_auditor IS NOT NULL
+		) AS TotalDokumenAuditor
+	`).
+		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
+		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
+		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
+		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id").
+		Where("r.uuid = ?", id).
+		Take(&result).Error // Take = LIMIT 1
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &result, nil
@@ -202,7 +182,7 @@ func (r *RenstraRepository) GetAll(
 	scope string,
 ) ([]domainrenstra.RenstraDefault, int64, error) {
 
-	var renstras []domainrenstra.RenstraDefault
+	var renstras = make([]domainrenstra.RenstraDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Table("renstra r").

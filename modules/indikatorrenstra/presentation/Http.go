@@ -20,6 +20,7 @@ import (
 	// GetTreeIndikatorRenstraByTahun "UnpakSiamida/modules/indikatorrenstra/application/GetTreeIndikatorRenstraByTahun"
 	GetAllIndikatorRenstras "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
 	SetupUuidIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/SetupUuidIndikatorRenstra"
+	TreeIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/TreeIndikatorRenstra"
 )
 
 // CreateIndikatorRenstraHandler godoc
@@ -290,6 +291,31 @@ func GetAllIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 	return adapter.Send(c, result)
 }
 
+// TreeIndikatorRenstrasHandler godoc
+// @Summary Tree IndikatorRenstras
+// @Tags IndikatorRenstra
+// @Param tahun path string true "Tahun"
+// @Produce json
+// @Success 200 {object} []indikatorrenstradomain.IndikatorTree
+// @Router /indikatorrenstra/tree/{tahun} [get]
+func TreeIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
+	tahun := c.Params("tahun")
+	query := TreeIndikatorRenstra.TreeIndikatorRenstraQuery{
+		Tahun: tahun,
+	}
+
+	result, err := mediatr.Send[
+		TreeIndikatorRenstra.TreeIndikatorRenstraQuery,
+		[]indikatorrenstradomain.IndikatorTree,
+	](context.Background(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(result)
+}
+
 func SetupUuidIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 	cmd := SetupUuidIndikatorRenstra.SetupUuidIndikatorRenstraCommand{}
 
@@ -310,9 +336,10 @@ func ModuleIndikatorRenstra(app *fiber.App) {
 	app.Post("/indikatorrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateIndikatorRenstraHandlerfunc)
 	app.Put("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateIndikatorRenstraHandlerfunc)
 	app.Delete("/indikatorrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteIndikatorRenstraHandlerfunc)
+
 	app.Get("/indikatorrenstra/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetIndikatorRenstraHandlerfunc)
 	app.Get("/indikatorrenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllIndikatorRenstrasHandlerfunc)
-
+	app.Get("/indikatorrenstra/tree/:tahun", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), TreeIndikatorRenstrasHandlerfunc)
 	// app.Get("/indikatorrenstra/tree/:uuidTahun", GetTreeIndikatorRenstraByTahunHandlerfunc)
 }
 

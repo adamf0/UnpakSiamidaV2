@@ -58,7 +58,7 @@ func (r *TemplateDokumenTambahanRepository) GetAll(
 ) ([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, int64, error) {
 
 	var (
-		result     []domaintemplatedokumentambahan.TemplateDokumenTambahanDefault
+		result     = make([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, 0)
 		total      int64
 		conditions []string
 		args       []interface{}
@@ -229,55 +229,32 @@ func (r *TemplateDokumenTambahanRepository) GetAllByTahunFakUnitDefault(
 	fakultasProdiUnit string,
 ) ([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, error) {
 
-	query := `
-		SELECT
-			dt.id             		AS ID,
-			dt.uuid           		AS UUID,
-			dt.tahun          		AS Tahun,
-			jf.id             		AS JenisFileId,
-			jf.uuid           		AS JenisFileUuid,
-			jf.nama           		AS JenisFile,
-			dt.fakultas_prodi_unit 	AS FakultasProdiUnit,
-			dt.pertanyaan     		AS Pertanyaan,
-			dt.klasifikasi    		AS Klasifikasi,
-			dt.tugas    			AS Tugas
-		FROM template_dokumen_tambahan dt
-		INNER JOIN jenis_file_renstra jf ON jf.id = dt.jenis_file
-		WHERE dt.tahun = ?
-		  AND dt.fakultas_prodi_unit = ?
-	`
+	var results = make([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, 0)
 
-	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasProdiUnit).Rows()
+	err := r.db.WithContext(ctx).
+		Table("template_dokumen_tambahan dt").
+		Select(`
+		dt.id AS ID,
+		dt.uuid AS UUID,
+		dt.tahun AS Tahun,
+		jf.id AS JenisFileID,
+		jf.uuid AS JenisFileUuid,
+		jf.nama AS JenisFile,
+		dt.fakultas_prodi_unit AS FakultasProdiUnit,
+		dt.pertanyaan AS Pertanyaan,
+		dt.klasifikasi AS Klasifikasi,
+		dt.tugas AS Tugas
+	`).
+		Joins("INNER JOIN jenis_file_renstra jf ON jf.id = dt.jenis_file").
+		Where("dt.tahun = ? AND dt.fakultas_prodi_unit = ?", tahun, fakultasProdiUnit).
+		Find(&results).Error
+
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	results := make([]domaintemplatedokumentambahan.TemplateDokumenTambahanDefault, 0)
-
-	for rows.Next() {
-		var item domaintemplatedokumentambahan.TemplateDokumenTambahanDefault
-
-		err := rows.Scan(
-			&item.ID,
-			&item.UUID,
-			&item.Tahun,
-			&item.JenisFileID,
-			&item.JenisFileUuid,
-			&item.JenisFile,
-			&item.FakultasProdiUnit,
-			&item.Pertanyaan,
-			&item.Klasifikasi,
-			&item.Tugas,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, item)
-	}
 
 	return results, nil
+
 }
 
 // ------------------------

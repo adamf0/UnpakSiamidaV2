@@ -4,6 +4,7 @@ import (
 	commondomainMataProgram "UnpakSiamida/common/domain"
 	domainMataProgram "UnpakSiamida/modules/mataprogram/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,23 +50,19 @@ func (r *MataProgramRepository) GetDefaultByUuid(
 ) (*domainMataProgram.MataProgramDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct MataProgramDefault
-	query := `
-		SELECT id, uuid, nama
-		FROM mata_program
-		WHERE uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domainMataProgram.MataProgramDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("mata_program").
+		Select("id, uuid, nama").
+		Where("uuid = ?", id).
+		Take(&rowData).Error
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -86,7 +83,7 @@ func (r *MataProgramRepository) GetAll(
 	page, limit *int,
 ) ([]domainMataProgram.MataProgram, int64, error) {
 
-	var MataPrograms []domainMataProgram.MataProgram
+	var MataPrograms = make([]domainMataProgram.MataProgram, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainMataProgram.MataProgram{})

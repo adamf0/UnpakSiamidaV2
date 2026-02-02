@@ -59,7 +59,7 @@ func DefaultBlacklistedHeaderNames() map[string]bool {
 func DefaultHeaderSecurityConfig() *HeaderSecurityConfig {
 	return &HeaderSecurityConfig{
 		BlacklistedHeaderNames: DefaultBlacklistedHeaderNames(),
-		AllowDomains:           []string{"siamida.unpak.ac.id", "localhost:3000", "thunderclient.com"},
+		AllowDomains:           []string{"siamida.unpak.ac.id", "localhost", "localhost:3000", "thunderclient.com"},
 		MaxHeaderLen:           8192,
 		ResolveAndCheck:        false,
 		LookupTimeout:          1 * time.Second,

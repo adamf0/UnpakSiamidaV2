@@ -83,7 +83,7 @@ func (r *PreviewTemplateRepository) GetByTahunTag(
 	tag string,
 ) ([]domainpreviewtemplate.PreviewTemplate, error) {
 
-	var results []domainpreviewtemplate.PreviewTemplate
+	var results = make([]domainpreviewtemplate.PreviewTemplate, 0)
 
 	sql := `
 		SELECT

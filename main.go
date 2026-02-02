@@ -33,6 +33,10 @@ import (
 
 	aktivitasprokerPresentation "UnpakSiamida/modules/aktivitasproker/presentation"
 
+	laporanInfrastructure "UnpakSiamida/modules/laporan/infrastructure"
+
+	laporanPresentation "UnpakSiamida/modules/laporan/presentation"
+
 	beritaacaraInfrastructure "UnpakSiamida/modules/beritaacara/infrastructure"
 
 	beritaacaraPresentation "UnpakSiamida/modules/beritaacara/presentation"
@@ -357,6 +361,10 @@ func main() {
 		return aktivitasprokerInfrastructure.RegisterModuleAktivitasProker(db)
 	})
 
+	mustStart("Laporan Module", func() error { //buat audit
+		return laporanInfrastructure.RegisterModuleLaporan(db)
+	})
+
 	if len(startupErrors) > 0 {
 		app.Use(func(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{
@@ -393,6 +401,7 @@ func main() {
 	mataprogramPresentation.ModuleMataProgram(app)
 	jadwalprokerPresentation.ModuleJadwalProker(app)
 	aktivitasprokerPresentation.ModuleAktivitasProker(app)
+	laporanPresentation.ModuleMonitoringProker(app)
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),

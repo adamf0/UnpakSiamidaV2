@@ -4,6 +4,7 @@ import (
 	commondomainTahunProker "UnpakSiamida/common/domain"
 	domainTahunProker "UnpakSiamida/modules/tahunproker/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,23 +50,19 @@ func (r *TahunProkerRepository) GetDefaultByUuid(
 ) (*domainTahunProker.TahunProkerDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct TahunProkerDefault
-	query := `
-		SELECT id, uuid, tahun
-		FROM master_tahun
-		WHERE uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domainTahunProker.TahunProkerDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("master_tahun").
+		Select("id, uuid, tahun").
+		Where("uuid = ?", id).
+		Take(&rowData).Error
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -86,7 +83,7 @@ func (r *TahunProkerRepository) GetAll(
 	page, limit *int,
 ) ([]domainTahunProker.TahunProker, int64, error) {
 
-	var TahunProkers []domainTahunProker.TahunProker
+	var TahunProkers = make([]domainTahunProker.TahunProker, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainTahunProker.TahunProker{})

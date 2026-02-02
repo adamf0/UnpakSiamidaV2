@@ -4,8 +4,10 @@ import (
 	"context"
 	// commondomaingeneraterenstra "UnpakSiamida/common/domain"
 	domaingeneraterenstra "UnpakSiamida/modules/generaterenstra/domain"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
 	// "strings"
 	"errors"
 )
@@ -80,55 +82,33 @@ func (r *GenerateRenstraRepository) GetAllRenstraNilaiByTahunFakUnitDefault(
 	fakultasUnit uint,
 ) ([]domaingeneraterenstra.GenerateRenstraDefault, error) {
 
-	query := `
-		SELECT
-			gr.id as ID,
-			gr.uuid as UUID,
-			gr.id_renstra as RenstraId,
-			tr.uuid as TemplateRenstraUuid,
-			gr.template_renstra as TemplateRenstra,
-            i.indikator as Indikator,
-			gr.tugas as Tugas,
-			r.tahun as RenstraTahun,
-			tr.tahun as TemplateTahun 
-		FROM renstra_nilai gr
-		INNER JOIN renstra r ON r.id = gr.id_renstra
-		INNER JOIN template_renstra tr ON tr.id = gr.template_renstra
-        INNER JOIN master_indikator_renstra i ON tr.indikator = i.id
-		WHERE r.tahun = ?
-		  AND r.fakultas_unit = ?
-	`
+	var results = make([]domaingeneraterenstra.GenerateRenstraDefault, 0)
 
-	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasUnit).Rows()
+	err := r.db.WithContext(ctx).
+		Table("renstra_nilai gr").
+		Select(`
+		gr.id AS ID,
+		gr.uuid AS UUID,
+		gr.id_renstra AS RenstraId,
+		tr.uuid AS TemplateRenstraUuid,
+		gr.template_renstra AS TemplateRenstra,
+		i.indikator AS Indikator,
+		gr.tugas AS Tugas,
+		r.tahun AS RenstraTahun,
+		tr.tahun AS TemplateTahun
+	`).
+		Joins("INNER JOIN renstra r ON r.id = gr.id_renstra").
+		Joins("INNER JOIN template_renstra tr ON tr.id = gr.template_renstra").
+		Joins("INNER JOIN master_indikator_renstra i ON tr.indikator = i.id").
+		Where("r.tahun = ? AND r.fakultas_unit = ?", tahun, fakultasUnit).
+		Find(&results).Error
+
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	results := make([]domaingeneraterenstra.GenerateRenstraDefault, 0)
-
-	for rows.Next() {
-		var item domaingeneraterenstra.GenerateRenstraDefault
-
-		err := rows.Scan(
-			&item.ID,
-			&item.UUID,
-			&item.RenstraId,
-			&item.TemplateRenstraUuid,
-			&item.TemplateRenstra,
-			&item.Indikator,
-			&item.Tugas,
-			&item.RenstraTahun,
-			&item.TemplateTahun,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, item)
-	}
 
 	return results, nil
+
 }
 
 // ------------------------
@@ -140,65 +120,36 @@ func (r *GenerateRenstraRepository) GetAllDokumenTambahanByTahunFakUnitDefault(
 	fakultasUnit uint,
 ) ([]domaingeneraterenstra.GenerateDokumenTambahanDefault, error) {
 
-	query := `
-		SELECT 
-			d.id as ID,
-			d.uuid as UUID,
-			r.id as RenstraId,
-			dt.uuid as TemplateDokumenTambahanUuid,
-			dt.id as TemplateDokumenTambahan,
-			jf.id as JenisFileId,
-			jf.nama as JenisFile,
-			dt.pertanyaan as Pertanyaan,
-			dt.tugas as Tugas,
-			r.fakultas_unit as FakultasUnit,
-			r.tahun as RenstraTahun,
-			dt.tahun as TemplateTahun
-		FROM dokumen_tambahan d
-		INNER JOIN renstra r ON r.id = d.id_renstra
-		INNER JOIN template_dokumen_tambahan dt ON dt.id = d.id_template_dokumen_tambahan
-		INNER JOIN jenis_file jf ON jf.id = dt.jenis_file
-		WHERE r.tahun = ?
-		  AND r.fakultas_unit = ?
-	`
+	var results = make([]domaingeneraterenstra.GenerateDokumenTambahanDefault, 0)
 
-	rows, err := r.db.WithContext(ctx).Raw(query, tahun, fakultasUnit).Rows()
+	err := r.db.WithContext(ctx).
+		Table("dokumen_tambahan d").
+		Select(`
+		d.id AS ID,
+		d.uuid AS UUID,
+		r.id AS RenstraId,
+		dt.uuid AS TemplateDokumenTambahanUuid,
+		dt.id AS TemplateDokumenTambahan,
+		jf.id AS JenisFileId,
+		jf.nama AS JenisFile,
+		dt.pertanyaan AS Pertanyaan,
+		dt.tugas AS Tugas,
+		r.fakultas_unit AS FakultasUnit,
+		r.tahun AS RenstraTahun,
+		dt.tahun AS TemplateTahun
+	`).
+		Joins("INNER JOIN renstra r ON r.id = d.id_renstra").
+		Joins("INNER JOIN template_dokumen_tambahan dt ON dt.id = d.id_template_dokumen_tambahan").
+		Joins("INNER JOIN jenis_file jf ON jf.id = dt.jenis_file").
+		Where("r.tahun = ? AND r.fakultas_unit = ?", tahun, fakultasUnit).
+		Find(&results).Error
+
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	results := make([]domaingeneraterenstra.GenerateDokumenTambahanDefault, 0)
-
-	for rows.Next() {
-		var item domaingeneraterenstra.GenerateDokumenTambahanDefault
-
-		err := rows.Scan(
-			&item.ID,                          
-			&item.UUID,                       
-			&item.RenstraId,                  
-
-			&item.TemplateDokumenTambahanUuid, 
-			&item.TemplateDokumenTambahan,     
-
-			&item.JenisFileId,                 
-			&item.JenisFile,                   
-
-			&item.Pertanyaan,                  
-			&item.Tugas,                       
-
-			&item.FakultasUnit,                
-			&item.RenstraTahun,                
-			&item.TemplateTahun,               
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		results = append(results, item)
-	}
 
 	return results, nil
+
 }
 
 // ------------------------
@@ -210,7 +161,7 @@ func (r *GenerateRenstraRepository) GetAllDokumenTambahanByTahunFakUnitDefault(
 // ) (*domaingeneraterenstra.RenstraDefault, error) {
 
 // 	query := `
-// 		SELECT 
+// 		SELECT
 // 			r.id as Id,
 // 			r.uuid as Uuid,
 // 			r.tahun as Tahun,

@@ -4,6 +4,7 @@ import (
 	commondomainJadwalProker "UnpakSiamida/common/domain"
 	domainJadwalProker "UnpakSiamida/modules/jadwalproker/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,34 +50,31 @@ func (r *JadwalProkerRepository) GetDefaultByUuid(
 ) (*domainJadwalProker.JadwalProkerDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct JadwalProkerDefault
-	query := `
-		SELECT 
-			jp.id as ID,
-			jp.uuid as UUID,
-			jp.id_fakultas_unit as FakultasUnitId,
-			vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
-			vfu.jenjang as Jenjang,
-			vfu.type as Type,
-			vfu.fakultas as Fakultas,
-			jp.tanggal_tutup as TanggalTutupEntry,
-			jp.tanggal_tutup_dokumen as TanggalTutupDokumen
-		FROM jadwal_proker jp
-		JOIN v_fakultas_unit vfu ON jp.id_fakultas_unit = vfu.id
-		WHERE jp.uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domainJadwalProker.JadwalProkerDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("jadwal_proker jp").
+		Select(`
+		jp.id as ID,
+		jp.uuid as UUID,
+		jp.id_fakultas_unit as FakultasUnitId,
+		vfu.uuid as FakultasUnitUuid,
+		vfu.nama_fak_prod_unit as FakultasUnit,
+		vfu.jenjang as Jenjang,
+		vfu.type as Type,
+		vfu.fakultas as Fakultas,
+		jp.tanggal_tutup as TanggalTutupEntry,
+		jp.tanggal_tutup_dokumen as TanggalTutupDokumen
+	`).
+		Joins("JOIN v_fakultas_unit vfu ON jp.id_fakultas_unit = vfu.id").
+		Where("jp.uuid = ?", id).
+		Take(&rowData).Error
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -97,7 +95,7 @@ func (r *JadwalProkerRepository) GetAll(
 	page, limit *int,
 ) ([]domainJadwalProker.JadwalProkerDefault, int64, error) {
 
-	var rows []domainJadwalProker.JadwalProkerDefault
+	var rows = make([]domainJadwalProker.JadwalProkerDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).

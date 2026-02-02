@@ -61,7 +61,7 @@ func (r *UserRepository) GetAll(
 	page, limit *int,
 ) ([]domainuser.User, int64, error) {
 
-	var users []domainuser.User
+	var users = make([]domainuser.User, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainuser.User{})

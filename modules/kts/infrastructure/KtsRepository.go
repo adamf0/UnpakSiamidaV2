@@ -5,7 +5,6 @@ import (
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domainKts "UnpakSiamida/modules/kts/domain"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -52,106 +51,83 @@ func (r *KtsRepository) GetDefaultByUuid(
 ) (*domainKts.KtsDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct KtsDefault
-	query := `
-		SELECT 
-			k.id AS ID,
-			k.uuid AS UUID,
-
-			r.id AS RenstraId,
-			k.id_renstra_nilai AS RenstraNilai,
-			k.id_dokumen_tambahan AS DokumenTambahan,
-			k.status AS Status,
-
-			dt.id_template_dokumen_tambahan AS TemplateDokumen,
-			tdt.pertanyaan AS Pertanyaan,
-			jf.id AS JenisFileId,
-			jf.nama AS JenisFile,
-
-			rn.template_renstra AS TemplateRenstra,
-			sr.id AS StandarId,
-			sr.nama AS Standar,
-			mir.id AS IndikatorId,
-			mir.indikator AS Indikator,
-
-			r.tahun AS Tahun,
-			r.fakultas_unit AS IdTarget,
-			CASE 
-				WHEN fu.type COLLATE utf8mb4_unicode_ci = 'prodi'
-				THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')')
-				ELSE fu.nama_fak_prod_unit
-			END AS Target,
-
-			k.nomor_laporan as NomorLaporan,
-			k.tanggal_laporan as TanggalLaporan,
-			k.auditor as Auditor,
-			r.auditee as Auditee,
-			k.uraian_ketidaksesuaian_p as KetidaksesuaianP,
-			k.uraian_ketidaksesuaian_l as KetidaksesuaianL,
-			k.uraian_ketidaksesuaian_o as KetidaksesuaianO,
-			k.uraian_ketidaksesuaian_r as KetidaksesuaianR,
-			k.akar_masalah as AkarMasalah,
-			k.tindakan_koreksi as TindakanKoreksi,
-			k.acc_auditor as AccAuditor,
-
-			k.status_acc_auditee as StatusAccAuditee,
-			k.acc_auditee as AccAuditee,
-			k.keterangan_tolak_auditee as KeteranganTolak,
-			k.tindakan_perbaikan as TindakanPerbaikan,
-
-			k.tanggal_penyelesaian as TanggalPenyelesaian,
-
-			k.tinjauan_tindakan_perbaikan as TinjauanTindakanPerbaikan,
-			k.tanggal_closing_auditee as TanggalClosing,
-			k.acc_auditor_final as AccFinal,
-
-			k.tanggal_closing as TanggalClosingFinal,
-			k.wmm_upmf_upmps as WmmUpmfUpmps,
-			k.closingBy as ClosingBy
-
-		FROM kts_renstra k
-
-		LEFT JOIN renstra_nilai rn 
-			ON k.id_renstra_nilai = rn.id
-
-		LEFT JOIN dokumen_tambahan dt 
-			ON k.id_dokumen_tambahan = dt.id
-
-		JOIN renstra r 
-			ON r.id = COALESCE(rn.id_renstra, dt.id_renstra)
-
-		JOIN v_fakultas_unit fu 
-			ON r.fakultas_unit = fu.id
-
-		LEFT JOIN template_renstra tr 
-			ON rn.template_renstra = tr.id
-
-		LEFT JOIN master_indikator_renstra mir 
-			ON tr.indikator = mir.id
-
-		LEFT JOIN master_standar_renstra sr 
-			ON mir.id_master_standar = sr.id
-
-		LEFT JOIN template_dokumen_tambahan tdt 
-			ON dt.id_template_dokumen_tambahan = tdt.id
-
-		LEFT JOIN jenis_file_renstra jf 
-			ON tdt.jenis_file = jf.id
-
-		WHERE k.uuid = ?
-		ORDER BY k.id_dokumen_tambahan DESC
-		LIMIT 1
-	`
-
 	var rowData domainKts.KtsDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("kts_renstra k").
+		Select(`
+		k.id AS ID,
+		k.uuid AS UUID,
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil // ✅ PENTING
+		r.id AS RenstraId,
+		k.id_renstra_nilai AS RenstraNilai,
+		k.id_dokumen_tambahan AS DokumenTambahan,
+		k.status AS Status,
+
+		dt.id_template_dokumen_tambahan AS TemplateDokumen,
+		tdt.pertanyaan AS Pertanyaan,
+		jf.id AS JenisFileId,
+		jf.nama AS JenisFile,
+
+		rn.template_renstra AS TemplateRenstra,
+		sr.id AS StandarId,
+		sr.nama AS Standar,
+		mir.id AS IndikatorId,
+		mir.indikator AS Indikator,
+
+		r.tahun AS Tahun,
+		r.fakultas_unit AS IdTarget,
+		CASE 
+			WHEN fu.type COLLATE utf8mb4_unicode_ci = 'prodi'
+			THEN CONCAT(fu.nama_fak_prod_unit, ' (', fu.jenjang, ')')
+			ELSE fu.nama_fak_prod_unit
+		END AS Target,
+
+		k.nomor_laporan as NomorLaporan,
+		k.tanggal_laporan as TanggalLaporan,
+		k.auditor as Auditor,
+		r.auditee as Auditee,
+		k.uraian_ketidaksesuaian_p as KetidaksesuaianP,
+		k.uraian_ketidaksesuaian_l as KetidaksesuaianL,
+		k.uraian_ketidaksesuaian_o as KetidaksesuaianO,
+		k.uraian_ketidaksesuaian_r as KetidaksesuaianR,
+		k.akar_masalah as AkarMasalah,
+		k.tindakan_koreksi as TindakanKoreksi,
+		k.acc_auditor as AccAuditor,
+
+		k.status_acc_auditee as StatusAccAuditee,
+		k.acc_auditee as AccAuditee,
+		k.keterangan_tolak_auditee as KeteranganTolak,
+		k.tindakan_perbaikan as TindakanPerbaikan,
+
+		k.tanggal_penyelesaian as TanggalPenyelesaian,
+
+		k.tinjauan_tindakan_perbaikan as TinjauanTindakanPerbaikan,
+		k.tanggal_closing_auditee as TanggalClosing,
+		k.acc_auditor_final as AccFinal,
+
+		k.tanggal_closing as TanggalClosingFinal,
+		k.wmm_upmf_upmps as WmmUpmfUpmps,
+		k.closingBy as ClosingBy
+	`).
+		Joins(`LEFT JOIN renstra_nilai rn ON k.id_renstra_nilai = rn.id`).
+		Joins(`LEFT JOIN dokumen_tambahan dt ON k.id_dokumen_tambahan = dt.id`).
+		Joins(`JOIN renstra r ON r.id = COALESCE(rn.id_renstra, dt.id_renstra)`).
+		Joins(`JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id`).
+		Joins(`LEFT JOIN template_renstra tr ON rn.template_renstra = tr.id`).
+		Joins(`LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id`).
+		Joins(`LEFT JOIN master_standar_renstra sr ON mir.id_master_standar = sr.id`).
+		Joins(`LEFT JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id`).
+		Joins(`LEFT JOIN jenis_file_renstra jf ON tdt.jenis_file = jf.id`).
+		Where("k.uuid = ?", id).
+		Order("k.id_dokumen_tambahan DESC").
+		Take(&rowData).Error // Take otomatis LIMIT 1
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -179,7 +155,7 @@ func (r *KtsRepository) GetAll(
 	page, limit *int,
 ) ([]domainKts.KtsDefault, int64, error) {
 
-	var rows []domainKts.KtsDefault
+	var rows = make([]domainKts.KtsDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).

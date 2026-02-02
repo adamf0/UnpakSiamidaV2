@@ -1,13 +1,14 @@
 package infrastructure
 
 import (
-	"context"
 	commondomainJenisFile "UnpakSiamida/common/domain"
 	domainJenisFile "UnpakSiamida/modules/jenisfile/domain"
+	"context"
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"strings"
-	"fmt"
 )
 
 type JenisFileRepository struct {
@@ -47,32 +48,27 @@ func (r *JenisFileRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainJenisFile.JenisFileDefault, error) {
 
-	// Ambil hanya kolom yang benar-benar ada di struct JenisFileDefault
-	query := `
-		SELECT id, uuid, nama
-		FROM jenis_file_renstra
-		WHERE uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domainJenisFile.JenisFileDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("jenis_file_renstra").
+		Select("id, uuid, nama").
+		Where("uuid = ?", id).
+		Take(&rowData).Error // Take otomatis LIMIT 1
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
 }
 
 var allowedSearchColumns = map[string]string{
-    // key:param -> db column
-    "nama":           	"nama",
+	// key:param -> db column
+	"nama": "nama",
 }
 
 // ------------------------
@@ -85,7 +81,7 @@ func (r *JenisFileRepository) GetAll(
 	page, limit *int,
 ) ([]domainJenisFile.JenisFile, int64, error) {
 
-	var JenisFiles []domainJenisFile.JenisFile
+	var JenisFiles = make([]domainJenisFile.JenisFile, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainJenisFile.JenisFile{})
@@ -97,7 +93,7 @@ func (r *JenisFileRepository) GetAll(
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
 			operator := strings.TrimSpace(strings.ToLower(f.Operator))
-			
+
 			var value string
 			if f.Value != nil {
 				value = strings.TrimSpace(*f.Value)
@@ -153,7 +149,7 @@ func (r *JenisFileRepository) GetAll(
 			params = append(params, like)
 		}
 
-		db = db.Where("(" + strings.Join(orParts, " OR ") + ")", params...)
+		db = db.Where("("+strings.Join(orParts, " OR ")+")", params...)
 	}
 
 	// -------------------------------

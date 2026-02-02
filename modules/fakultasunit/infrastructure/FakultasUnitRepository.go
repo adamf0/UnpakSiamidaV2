@@ -58,7 +58,7 @@ func (r *FakultasUnitRepository) GetAll(
 	page, limit *int,
 ) ([]domainfakultasunit.FakultasUnit, int64, error) {
 
-	var fakultasunits []domainfakultasunit.FakultasUnit
+	var fakultasunits = make([]domainfakultasunit.FakultasUnit, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&domainfakultasunit.FakultasUnit{})

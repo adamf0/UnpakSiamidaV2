@@ -4,6 +4,7 @@ import (
 	commondomaindokumenproker "UnpakSiamida/common/domain"
 	domaindokumenproker "UnpakSiamida/modules/dokumenproker/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -49,40 +50,37 @@ func (r *DokumenProkerRepository) GetDefaultByUuid(
 ) (*domaindokumenproker.DokumenProkerDefault, error) {
 
 	// Ambil hanya kolom yang benar-benar ada di struct DokumenProkerDefault
-	query := `
-		SELECT 
-			drp.id as ID,
-			drp.uuid as UUID,
-			drp.id_fakultas_unit as FakultasUnitId,
-            vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
-			vfu.jenjang as Jenjang,
-			vfu.type as Type,
-			vfu.fakultas as Fakultas,
-            drp.id_mata_program as MataProgramId,
-            mp.uuid as MataProgramUUID,
-            mp.mata_program as MataProgram,
-            drp.jenis_dokumen as JenisDokumen,
-            drp.file as File,
-            drp.status_verifikasi as Status,
-            drp.catatan as Catatan
-		FROM dokumen_realisasi_proker drp
-		JOIN v_fakultas_unit vfu ON drp.id_fakultas_unit = vfu.id 
-        JOIN mata_program mp ON drp.id_mata_program = mp.id
-		WHERE a.uuid = ?
-		LIMIT 1
-	`
-
 	var rowData domaindokumenproker.DokumenProkerDefault
 
-	err := r.db.WithContext(ctx).Raw(query, id).Scan(&rowData).Error
-	if err != nil {
-		return nil, err
-	}
+	err := r.db.WithContext(ctx).
+		Table("dokumen_realisasi_proker drp").
+		Select(`
+		drp.id as ID,
+		drp.uuid as UUID,
+		drp.id_fakultas_unit as FakultasUnitId,
+		vfu.uuid as FakultasUnitUuid,
+		vfu.nama_fak_prod_unit as FakultasUnit,
+		vfu.jenjang as Jenjang,
+		vfu.type as Type,
+		vfu.fakultas as Fakultas,
+		drp.id_mata_program as MataProgramId,
+		mp.uuid as MataProgramUUID,
+		mp.mata_program as MataProgram,
+		drp.jenis_dokumen as JenisDokumen,
+		drp.file as File,
+		drp.status_verifikasi as Status,
+		drp.catatan as Catatan
+	`).
+		Joins("JOIN v_fakultas_unit vfu ON drp.id_fakultas_unit = vfu.id").
+		Joins("JOIN mata_program mp ON drp.id_mata_program = mp.id").
+		Where("drp.uuid = ?", id).
+		Take(&rowData).Error
 
-	// Jika tidak ada row → struct kosong → anggap record not found
-	if rowData.Id == 0 {
-		return nil, gorm.ErrRecordNotFound
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
 	return &rowData, nil
@@ -103,7 +101,7 @@ func (r *DokumenProkerRepository) GetAll(
 	page, limit *int,
 ) ([]domaindokumenproker.DokumenProkerDefault, int64, error) {
 
-	var rows []domaindokumenproker.DokumenProkerDefault
+	var rows = make([]domaindokumenproker.DokumenProkerDefault, 0)
 	var total int64
 
 	db := r.db.WithContext(ctx).
