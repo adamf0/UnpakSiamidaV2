@@ -35,10 +35,28 @@
                             "$ref": "#/definitions/domain.AktivitasProker"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -115,10 +133,28 @@
                             "$ref": "#/definitions/domain.BeritaAcara"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -195,10 +231,28 @@
                             "$ref": "#/definitions/domain.DokumenProker"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -275,10 +329,28 @@
                             "$ref": "#/definitions/domain.JadwalProker"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -355,10 +427,28 @@
                             "$ref": "#/definitions/domain.JenisFile"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -435,10 +525,28 @@
                             "$ref": "#/definitions/domain.Kts"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -515,10 +623,28 @@
                             "$ref": "#/definitions/domain.MataProgram"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -569,6 +695,127 @@
                 }
             }
         },
+        "/MonitoringIndikator/{tahun}/{indikator}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MonitoringIndikator"
+                ],
+                "summary": "Get MonitoringIndikator by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "indikator",
+                        "description": "Indikator UUID",
+                        "name": "indikator",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.MonitoringIndikator"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/MonitoringProker/{tahun}/{target}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MonitoringProker"
+                ],
+                "summary": "Get MonitoringProker by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "tahun",
+                        "description": "Tahun UUID",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "target",
+                        "description": "Target UUID",
+                        "name": "target",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.MonitoringProker"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
         "/TahunProker/{uuid}": {
             "get": {
                 "produces": [
@@ -595,10 +842,28 @@
                             "$ref": "#/definitions/domain.TahunProker"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -926,10 +1191,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1150,10 +1433,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1372,10 +1673,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1407,10 +1726,28 @@
                             "$ref": "#/definitions/domain.DokumenTambahan"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1550,10 +1887,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1630,10 +1985,28 @@
                             "$ref": "#/definitions/domain.FakultasUnit"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1772,6 +2145,37 @@
                 }
             }
         },
+        "/indikatorrenstra/tree/{tahun}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IndikatorRenstra"
+                ],
+                "summary": "Tree IndikatorRenstras",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tahun",
+                        "name": "tahun",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/UnpakSiamida_modules_indikatorrenstra_domain.IndikatorTree"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/indikatorrenstra/{uuid}": {
             "get": {
                 "produces": [
@@ -1798,10 +2202,28 @@
                             "$ref": "#/definitions/domain.IndikatorRenstra"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -1928,10 +2350,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2155,10 +2595,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2309,10 +2767,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2408,10 +2884,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2578,10 +3072,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2876,10 +3388,28 @@
                             "$ref": "#/definitions/domain.RenstraDefault"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -2911,10 +3441,28 @@
                             "$ref": "#/definitions/domain.RenstraDefault"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3078,10 +3626,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3176,10 +3742,28 @@
                             "$ref": "#/definitions/domain.RenstraNilai"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3320,10 +3904,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3500,10 +4102,28 @@
                             "$ref": "#/definitions/domain.StandarRenstra"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3597,10 +4217,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3796,10 +4434,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3821,10 +4477,28 @@
                             "$ref": "#/definitions/domain.TahunRenstra"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -3991,10 +4665,28 @@
                             "$ref": "#/definitions/domain.TemplateDokumenTambahan"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4027,10 +4719,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4228,10 +4938,28 @@
                             "$ref": "#/definitions/domain.TemplateRenstra"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4391,10 +5119,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4560,10 +5306,28 @@
                             "$ref": "#/definitions/domain.User"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4690,10 +5454,28 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/domain.Error"
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
                         }
                     }
                 }
@@ -4752,6 +5534,26 @@
         }
     },
     "definitions": {
+        "UnpakSiamida_modules_indikatorrenstra_domain.IndikatorTree": {
+            "type": "object",
+            "properties": {
+                "indikator": {
+                    "type": "string"
+                },
+                "indikatorId": {
+                    "type": "integer"
+                },
+                "indikatorUuid": {
+                    "type": "string"
+                },
+                "parentIndikatorId": {
+                    "type": "integer"
+                },
+                "pointing": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.AktivitasProker": {
             "type": "object",
             "properties": {
@@ -5067,37 +5869,6 @@
                     "type": "string"
                 }
             }
-        },
-        "domain.Error": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/domain.ErrorType"
-                }
-            }
-        },
-        "domain.ErrorType": {
-            "type": "integer",
-            "enum": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "x-enum-varnames": [
-                "ErrorFailure",
-                "Validation",
-                "Problem",
-                "NotFound",
-                "Conflict"
-            ]
         },
         "domain.FakultasUnit": {
             "type": "object",
@@ -5492,6 +6263,166 @@
                     "type": "integer"
                 },
                 "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.MonitoringIndikator": {
+            "type": "object",
+            "properties": {
+                "Capaian": {
+                    "type": "number"
+                },
+                "CapaianAuditor": {
+                    "type": "number"
+                },
+                "Fakultas": {
+                    "type": "string"
+                },
+                "FakultasUnit": {
+                    "type": "string"
+                },
+                "FakultasUnitId": {
+                    "type": "integer"
+                },
+                "FakultasUnitUuid": {
+                    "type": "string"
+                },
+                "Indikator": {
+                    "type": "string"
+                },
+                "IndikatorId": {
+                    "type": "integer"
+                },
+                "Jenjang": {
+                    "type": "string"
+                },
+                "Tahun": {
+                    "type": "integer"
+                },
+                "TipeTarget": {
+                    "type": "string"
+                },
+                "Type": {
+                    "type": "string"
+                },
+                "UndikatorUuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.MonitoringProker": {
+            "type": "object",
+            "properties": {
+                "DokumenPendukung": {
+                    "type": "integer"
+                },
+                "DokumenPendukungR0": {
+                    "type": "integer"
+                },
+                "DokumenPendukungR1": {
+                    "type": "integer"
+                },
+                "DokumenPendukungR2": {
+                    "type": "integer"
+                },
+                "DokumenPendukungR3": {
+                    "type": "integer"
+                },
+                "Fakultas": {
+                    "type": "string"
+                },
+                "FakultasUnit": {
+                    "type": "string"
+                },
+                "FakultasUnitId": {
+                    "type": "integer"
+                },
+                "FakultasUnitUuid": {
+                    "type": "string"
+                },
+                "Jenjang": {
+                    "type": "string"
+                },
+                "Laporan": {
+                    "type": "integer"
+                },
+                "LaporanR0": {
+                    "type": "integer"
+                },
+                "LaporanR1": {
+                    "type": "integer"
+                },
+                "LaporanR2": {
+                    "type": "integer"
+                },
+                "LaporanR3": {
+                    "type": "integer"
+                },
+                "MataProgram": {
+                    "type": "string"
+                },
+                "MataProgramId": {
+                    "type": "integer"
+                },
+                "MataProgramUuid": {
+                    "type": "string"
+                },
+                "ProposalTOR": {
+                    "type": "integer"
+                },
+                "ProposalTORR0": {
+                    "type": "integer"
+                },
+                "ProposalTORR1": {
+                    "type": "integer"
+                },
+                "ProposalTORR2": {
+                    "type": "integer"
+                },
+                "ProposalTORR3": {
+                    "type": "integer"
+                },
+                "SK": {
+                    "type": "integer"
+                },
+                "SKR0": {
+                    "type": "integer"
+                },
+                "SKR1": {
+                    "type": "integer"
+                },
+                "SKR2": {
+                    "type": "integer"
+                },
+                "SKR3": {
+                    "type": "integer"
+                },
+                "SOP": {
+                    "type": "integer"
+                },
+                "SOPR0": {
+                    "type": "integer"
+                },
+                "SOPR1": {
+                    "type": "integer"
+                },
+                "SOPR2": {
+                    "type": "integer"
+                },
+                "SOPR3": {
+                    "type": "integer"
+                },
+                "Tahun": {
+                    "type": "string"
+                },
+                "TahunId": {
+                    "type": "integer"
+                },
+                "TahunUuid": {
+                    "type": "string"
+                },
+                "Type": {
                     "type": "string"
                 }
             }
