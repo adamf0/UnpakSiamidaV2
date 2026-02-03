@@ -111,7 +111,10 @@ func UpdateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "BeritaAcara UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted BeritaAcara"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /beritaacara/{uuid} [delete]
 func DeleteBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 
@@ -139,7 +142,10 @@ func DeleteBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "BeritaAcara UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} BeritaAcaradomain.BeritaAcara
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /BeritaAcara/{uuid} [get]
 func GetBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 

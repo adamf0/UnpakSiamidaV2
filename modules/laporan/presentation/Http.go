@@ -25,8 +25,12 @@ import (
 // @Param target path string true "Target UUID" format(target)
 // @Produce json
 // @Success 200 {object} laporan.MonitoringProker
-// @Failure 404 {object} commondomain.Error
-// @Router /MonitoringProker/{tahun}/{target} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /MonitoringProker/{tahun}/{target} [get]
 func GetMonitoringProkerHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.Params("tahun")
 	target := c.Params("target")
@@ -77,8 +81,12 @@ func GetMonitoringProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param indikator path string true "Indikator UUID" format(indikator)
 // @Produce json
 // @Success 200 {object} laporan.MonitoringIndikator
-// @Failure 404 {object} commondomain.Error
-// @Router /MonitoringIndikator/{tahun}/{indikator} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /MonitoringIndikator/{tahun}/{indikator} [get]
 func GetMonitoringIndikatorHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.Params("tahun")
 	indikator := c.Params("indikator")

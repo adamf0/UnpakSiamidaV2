@@ -107,7 +107,10 @@ func UpdateJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "JadwalProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted JadwalProker"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /jadwalproker/{uuid} [delete]
 func DeleteJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 
@@ -135,7 +138,10 @@ func DeleteJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "JadwalProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} JadwalProkerdomain.JadwalProker
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /JadwalProker/{uuid} [get]
 func GetJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")

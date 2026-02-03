@@ -27,7 +27,10 @@ import (
 // @Param uuid path string true "FakultasUnit UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} fakultasunitdomain.FakultasUnit
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /fakultasunit/{uuid} [get]
 func GetFakultasUnitHandler(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")

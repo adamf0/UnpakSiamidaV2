@@ -163,8 +163,12 @@ func UpdateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "TemplateRenstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted TemplateRenstra"
-// @Failure 404 {object} commondomain.Error
-// @Router /templaterenstra/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /templaterenstra/{uuid} [delete]
 func DeleteTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 
 	uuid := c.Params("uuid")
@@ -191,8 +195,12 @@ func DeleteTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "TemplateRenstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} templaterenstradomain.TemplateRenstra
-// @Failure 404 {object} commondomain.Error
-// @Router /templaterenstra/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /templaterenstra/{uuid} [get]
 func GetTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 

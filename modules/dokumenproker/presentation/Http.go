@@ -125,7 +125,10 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "DokumenProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted DokumenProker"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /dokumenproker/{uuid} [delete]
 func DeleteDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 
@@ -153,7 +156,10 @@ func DeleteDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "DokumenProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} DokumenProkerdomain.DokumenProker
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /DokumenProker/{uuid} [get]
 func GetDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")

@@ -125,7 +125,10 @@ func UpdateAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "AktivitasProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted AktivitasProker"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /aktivitasproker/{uuid} [delete]
 func DeleteAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 
@@ -153,7 +156,10 @@ func DeleteAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "AktivitasProker UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} AktivitasProkerdomain.AktivitasProker
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /AktivitasProker/{uuid} [get]
 func GetAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")

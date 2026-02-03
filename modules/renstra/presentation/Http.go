@@ -174,8 +174,12 @@ func GiveCodeAccessRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "Renstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted Renstra"
-// @Failure 404 {object} commondomain.Error
-// @Router /renstra/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /renstra/{uuid} [delete]
 func DeleteRenstraHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 
@@ -203,8 +207,12 @@ func DeleteRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "Renstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} renstradomain.RenstraDefault
-// @Failure 404 {object} commondomain.Error
-// @Router /renstra/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /renstra/{uuid} [get]
 func GetRenstraHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 
@@ -236,8 +244,12 @@ func GetRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param tahun path string true "Tahun"
 // @Produce json
 // @Success 200 {object} renstradomain.RenstraDefault
-// @Failure 404 {object} commondomain.Error
-// @Router /renstra/{tahun} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /renstra/{tahun} [get]
 func GetRenstraByTahunTargetHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
 	page := c.QueryInt("page", 1)

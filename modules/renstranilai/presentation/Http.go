@@ -95,8 +95,12 @@ func UpdateRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "RenstraNilai UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted RenstraNilai"
-// @Failure 404 {object} commondomain.Error
-// @Router /renstranilai/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /renstranilai/{uuid} [delete]
 func DeleteRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 
@@ -124,8 +128,12 @@ func DeleteRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "RenstraNilai UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} renstranilaidomain.RenstraNilai
-// @Failure 404 {object} commondomain.Error
-// @Router /renstranilai/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /renstranilai/{uuid} [get]
 func GetRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 

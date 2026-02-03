@@ -102,8 +102,12 @@ func UpdateMataProgramHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "MataProgram UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted MataProgram"
-// @Failure 404 {object} commondomain.Error
-// @Router /mataprogram/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /mataprogram/{uuid} [delete]
 func DeleteMataProgramHandlerfunc(c *fiber.Ctx) error {
 
 	uuid := c.Params("uuid")
@@ -130,8 +134,12 @@ func DeleteMataProgramHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "MataProgram UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} MataProgramdomain.MataProgram
-// @Failure 404 {object} commondomain.Error
-// @Router /MataProgram/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /MataProgram/{uuid} [get]
 func GetMataProgramHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 

@@ -124,8 +124,12 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 // @Param uuid path string true "User UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted user"
-// @Failure 404 {object} commondomain.Error
-// @Router /user/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /user/{uuid} [delete]
 func DeleteUserHandler(c *fiber.Ctx) error {
 
 	cmd := DeleteUser.DeleteUserCommand{
@@ -154,8 +158,12 @@ func DeleteUserHandler(c *fiber.Ctx) error {
 // @Param uuid path string true "User UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} userdomain.User
-// @Failure 404 {object} commondomain.Error
-// @Router /user/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /user/{uuid} [get]
 func GetUserHandler(c *fiber.Ctx) error {
 
 	query := GetUser.GetUserByUuidQuery{

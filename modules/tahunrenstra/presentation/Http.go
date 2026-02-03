@@ -26,8 +26,12 @@ import (
 // @Tags TahunRenstra
 // @Produce json
 // @Success 200 {object} TahunRenstradomain.TahunRenstra
-// @Failure 404 {object} commondomain.Error
-// @Router /tahunrenstra/active [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /tahunrenstra/active [get]
 func GetActiveTahunRenstraHandlerfunc(c *fiber.Ctx) error {
 	query := GetActiveTahunRenstra.GetActiveTahunRenstraQuery{}
 

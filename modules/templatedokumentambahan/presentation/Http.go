@@ -134,8 +134,12 @@ func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "TemplateDokumenTambahan UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted TemplateDokumenTambahan"
-// @Failure 404 {object} commondomain.Error
-// @Router /templatedokumentambahan/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /templatedokumentambahan/{uuid} [delete]
 func DeleteTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 
 	uuid := c.Params("uuid")
@@ -162,8 +166,12 @@ func DeleteTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "TemplateDokumenTambahan UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} templatedokumentambahandomain.TemplateDokumenTambahan
-// @Failure 404 {object} commondomain.Error
-// @Router /templatedokumentambahan/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /templatedokumentambahan/{uuid} [get]
 func GetTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 

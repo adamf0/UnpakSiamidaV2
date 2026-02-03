@@ -109,8 +109,12 @@ func UpdateKtsHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "Kts UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} Ktsdomain.Kts
-// @Failure 404 {object} commondomain.Error
-// @Router /Kts/{uuid} [get]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /Kts/{uuid} [get]
 func GetKtsHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 
@@ -221,8 +225,12 @@ func GetAllKtssHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "Kts UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted Kts"
-// @Failure 404 {object} commondomain.Error
-// @Router /kts/{uuid} [delete]
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+//
+//	@Router /kts/{uuid} [delete]
 func DeleteKtsHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 

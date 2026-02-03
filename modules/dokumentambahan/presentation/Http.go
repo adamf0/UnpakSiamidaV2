@@ -91,7 +91,10 @@ func UpdateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "DokumenTambahan UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted DokumenTambahan"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /dokumentambahan/{uuid} [delete]
 func DeleteDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
@@ -120,7 +123,10 @@ func DeleteDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "DokumenTambahan UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} dokumentambahandomain.DokumenTambahan
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /dokumentambahan/{uuid} [get]
 func GetDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")

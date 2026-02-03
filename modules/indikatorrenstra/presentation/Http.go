@@ -131,7 +131,10 @@ func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "IndikatorRenstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted IndikatorRenstra"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /indikatorrenstra/{uuid} [delete]
 func DeleteIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
@@ -160,7 +163,10 @@ func DeleteIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "IndikatorRenstra UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} indikatorrenstradomain.IndikatorRenstra
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /indikatorrenstra/{uuid} [get]
 func GetIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
@@ -193,7 +199,10 @@ func GetIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param uuidTahun path string true "tahun UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} indikatorrenstradomain.IndikatorRenstra
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /indikatorrenstra/{uuid} [get]
 // func GetTreeIndikatorRenstraByTahunHandler(c *fiber.Ctx) error {
 //     uuidTahun := c.Params("uuidTahun")

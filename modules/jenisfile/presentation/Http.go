@@ -96,7 +96,10 @@ func UpdateJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "JenisFile UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of deleted JenisFile"
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /jenisfile/{uuid} [delete]
 func DeleteJenisFileHandlerfunc(c *fiber.Ctx) error {
 
@@ -124,7 +127,10 @@ func DeleteJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Param uuid path string true "JenisFile UUID" format(uuid)
 // @Produce json
 // @Success 200 {object} JenisFiledomain.JenisFile
-// @Failure 404 {object} commondomain.Error
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
 // @Router /JenisFile/{uuid} [get]
 func GetJenisFileHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
