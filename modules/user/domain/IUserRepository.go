@@ -9,6 +9,7 @@ import (
 
 type IUserRepository interface {
 	GetByUuid(ctx context.Context, uid uuid.UUID) (*User, error)
+	GetAllStrict(ctx context.Context) ([]UserOptions, error)
 	GetAll(
 		ctx context.Context,
 		search string,

@@ -3,6 +3,7 @@ package infrastructure
 import (
 	create "UnpakSiamida/modules/user/application/CreateUser"
 	delete "UnpakSiamida/modules/user/application/DeleteUser"
+	getAllOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
 	getAll "UnpakSiamida/modules/user/application/GetAllUsers"
 	get "UnpakSiamida/modules/user/application/GetUser"
 	setupUuid "UnpakSiamida/modules/user/application/SetupUuidUser"
@@ -74,6 +75,13 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		getAll.GetAllUsersQuery,
 		domainuser.PagedUsers,
 	](&getAll.GetAllUsersQueryHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getAllOptions.GetAllUserOptionsQuery,
+		[]domainuser.UserOptions,
+	](&getAllOptions.GetAllUserOptionsQueryHandler{
 		Repo: repoUser,
 	})
 

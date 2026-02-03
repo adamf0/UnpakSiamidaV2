@@ -13,6 +13,7 @@ import (
 
 	CreateUser "UnpakSiamida/modules/user/application/CreateUser"
 	DeleteUser "UnpakSiamida/modules/user/application/DeleteUser"
+	GetAllUserOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
 	GetAllUsers "UnpakSiamida/modules/user/application/GetAllUsers"
 	GetUser "UnpakSiamida/modules/user/application/GetUser"
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
@@ -267,6 +268,30 @@ func GetAllUsersHandler(c *fiber.Ctx) error {
 	return adapter.Send(c, result)
 }
 
+// =======================================================
+// GET /user-options
+// =======================================================
+
+// GetAllUserOptionsHandler godoc
+// @Summary Get All User Options
+// @Tags User
+// @Produce json
+// @Success 200 {object} userdomain.UserOptions
+// @Router /user-options [get]
+func GetAllUserOptionsHandler(c *fiber.Ctx) error {
+	query := GetAllUserOptions.GetAllUserOptionsQuery{}
+	result, err := mediatr.Send[
+		GetAllUserOptions.GetAllUserOptionsQuery,
+		[]userdomain.UserOptions,
+	](c.Context(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(result)
+}
+
 func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
 	cmd := SetupUuidUser.SetupUuidUserCommand{}
 
@@ -280,6 +305,7 @@ func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleUser(app *fiber.App) {
 	admin := []string{"admin"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/user/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidUsersHandlerfunc)
@@ -289,6 +315,8 @@ func ModuleUser(app *fiber.App) {
 	app.Delete("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteUserHandler)
 	app.Get("/user/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetUserHandler)
 	app.Get("/users", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUsersHandler)
+
+	app.Get("/user-options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GetAllUserOptionsHandler)
 }
 
 func nullableString(s string) *string {

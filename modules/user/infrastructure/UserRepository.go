@@ -51,6 +51,17 @@ var allowedSearchColumns = map[string]string{
 	"fakultas_unit": "fakultas_unit",
 }
 
+func (r *UserRepository) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
+	var users = make([]domainuser.UserOptions, 0)
+
+	// Ambil semua data dari table "users"
+	if err := r.db.WithContext(ctx).Table("users").Where("level != ?", "admin").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // ------------------------
 // GET ALL
 // ------------------------

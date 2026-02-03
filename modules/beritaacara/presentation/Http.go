@@ -266,8 +266,8 @@ func ModuleBeritaAcara(app *fiber.App) {
 	app.Post("/beritaacara", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateBeritaAcaraHandlerfunc)
 	app.Put("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateBeritaAcaraHandlerfunc)
 	app.Delete("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteBeritaAcaraHandlerfunc)
-	app.Get("/BeritaAcara/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetBeritaAcaraHandlerfunc)
-	app.Get("/BeritaAcaras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllBeritaAcarasHandlerfunc)
+	app.Get("/beritaacara/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetBeritaAcaraHandlerfunc)
+	app.Get("/beritaacaras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllBeritaAcarasHandlerfunc)
 }
 
 func parseInt(val string) int {

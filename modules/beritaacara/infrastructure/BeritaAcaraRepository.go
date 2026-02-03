@@ -60,12 +60,18 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 		ba.fakultas_unit as FakultasUnitId,
 		fu.nama_fak_prod_unit as FakultasUnit,
 		ba.tanggal as Tanggal,
+		
 		ba.auditee as AuditeeId,
-		u1.name as NamaAuditee,
-		ba.auditor1 as Auditor1,
-		u2.name as NamaAuditor1,
-		ba.auditor2 as Auditor2,
-		u3.name as NamaAuditor2
+		u1.uuid as AuditeeUuid,
+		u1.name as Auditee,
+
+		ba.auditor1 as Auditor1Id,
+		u2.uuid as Auditor1Uuid,
+		u2.name as Auditor1,
+		
+		ba.auditor2 as Auditor2Id,
+		u3.uuid as Auditor2Uuid,
+		u3.name as Auditor2
 	`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id").
 		Joins("LEFT JOIN users u1 ON ba.auditee = u1.id").
@@ -86,6 +92,7 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
 	"nama_fak_prod_unit": "fu.nama_fak_prod_unit",
+	"target":             "fu.uuid",
 }
 
 // ------------------------
@@ -104,22 +111,26 @@ func (r *BeritaAcaraRepository) GetAll(
 	db := r.db.WithContext(ctx).
 		Table("berita_acara ba").
 		Select(`
-			ba.id AS id,
-			ba.uuid AS uuid,
+			ba.id as Id,
+			ba.uuid as Uuid,
+			ba.tahun as Tahun,
+			ba.fakultas_unit as FakultasUnitId,
+			fu.uuid as FakultasUnitUuid,
+			fu.nama_fak_prod_unit as FakultasUnit,
+			ba.tanggal as Tanggal,
+			ba.auditee as AuditeeId,
 
-			ba.tahun AS tahun,
-			ba.fakultas_unit AS fakultas_unit_id,
-			fu.nama_fak_prod_unit AS fakultas_unit,
-			ba.tanggal AS tanggal,
+			ba.auditee as AuditeeId,
+			u1.uuid as AuditeeUuid,
+			u1.name as Auditee,
 
-			ba.auditee AS auditee_id,
-			u1.name AS nama_auditee,
-
-			ba.auditor1 AS auditor1,
-			u2.name AS nama_auditor1,
-
-			ba.auditor2 AS auditor2,
-			u3.name AS nama_auditor2
+			ba.auditor1 as Auditor1Id,
+			u2.uuid as Auditor1Uuid,
+			u2.name as Auditor1,
+			
+			ba.auditor2 as Auditor2Id,
+			u3.uuid as Auditor2Uuid,
+			u3.name as Auditor2
 		`).
 		Joins(`LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id`).
 		Joins(`LEFT JOIN users u1 ON ba.auditee = u1.id`).
