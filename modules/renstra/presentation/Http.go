@@ -3,7 +3,6 @@ package presentation
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -272,7 +271,6 @@ func GetRenstraByTahunTargetHandlerfunc(c *fiber.Ctx) error {
 		}
 		filtersRaw += fmt.Sprintf("uuidauditee:eq:%s;uuidauditor1:eq:%s;uuidauditor2:eq:%s", sid, sid, sid)
 	}
-	log.Printf("[filter] audit: %s", filtersRaw)
 
 	var filters []commondomain.SearchFilter
 
