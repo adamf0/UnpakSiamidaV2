@@ -5280,6 +5280,25 @@
                 }
             }
         },
+        "/user-options": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get All User Options",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.UserOptions"
+                        }
+                    }
+                }
+            }
+        },
         "/user/{uuid}": {
             "get": {
                 "produces": [
@@ -5671,23 +5690,35 @@
                 "auditeeId": {
                     "type": "integer"
                 },
+                "auditeeUuid": {
+                    "type": "string"
+                },
                 "auditor1": {
                     "type": "string"
                 },
                 "auditor1Id": {
                     "type": "integer"
                 },
+                "auditor1Uuid": {
+                    "type": "string"
+                },
                 "auditor2": {
                     "type": "string"
                 },
-                "auditor2ID": {
+                "auditor2Id": {
                     "type": "integer"
+                },
+                "auditor2Uuid": {
+                    "type": "string"
                 },
                 "fakultasUnit": {
                     "type": "string"
                 },
                 "fakultasUnitId": {
                     "type": "integer"
+                },
+                "fakultasUnitUuid": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -7322,6 +7353,26 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UserOptions": {
+            "type": "object",
+            "properties": {
+                "fakultas": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "uuid": {
