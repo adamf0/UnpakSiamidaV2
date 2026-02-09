@@ -4,11 +4,18 @@ import (
 	"context"
 
 	domainberitaacara "UnpakSiamida/modules/beritaacara/domain"
+	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
 type CreateBeritaAcaraCommandHandler struct {
-	Repo domainberitaacara.IBeritaAcaraRepository
+	Repo             domainberitaacara.IBeritaAcaraRepository
+	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository
+	RepoUser         domainuser.IUserRepository
 }
 
 func (h *CreateBeritaAcaraCommandHandler) Handle(
@@ -23,14 +30,86 @@ func (h *CreateBeritaAcaraCommandHandler) Handle(
 		return "", domainberitaacara.InvalidTanggal()
 	}
 
-	//[pr] bagian auditee, auditor masih dalam bentuk int harusnya uuid
+	uuidFakultasUnit, err := uuid.Parse(cmd.FakultasUnitUuid)
+	if err != nil {
+		return "", domainberitaacara.InvalidFakultasUnit()
+	}
+
+	uuidAuditee, err := uuid.Parse(cmd.AuditeeUuid)
+	if err != nil {
+		return "", domainberitaacara.InvalidAuditee()
+	}
+
+	var (
+		idAuditor1 *uint
+		idAuditor2 *uint
+		fakultas   *domainfakultasunit.FakultasUnit
+		auditee    *domainuser.User
+	)
+
+	g, ctxg := errgroup.WithContext(ctx)
+
+	if cmd.Auditor1Uuid != nil {
+		auditor1UUID := *cmd.Auditor1Uuid
+		g.Go(func() error {
+			uuidAuditor1, err := uuid.Parse(auditor1UUID)
+			if err != nil {
+				return nil // optional field → ignore invalid
+			}
+			auditor1, err := h.RepoUser.GetByUuid(ctxg, uuidAuditor1)
+			if err != nil {
+				return nil
+			}
+			idAuditor1 = &auditor1.ID
+			return nil
+		})
+	}
+
+	if cmd.Auditor2Uuid != nil {
+		auditor2UUID := *cmd.Auditor2Uuid
+		g.Go(func() error {
+			uuidAuditor2, err := uuid.Parse(auditor2UUID)
+			if err != nil {
+				return nil
+			}
+			auditor2, err := h.RepoUser.GetByUuid(ctxg, uuidAuditor2)
+			if err != nil {
+				return nil
+			}
+			idAuditor2 = &auditor2.ID
+			return nil
+		})
+	}
+
+	g.Go(func() error {
+		f, err := h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultasUnit)
+		if err != nil {
+			return domainberitaacara.NotFoundFakultas()
+		}
+		fakultas = f
+		return nil
+	})
+
+	g.Go(func() error {
+		u, err := h.RepoUser.GetByUuid(ctxg, uuidAuditee)
+		if err != nil {
+			return domainberitaacara.NotFoundAuditee()
+		}
+		auditee = u
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return "", err
+	}
+
 	result := domainberitaacara.NewBeritaAcara(
 		cmd.Tahun,
-		cmd.FakultasUnit,
+		fakultas.ID,
 		tanggal,
-		cmd.Auditee,
-		cmd.Auditor1,
-		cmd.Auditor2,
+		auditee.ID,
+		idAuditor1,
+		idAuditor2,
 	)
 
 	if !result.IsSuccess {

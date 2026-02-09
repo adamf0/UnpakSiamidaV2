@@ -19,6 +19,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/text/unicode/norm"
 )
@@ -257,9 +258,19 @@ func JWTMiddleware() fiber.Handler {
 			c.Request().PostArgs().Set("sid", sid)
 		}
 
+		c.Request().PostArgs().Set("token", tokenStr)
+		// c.Locals("token", tokenStr)
+
 		// lanjut ke handler berikutnya
 		return c.Next()
 	}
+}
+
+func getTahun(c *fiber.Ctx) string {
+	if t := c.Params("tahun"); t != "" {
+		return t
+	}
+	return c.Query("ctxtahun")
 }
 
 func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
@@ -323,7 +334,7 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 			return c.Next()
 		}
 
-		tahun := c.Params("tahun") //c.Query("tahun") -> /?tahun=
+		tahun := getTahun(c) //c.Query("tahun") -> /?tahun=
 		log.Printf("[RBAC] Tahun: %s", tahun)
 		if tahun == "" {
 			log.Println("[RBAC] Tahun query param missing")
@@ -369,6 +380,33 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+func WSError(conn *websocket.Conn, code string, msg string) error {
+
+	conn.WriteJSON(map[string]interface{}{
+		"code":        code,
+		"description": msg,
+	})
+
+	conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(
+			websocket.ClosePolicyViolation,
+			msg,
+		),
+		time.Now().Add(time.Second),
+	)
+
+	conn.Close()
+	return errors.New(msg)
+}
+
+type WSSession struct {
+	Token         string
+	SID           string
+	User          *Account
+	GrantedAccess []string
 }
 
 // =======================

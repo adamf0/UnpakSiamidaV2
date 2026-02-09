@@ -1,7 +1,9 @@
 package presentation
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"strconv"
 	"strings"
 
@@ -15,6 +17,7 @@ import (
 
 	CreateBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 	DeleteBeritaAcara "UnpakSiamida/modules/beritaacara/application/DeleteBeritaAcara"
+	ExportBeritaAcara "UnpakSiamida/modules/beritaacara/application/ExportBeritaAcara"
 	GetAllBeritaAcaras "UnpakSiamida/modules/beritaacara/application/GetAllBeritaAcaras"
 	GetBeritaAcara "UnpakSiamida/modules/beritaacara/application/GetBeritaAcara"
 	SetupUuidBeritaAcara "UnpakSiamida/modules/beritaacara/application/SetupUuidBeritaAcara"
@@ -28,7 +31,7 @@ import (
 // CreateBeritaAcaraHandler godoc
 // @Summary Create new BeritaAcara
 // @Tags BeritaAcara
-// @Param tahun formData string true "Nama Tahun"
+// @Param tahun formData string true "Tahun"
 // @Param fakultasunit formData string true "Fakultas Unit"
 // @Param tanggal formData string true "Tanggal"
 // @Param auditee formData string true "Auditee"
@@ -44,12 +47,12 @@ import (
 func CreateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 
 	cmd := CreateBeritaAcara.CreateBeritaAcaraCommand{
-		Tahun:        c.FormValue("tahun"),
-		FakultasUnit: parseInt(c.FormValue("fakultasunit")),
-		Tanggal:      c.FormValue("tanggal"),
-		Auditee:      parseOptionalInt(c.FormValue("auditee")),
-		Auditor1:     parseOptionalInt(c.FormValue("auditor1")),
-		Auditor2:     parseOptionalInt(c.FormValue("auditor2")),
+		Tahun:            c.FormValue("tahun"),
+		FakultasUnitUuid: c.FormValue("fakultasunit"),
+		Tanggal:          c.FormValue("tanggal"),
+		AuditeeUuid:      c.FormValue("auditee"),
+		Auditor1Uuid:     str(c.FormValue("auditor1")),
+		Auditor2Uuid:     str(c.FormValue("auditor2")),
 	}
 
 	uuid, err := mediatr.Send[CreateBeritaAcara.CreateBeritaAcaraCommand, string](context.Background(), cmd)
@@ -68,7 +71,7 @@ func CreateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 // @Summary Update existing BeritaAcara
 // @Tags BeritaAcara
 // @Param uuid path string true "BeritaAcara UUID" format(uuid)
-// @Param tahun formData string true "Nama Tahun"
+// @Param tahun formData string true "Tahun"
 // @Param fakultasunit formData string true "Fakultas Unit"
 // @Param tanggal formData string true "Tanggal"
 // @Param auditee formData string true "Auditee"
@@ -84,13 +87,13 @@ func CreateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 func UpdateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 
 	cmd := UpdateBeritaAcara.UpdateBeritaAcaraCommand{
-		Uuid:         c.Params("uuid"),
-		Tahun:        c.FormValue("tahun"),
-		FakultasUnit: parseInt(c.FormValue("fakultasunit")),
-		Tanggal:      c.FormValue("tanggal"),
-		Auditee:      parseOptionalInt(c.FormValue("auditee")),
-		Auditor1:     parseOptionalInt(c.FormValue("auditor1")),
-		Auditor2:     parseOptionalInt(c.FormValue("auditor2")),
+		Uuid:             c.Params("uuid"),
+		Tahun:            c.FormValue("tahun"),
+		FakultasUnitUuid: c.FormValue("fakultasunit"),
+		Tanggal:          c.FormValue("tanggal"),
+		AuditeeUuid:      c.FormValue("auditee"),
+		Auditor1Uuid:     str(c.FormValue("auditor1")),
+		Auditor2Uuid:     str(c.FormValue("auditor2")),
 	}
 
 	updatedID, err := mediatr.Send[UpdateBeritaAcara.UpdateBeritaAcaraCommand, string](context.Background(), cmd)
@@ -130,6 +133,132 @@ func DeleteBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"uuid": deletedID})
+}
+
+// PublishBeritaAcaraHandler godoc
+// @Summary Publish existing BeritaAcara
+// @Tags BeritaAcara
+// @Param uuid path string true "BeritaAcara UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export BeritaAcara"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/{uuid} [post]
+func PublishBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.FormValue("token")
+
+	cmd := ExportBeritaAcara.PublishBeritaAcaraCommand{
+		Uuid:  uuid,
+		Token: token,
+	}
+
+	exportID, err := mediatr.Send[ExportBeritaAcara.PublishBeritaAcaraCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{"uuid": exportID})
+}
+
+// PreviewBeritaAcaraHandler godoc
+// @Summary Publish existing BeritaAcara
+// @Tags BeritaAcara
+// @Param uuid path string true "BeritaAcara UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export BeritaAcara"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/preview/:uuid [get]
+func PreviewBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.Query("token")
+	tahun := c.Query("ctxtahun")
+	// sid := c.FormValue("sid")
+	granted := c.FormValue("grantedaccess")
+
+	cmd := ExportBeritaAcara.ExportBeritaAcaraCommand{
+		Uuid:    uuid,
+		Token:   token,
+		SID:     "preview",
+		Granted: granted,
+		Tahun:   tahun,
+	}
+
+	data, err := mediatr.Send[ExportBeritaAcara.ExportBeritaAcaraCommand, []byte](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", "inline; filename=berita_acara.pdf")
+	c.Set("Cache-Control", "private, max-age=60")
+	c.Set("X-Accel-Buffering", "no") // penting untuk nginx/Cloudflare agar streaming langsung
+	return c.Send(data)
+}
+
+// ExportBeritaAcaraHandler godoc
+// @Summary Publish existing BeritaAcara
+// @Tags BeritaAcara
+// @Param uuid path string true "BeritaAcara UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export BeritaAcara"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/export/:uuid [get]
+func ExportBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.Query("token")
+	tahun := c.Query("ctxtahun")
+	sid := c.FormValue("sid")
+	granted := c.FormValue("grantedaccess")
+
+	cmd := ExportBeritaAcara.ExportBeritaAcaraCommand{
+		Uuid:    uuid,
+		Token:   token,
+		SID:     sid,
+		Granted: granted,
+		Tahun:   tahun,
+	}
+
+	data, err := mediatr.Send[ExportBeritaAcara.ExportBeritaAcaraCommand, []byte](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", "attachment; filename=berita_acara.pdf")
+	c.Set("Cache-Control", "private, max-age=60")
+	c.Set("X-Accel-Buffering", "no")
+
+	dataReader := bytes.NewReader(data)
+	buf := make([]byte, 32*1024) // 32 KB per chunk
+
+	for {
+		n, err := dataReader.Read(buf)
+		if n > 0 {
+			if _, writeErr := c.Write(buf[:n]); writeErr != nil {
+				return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", writeErr.Error()))
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", err.Error()))
+		}
+	}
+
+	return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", "file is lost"))
 }
 
 // =======================================================
@@ -259,13 +388,19 @@ func SetupUuidBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleBeritaAcara(app *fiber.App) {
 	admin := []string{"admin"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/beritaacara/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidBeritaAcarasHandlerfunc)
 
-	app.Post("/beritaacara", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateBeritaAcaraHandlerfunc)
-	app.Put("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateBeritaAcaraHandlerfunc)
-	app.Delete("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteBeritaAcaraHandlerfunc)
+	app.Post("/beritaacara", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), CreateBeritaAcaraHandlerfunc)
+	app.Put("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateBeritaAcaraHandlerfunc)
+	app.Delete("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), DeleteBeritaAcaraHandlerfunc)
+
+	app.Get("/beritaacara/publish/:uuid", commonpresentation.JWTMiddleware(), PublishBeritaAcaraHandlerfunc)
+	app.Get("/beritaacara/preview/:uuid", PreviewBeritaAcaraHandlerfunc) //private network
+	app.Get("/beritaacara/export/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), ExportBeritaAcaraHandlerfunc)
+
 	app.Get("/beritaacara/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetBeritaAcaraHandlerfunc)
 	app.Get("/beritaacaras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllBeritaAcarasHandlerfunc)
 }
@@ -281,13 +416,6 @@ func parseInt(val string) int {
 	return i
 }
 
-func parseOptionalInt(val string) *int {
-	if val == "" {
-		return nil
-	}
-	i, err := strconv.Atoi(val)
-	if err != nil {
-		return nil
-	}
-	return &i
+func str(v string) *string {
+	return &v
 }

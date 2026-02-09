@@ -36,3 +36,10 @@ func InvalidParsing(target string) domain.Error {
 func NotFoundFakultasUnit(id string) domain.Error {
 	return domain.NotFoundError("User.NotFoundFakultasUnit", fmt.Sprintf("fakultas unit with identifier %s not found", id))
 }
+
+func NotGranted() domain.Error {
+	return domain.NotFoundError("User.NotGranted", "you can't access this file because don't have permission")
+}
+func NotGrantedNonUser() domain.Error {
+	return domain.NotFoundError("User.NotGrantedNonUser", "you can't access this file because don't have permission non user")
+}

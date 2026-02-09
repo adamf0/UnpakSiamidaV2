@@ -42,10 +42,46 @@ func TestBeritaAcaraErrors(t *testing.T) {
 			expectedDesc: "data is invalid",
 		},
 		{
+			name:         "InvalidFakultasUnit_ReturnsCorrectError",
+			err:          domain.InvalidFakultasUnit(),
+			expectedCode: "BeritaAcara.InvalidFakultasUnit",
+			expectedDesc: "fakultas is invalid",
+		},
+		{
+			name:         "InvalidAuditee_ReturnsCorrectError",
+			err:          domain.InvalidAuditee(),
+			expectedCode: "BeritaAcara.InvalidAuditee",
+			expectedDesc: "auditee is invalid",
+		},
+		{
 			name:         "NotFound_WithDynamicId_ReturnsCorrectError",
 			err:          domain.NotFound("XYZ99"),
 			expectedCode: "BeritaAcara.NotFound",
 			expectedDesc: "BeritaAcara with identifier XYZ99 not found",
+		},
+		{
+			name:         "NotFoundFakultas_ReturnsCorrectError",
+			err:          domain.NotFoundFakultas(),
+			expectedCode: "BeritaAcara.NotFoundFakultas",
+			expectedDesc: "fakultas not found",
+		},
+		{
+			name:         "NotFoundAuditee_ReturnsCorrectError",
+			err:          domain.NotFoundAuditee(),
+			expectedCode: "BeritaAcara.NotFoundAuditee",
+			expectedDesc: "auditee not found",
+		},
+		{
+			name:         "NotFoundAuditor_ReturnsCorrectError",
+			err:          domain.NotFoundAuditor(),
+			expectedCode: "BeritaAcara.NotFoundAuditor",
+			expectedDesc: "auditor not found",
+		},
+		{
+			name:         "DuplicateAssigment_ReturnsCorrectError",
+			err:          domain.DuplicateAssigment(),
+			expectedCode: "BeritaAcara.DuplicateAssigment",
+			expectedDesc: "auditee, auditee 1, and auditor 2 must not have the same target",
 		},
 	}
 

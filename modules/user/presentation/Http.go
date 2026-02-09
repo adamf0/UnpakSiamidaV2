@@ -305,7 +305,6 @@ func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleUser(app *fiber.App) {
 	admin := []string{"admin"}
-	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/user/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidUsersHandlerfunc)
@@ -316,7 +315,7 @@ func ModuleUser(app *fiber.App) {
 	app.Get("/user/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetUserHandler)
 	app.Get("/users", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUsersHandler)
 
-	app.Get("/user-options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GetAllUserOptionsHandler)
+	app.Get("/user-options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUserOptionsHandler)
 }
 
 func nullableString(s string) *string {

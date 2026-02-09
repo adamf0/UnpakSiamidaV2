@@ -11,11 +11,14 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	commondomain "UnpakSiamida/common/domain"
 
 	tahunprokerInfrastructure "UnpakSiamida/modules/tahunproker/infrastructure"
 
@@ -195,6 +198,7 @@ import (
 
 	//////////
 
+	eventBeritaAcara "UnpakSiamida/modules/beritaacara/event"
 	eventKts "UnpakSiamida/modules/kts/event"
 	eventUser "UnpakSiamida/modules/user/event"
 
@@ -257,9 +261,15 @@ func main() {
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 
 	var db *gorm.DB
+	var redis commondomain.IRedisStore
 	mustStart("Database", func() error {
 		var err error
 		db, err = NewMySQL()
+		return err
+	})
+	mustStart("Redis", func() error {
+		var err error
+		redis = NewRedisStore()
 		return err
 	})
 
@@ -286,7 +296,7 @@ func main() {
 	})
 
 	mustStart("Berita Acara Module", func() error {
-		return beritaacaraInfrastructure.RegisterModuleBeritaAcara(db)
+		return beritaacaraInfrastructure.RegisterModuleBeritaAcara(db, &redis)
 	})
 
 	mustStart("Standar Renstra Module", func() error {
@@ -380,6 +390,7 @@ func main() {
 	commoninfra.RegisterEvent[eventKts.KtsUpdatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserCreatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app)
@@ -681,4 +692,13 @@ func NewMySQL() (*gorm.DB, error) {
 	})
 
 	return db, err
+}
+
+func NewRedisStore() *commoninfra.RedisStore {
+	client := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		DB:   0,
+	})
+
+	return commoninfra.NewRedisStore(client)
 }

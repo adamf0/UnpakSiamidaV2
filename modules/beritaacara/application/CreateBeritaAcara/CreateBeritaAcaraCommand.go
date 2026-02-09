@@ -1,10 +1,10 @@
 package application
 
 type CreateBeritaAcaraCommand struct {
-	Tahun        string
-	FakultasUnit int
-	Tanggal      string
-	Auditee      *int
-	Auditor1     *int
-	Auditor2     *int
+	Tahun            string
+	FakultasUnitUuid string
+	Tanggal          string
+	AuditeeUuid      string
+	Auditor1Uuid     *string
+	Auditor2Uuid     *string
 }

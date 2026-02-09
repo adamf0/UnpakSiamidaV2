@@ -15,11 +15,11 @@ type BeritaAcara struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement"`
 	UUID         uuid.UUID `gorm:"type:char(36);uniqueIndex"`
 	Tahun        string    `gorm:"column:tahun"`
-	FakultasUnit int       `gorm:"column:fakultas_unit"`
+	FakultasUnit uint      `gorm:"column:fakultas_unit"`
 	Tanggal      time.Time `gorm:"column:tanggal;type:date"`
-	Auditee      *int      `gorm:"column:auditee"`
-	Auditor1     *int      `gorm:"column:auditor1"`
-	Auditor2     *int      `gorm:"column:auditor2"`
+	Auditee      uint      `gorm:"column:auditee"`
+	Auditor1     *uint     `gorm:"column:auditor1"`
+	Auditor2     *uint     `gorm:"column:auditor2"`
 }
 
 func (BeritaAcara) TableName() string {
@@ -29,12 +29,24 @@ func (BeritaAcara) TableName() string {
 // === CREATE ===
 func NewBeritaAcara(
 	tahun string,
-	fakultasUnit int,
+	fakultasUnit uint,
 	tanggal time.Time,
-	auditee *int,
-	auditor1 *int,
-	auditor2 *int,
+	auditee uint,
+	auditor1 *uint,
+	auditor2 *uint,
 ) common.ResultValue[*BeritaAcara] {
+	if fakultasUnit <= 0 {
+		return common.FailureValue[*BeritaAcara](NotFoundFakultas())
+	}
+	if auditee <= 0 {
+		return common.FailureValue[*BeritaAcara](NotFoundAuditee())
+	}
+	if (auditor1 == nil || auditor2 == nil) || (*auditor1 <= 0 || *auditor2 <= 0) {
+		return common.FailureValue[*BeritaAcara](NotFoundAuditor())
+	}
+	if auditee == *auditor1 || auditee == *auditor2 {
+		return common.FailureValue[*BeritaAcara](DuplicateAssigment())
+	}
 
 	BeritaAcara := &BeritaAcara{
 		UUID:         uuid.New(),
@@ -60,11 +72,11 @@ func UpdateBeritaAcara(
 	prev *BeritaAcara,
 	uid uuid.UUID,
 	tahun string,
-	fakultasUnit int,
+	fakultasUnit uint,
 	tanggal time.Time,
-	auditee *int,
-	auditor1 *int,
-	auditor2 *int,
+	auditee uint,
+	auditor1 *uint,
+	auditor2 *uint,
 ) common.ResultValue[*BeritaAcara] {
 
 	if prev == nil {
@@ -73,6 +85,19 @@ func UpdateBeritaAcara(
 
 	if prev.UUID != uid {
 		return common.FailureValue[*BeritaAcara](InvalidData())
+	}
+
+	if fakultasUnit <= 0 {
+		return common.FailureValue[*BeritaAcara](NotFoundFakultas())
+	}
+	if auditee <= 0 {
+		return common.FailureValue[*BeritaAcara](NotFoundAuditee())
+	}
+	if (auditor1 == nil || auditor2 == nil) || (*auditor1 <= 0 || *auditor2 <= 0) {
+		return common.FailureValue[*BeritaAcara](NotFoundAuditor())
+	}
+	if auditee == *auditor1 || auditee == *auditor2 {
+		return common.FailureValue[*BeritaAcara](DuplicateAssigment())
 	}
 
 	prev.Tahun = tahun
@@ -90,3 +115,12 @@ func UpdateBeritaAcara(
 
 	return common.SuccessValue(prev)
 }
+
+// func (b *BeritaAcara) RequestPdfGeneration(token string) {
+// 	b.Raise(event.BeritaAcaraPdfRequestedEvent{
+// 		EventID:         uuid.New(),
+// 		OccurredOn:      time.Now().UTC(),
+// 		BeritaAcaraUUID: b.UUID,
+// 		Token:           token,
+// 	})
+// }

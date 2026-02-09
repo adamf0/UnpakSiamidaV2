@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Berita Acara Audit Internal</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 3cm 3cm 3cm 3cm;
+        }
+        *{
+            line-height: 1.1;
+            font-size: 1.1rem;
+        }
+
+        body {
+            font-family: "Times New Roman", serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #000;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #000;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-heading{
+            font-size: 1.25rem;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+        }
+
+        .title {
+            text-align: center;
+            font-weight: bold;
+            line-height: 1.4;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .content {
+            text-align: justify;
+            margin-top: 20px;
+        }
+
+        .date {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .signature-table {
+            width: 100%;
+            margin-top: 90px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<table class="header-table">
+    <tr>
+        <td width="14%">
+            <img src="{{.Logo1}}" width="100%">
+        </td>
+        <td width="72%" class="text-center">
+            <b class="text-heading">
+                YAYASAN PAKUAN SILIWANGI<br>
+                UNIVERSITAS PAKUAN<br>
+                LEMBAGA PENJAMINAN MUTU
+            </b><br>
+            Jl. Pakuan Kotak Pos 452, Bogor. Telp. 0251-8358848<br>
+            Fax. 0251-8356927<br>
+            Website: http://lpm.unpak.ac.id &nbsp; E-mail : lpmi@unpak.ac.id
+        </td>
+        <td width="14%">
+            <img src="{{.Logo2}}" width="100%">
+        </td>
+    </tr>
+</table>
+
+<br>
+<hr>
+<br>
+
+<!-- JUDUL -->
+<div class="title">
+    BERITA ACARA KEGIATAN<br>
+    AUDIT INTERNAL<br>
+    UNIVERSITAS PAKUAN<br>
+    {{.Tahun}}
+</div>
+
+<!-- ISI -->
+<div class="content">
+    Pada hari ini, {{.Hari}} tanggal {{.Tanggal}} telah dilaksanakan Audit Internal
+    di {{.Target}}. Adapun auditor yang bertugas adalah
+    {{if .Auditor1}}{{.Auditor1}}{{end}}
+    {{if and .Auditor1 .Auditor2}} dan {{end}}
+    {{if .Auditor2}}{{.Auditor2}}{{end}}.
+    Demikianlah berita acara kegiatan ini dibuat.
+</div>
+
+<div class="date">
+    Bogor, {{.Tanggal}}
+</div>
+
+<!-- TANDA TANGAN -->
+<table class="signature-table">
+    <tr>
+        <td>Lead Auditor</td>
+        <td></td>
+        <td>Auditee</td>
+    </tr>
+    <tr>
+        <td>
+            {{if .QrAuditor}}
+                <img src="data:image/png;base64,{{.QrAuditor}}" width="160">
+            {{end}}
+        </td>
+        <td></td>
+        <td>
+            {{if .QrAuditee}}
+                <img src="data:image/png;base64,{{.QrAuditee}}" width="160">
+            {{end}}
+        </td>
+    </tr>
+    <tr>
+        <td>{{.Auditor1}}</td>
+        <td></td>
+        <td>{{.Auditee}}</td>
+    </tr>
+</table>
+
+</body>
+</html>

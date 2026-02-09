@@ -1,12 +1,17 @@
 package helper
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"html"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/skip2/go-qrcode"
 )
 
 var (
@@ -296,4 +301,21 @@ func FTimeStr(v *string) string {
 	}
 
 	return *v
+}
+
+func GenerateQRBase64(content string, size int) (string, error) {
+	png, err := qrcode.Encode(content, qrcode.Medium, size)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(png), nil
+}
+
+func CheckFilesExist(paths ...string) error {
+	for _, f := range paths {
+		if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
+			return errors.New("file not found: " + f)
+		}
+	}
+	return nil
 }
