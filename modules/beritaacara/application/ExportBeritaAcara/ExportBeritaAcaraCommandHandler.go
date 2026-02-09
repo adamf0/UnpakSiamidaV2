@@ -67,7 +67,7 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 		return []byte{}, domainberitaacara.NoResource()
 	}
 
-	data := buildBeritaAcaraData(beritaacara.FakultasUnit, *beritaacara.Auditor1, *beritaacara.Auditor2, *beritaacara.Auditee, logo1, logo2)
+	data := buildBeritaAcaraData(beritaacara.Tahun, beritaacara.FakultasUnit, *beritaacara.Auditor1, *beritaacara.Auditor2, *beritaacara.Auditee, logo1, logo2, beritaacara.Tanggal)
 
 	pdfGen := commoninfra.NewWkhtmlPdfGenerator()
 	pdf, err := pdfGen.Generate(template, data)
@@ -82,14 +82,24 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 	return []byte{}, domainberitaacara.NotGranted()
 }
 
-func buildBeritaAcaraData(target, auditor1, auditor2, auditee, logo1, logo2 string) domainberitaacara.BeritaAcaraPDF {
+func buildBeritaAcaraData(tahun, target, auditor1, auditor2, auditee, logo1, logo2 string, tanggal time.Time) domainberitaacara.BeritaAcaraPDF {
 	qrAuditor, _ := helper.GenerateQRBase64("Nama : "+auditor1, 120)
 	qrAuditee, _ := helper.GenerateQRBase64("Nama : "+auditee, 120)
 
+	var hariID = map[time.Weekday]string{
+		time.Monday:    "Senin",
+		time.Tuesday:   "Selasa",
+		time.Wednesday: "Rabu",
+		time.Thursday:  "Kamis",
+		time.Friday:    "Jumat",
+		time.Saturday:  "Sabtu",
+		time.Sunday:    "Minggu",
+	}
+
 	return domainberitaacara.BeritaAcaraPDF{
-		Tahun:     "2080",
-		Hari:      "Senin",
-		Tanggal:   "1 Januari 2021",
+		Tahun:     tahun,
+		Hari:      hariID[tanggal.Weekday()],
+		Tanggal:   tanggal.Format("02 Januari 2006"),
 		Target:    target,
 		Auditor1:  auditor1,
 		Auditor2:  auditor2,

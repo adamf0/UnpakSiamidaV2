@@ -247,18 +247,18 @@ func ExportBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 		n, err := dataReader.Read(buf)
 		if n > 0 {
 			if _, writeErr := c.Write(buf[:n]); writeErr != nil {
-				return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", writeErr.Error()))
+				return writeErr
 			}
 		}
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", err.Error()))
+			return err
 		}
 	}
 
-	return commoninfra.HandleError(c, commoninfra.NewResponseError("common.ExportFailed", "file is lost"))
+	return nil
 }
 
 // =======================================================
