@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        font-size: 14px;
+        font-family: "Times New Roman", Times, serif;
+        vertical-align: top;
+      }
+      table {
+        margin: 0 auto;
+        border-collapse: collapse;
+        border: 1px solid black;
+      }
+      table,
+      td {
+        padding: 5px;
+      }
+      ul {
+        padding-left: 20px;
+        margin: 0px;
+      }
+
+      .heading{
+        font-size: 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <table border="1">
+      <tr>
+        <td colspan="3" style="text-align: center">
+          <b class="heading">LEMBAGA PENJAMINAN MUTU</b>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" style="text-align: center">
+          <b class="heading">AUDIT MUTU INTERNAL</b>
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: left"><b>LAPORAN AUDIT MUTU INTERNAL</b></td>
+        <td style="text-align: left"><b>Nomor</b>: {{.Nomor}}</td>
+        <td rowspan="2" style="text-align: left">
+          <b>Tanggal</b>: {{.Tanggal}}
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: left">
+            <b>Bagian/Auditee</b>: 
+            {{if gt (len .Auditee.Nama) 0}}
+                {{.Auditee.Nama}}
+            {{else}}
+                N/A
+            {{end}}
+        </td>
+        <td style="text-align: left">
+            <b>Auditor</b>: 
+            {{if gt (len .Auditor1) 0}}
+                {{.Auditor1}}
+            {{else}}
+                N/A
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" rowspan="2" style="text-align: left">
+            <b>URAIAN KETIDAKSESUAIAN</b>: (Diisi oleh auditor)<br /><br /><br />
+            <b>P (Problem)</b>: 
+            {{if gt (len .P) 0}}
+                {{.P}} <br /><br />
+            {{else}}
+                <br /><br /><br /><br />
+            {{end}} 
+            <b>L (Location)</b>: 
+            {{if gt (len .L) 0}}
+                {{.L}} <br /><br />
+            {{else}}
+                <br /><br /><br /><br />
+            {{end}} 
+            <b>O (Objective)</b>: 
+            {{if gt (len .O) 0}}
+                {{.O}} <br /><br />
+            {{else}}
+                <br /><br /><br /><br />
+            {{end}} 
+            <b>R (Reference)</b>: 
+            {{if gt (len .R) 0}}
+                {{.R}} <br /><br />
+            {{else}}
+                <br /><br /><br /><br />
+            {{end}} 
+          <br />
+        REFERENSI KTS: 
+        {{.Referensi}}
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <b>
+            {{if gt (len .HasilTemuan) 0}}
+                {{.HasilTemuan}} <br /><br />
+            {{else}}
+                <br /><br />
+            {{end}} 
+        </b>
+        </td>
+        <td style="text-align: left">
+            <b>AKAR MASALAH</b>: (Diisi oleh auditor)<br />
+            {{if gt (len .AkarMasalah) 0}}
+                {{.AkarMasalah}} <br /><br /><br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: left">
+          <b>Tindakan Korektif</b>: (Diisi oleh auditor)<br />
+            {{if gt (len .TindakanKoreksi) 0}}
+                {{.TindakanKoreksi}} <br /><br /><br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" style="text-align: left">
+            <b>TINDAKAN PERBAIKAN</b>: (Diisi oleh auditee)<br />
+            {{if gt (len .TindakanPerbaikan) 0}}
+                {{.TindakanPerbaikan}} <br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+          
+            <br />
+            <b>Tanggal Penyelesaian</b>: 
+            {{if gt (len .TanggalPenyelesaian) 0}}
+                {{.TanggalPenyelesaian}} <br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td style="text-align: left">
+          <b>Pengusul/Auditor</b>:<br />
+            {{if gt (len .QRAccAuditor1) 0}}
+                {{if .QRAccAuditor1}}
+                    <img
+                        src="data:image/png;base64,{{.QRAccAuditor1}}"
+                        alt="qr"
+                    /><br />
+                {{end}}
+                {{.AccAuditor1.Nama}} <br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+        <td style="text-align: left">
+          <b>Penanggung Jawab/Auditee</b>:<br />
+            {{if gt (len .QRAuditee) 0}}
+                {{if .QRAuditee}}
+                    <img
+                        src="data:image/png;base64,{{.QRAuditee}}"
+                        alt="qr"
+                    /><br />
+                {{end}}
+                {{.Auditee.Nama}}
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+        <td style="text-align: left">
+          <b>Tanggal</b>:
+            {{if gt (len .AccAuditor1Final.Tgl) 0}}
+                {{.AccAuditor1Final.Tgl}}
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <b>TINJAUAN TERHADAP TINDAKAN PERBAIKAN</b>: (Diisi oleh auditor setelah KTS diselesaikan oleh auditee) <br />{{if .TinjauanTindakanPerbaikan}}{{.TinjauanTindakanPerbaikan}}{{end}}
+        </td>
+        <td>
+          <b>Auditor</b>:
+          <br />
+            {{if gt (len .QRAccAuditor1Final) 0}}
+                {{if.QRAccAuditor1Final}}
+                    <img
+                        src="data:image/png;base64,{{.QRAccAuditor1Final}}"
+                        alt="qr"
+                    /><br />
+                {{end}}
+                {{.AccAuditor1Final.Nama}}<br /><br />
+            {{else}}
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+            {{end}}
+        </td>
+      </tr>
+      <tr>
+        <td><b>Kesimpulan</b>: {{if .Close.WmmUpmfUpmps}}Close{{end}}</td>
+        <td>
+          <b>UPML/UPMF/UPMPS</b>:<br />
+          {{if.QRClose}}
+          <img
+            src="data:image/png;base64,{{.QRClose}}"
+            alt="qr"
+          />
+          <br />
+          {{end}}
+          {{if .Close.WmmUpmfUpmps}}
+          {{.Close.WmmUpmfUpmps}}
+          {{end}}
+        </td>
+        <td>
+          <b>Tanggal</b>:
+          {{if .Close.TanggalClosing}}
+          {{.Close.TanggalClosing}}
+          {{end}}
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

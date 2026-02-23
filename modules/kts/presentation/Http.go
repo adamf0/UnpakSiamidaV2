@@ -1,18 +1,22 @@
 package presentation
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	Ktsdomain "UnpakSiamida/modules/kts/domain"
 
 	DeleteKts "UnpakSiamida/modules/kts/application/DeleteKts"
+	ExportKts "UnpakSiamida/modules/kts/application/ExportKts"
 	GetAllKtss "UnpakSiamida/modules/kts/application/GetAllKtss"
 	GetKts "UnpakSiamida/modules/kts/application/GetKts"
 	SetupUuidKts "UnpakSiamida/modules/kts/application/SetupUuidKts"
@@ -40,26 +44,26 @@ func UpdateKtsHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 	tahun := c.Params("tahun")
 	step := c.FormValue("step")
-	nomorLaporan := ptr(c.FormValue("nomorLaporan"))
-	tanggalLaporan := ptr(c.FormValue("tanggalLaporan"))
-	uraianKetidaksesuaianP := ptr(c.FormValue("uraianKetidaksesuaianP"))
-	uraianKetidaksesuaianL := ptr(c.FormValue("uraianKetidaksesuaianL"))
-	uraianKetidaksesuaianO := ptr(c.FormValue("uraianKetidaksesuaianO"))
-	uraianKetidaksesuaianR := ptr(c.FormValue("uraianKetidaksesuaianR"))
-	akarMasalah := ptr(c.FormValue("akarMasalah"))
-	tindakanKoreksi := ptr(c.FormValue("tindakanKoreksi"))
+	nomorLaporan := helper.StrPtr(c.FormValue("nomorLaporan"))
+	tanggalLaporan := helper.StrPtr(c.FormValue("tanggalLaporan"))
+	uraianKetidaksesuaianP := helper.StrPtr(c.FormValue("uraianKetidaksesuaianP"))
+	uraianKetidaksesuaianL := helper.StrPtr(c.FormValue("uraianKetidaksesuaianL"))
+	uraianKetidaksesuaianO := helper.StrPtr(c.FormValue("uraianKetidaksesuaianO"))
+	uraianKetidaksesuaianR := helper.StrPtr(c.FormValue("uraianKetidaksesuaianR"))
+	akarMasalah := helper.StrPtr(c.FormValue("akarMasalah"))
+	tindakanKoreksi := helper.StrPtr(c.FormValue("tindakanKoreksi"))
 
-	statusAccAuditee := ptr(c.FormValue("statusAccAuditee"))
-	keteranganTolak := ptr(c.FormValue("keteranganTolak"))
-	tindakanPerbaikan := ptr(c.FormValue("tindakanPerbaikan"))
+	statusAccAuditee := helper.StrPtr(c.FormValue("statusAccAuditee"))
+	keteranganTolak := helper.StrPtr(c.FormValue("keteranganTolak"))
+	tindakanPerbaikan := helper.StrPtr(c.FormValue("tindakanPerbaikan"))
 
-	tanggalpenyelesaian := ptr(c.FormValue("tanggalPenyelesaian"))
+	tanggalpenyelesaian := helper.StrPtr(c.FormValue("tanggalPenyelesaian"))
 
-	tinjauanTindakanPerbaikan := ptr(c.FormValue("tinjauanTindakanPerbaikan"))
-	tanggalClosing := ptr(c.FormValue("tanggalClosing"))
+	tinjauanTindakanPerbaikan := helper.StrPtr(c.FormValue("tinjauanTindakanPerbaikan"))
+	tanggalClosing := helper.StrPtr(c.FormValue("tanggalClosing"))
 
-	tanggalClosingFinal := ptr(c.FormValue("tanggalClosingFinal"))
-	wmmUpmfUpmps := ptr(c.FormValue("wmmUpmfUpmps"))
+	tanggalClosingFinal := helper.StrPtr(c.FormValue("tanggalClosingFinal"))
+	wmmUpmfUpmps := helper.StrPtr(c.FormValue("wmmUpmfUpmps"))
 
 	sid := c.FormValue("sid")
 
@@ -248,6 +252,132 @@ func DeleteKtsHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"uuid": deletedID})
 }
 
+// PublishKtsHandler godoc
+// @Summary Publish existing Kts
+// @Tags Kts
+// @Param uuid path string true "Kts UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export Kts"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/{uuid} [post]
+func PublishKtsHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.FormValue("token")
+
+	cmd := ExportKts.PublishKtsCommand{
+		Uuid:  uuid,
+		Token: token,
+	}
+
+	exportID, err := mediatr.Send[ExportKts.PublishKtsCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{"uuid": exportID})
+}
+
+// PreviewKtsHandler godoc
+// @Summary Publish existing Kts
+// @Tags Kts
+// @Param uuid path string true "Kts UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export Kts"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/preview/:uuid [get]
+func PreviewKtsHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.Query("token")
+	tahun := c.Query("ctxtahun")
+	// sid := c.FormValue("sid")
+	granted := c.FormValue("grantedaccess")
+
+	cmd := ExportKts.ExportKtsCommand{
+		Uuid:    uuid,
+		Token:   token,
+		SID:     "preview",
+		Granted: granted,
+		Tahun:   tahun,
+	}
+
+	data, err := mediatr.Send[ExportKts.ExportKtsCommand, []byte](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", "inline; filename=kts.pdf")
+	c.Set("Cache-Control", "private, max-age=60")
+	c.Set("X-Accel-Buffering", "no") // penting untuk nginx/Cloudflare agar streaming langsung
+	return c.Send(data)
+}
+
+// ExportKtsHandler godoc
+// @Summary Publish existing Kts
+// @Tags Kts
+// @Param uuid path string true "Kts UUID" format(uuid)
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of export Kts"
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 409 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /beritaacara/export/:uuid [get]
+func ExportKtsHandlerfunc(c *fiber.Ctx) error {
+
+	uuid := c.Params("uuid")
+	token := c.FormValue("token")
+	tahun := c.Query("ctxtahun")
+	sid := c.FormValue("sid")
+	granted := c.FormValue("grantedaccess")
+
+	cmd := ExportKts.ExportKtsCommand{
+		Uuid:    uuid,
+		Token:   token,
+		SID:     sid,
+		Granted: granted,
+		Tahun:   tahun,
+	}
+
+	data, err := mediatr.Send[ExportKts.ExportKtsCommand, []byte](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", "attachment; filename=berita_acara.pdf")
+	c.Set("Cache-Control", "private, max-age=60")
+	c.Set("X-Accel-Buffering", "no")
+
+	dataReader := bytes.NewReader(data)
+	buf := make([]byte, 32*1024) // 32 KB per chunk
+
+	for {
+		n, err := dataReader.Read(buf)
+		if n > 0 {
+			if _, writeErr := c.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 func SetupUuidKtssHandlerfunc(c *fiber.Ctx) error {
 	cmd := SetupUuidKts.SetupUuidKtsCommand{}
 
@@ -271,11 +401,8 @@ func ModuleKts(app *fiber.App) {
 
 	app.Get("/Kts/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetKtsHandlerfunc)
 	app.Get("/Ktss", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllKtssHandlerfunc)
-}
 
-func ptr(s string) *string {
-	if strings.TrimSpace(s) == "" {
-		return nil
-	}
-	return &s
+	app.Get("/kts/publish/:uuid", commonpresentation.JWTMiddleware(), PublishKtsHandlerfunc)
+	app.Get("/kts/preview/:uuid", PreviewKtsHandlerfunc) //private network
+	app.Get("/kts/export/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), ExportKtsHandlerfunc)
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	helper "UnpakSiamida/common/helper"
 	event "UnpakSiamida/modules/dokumentambahan/event"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 
@@ -54,7 +55,7 @@ func UpdateDokumenTambahan(
 		return common.FailureValue[*DokumenTambahan](InvalidData())
 	}
 
-	if !contains([]string{"auditee", "auditor2"}, Mode) {
+	if !helper.Contains([]string{"auditee", "auditor2"}, Mode) {
 		return common.FailureValue[*DokumenTambahan](RejectAction())
 	}
 
@@ -78,15 +79,6 @@ func UpdateDokumenTambahan(
 	})
 
 	return common.SuccessValue(prev)
-}
-
-func contains(list []string, value string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }
 
 func IsGrantedAccess(tahun, mode, granted string) bool {

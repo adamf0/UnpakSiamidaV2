@@ -60,3 +60,19 @@ func NotFound(id string) domain.Error {
 func NotFoundUser() domain.Error {
 	return domain.NotFoundError("Kts.NotFoundUser", "user not found")
 }
+
+func NotGranted() domain.Error {
+	return domain.NotFoundError("Kts.NotGranted", "Download kts is rejected because not granted")
+}
+func NotPushDownload() domain.Error {
+	return domain.NotFoundError("Kts.NotPushDownload", "Download kts is not available")
+}
+func NoPermission() domain.Error {
+	return domain.NotFoundError("Kts.NoPermission", "Something wrong to access resource")
+}
+func NoResource() domain.Error {
+	return domain.NotFoundError("Kts.NoResource", "resource/assets not found to build pdf")
+}
+func GeneratePDF(message string) domain.Error {
+	return domain.NotFoundError("Kts.GeneratePDF", fmt.Sprintf("error: %s", message))
+}

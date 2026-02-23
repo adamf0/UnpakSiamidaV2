@@ -7,10 +7,12 @@ import (
 	"html"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/skip2/go-qrcode"
 )
 
@@ -254,54 +256,65 @@ func Status(v *uint) string {
 	return "Tidak"
 }
 
-var bulanID = []string{
-	"",
-	"Januari", "Februari", "Maret", "April", "Mei", "Juni",
-	"Juli", "Agustus", "September", "Oktober", "November", "Desember",
+func Contains(list []string, value string) bool {
+	return slices.Contains(list, value)
 }
 
-var locWIB, _ = time.LoadLocation("Asia/Jakarta")
+func GrantedContains(audit []string, tahun string, granted string, isother bool) bool {
+	entries := strings.Split(granted, ",")
+	for _, e := range entries {
+		parts := strings.Split(e, "#")
+		if len(parts) != 2 {
+			return false
+		}
 
-func formatWIB(t time.Time) string {
-	t = t.In(locWIB)
+		year := strings.TrimSpace(parts[0])
+		level := strings.TrimSpace(parts[1])
 
-	return fmt.Sprintf(
-		"%02d %s %d %02d:%02d:%02d WIB",
-		t.Day(),
-		bulanID[int(t.Month())],
-		t.Year(),
-		t.Hour(),
-		t.Minute(),
-		t.Second(),
-	)
-}
-
-func FTime(t time.Time) string {
-	if t.IsZero() {
-		return "-"
-	}
-	return formatWIB(t)
-}
-
-func FTimeStr(v *string) string {
-	if v == nil || *v == "" {
-		return "-"
-	}
-
-	layouts := []string{
-		time.RFC3339,
-		"2006-01-02 15:04:05",
-		"2006-01-02",
-	}
-
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, *v); err == nil {
-			return formatWIB(t)
+		if isother {
+			if Contains(audit, level) {
+				return true
+			}
+		} else {
+			if year == tahun && Contains(audit, level) {
+				return true
+			}
 		}
 	}
-
-	return *v
+	return false
 }
+
+func TimeToStringPtr(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format("2006-01-02")
+	return &s
+}
+
+func StrPtr(s string) *string {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func UUIDString(u *uuid.UUID) string {
+	if u == nil {
+		return ""
+	}
+	return u.String()
+}
+
+func NullableString(u *string) string {
+	if u == nil {
+		return ""
+	}
+	return *u
+}
+
+func UintPtr(v uint) *uint { return &v }
 
 func GenerateQRBase64(content string, size int) (string, error) {
 	png, err := qrcode.Encode(content, qrcode.Medium, size)

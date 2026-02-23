@@ -1,11 +1,11 @@
 package domain
 
 import (
-	"slices"
 	"strings"
 	"time"
 
 	common "UnpakSiamida/common/domain"
+	helper "UnpakSiamida/common/helper"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	event "UnpakSiamida/modules/renstranilai/event"
 
@@ -60,7 +60,7 @@ func UpdateRenstraNilai(
 		return common.FailureValue[*RenstraNilai](InvalidData())
 	}
 
-	if !contains([]string{"auditee", "auditor1", "auditor2"}, Mode) {
+	if !helper.Contains([]string{"auditee", "auditor1", "auditor2"}, Mode) {
 		return common.FailureValue[*RenstraNilai](RejectAction())
 	}
 
@@ -86,10 +86,6 @@ func UpdateRenstraNilai(
 	})
 
 	return common.SuccessValue(prev)
-}
-
-func contains(list []string, value string) bool {
-	return slices.Contains(list, value)
 }
 
 func IsGrantedAccess(tahun, mode, granted string) bool {

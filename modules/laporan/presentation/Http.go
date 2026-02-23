@@ -24,7 +24,7 @@ import (
 // @Param tahun path string true "Tahun UUID" format(tahun)
 // @Param target path string true "Target UUID" format(target)
 // @Produce json
-// @Success 200 {object} laporan.MonitoringProker
+// @Success 200 {object} commondomain.Paged[laporan.MonitoringProker]
 // @Failure 400 {object} commoninfra.ResponseError
 // @Failure 404 {object} commoninfra.ResponseError
 // @Failure 409 {object} commoninfra.ResponseError

@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
 	infra "UnpakSiamida/modules/fakultasunit/infrastructure"
 )
@@ -66,46 +67,46 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 	}{
 		// nama_fak_prod_unit
 		{"nama eq Teknik", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "eq", str("Teknik")},
+			{"nama_fak_prod_unit", "eq", helper.StrPtr("Teknik")},
 		}, 1},
 		{"nama like Tek", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "like", str("Tek")},
+			{"nama_fak_prod_unit", "like", helper.StrPtr("Tek")},
 		}, 9},
 		{"nama neq Ekonomi", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "neq", str("Ekonomi")},
+			{"nama_fak_prod_unit", "neq", helper.StrPtr("Ekonomi")},
 		}, 10},
 
 		// fakultas
 		{"fakultas eq VOKASI", []domain.SearchFilter{
-			{"fakultas", "eq", str("VOKASI")},
+			{"fakultas", "eq", helper.StrPtr("VOKASI")},
 		}, 7},
 		{"fakultas in", []domain.SearchFilter{
-			{"fakultas", "in", str("VOKASI,EKONOMI DAN BISNIS")},
+			{"fakultas", "in", helper.StrPtr("VOKASI,EKONOMI DAN BISNIS")},
 		}, 10},
 
 		// jenjang
 		{"jenjang eq S1", []domain.SearchFilter{
-			{"jenjang", "eq", str("s1")},
+			{"jenjang", "eq", helper.StrPtr("s1")},
 		}, 10},
 		{"jenjang neq S1", []domain.SearchFilter{
-			{"jenjang", "neq", str("s1")},
+			{"jenjang", "neq", helper.StrPtr("s1")},
 		}, 10},
 		{"jenjang like S", []domain.SearchFilter{
-			{"jenjang", "like", str("S")},
+			{"jenjang", "like", helper.StrPtr("S")},
 		}, 10},
 
 		// MULTI FILTERS
 		{"fakultas FT AND jenjang S1",
 			[]domain.SearchFilter{
-				{"fakultas", "eq", str("TEKNIK")},
-				{"jenjang", "eq", str("s1")},
+				{"fakultas", "eq", helper.StrPtr("TEKNIK")},
+				{"jenjang", "eq", helper.StrPtr("s1")},
 			},
 			5,
 		},
 		{"fakultas EKONOMI DAN BISNIS AND type prodi",
 			[]domain.SearchFilter{
-				{"fakultas", "eq", str("TEKNIK")},
-				{"jenjang", "like", str("s1")},
+				{"fakultas", "eq", helper.StrPtr("TEKNIK")},
+				{"jenjang", "like", helper.StrPtr("s1")},
 			},
 			5,
 		},
@@ -158,7 +159,3 @@ func TestGetAllFakultasUnitsIntegration(t *testing.T) {
 // 		t.Fatalf("expected FakultasUnit.EmptyData, got %s", derr.Code)
 // 	}
 // }
-
-func str(v string) *string {
-	return &v
-}

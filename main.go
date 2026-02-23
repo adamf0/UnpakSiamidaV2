@@ -136,6 +136,8 @@ import (
 
 	deleteBeritaAcara "UnpakSiamida/modules/beritaacara/application/DeleteBeritaAcara"
 
+	exportBeritaAcara "UnpakSiamida/modules/beritaacara/application/ExportBeritaAcara"
+
 	createUser "UnpakSiamida/modules/user/application/CreateUser"
 
 	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
@@ -183,6 +185,8 @@ import (
 	deleteDokumenTambahan "UnpakSiamida/modules/dokumentambahan/application/DeleteDokumenTambahan"
 
 	updateKts "UnpakSiamida/modules/kts/application/UpdateKts"
+
+	exportKts "UnpakSiamida/modules/kts/application/ExportKts"
 
 	generateRenstra "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
 
@@ -236,6 +240,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  10 * time.Second,
 	})
+	// app.Use(recover())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -352,7 +357,7 @@ func main() {
 	})
 
 	mustStart("Kts Module", func() error { //buat audit
-		return ktsInfrastructure.RegisterModuleKts(db, tg)
+		return ktsInfrastructure.RegisterModuleKts(db, &redis, tg)
 	})
 
 	mustStart("Tahun Proker Module", func() error { //buat audit
@@ -391,6 +396,7 @@ func main() {
 	commoninfra.RegisterEvent[eventUser.UserCreatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventKts.KtsPdfRequestedEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app)
@@ -512,6 +518,14 @@ func (b *ValidationBehavior) Handle(
 	case deleteBeritaAcara.DeleteBeritaAcaraCommand:
 		if err := deleteBeritaAcara.DeleteBeritaAcaraCommandValidation(cmd); err != nil {
 			return nil, wrapValidationError("BeritaAcaraDelete.Validation", err)
+		}
+	case exportBeritaAcara.PublishBeritaAcaraCommand:
+		if err := exportBeritaAcara.PublishBeritaAcaraCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("BeritaAcaraPublish.Validation", err)
+		}
+	case exportBeritaAcara.ExportBeritaAcaraCommand:
+		if err := exportBeritaAcara.ExportBeritaAcaraCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("BeritaAcaraExport.Validation", err)
 		}
 
 	// === User Commands ===
@@ -646,6 +660,14 @@ func (b *ValidationBehavior) Handle(
 	case updateKts.UpdateKtsCommand:
 		if err := updateKts.UpdateKtsCommandValidation(cmd); err != nil {
 			return nil, wrapValidationError("KtsUpdate.Validation", err)
+		}
+	case exportKts.PublishKtsCommand:
+		if err := exportKts.PublishKtsCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("KtsPublish.Validation", err)
+		}
+	case exportKts.ExportKtsCommand:
+		if err := exportKts.ExportKtsCommandValidation(cmd); err != nil {
+			return nil, wrapValidationError("KtsExport.Validation", err)
 		}
 
 	default:

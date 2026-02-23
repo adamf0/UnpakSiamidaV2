@@ -6,7 +6,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-func ExportBeritaAcaraCommandValidation(cmd ExportBeritaAcaraCommand, isPreview bool) error {
+func ExportBeritaAcaraCommandValidation(cmd ExportBeritaAcaraCommand) error {
 	rules := []*validation.FieldRules{
 		validation.Field(&cmd.Uuid,
 			validation.Required.Error("Uuid cannot be blank"),
@@ -17,16 +17,11 @@ func ExportBeritaAcaraCommandValidation(cmd ExportBeritaAcaraCommand, isPreview 
 			validation.Required.Error("Token cannot be blank"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
-	}
-
-	if !isPreview {
-		rules = append(rules,
-			validation.Field(&cmd.SID,
-				validation.Required.Error("SID cannot be blank"),
-				validation.By(helper.ValidateUUIDv4),
-				validation.By(helper.NoXSSFullScanWithDecode()),
-			),
-		)
+		validation.Field(&cmd.SID,
+			validation.Required.Error("SID cannot be blank"),
+			validation.By(helper.ValidateUUIDv4),
+			validation.By(helper.NoXSSFullScanWithDecode()),
+		),
 	}
 
 	return validation.ValidateStruct(&cmd, rules...)

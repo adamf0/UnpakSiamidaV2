@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/dokumentambahan/application/GetAllDokumenTambahans"
 	infra "UnpakSiamida/modules/dokumentambahan/infrastructure"
 )
@@ -65,68 +66,68 @@ func TestGetAllDokumenTambahansIntegration(t *testing.T) {
 		expectedRows int
 	}{
 		{"dokumen eq Program Kerja Sesuai Dengan Template 2024 disertai Monev", []domain.SearchFilter{
-			{"dokumen", "eq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"dokumen", "eq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 10},
 		{"dokumen like Program Kerja Sesuai Dengan Template 2024 disertai Monev", []domain.SearchFilter{
-			{"dokumen", "like", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"dokumen", "like", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 10},
 		{"dokumen neq Program Kerja Sesuai Dengan Template 2024 disertai Monev", []domain.SearchFilter{
-			{"dokumen", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"dokumen", "neq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 10},
 
 		{"pertanyaan eq Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?", []domain.SearchFilter{
-			{"pertanyaan", "eq", str("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
+			{"pertanyaan", "eq", helper.StrPtr("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
 		}, 10},
 		{"pertanyaan like Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?", []domain.SearchFilter{
-			{"pertanyaan", "like", str("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
+			{"pertanyaan", "like", helper.StrPtr("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
 		}, 10},
 		{"pertanyaan neq Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?", []domain.SearchFilter{
-			{"pertanyaan", "neq", str("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
+			{"pertanyaan", "neq", helper.StrPtr("Apakah Sudah Lengkap Sesuai Dengan Template Proker 2024 Beserta Monevnya?")},
 		}, 10},
 
 		{"targetaudit eq PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
-			{"targetaudit", "eq", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
+			{"targetaudit", "eq", helper.StrPtr("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
 		}, 8},
 		{"targetaudit like PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
-			{"targetaudit", "like", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
+			{"targetaudit", "like", helper.StrPtr("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
 		}, 8},
 		{"targetaudit neq PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)", []domain.SearchFilter{
-			{"targetaudit", "neq", str("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
+			{"targetaudit", "neq", helper.StrPtr("PUTIK (PUSAT TEKNOLOGI INFORMASI DAN KOMUNIKASI)")},
 		}, 10},
 
 		{"tipe eq fakultas", []domain.SearchFilter{
-			{"tipe", "eq", str("fakultas")},
+			{"tipe", "eq", helper.StrPtr("fakultas")},
 		}, 10},
 		{"tipe like fakultas", []domain.SearchFilter{
-			{"tipe", "like", str("fakultas")},
+			{"tipe", "like", helper.StrPtr("fakultas")},
 		}, 10},
 		{"tipe neq fakultas", []domain.SearchFilter{
-			{"tipe", "neq", str("fakultas")},
+			{"tipe", "neq", helper.StrPtr("fakultas")},
 		}, 10},
 
 		{"tahun eq fakultas", []domain.SearchFilter{
-			{"tahun", "eq", str("2025")},
+			{"tahun", "eq", helper.StrPtr("2025")},
 		}, 10},
 		{"tahun like 2025", []domain.SearchFilter{
-			{"tahun", "like", str("2025")},
+			{"tahun", "like", helper.StrPtr("2025")},
 		}, 10},
 		{"tahun neq 2025", []domain.SearchFilter{
-			{"tahun", "neq", str("2025")},
+			{"tahun", "neq", helper.StrPtr("2025")},
 		}, 10},
 		{"tahun in 2025", []domain.SearchFilter{
-			{"tahun", "in", str("2025,2024")},
+			{"tahun", "in", helper.StrPtr("2025,2024")},
 		}, 10},
 		{"tahun gt 2024", []domain.SearchFilter{
-			{"tahun", "gt", str("2024")},
+			{"tahun", "gt", helper.StrPtr("2024")},
 		}, 10},
 		{"tahun gte 2024", []domain.SearchFilter{
-			{"tahun", "gte", str("2024")},
+			{"tahun", "gte", helper.StrPtr("2024")},
 		}, 10},
 		{"tahun lt 2025", []domain.SearchFilter{
-			{"tahun", "lt", str("2025")},
+			{"tahun", "lt", helper.StrPtr("2025")},
 		}, 10},
 		{"tahun lte 2025", []domain.SearchFilter{
-			{"tahun", "lte", str("2025")},
+			{"tahun", "lte", helper.StrPtr("2025")},
 		}, 10},
 	}
 
@@ -151,8 +152,4 @@ func TestGetAllDokumenTambahansIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

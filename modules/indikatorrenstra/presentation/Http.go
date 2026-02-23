@@ -8,6 +8,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 
@@ -42,10 +43,10 @@ import (
 func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 	standarRenstra := c.FormValue("standar_renstra")
 	indikator := c.FormValue("indikator")
-	parent := nullableString(c.FormValue("parent"))
+	parent := helper.StrPtr(c.FormValue("parent"))
 	tahun := c.FormValue("tahun")
 	tipeTarget := c.FormValue("tipe_target")
-	operator := nullableString(c.FormValue("operator"))
+	operator := helper.StrPtr(c.FormValue("operator"))
 
 	cmd := CreateIndikatorRenstra.CreateIndikatorRenstraCommand{
 		StandarRenstra: standarRenstra,
@@ -65,7 +66,7 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -94,10 +95,10 @@ func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 
 	standarRenstra := c.FormValue("standar_renstra")
 	indikator := c.FormValue("indikator")
-	parent := nullableString(c.FormValue("parent"))
+	parent := helper.StrPtr(c.FormValue("parent"))
 	tahun := c.FormValue("tahun")
 	tipeTarget := c.FormValue("tipe_target")
-	operator := nullableString(c.FormValue("operator"))
+	operator := helper.StrPtr(c.FormValue("operator"))
 
 	cmd := UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand{
 		Uuid:           uuid,
@@ -350,15 +351,4 @@ func ModuleIndikatorRenstra(app *fiber.App) {
 	app.Get("/indikatorrenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllIndikatorRenstrasHandlerfunc)
 	app.Get("/indikatorrenstra/tree/:tahun", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), TreeIndikatorRenstrasHandlerfunc)
 	// app.Get("/indikatorrenstra/tree/:uuidTahun", GetTreeIndikatorRenstraByTahunHandlerfunc)
-}
-
-// ====================================================================
-// Helper: convert empty string → nil
-// ====================================================================
-func nullableString(s string) *string {
-	trimmed := strings.TrimSpace(s)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }

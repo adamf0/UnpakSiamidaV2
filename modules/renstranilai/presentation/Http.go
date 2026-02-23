@@ -8,6 +8,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 
@@ -54,11 +55,11 @@ func UpdateRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.Params("tahun")
 	mode := c.FormValue("mode")
 	granted := c.FormValue("grantedaccess") //dari middleware
-	capaian := nullableString(c.FormValue("capaian"))
-	catatan := nullableString(c.FormValue("catatan"))
-	linkBukti := nullableString(c.FormValue("linkBukti"))
-	capaianAuditor := nullableString(c.FormValue("capaianAuditor"))
-	catatanAuditor := nullableString(c.FormValue("catatanAuditor"))
+	capaian := helper.StrPtr(c.FormValue("capaian"))
+	catatan := helper.StrPtr(c.FormValue("catatan"))
+	linkBukti := helper.StrPtr(c.FormValue("linkBukti"))
+	capaianAuditor := helper.StrPtr(c.FormValue("capaianAuditor"))
+	catatanAuditor := helper.StrPtr(c.FormValue("catatanAuditor"))
 
 	cmd := UpdateRenstraNilai.UpdateRenstraNilaiCommand{
 		Uuid:           uuid,
@@ -257,15 +258,4 @@ func ModuleRenstraNilai(app *fiber.App) {
 	//private
 	app.Get("/renstranilai/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetRenstraNilaiHandlerfunc)
 	app.Get("/renstranilais", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllRenstraNilaisHandlerfunc)
-}
-
-// ====================================================================
-// Helper: convert empty string → nil
-// ====================================================================
-func nullableString(s string) *string {
-	trimmed := strings.TrimSpace(s)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }

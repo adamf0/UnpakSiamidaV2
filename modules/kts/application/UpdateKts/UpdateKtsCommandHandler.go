@@ -135,6 +135,7 @@ func (h *UpdateKtsCommandHandler) Handle(
 			cmd.KeteranganTolak,
 			cmd.TindakanPerbaikan,
 			cmd.Tahun,
+			existingUser.ID,
 		)
 	case "step2R":
 		result = domainkts.UpdateKtsTindakan(
@@ -165,6 +166,7 @@ func (h *UpdateKtsCommandHandler) Handle(
 			*cmd.TanggalClosing,
 			existingUser.ID,
 			cmd.Tahun,
+			existingUser.ID,
 		)
 	case "step5":
 		result = domainkts.UpdateKtsStep5(

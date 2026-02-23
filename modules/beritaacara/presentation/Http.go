@@ -11,6 +11,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	BeritaAcaradomain "UnpakSiamida/modules/beritaacara/domain"
@@ -51,8 +52,8 @@ func CreateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 		FakultasUnitUuid: c.FormValue("fakultasunit"),
 		Tanggal:          c.FormValue("tanggal"),
 		AuditeeUuid:      c.FormValue("auditee"),
-		Auditor1Uuid:     str(c.FormValue("auditor1")),
-		Auditor2Uuid:     str(c.FormValue("auditor2")),
+		Auditor1Uuid:     helper.StrPtr(c.FormValue("auditor1")),
+		Auditor2Uuid:     helper.StrPtr(c.FormValue("auditor2")),
 	}
 
 	uuid, err := mediatr.Send[CreateBeritaAcara.CreateBeritaAcaraCommand, string](context.Background(), cmd)
@@ -60,7 +61,7 @@ func CreateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -92,8 +93,8 @@ func UpdateBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 		FakultasUnitUuid: c.FormValue("fakultasunit"),
 		Tanggal:          c.FormValue("tanggal"),
 		AuditeeUuid:      c.FormValue("auditee"),
-		Auditor1Uuid:     str(c.FormValue("auditor1")),
-		Auditor2Uuid:     str(c.FormValue("auditor2")),
+		Auditor1Uuid:     helper.StrPtr(c.FormValue("auditor1")),
+		Auditor2Uuid:     helper.StrPtr(c.FormValue("auditor2")),
 	}
 
 	updatedID, err := mediatr.Send[UpdateBeritaAcara.UpdateBeritaAcaraCommand, string](context.Background(), cmd)
@@ -217,10 +218,11 @@ func PreviewBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 func ExportBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 
 	uuid := c.Params("uuid")
-	token := c.Query("token")
+	token := c.FormValue("token")
 	tahun := c.Query("ctxtahun")
 	sid := c.FormValue("sid")
 	granted := c.FormValue("grantedaccess")
+	// godump.Dd(granted)
 
 	cmd := ExportBeritaAcara.ExportBeritaAcaraCommand{
 		Uuid:    uuid,
@@ -316,6 +318,8 @@ func GetAllBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 	limit := c.QueryInt("limit", 10)
 	search := c.Query("search", "")
 
+	sid := c.FormValue("sid")
+
 	filtersRaw := c.Query("filters", "")
 	var filters []commondomain.SearchFilter
 
@@ -343,6 +347,12 @@ func GetAllBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	filters = append(filters, commondomain.SearchFilter{
+		Field:    "pic",
+		Operator: "eq",
+		Value:    &sid,
+	})
 
 	query := GetAllBeritaAcaras.GetAllBeritaAcarasQuery{
 		Search:        search,
@@ -414,8 +424,4 @@ func parseInt(val string) int {
 		return 0
 	}
 	return i
-}
-
-func str(v string) *string {
-	return &v
 }

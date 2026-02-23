@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/tahunproker/application/GetAllTahunProkers"
 	infra "UnpakSiamida/modules/tahunproker/infrastructure"
 )
@@ -66,13 +67,13 @@ func TestGetAllTahunProkersIntegration(t *testing.T) {
 	}{
 		// tahun
 		{"tahun eq '2080'", []domain.SearchFilter{
-			{"tahun", "eq", str("2080")},
+			{"tahun", "eq", helper.StrPtr("2080")},
 		}, 0},
 		{"tahun like '2025'", []domain.SearchFilter{
-			{"tahun", "like", str("2025")},
+			{"tahun", "like", helper.StrPtr("2025")},
 		}, 1},
 		{"tahun neq '2023'", []domain.SearchFilter{
-			{"tahun", "neq", str("2023")},
+			{"tahun", "neq", helper.StrPtr("2023")},
 		}, 2},
 	}
 
@@ -97,8 +98,4 @@ func TestGetAllTahunProkersIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

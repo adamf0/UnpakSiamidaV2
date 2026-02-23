@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BeritaAcaraRepository struct {
@@ -93,6 +94,7 @@ var allowedSearchColumns = map[string]string{
 	// key:param -> db column
 	"nama_fak_prod_unit": "fu.nama_fak_prod_unit",
 	"target":             "fu.uuid",
+	"pic":                "",
 }
 
 // ------------------------
@@ -108,7 +110,7 @@ func (r *BeritaAcaraRepository) GetAll(
 	var rows = make([]domainberitaacara.BeritaAcaraDefault, 0)
 	var total int64
 
-	db := r.db.WithContext(ctx).
+	db := r.db.WithContext(ctx).Debug().
 		Table("berita_acara ba").
 		Select(`
 			ba.id as Id,
@@ -141,25 +143,58 @@ func (r *BeritaAcaraRepository) GetAll(
 	// ADVANCED FILTERS
 	// -----------------------------------
 	for _, f := range searchFilters {
-		col, ok := allowedSearchColumns[strings.ToLower(f.Field)]
-		if !ok {
-			continue
-		}
-
+		targetColumn := strings.ToLower(f.Field)
 		val := ""
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
 		}
+		if val == "" {
+			continue
+		}
 
-		switch strings.ToLower(f.Operator) {
-		case "eq":
-			db = db.Where(col+" = ?", val)
-		case "neq":
-			db = db.Where(col+" <> ?", val)
-		case "like":
-			db = db.Where(col+" LIKE ?", "%"+val+"%")
-		case "in":
-			db = db.Where(col+" IN ?", strings.Split(val, ","))
+		if targetColumn == "pic" {
+			db = db.Where("(u1.uuid = ? or u2.uuid = ? or u3.uuid = ?)", val, val, val)
+		} else {
+
+			col, ok := allowedSearchColumns[targetColumn]
+			if !ok {
+				continue
+			}
+
+			switch strings.ToLower(f.Operator) {
+			case "eq":
+				db = db.Where(clause.Eq{
+					Column: col,
+					Value:  val,
+				})
+			case "neq":
+				db = db.Where(clause.Neq{
+					Column: col,
+					Value:  val,
+				})
+			case "like":
+				db = db.Where(clause.Like{
+					Column: col,
+					Value:  "%" + val + "%",
+				})
+			case "in":
+				rawVals := strings.Split(val, ",")
+				vals := make([]interface{}, 0, len(rawVals))
+
+				for _, v := range rawVals {
+					v = strings.TrimSpace(v)
+					if v != "" {
+						vals = append(vals, v)
+					}
+				}
+
+				if len(vals) > 0 {
+					db = db.Where(clause.IN{
+						Column: col,
+						Values: vals,
+					})
+				}
+			}
 		}
 	}
 
@@ -168,15 +203,22 @@ func (r *BeritaAcaraRepository) GetAll(
 	// -----------------------------------
 	if strings.TrimSpace(search) != "" {
 		like := "%" + search + "%"
-		var or []string
-		var args []interface{}
+		var conditions []clause.Expression
 
 		for _, col := range allowedSearchColumns {
-			or = append(or, col+" LIKE ?")
-			args = append(args, like)
+			if col == "pic" {
+				continue
+			}
+
+			conditions = append(conditions, clause.Like{
+				Column: col,
+				Value:  like,
+			})
 		}
 
-		db = db.Where("("+strings.Join(or, " OR ")+")", args...)
+		if len(conditions) > 0 {
+			db = db.Where(clause.Or(conditions...))
+		}
 	}
 
 	// -----------------------------------

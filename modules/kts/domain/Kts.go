@@ -1,14 +1,13 @@
 package domain
 
 import (
-	"errors"
-	"strconv"
 	"strings"
 	"time"
 
 	// "github.com/goforj/godump"
 
 	common "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	event "UnpakSiamida/modules/kts/event"
 
 	"github.com/google/uuid"
@@ -157,6 +156,7 @@ func UpdateKtsStep1(
 	accAuditor uint,
 	tahun string,
 ) common.ResultValue[*Kts] {
+	factory := helper.DateLayoutSecondFactory{}
 
 	if prev == nil || prevKts == nil {
 		return common.FailureValue[*Kts](EmptyData())
@@ -167,27 +167,32 @@ func UpdateKtsStep1(
 	if prevKts.Tahun == nil || *prevKts.Tahun != tahun {
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
-	if accAuditor == 0 {
+
+	picAudit, err := helper.ParseInt64(helper.NullableString(prev.Auditor))
+	if accAuditor == 0 || err != nil || accAuditor != uint(picAudit) {
 		return common.FailureValue[*Kts](InvalidAuditor())
 	}
 	if strings.TrimSpace(nomorLaporan) == "" {
 		return common.FailureValue[*Kts](RequiredNomorLaporan())
 	}
 
-	tgl, err := ParseDatePtr(tanggalLaporan)
+	tgl, err := helper.NewDateChain(tanggalLaporan).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		Ptr()
 	if err != nil {
 		return common.FailureValue[*Kts](InvalidTanggal())
 	}
 
-	prev.NomorLaporan = StringPtr(nomorLaporan)
+	prev.NomorLaporan = helper.StrPtr(nomorLaporan)
 	prev.TanggalLaporan = tgl
-	prev.KetidaksesuaianP = StringPtr(ketidaksesuaianP)
-	prev.KetidaksesuaianL = StringPtr(ketidaksesuaianL)
-	prev.KetidaksesuaianO = StringPtr(ketidaksesuaianO)
-	prev.KetidaksesuaianR = StringPtr(ketidaksesuaianR)
-	prev.AkarMasalah = StringPtr(akarMasalah)
-	prev.TindakanKoreksi = StringPtr(tindakanKoreksi)
-	prev.AccAuditor = UintPtr(accAuditor)
+	prev.KetidaksesuaianP = helper.StrPtr(ketidaksesuaianP)
+	prev.KetidaksesuaianL = helper.StrPtr(ketidaksesuaianL)
+	prev.KetidaksesuaianO = helper.StrPtr(ketidaksesuaianO)
+	prev.KetidaksesuaianR = helper.StrPtr(ketidaksesuaianR)
+	prev.AkarMasalah = helper.StrPtr(akarMasalah)
+	prev.TindakanKoreksi = helper.StrPtr(tindakanKoreksi)
+	prev.AccAuditor = helper.UintPtr(accAuditor)
 	prev.Status = "menunggu_verif_auditee"
 
 	if prev.DokumenTambahan != nil {
@@ -203,15 +208,15 @@ func UpdateKtsStep1(
 			IdTarget:        prevKts.IdTarget,
 			Target:          prevKts.Target,
 
-			NomorLaporan:     StringPtr(nomorLaporan),
-			TanggalLaporan:   TimeToStringPtr(prev.TanggalLaporan),
-			KetidaksesuaianP: StringPtr(ketidaksesuaianP),
-			KetidaksesuaianL: StringPtr(ketidaksesuaianL),
-			KetidaksesuaianO: StringPtr(ketidaksesuaianO),
-			KetidaksesuaianR: StringPtr(ketidaksesuaianR),
-			AkarMasalah:      StringPtr(akarMasalah),
-			TindakanKoreksi:  StringPtr(tindakanKoreksi),
-			Status:           StringPtr("menunggu_verif_auditee"),
+			NomorLaporan:     helper.StrPtr(nomorLaporan),
+			TanggalLaporan:   helper.TimeToStringPtr(prev.TanggalLaporan),
+			KetidaksesuaianP: helper.StrPtr(ketidaksesuaianP),
+			KetidaksesuaianL: helper.StrPtr(ketidaksesuaianL),
+			KetidaksesuaianO: helper.StrPtr(ketidaksesuaianO),
+			KetidaksesuaianR: helper.StrPtr(ketidaksesuaianR),
+			AkarMasalah:      helper.StrPtr(akarMasalah),
+			TindakanKoreksi:  helper.StrPtr(tindakanKoreksi),
+			Status:           helper.StrPtr("menunggu_verif_auditee"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -227,15 +232,15 @@ func UpdateKtsStep1(
 			IdTarget:        prevKts.IdTarget,
 			Target:          prevKts.Target,
 
-			NomorLaporan:     StringPtr(nomorLaporan),
-			TanggalLaporan:   TimeToStringPtr(prev.TanggalLaporan),
-			KetidaksesuaianP: StringPtr(ketidaksesuaianP),
-			KetidaksesuaianL: StringPtr(ketidaksesuaianL),
-			KetidaksesuaianO: StringPtr(ketidaksesuaianO),
-			KetidaksesuaianR: StringPtr(ketidaksesuaianR),
-			AkarMasalah:      StringPtr(akarMasalah),
-			TindakanKoreksi:  StringPtr(tindakanKoreksi),
-			Status:           StringPtr("menunggu_verif_auditee"),
+			NomorLaporan:     helper.StrPtr(nomorLaporan),
+			TanggalLaporan:   helper.TimeToStringPtr(prev.TanggalLaporan),
+			KetidaksesuaianP: helper.StrPtr(ketidaksesuaianP),
+			KetidaksesuaianL: helper.StrPtr(ketidaksesuaianL),
+			KetidaksesuaianO: helper.StrPtr(ketidaksesuaianO),
+			KetidaksesuaianR: helper.StrPtr(ketidaksesuaianR),
+			AkarMasalah:      helper.StrPtr(akarMasalah),
+			TindakanKoreksi:  helper.StrPtr(tindakanKoreksi),
+			Status:           helper.StrPtr("menunggu_verif_auditee"),
 		})
 	}
 
@@ -255,6 +260,7 @@ func UpdateKtsStep2(
 	keteranganTolak *string,
 	tindakanPerbaikan *string,
 	tahun string,
+	auditee uint,
 ) common.ResultValue[*Kts] {
 
 	if prev == nil || prevKts == nil {
@@ -266,7 +272,7 @@ func UpdateKtsStep2(
 	if prevKts.Tahun == nil || *prevKts.Tahun != tahun {
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
-	if accAuditee == 0 {
+	if accAuditee == 0 || accAuditee != auditee {
 		return common.FailureValue[*Kts](InvalidAuditee())
 	}
 	if statusAccAuditee > 1 {
@@ -276,8 +282,8 @@ func UpdateKtsStep2(
 		return common.FailureValue[*Kts](RequiredKeteranganTolak())
 	}
 
-	prev.StatusAccAuditee = UintPtr(statusAccAuditee)
-	prev.AccAuditee = UintPtr(accAuditee)
+	prev.StatusAccAuditee = helper.UintPtr(statusAccAuditee)
+	prev.AccAuditee = helper.UintPtr(accAuditee)
 	prev.KeteranganTolak = keteranganTolak
 	prev.TindakanPerbaikan = tindakanPerbaikan
 	if statusAccAuditee == 1 {
@@ -299,7 +305,7 @@ func UpdateKtsStep2(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -311,7 +317,7 @@ func UpdateKtsStep2(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			Status: StringPtr(prev.Status),
+			Status: helper.StrPtr(prev.Status),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -328,7 +334,7 @@ func UpdateKtsStep2(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -340,7 +346,7 @@ func UpdateKtsStep2(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			Status: StringPtr(prev.Status),
+			Status: helper.StrPtr(prev.Status),
 		})
 	}
 
@@ -365,7 +371,7 @@ func UpdateKtsTindakan(
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
 
-	prev.TindakanPerbaikan = StringPtr(tindakanPerbaikan)
+	prev.TindakanPerbaikan = helper.StrPtr(tindakanPerbaikan)
 
 	if prev.DokumenTambahan != nil {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -380,7 +386,7 @@ func UpdateKtsTindakan(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -390,8 +396,8 @@ func UpdateKtsTindakan(
 
 			StatusAccAuditee:  prev.StatusAccAuditee,
 			KeteranganTolak:   prev.KeteranganTolak,
-			TindakanPerbaikan: StringPtr(tindakanPerbaikan),
-			Status:            StringPtr(prevKts.Status),
+			TindakanPerbaikan: helper.StrPtr(tindakanPerbaikan),
+			Status:            helper.StrPtr(prevKts.Status),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -408,7 +414,7 @@ func UpdateKtsTindakan(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -418,8 +424,8 @@ func UpdateKtsTindakan(
 
 			StatusAccAuditee:  prev.StatusAccAuditee,
 			KeteranganTolak:   prev.KeteranganTolak,
-			TindakanPerbaikan: StringPtr(tindakanPerbaikan),
-			Status:            StringPtr(prevKts.Status),
+			TindakanPerbaikan: helper.StrPtr(tindakanPerbaikan),
+			Status:            helper.StrPtr(prevKts.Status),
 		})
 	}
 
@@ -438,6 +444,7 @@ func UpdateKtsStep3(
 	tanggalPenyelesaian string,
 	tahun string,
 ) common.ResultValue[*Kts] {
+	factory := helper.DateLayoutSecondFactory{}
 
 	if prev == nil || prevKts == nil {
 		return common.FailureValue[*Kts](EmptyData())
@@ -448,11 +455,15 @@ func UpdateKtsStep3(
 	if prevKts.Tahun == nil || *prevKts.Tahun != tahun {
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
-	if accAuditor == 0 || prevKts.Auditor == nil || *prevKts.Auditor != strconv.FormatUint(uint64(accAuditor), 10) {
+	picAudit, err := helper.ParseInt64(helper.NullableString(prev.Auditor))
+	if accAuditor == 0 || err != nil || accAuditor != uint(picAudit) {
 		return common.FailureValue[*Kts](InvalidAuditor())
 	}
 
-	tgl, err := ParseDatePtr(tanggalPenyelesaian)
+	tgl, err := helper.NewDateChain(tanggalPenyelesaian).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		Ptr()
 	if err != nil {
 		return common.FailureValue[*Kts](InvalidTanggal())
 	}
@@ -473,7 +484,7 @@ func UpdateKtsStep3(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -485,8 +496,8 @@ func UpdateKtsStep3(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-			Status:              StringPtr("menunggu_penyelesaian"),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
+			Status:              helper.StrPtr("menunggu_penyelesaian"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -503,7 +514,7 @@ func UpdateKtsStep3(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -515,8 +526,8 @@ func UpdateKtsStep3(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
-			Status:              StringPtr("menunggu_penyelesaian"),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
+			Status:              helper.StrPtr("menunggu_penyelesaian"),
 		})
 	}
 
@@ -535,7 +546,9 @@ func UpdateKtsStep4(
 	tanggalClosing string,
 	accFinal uint,
 	tahun string,
+	auditee uint,
 ) common.ResultValue[*Kts] {
+	factory := helper.DateLayoutSecondFactory{}
 
 	if prev == nil || prevKts == nil {
 		return common.FailureValue[*Kts](EmptyData())
@@ -546,18 +559,21 @@ func UpdateKtsStep4(
 	if prevKts.Tahun == nil || *prevKts.Tahun != tahun {
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
-	if accFinal == 0 || prevKts.Auditee == nil || *prevKts.Auditee != strconv.FormatUint(uint64(accFinal), 10) {
+	if accFinal == 0 || accFinal != auditee {
 		return common.FailureValue[*Kts](InvalidAuditee())
 	}
 
-	tgl, err := ParseDatePtr(tanggalClosing)
+	tgl, err := helper.NewDateChain(tanggalClosing).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		Ptr()
 	if err != nil {
 		return common.FailureValue[*Kts](InvalidTanggal())
 	}
 
-	prev.TinjauanTindakanPerbaikan = StringPtr(tinjauan)
+	prev.TinjauanTindakanPerbaikan = helper.StrPtr(tinjauan)
 	prev.TanggalClosing = tgl
-	prev.AccFinal = UintPtr(accFinal)
+	prev.AccFinal = helper.UintPtr(accFinal)
 	prev.Status = "tindakan_penyelesaian"
 
 	if prev.DokumenTambahan != nil {
@@ -573,7 +589,7 @@ func UpdateKtsStep4(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -585,10 +601,10 @@ func UpdateKtsStep4(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
 
-			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-			Status:         StringPtr("tindakan_penyelesaian"),
+			TanggalClosing: helper.TimeToStringPtr(prev.TanggalClosing),
+			Status:         helper.StrPtr("tindakan_penyelesaian"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -605,7 +621,7 @@ func UpdateKtsStep4(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -617,10 +633,10 @@ func UpdateKtsStep4(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
 
-			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
-			Status:         StringPtr("tindakan_penyelesaian"),
+			TanggalClosing: helper.TimeToStringPtr(prev.TanggalClosing),
+			Status:         helper.StrPtr("tindakan_penyelesaian"),
 		})
 	}
 
@@ -640,6 +656,8 @@ func UpdateKtsStep5(
 	closingBy uint,
 	tahun string,
 ) common.ResultValue[*Kts] {
+	factory := helper.DateLayoutSecondFactory{}
+
 	if prev == nil || prevKts == nil {
 		return common.FailureValue[*Kts](EmptyData())
 	}
@@ -649,18 +667,22 @@ func UpdateKtsStep5(
 	if prevKts.Tahun == nil || *prevKts.Tahun != tahun {
 		return common.FailureValue[*Kts](InvalidTahun())
 	}
-	if closingBy == 0 || prevKts.Auditor == nil || *prevKts.Auditor != strconv.FormatUint(uint64(closingBy), 10) {
+	picAudit, err := helper.ParseInt64(helper.NullableString(prev.Auditor))
+	if closingBy == 0 || err != nil || closingBy != uint(picAudit) {
 		return common.FailureValue[*Kts](InvalidAuditor())
 	}
 
-	tgl, err := ParseDatePtr(tanggalClosingFinal)
+	tgl, err := helper.NewDateChain(tanggalClosingFinal).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		Ptr()
 	if err != nil {
 		return common.FailureValue[*Kts](InvalidTanggal())
 	}
 
 	prev.TanggalClosingFinal = tgl
-	prev.WmmUpmfUpmps = StringPtr(wmmUpmfUpmps)
-	prev.ClosingBy = UintPtr(closingBy)
+	prev.WmmUpmfUpmps = helper.StrPtr(wmmUpmfUpmps)
+	prev.ClosingBy = helper.UintPtr(closingBy)
 	prev.Status = "tutup_kts"
 
 	if prev.DokumenTambahan != nil {
@@ -676,7 +698,7 @@ func UpdateKtsStep5(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -688,13 +710,13 @@ func UpdateKtsStep5(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
 
-			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
+			TanggalClosing: helper.TimeToStringPtr(prev.TanggalClosing),
 
-			TanggalClosingFinal: TimeToStringPtr(prev.TanggalClosingFinal),
-			WmmUpmfUpmps:        StringPtr(wmmUpmfUpmps),
-			Status:              StringPtr("tutup_kts"),
+			TanggalClosingFinal: helper.TimeToStringPtr(prev.TanggalClosingFinal),
+			WmmUpmfUpmps:        helper.StrPtr(wmmUpmfUpmps),
+			Status:              helper.StrPtr("tutup_kts"),
 		})
 	} else {
 		prev.Raise(event.KtsUpdatedEvent{
@@ -711,7 +733,7 @@ func UpdateKtsStep5(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   prevKts.TanggalLaporan,
+			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -723,48 +745,15 @@ func UpdateKtsStep5(
 			KeteranganTolak:   prev.KeteranganTolak,
 			TindakanPerbaikan: prev.TindakanPerbaikan,
 
-			TanggalPenyelesaian: TimeToStringPtr(prev.TanggalPenyelesaian),
+			TanggalPenyelesaian: helper.TimeToStringPtr(prev.TanggalPenyelesaian),
 
-			TanggalClosing: TimeToStringPtr(prev.TanggalClosing),
+			TanggalClosing: helper.TimeToStringPtr(prev.TanggalClosing),
 
-			TanggalClosingFinal: TimeToStringPtr(prev.TanggalClosingFinal),
-			WmmUpmfUpmps:        StringPtr(wmmUpmfUpmps),
-			Status:              StringPtr("tutup_kts"),
+			TanggalClosingFinal: helper.TimeToStringPtr(prev.TanggalClosingFinal),
+			WmmUpmfUpmps:        helper.StrPtr(wmmUpmfUpmps),
+			Status:              helper.StrPtr("tutup_kts"),
 		})
 	}
 
 	return common.SuccessValue(prev)
-}
-
-//
-// ======================= HELPERS =======================
-//
-
-func StringPtr(v string) *string { return &v }
-func UintPtr(v uint) *uint       { return &v }
-
-func ParseDatePtr(input string) (*time.Time, error) {
-	if strings.TrimSpace(input) == "" {
-		return nil, nil
-	}
-	layouts := []string{
-		"2006-01-02",
-		time.RFC3339,
-		"2006-01-02T15:04:05-07:00",
-	}
-	for _, l := range layouts {
-		if t, err := time.Parse(l, input); err == nil {
-			tt := t.Truncate(24 * time.Hour)
-			return &tt, nil
-		}
-	}
-	return nil, errors.New("invalid date format")
-}
-
-func TimeToStringPtr(t *time.Time) *string {
-	if t == nil {
-		return nil
-	}
-	s := t.Format("2006-01-02")
-	return &s
 }

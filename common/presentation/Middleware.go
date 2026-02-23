@@ -89,7 +89,7 @@ type Account struct {
 	Name         string      `json:"name"`
 	Email        string      `json:"email"`
 	FakultasUnit string      `json:"fakultas_unit"`
-	ExtraRole    []ExtraRole `gorm:"-"; json:"extrarole,omitempty"`
+	ExtraRole    []ExtraRole `gorm:"-" json:"extrarole,omitempty"`
 }
 type ExtraRole struct {
 	Tahun string `json:"tahun"`

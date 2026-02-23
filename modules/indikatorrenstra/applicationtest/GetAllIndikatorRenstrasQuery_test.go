@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
 	infra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 )
@@ -66,35 +67,35 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
 	}{
 		// indikator
 		{"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{
-			{"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
+			{"indikator", "eq", helper.StrPtr("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
 		}, 2},
 		{"indikator like 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{
-			{"indikator", "like", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
+			{"indikator", "like", helper.StrPtr("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
 		}, 2},
 		{"indikator neq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing'", []domain.SearchFilter{
-			{"indikator", "neq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
+			{"indikator", "neq", helper.StrPtr("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
 		}, 10}, //aslinya 156, 10 kena paging
 
 		// tahun
 		{"tahun eq 2024", []domain.SearchFilter{
-			{"tahun", "eq", str("2024")},
+			{"tahun", "eq", helper.StrPtr("2024")},
 		}, 10}, //aslinya 80, 10 kena paging
 		{"tahun in", []domain.SearchFilter{
-			{"tahun", "in", str("2025,2024")},
+			{"tahun", "in", helper.StrPtr("2025,2024")},
 		}, 10}, //aslinya 158, 10 kena paging
 
 		// MULTI FILTERS (AND)
 		{"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing' AND tahun eq '2025'",
 			[]domain.SearchFilter{
-				{"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-				{"tahun", "eq", str("2025")},
+				{"indikator", "eq", helper.StrPtr("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
+				{"tahun", "eq", helper.StrPtr("2025")},
 			},
 			1,
 		},
 		{"indikator eq 'Lulusan memiliki sertifikat kompetensi atau Bahasa asing' AND tahun eq '2025'",
 			[]domain.SearchFilter{
-				{"indikator", "eq", str("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
-				{"tahun", "eq", str("2023")},
+				{"indikator", "eq", helper.StrPtr("Lulusan memiliki sertifikat kompetensi atau Bahasa asing")},
+				{"tahun", "eq", helper.StrPtr("2023")},
 			},
 			0,
 		},
@@ -148,7 +149,3 @@ func TestGetAllIndikatorRenstrasIntegration(t *testing.T) {
 // 		t.Fatalf("expected IndikatorRenstra.EmptyData, got %s", derr.Code)
 // 	}
 // }
-
-func str(v string) *string {
-	return &v
-}

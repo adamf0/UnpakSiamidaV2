@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type KtsRepository struct {
@@ -85,12 +86,20 @@ func (r *KtsRepository) GetDefaultByUuid(
 
 		k.nomor_laporan as NomorLaporan,
 		k.tanggal_laporan as TanggalLaporan,
+		
 		k.auditor as Auditor,
+		u2.name as NamaAuditor,
+		u2.uuid as AuditorUuid,
 		r.auditee as Auditee,
+		u1.name as NamaAuditee,
+		u1.uuid as AuditeeUuid,
+
 		k.uraian_ketidaksesuaian_p as KetidaksesuaianP,
 		k.uraian_ketidaksesuaian_l as KetidaksesuaianL,
 		k.uraian_ketidaksesuaian_o as KetidaksesuaianO,
 		k.uraian_ketidaksesuaian_r as KetidaksesuaianR,
+		k.referensi as Referensi,
+		k.hasil_temuan as HasilTemuan,
 		k.akar_masalah as AkarMasalah,
 		k.tindakan_koreksi as TindakanKoreksi,
 		k.acc_auditor as AccAuditor,
@@ -119,6 +128,8 @@ func (r *KtsRepository) GetDefaultByUuid(
 		Joins(`LEFT JOIN master_standar_renstra sr ON mir.id_master_standar = sr.id`).
 		Joins(`LEFT JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id`).
 		Joins(`LEFT JOIN jenis_file_renstra jf ON tdt.jenis_file = jf.id`).
+		Joins(`LEFT JOIN users u1 ON r.auditee = u1.id`).
+		Joins(`LEFT JOIN users u2 ON k.auditor = u2.id`).
 		Where("k.uuid = ?", id).
 		Order("k.id_dokumen_tambahan DESC").
 		Take(&rowData).Error // Take otomatis LIMIT 1
@@ -190,12 +201,20 @@ func (r *KtsRepository) GetAll(
 
 			k.nomor_laporan as NomorLaporan,
 			k.tanggal_laporan as TanggalLaporan,
+			
 			k.auditor as Auditor,
+			u2.name as NamaAuditor,
+			u2.uuid as AuditorUuid,
 			r.auditee as Auditee,
+			u1.name as NamaAuditee,
+			u1.uuid as AuditeeUuid,
+
 			k.uraian_ketidaksesuaian_p as KetidaksesuaianP,
 			k.uraian_ketidaksesuaian_l as KetidaksesuaianL,
 			k.uraian_ketidaksesuaian_o as KetidaksesuaianO,
 			k.uraian_ketidaksesuaian_r as KetidaksesuaianR,
+			k.referensi as Referensi,
+			k.hasil_temuan as HasilTemuan,
 			k.akar_masalah as AkarMasalah,
 			k.tindakan_koreksi as TindakanKoreksi,
 			k.acc_auditor as AccAuditor,
@@ -250,7 +269,9 @@ func (r *KtsRepository) GetAll(
 		Joins(`
 			LEFT JOIN jenis_file_renstra jf 
 				ON tdt.jenis_file = jf.id
-		`)
+		`).
+		Joins(`LEFT JOIN users u1 ON r.auditee = u1.id`).
+		Joins(`LEFT JOIN users u2 ON k.auditor = u2.id`)
 
 	// -----------------------------------
 	// ADVANCED FILTERS
@@ -265,16 +286,43 @@ func (r *KtsRepository) GetAll(
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
 		}
+		if val == "" {
+			continue
+		}
 
 		switch strings.ToLower(f.Operator) {
 		case "eq":
-			db = db.Where(col+" = ?", val)
+			db = db.Where(clause.Eq{
+				Column: col,
+				Value:  val,
+			})
 		case "neq":
-			db = db.Where(col+" <> ?", val)
+			db = db.Where(clause.Neq{
+				Column: col,
+				Value:  val,
+			})
 		case "like":
-			db = db.Where(col+" LIKE ?", "%"+val+"%")
+			db = db.Where(clause.Like{
+				Column: col,
+				Value:  "%" + val + "%",
+			})
 		case "in":
-			db = db.Where(col+" IN ?", strings.Split(val, ","))
+			rawVals := strings.Split(val, ",")
+			vals := make([]interface{}, 0, len(rawVals))
+
+			for _, v := range rawVals {
+				v = strings.TrimSpace(v)
+				if v != "" {
+					vals = append(vals, v)
+				}
+			}
+
+			if len(vals) > 0 {
+				db = db.Where(clause.IN{
+					Column: col,
+					Values: vals,
+				})
+			}
 		}
 	}
 
@@ -283,15 +331,18 @@ func (r *KtsRepository) GetAll(
 	// -----------------------------------
 	if strings.TrimSpace(search) != "" {
 		like := "%" + search + "%"
-		var or []string
-		var args []interface{}
+		var conditions []clause.Expression
 
 		for _, col := range allowedSearchColumns {
-			or = append(or, col+" LIKE ?")
-			args = append(args, like)
+			conditions = append(conditions, clause.Like{
+				Column: col,
+				Value:  like,
+			})
 		}
 
-		db = db.Where("("+strings.Join(or, " OR ")+")", args...)
+		if len(conditions) > 0 {
+			db = db.Where(clause.Or(conditions...))
+		}
 	}
 
 	// -----------------------------------

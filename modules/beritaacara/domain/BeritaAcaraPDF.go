@@ -6,6 +6,7 @@ type BeritaAcaraPDF struct {
 	Tanggal  string
 	Target   string
 	Auditee  string
+	Auditor  string
 	Auditor1 string
 	Auditor2 string
 	Logo1    string

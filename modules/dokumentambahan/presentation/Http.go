@@ -8,6 +8,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 
@@ -54,9 +55,9 @@ func UpdateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.Params("tahun")
 	mode := c.FormValue("mode")
 	granted := c.FormValue("grantedaccess") //dari middleware
-	link := nullableString(c.FormValue("link"))
-	capaianAuditor := nullableString(c.FormValue("capaianAuditor"))
-	catatanAuditor := nullableString(c.FormValue("catatanAuditor"))
+	link := helper.StrPtr(c.FormValue("link"))
+	capaianAuditor := helper.StrPtr(c.FormValue("capaianAuditor"))
+	catatanAuditor := helper.StrPtr(c.FormValue("catatanAuditor"))
 
 	cmd := UpdateDokumenTambahan.UpdateDokumenTambahanCommand{
 		Uuid:           uuid,
@@ -251,15 +252,4 @@ func ModuleDokumenTambahan(app *fiber.App) {
 	//private
 	app.Get("/dokumentambahan/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetDokumenTambahanHandlerfunc)
 	app.Get("/dokumentambahans", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllDokumenTambahansHandlerfunc)
-}
-
-// ====================================================================
-// Helper: convert empty string → nil
-// ====================================================================
-func nullableString(s string) *string {
-	trimmed := strings.TrimSpace(s)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }

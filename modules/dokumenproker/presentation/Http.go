@@ -8,6 +8,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	DokumenProkerdomain "UnpakSiamida/modules/dokumenproker/domain"
@@ -47,7 +48,7 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	jenis_dokumen := c.FormValue("jenis_dokumen")
 	file := c.FormValue("file")
 	status := c.FormValue("status")
-	catatan := strPtr(c.FormValue("catatan"))
+	catatan := helper.StrPtr(c.FormValue("catatan"))
 
 	cmd := CreateDokumenProker.CreateDokumenProkerCommand{
 		FakultasUuid:    fakultas_unit,
@@ -63,7 +64,7 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -95,7 +96,7 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	jenis_dokumen := c.FormValue("jenis_dokumen")
 	file := c.FormValue("file")
 	status := c.FormValue("status")
-	catatan := strPtr(c.FormValue("catatan"))
+	catatan := helper.StrPtr(c.FormValue("catatan"))
 
 	cmd := UpdateDokumenProker.UpdateDokumenProkerCommand{
 		Uuid:            uuid,
@@ -283,8 +284,4 @@ func ModuleDokumenProker(app *fiber.App) {
 	app.Delete("/dokumenproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteDokumenProkerHandlerfunc)
 	app.Get("/DokumenProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetDokumenProkerHandlerfunc)
 	app.Get("/DokumenProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllDokumenProkersHandlerfunc)
-}
-
-func strPtr(v string) *string {
-	return &v
 }

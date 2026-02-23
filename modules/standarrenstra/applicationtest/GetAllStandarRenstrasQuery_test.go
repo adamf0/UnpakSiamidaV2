@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/standarrenstra/application/GetAllStandarRenstras"
 	infra "UnpakSiamida/modules/standarrenstra/infrastructure"
 )
@@ -66,13 +67,13 @@ func TestGetAllStandarRenstrasIntegration(t *testing.T) {
 	}{
 		// nama
 		{"nama eq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "eq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"nama", "eq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 0},
 		{"nama like '2023'", []domain.SearchFilter{
-			{"nama", "like", str("2023")},
+			{"nama", "like", helper.StrPtr("2023")},
 		}, 0},
 		{"nama neq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"nama", "neq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 10},
 	}
 
@@ -97,8 +98,4 @@ func TestGetAllStandarRenstrasIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

@@ -54,7 +54,7 @@ func CreateJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================

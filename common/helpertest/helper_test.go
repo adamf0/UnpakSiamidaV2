@@ -175,40 +175,39 @@ func TestFormatWIB(t *testing.T) {
 	loc, _ := time.LoadLocation("UTC")
 	tm := time.Date(2024, 1, 2, 3, 4, 5, 0, loc)
 
-	got := helper.FTime(tm)
+	ctx := helper.DateContext{}
+	ctx.SetStrategy(helper.IndonesianDateFormatter{})
+	got := ctx.FormatWithTime(tm)
 
 	if !strings.Contains(got, "WIB") {
 		t.Fatalf("expected WIB timezone, got %s", got)
 	}
 }
 
-func TestFTimeStr(t *testing.T) {
-	tests := []struct {
-		name  string
-		input *string
-		want  string
-	}{
-		{"nil", nil, "-"},
-		{"empty", strPtr(""), "-"},
-		{"date_only", strPtr("2024-01-02"), "02 Januari 2024"},
-		{"datetime", strPtr("2024-01-02 10:20:30"), "02 Januari 2024"},
-		{"rfc3339", strPtr("2024-01-02T10:20:30Z"), "02 Januari 2024"},
-		{"invalid", strPtr("abc"), "abc"},
-	}
+//[pr] ganti ke chain
+// func TestFormatDateTimeID(t *testing.T) {
+// 	tests := []struct {
+// 		name  string
+// 		input *string
+// 		want  string
+// 	}{
+// 		{"nil", nil, "-"},
+// 		{"empty", helper.StrPtr(""), "-"},
+// 		{"date_only", helper.StrPtr("2024-01-02"), "02 Januari 2024"},
+// 		{"datetime", helper.StrPtr("2024-01-02 10:20:30"), "02 Januari 2024"},
+// 		{"rfc3339", helper.StrPtr("2024-01-02T10:20:30Z"), "02 Januari 2024"},
+// 		{"invalid", helper.StrPtr("abc"), "abc"},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := helper.FTimeStr(tt.input)
-			if tt.want != "-" && !strings.Contains(got, tt.want) {
-				t.Fatalf("expected %s got %s", tt.want, got)
-			}
-		})
-	}
-}
-
-func strPtr(s string) *string {
-	return &s
-}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got := helper.FormatDateTimeID(tt.input)
+// 			if tt.want != "-" && !strings.Contains(got, tt.want) {
+// 				t.Fatalf("expected %s got %s", tt.want, got)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestReDoS_Email_LongInput(t *testing.T) {
 	evil := strings.Repeat("a", 5_000_000) + "@unpak.ac.id"

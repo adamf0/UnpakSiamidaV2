@@ -10,11 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// helper untuk pointer string
-func ptr(s string) *string {
-	return &s
-}
-
 // ====================
 // CREATE
 // ====================
@@ -62,8 +57,8 @@ func TestUpdateTemplateDokumenTambahan_Success(t *testing.T) {
 	result := domain.UpdateTemplateDokumenTambahan(
 		prev,
 		prev.UUID,
-		"2026",       // tahun
-		2,            // jenisFileID
+		"2026", // tahun
+		2,      // jenisFileID
 		"Pertanyaan Baru",
 		"Klasifikasi Baru",
 		"Kategori Baru",

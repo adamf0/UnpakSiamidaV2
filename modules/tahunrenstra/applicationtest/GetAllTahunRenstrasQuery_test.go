@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	appgetall "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
 	infra "UnpakSiamida/modules/tahunrenstra/infrastructure"
 )
@@ -56,21 +57,21 @@ func TestGetAllTahunRenstras_Filter(t *testing.T) {
 		expectedRows int
 	}{
 		{"tahun eq 2025", []domain.SearchFilter{
-			{"tahun", "eq", str("2025")},
+			{"tahun", "eq", helper.StrPtr("2025")},
 		}, 1},
 
 		{"status eq active", []domain.SearchFilter{
-			{"status", "eq", str("active")},
+			{"status", "eq", helper.StrPtr("active")},
 		}, 1},
 
 		{"status neq active", []domain.SearchFilter{
-			{"status", "neq", str("active")},
+			{"status", "neq", helper.StrPtr("active")},
 		}, 3},
 
 		{"multi filter tahun=2024 AND status active",
 			[]domain.SearchFilter{
-				{"tahun", "eq", str("2024")},
-				{"status", "eq", str("active")},
+				{"tahun", "eq", helper.StrPtr("2024")},
+				{"status", "eq", helper.StrPtr("active")},
 			},
 			0,
 		},
@@ -141,8 +142,4 @@ func TestGetAllTahunRenstras_GlobalSearch(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

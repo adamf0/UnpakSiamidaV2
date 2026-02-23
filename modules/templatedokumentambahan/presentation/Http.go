@@ -22,13 +22,6 @@ import (
 	SetupUuidTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan"
 )
 
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 // =======================================================
 // POST /templatedokumentambahan
 // =======================================================
@@ -72,7 +65,7 @@ func CreateTemplateDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================

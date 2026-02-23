@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	common "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	infrafakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	infraindikator "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 	app "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
@@ -129,8 +130,8 @@ func TestUpdateTemplateRenstraCommandHandler_Fail(t *testing.T) {
 			indikatorUUID: "b763b5b3-a18e-416c-9d0d-a0c23aa6076c", // valid
 			fakultasUUID:  "dea9a83f-70b3-4295-85ed-459eb1a9f6a0", // tidak ada
 			target:        nil,
-			targetMin:     strPtr("80"),
-			targetMax:     strPtr("120"),
+			targetMin:     helper.StrPtr("80"),
+			targetMax:     helper.StrPtr("120"),
 			expectedCode:  "TemplateRenstra.InvalidValueTarget",
 		},
 	}

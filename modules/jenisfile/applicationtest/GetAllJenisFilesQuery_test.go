@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/jenisfile/application/GetAllJenisFiles"
 	infra "UnpakSiamida/modules/jenisfile/infrastructure"
 )
@@ -66,13 +67,13 @@ func TestGetAllJenisFilesIntegration(t *testing.T) {
 	}{
 		// nama
 		{"nama eq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "eq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"nama", "eq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 1},
 		{"nama like '2023'", []domain.SearchFilter{
-			{"nama", "like", str("2023")},
+			{"nama", "like", helper.StrPtr("2023")},
 		}, 1},
 		{"nama neq 'Program Kerja Sesuai Dengan Template 2024 disertai Monev'", []domain.SearchFilter{
-			{"nama", "neq", str("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
+			{"nama", "neq", helper.StrPtr("Program Kerja Sesuai Dengan Template 2024 disertai Monev")},
 		}, 5},
 	}
 
@@ -97,8 +98,4 @@ func TestGetAllJenisFilesIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

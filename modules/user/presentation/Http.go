@@ -8,6 +8,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 
@@ -49,7 +50,7 @@ func CreateUserHandler(c *fiber.Ctx) error {
 		Password:         c.FormValue("password"),
 		Email:            c.FormValue("email"),
 		Level:            c.FormValue("level"),
-		UuidFakultasUnit: nullableString(c.FormValue("FakultasUnit")),
+		UuidFakultasUnit: helper.StrPtr(c.FormValue("FakultasUnit")),
 	}
 
 	uuid, err := mediatr.Send[
@@ -61,7 +62,7 @@ func CreateUserHandler(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -100,7 +101,7 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 		Password:         passwordPtr,
 		Email:            c.FormValue("email"),
 		Level:            c.FormValue("level"),
-		UuidFakultasUnit: nullableString(c.FormValue("FakultasUnit")),
+		UuidFakultasUnit: helper.StrPtr(c.FormValue("FakultasUnit")),
 	}
 
 	updatedID, err := mediatr.Send[
@@ -316,12 +317,4 @@ func ModuleUser(app *fiber.App) {
 	app.Get("/users", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUsersHandler)
 
 	app.Get("/user-options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUserOptionsHandler)
-}
-
-func nullableString(s string) *string {
-	trimmed := strings.TrimSpace(s)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }

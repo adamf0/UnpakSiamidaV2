@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type AktivitasProkerRepository struct {
@@ -106,25 +107,26 @@ func (r *AktivitasProkerRepository) GetAll(
 
 	db := r.db.WithContext(ctx).
 		Table("aktivitas a").
+		Table("aktivitas a").
 		Select(`
-			a.id as ID,
-			a.uuid as UUID,
-			a.id_fakultas_unit as FakultasUnitId,
-            vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
-			vfu.jenjang as Jenjang,
-			vfu.type as Type,
-			vfu.fakultas as Fakultas,
-            a.id_mata_program as MataProgramId,
-            mp.uuid as MataProgramUUID,
-            mp.mata_program as MataProgram,
-            a.aktivitas as Aktivitas,
-            a.PIC as PIC,
-			a.target_rk_awal as TanggalRKAwal,
-			a.target_rk_akhir as TanggalRKAkhir
-		`).
-		Joins(`v_fakultas_unit vfu ON jp.id_fakultas_unit = vfu.id`).
-		Joins(`mata_program mp ON a.id_mata_program = mp.id`)
+		a.id as ID,
+		a.uuid as UUID,
+		a.id_fakultas_unit as FakultasUnitId,
+		vfu.uuid as FakultasUnitUuid,
+		vfu.nama_fak_prod_unit as FakultasUnit,
+		vfu.jenjang as Jenjang,
+		vfu.type as Type,
+		vfu.fakultas as Fakultas,
+		a.id_mata_program as MataProgramId,
+		mp.uuid as MataProgramUUID,
+		mp.mata_program as MataProgram,
+		a.aktivitas as Aktivitas,
+		a.PIC as PIC,
+		a.target_rk_awal as TanggalRKAwal,
+		a.target_rk_akhir as TanggalRKAkhir
+	`).
+		Joins("JOIN v_fakultas_unit vfu ON a.id_fakultas_unit = vfu.id").
+		Joins("JOIN mata_program mp ON a.id_mata_program = mp.id")
 
 	// -----------------------------------
 	// ADVANCED FILTERS
@@ -139,16 +141,43 @@ func (r *AktivitasProkerRepository) GetAll(
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
 		}
+		if val == "" {
+			continue
+		}
 
 		switch strings.ToLower(f.Operator) {
 		case "eq":
-			db = db.Where(col+" = ?", val)
+			db = db.Where(clause.Eq{
+				Column: col,
+				Value:  val,
+			})
 		case "neq":
-			db = db.Where(col+" <> ?", val)
+			db = db.Where(clause.Neq{
+				Column: col,
+				Value:  val,
+			})
 		case "like":
-			db = db.Where(col+" LIKE ?", "%"+val+"%")
+			db = db.Where(clause.Like{
+				Column: col,
+				Value:  "%" + val + "%",
+			})
 		case "in":
-			db = db.Where(col+" IN ?", strings.Split(val, ","))
+			rawVals := strings.Split(val, ",")
+			vals := make([]interface{}, 0, len(rawVals))
+
+			for _, v := range rawVals {
+				v = strings.TrimSpace(v)
+				if v != "" {
+					vals = append(vals, v)
+				}
+			}
+
+			if len(vals) > 0 {
+				db = db.Where(clause.IN{
+					Column: col,
+					Values: vals,
+				})
+			}
 		}
 	}
 
@@ -157,15 +186,18 @@ func (r *AktivitasProkerRepository) GetAll(
 	// -----------------------------------
 	if strings.TrimSpace(search) != "" {
 		like := "%" + search + "%"
-		var or []string
-		var args []interface{}
+		var conditions []clause.Expression
 
 		for _, col := range allowedSearchColumns {
-			or = append(or, col+" LIKE ?")
-			args = append(args, like)
+			conditions = append(conditions, clause.Like{
+				Column: col,
+				Value:  like,
+			})
 		}
 
-		db = db.Where("("+strings.Join(or, " OR ")+")", args...)
+		if len(conditions) > 0 {
+			db = db.Where(clause.Or(conditions...))
+		}
 	}
 
 	// -----------------------------------

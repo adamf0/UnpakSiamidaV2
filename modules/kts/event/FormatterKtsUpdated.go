@@ -34,6 +34,28 @@ type KtsUpdatedView struct {
 }
 
 func RenderKtsUpdatedTemplate(e KtsUpdatedEvent) string {
+	ctx := helper.DateContext{}
+	ctx.SetStrategy(helper.IndonesianDateFormatter{})
+
+	factory := helper.DateLayoutFirstFactory{}
+	TanggalClosing := helper.NewDateChain(*e.TanggalClosing).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		UseFormatStrategy(factory.CreateFormatter()).
+		FormatString()
+
+	TanggalPenyelesaian := helper.NewDateChain(*e.TanggalPenyelesaian).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		UseFormatStrategy(factory.CreateFormatter()).
+		FormatString()
+
+	TanggalClosingFinal := helper.NewDateChain(*e.TanggalClosingFinal).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		UseFormatStrategy(factory.CreateFormatter()).
+		FormatString()
+
 	view := KtsUpdatedView{
 		UUID:                e.KtsUUID.String(),
 		Target:              helper.StringHtmlValue(e.Target),
@@ -54,11 +76,11 @@ func RenderKtsUpdatedTemplate(e KtsUpdatedEvent) string {
 		Keterangan:          helper.StringHtmlValue(e.KeteranganTolak),
 		TindakanPerbaikan:   helper.StringHtmlValue(e.TindakanPerbaikan),
 		Tinjauan:            helper.StringHtmlValue(e.TinjauanTindakanPerbaikan),
-		TanggalClosing:      helper.FTimeStr(e.TanggalClosing),
-		TanggalPenyelesaian: helper.FTimeStr(e.TanggalPenyelesaian),
-		TanggalClosingFinal: helper.FTimeStr(e.TanggalClosingFinal),
+		TanggalClosing:      TanggalClosing,
+		TanggalPenyelesaian: TanggalPenyelesaian,
+		TanggalClosingFinal: TanggalClosingFinal,
 		Wmm:                 helper.StringHtmlValue(e.WmmUpmfUpmps),
-		Terjadi:             helper.FTime(e.OccurredOn),
+		Terjadi:             ctx.FormatWithTime(e.OccurredOn),
 	}
 
 	tpl := template.Must(template.New("kts").Parse(ktsUpdatedTemplate))

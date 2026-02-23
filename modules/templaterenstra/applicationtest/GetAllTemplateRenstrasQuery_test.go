@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/templaterenstra/application/GetAllTemplateRenstras"
 	infra "UnpakSiamida/modules/templaterenstra/infrastructure"
 )
@@ -66,13 +67,13 @@ func TestGetAllTemplateRenstrasIntegration(t *testing.T) {
 	}{
 		// tahun
 		{"tahun eq '2024'", []domain.SearchFilter{
-			{"tahun", "eq", str("2024")},
+			{"tahun", "eq", helper.StrPtr("2024")},
 		}, 10},
 		{"tahun like '2024'", []domain.SearchFilter{
-			{"tahun", "like", str("2024")},
+			{"tahun", "like", helper.StrPtr("2024")},
 		}, 10},
 		{"tahun neq '2024'", []domain.SearchFilter{
-			{"tahun", "neq", str("2024")},
+			{"tahun", "neq", helper.StrPtr("2024")},
 		}, 10},
 	}
 
@@ -97,8 +98,4 @@ func TestGetAllTemplateRenstrasIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/renstra/application/GetAllRenstras"
 	infra "UnpakSiamida/modules/renstra/infrastructure"
 )
@@ -62,13 +63,13 @@ func TestGetAllRenstrasIntegration(t *testing.T) {
 		expectedRows int
 	}{
 		{"tahun eq '2024'", []domain.SearchFilter{
-			{"tahun", "eq", str("2024")},
+			{"tahun", "eq", helper.StrPtr("2024")},
 		}, 10},
 		{"fakultas_unit like 'ILMU HUKUM'", []domain.SearchFilter{
-			{"fakultas_unit", "like", str("ILMU HUKUM")},
+			{"fakultas_unit", "like", helper.StrPtr("ILMU HUKUM")},
 		}, 4},
 		{"tahun neq '2023'", []domain.SearchFilter{
-			{"tahun", "neq", str("2023")},
+			{"tahun", "neq", helper.StrPtr("2023")},
 		}, 10},
 	}
 
@@ -87,8 +88,4 @@ func TestGetAllRenstrasIntegration(t *testing.T) {
 			assert.Len(t, res.Data, tt.expectedRows, "[%s] unexpected row count", tt.name)
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

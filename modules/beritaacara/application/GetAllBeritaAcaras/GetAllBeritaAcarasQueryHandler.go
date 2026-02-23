@@ -1,13 +1,18 @@
 package application
 
 import (
+	"UnpakSiamida/common/helper"
 	domainberitaacara "UnpakSiamida/modules/beritaacara/domain"
+	domainuser "UnpakSiamida/modules/user/domain"
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type GetAllBeritaAcarasQueryHandler struct {
-	Repo domainberitaacara.IBeritaAcaraRepository
+	Repo     domainberitaacara.IBeritaAcaraRepository
+	RepoUser domainuser.IUserRepository
 }
 
 func (h *GetAllBeritaAcarasQueryHandler) Handle(
@@ -16,6 +21,30 @@ func (h *GetAllBeritaAcarasQueryHandler) Handle(
 ) (domainberitaacara.PagedBeritaAcaras, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+
+	for i := len(q.SearchFilters) - 1; i >= 0; i-- {
+		filter := q.SearchFilters[i]
+
+		if filter.Field == "pic" && filter.Value != nil {
+			sid := helper.NullableString(filter.Value)
+
+			parse, errParse := uuid.Parse(sid)
+			if errParse != nil {
+				continue
+			}
+
+			user, erruser := h.RepoUser.GetByUuid(ctx, parse)
+			if erruser != nil {
+				continue
+			}
+			if user != nil && (user.Level == "admin" || user.Level == "fakultas") {
+				q.SearchFilters = append(
+					q.SearchFilters[:i],
+					q.SearchFilters[i+1:]...,
+				)
+			}
+		}
+	}
 
 	BeritaAcaras, total, err := h.Repo.GetAll(
 		ctx,

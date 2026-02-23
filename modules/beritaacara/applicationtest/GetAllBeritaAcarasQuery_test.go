@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	domain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/beritaacara/application/GetAllBeritaAcaras"
 	infra "UnpakSiamida/modules/beritaacara/infrastructure"
 )
@@ -66,13 +67,13 @@ func TestGetAllBeritaAcarasIntegration(t *testing.T) {
 	}{
 		// nama
 		{"nama eq HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "eq", str("HUKUM")},
+			{"nama_fak_prod_unit", "eq", helper.StrPtr("HUKUM")},
 		}, 5},
 		{"nama like HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "like", str("HUKUM")},
+			{"nama_fak_prod_unit", "like", helper.StrPtr("HUKUM")},
 		}, 10},
 		{"nama neq HUKUM", []domain.SearchFilter{
-			{"nama_fak_prod_unit", "neq", str("HUKUM")},
+			{"nama_fak_prod_unit", "neq", helper.StrPtr("HUKUM")},
 		}, 10},
 	}
 
@@ -97,8 +98,4 @@ func TestGetAllBeritaAcarasIntegration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func str(v string) *string {
-	return &v
 }

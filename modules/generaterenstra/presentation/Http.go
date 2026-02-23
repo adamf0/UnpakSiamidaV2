@@ -43,7 +43,7 @@ func GenerateRenstraHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid}) //[pr] dibuat struct common khusus uuid
+	return commonpresentation.JsonUUID(c, uuid) //[pr] dibuat struct common khusus uuid
 }
 
 // GenerateRenstraHandler godoc
@@ -76,7 +76,7 @@ func DeleteRenstraQuestionHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 func ModuleGenerateRenstra(app *fiber.App) {

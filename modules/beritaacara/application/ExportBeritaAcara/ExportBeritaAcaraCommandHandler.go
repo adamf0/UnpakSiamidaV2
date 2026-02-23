@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 
 	commondomain "UnpakSiamida/common/domain"
 	"UnpakSiamida/common/helper"
@@ -43,7 +42,7 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 	}
 
 	audit := []string{"auditee", "auditor1", "auditor2"}
-	audituuid := []string{beritaacara.AuditeeUuid.String(), beritaacara.Auditor1Uuid.String(), beritaacara.Auditor2Uuid.String()}
+	audituuid := []string{helper.UUIDString(beritaacara.AuditeeUuid), helper.UUIDString(beritaacara.Auditor1Uuid), helper.UUIDString(beritaacara.Auditor2Uuid)}
 	other := []string{"admin", "fakultas"}
 
 	if cmd.SID != "preview" {
@@ -67,7 +66,7 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 		return []byte{}, domainberitaacara.NoResource()
 	}
 
-	data := buildBeritaAcaraData(beritaacara.Tahun, beritaacara.FakultasUnit, *beritaacara.Auditor1, *beritaacara.Auditor2, *beritaacara.Auditee, logo1, logo2, beritaacara.Tanggal)
+	data := buildBeritaAcaraData(beritaacara.Tahun, beritaacara.FakultasUnit, beritaacara.Auditor1, beritaacara.Auditor2, beritaacara.Auditee, logo1, logo2, beritaacara.Tanggal)
 
 	pdfGen := commoninfra.NewWkhtmlPdfGenerator()
 	pdf, err := pdfGen.Generate(template, data)
@@ -75,71 +74,46 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 		return []byte{}, domainberitaacara.GeneratePDF(err.Error())
 	}
 
-	if (grantedContains(audit, cmd.Tahun, cmd.Granted, false) && contains(audituuid, cmd.SID)) || grantedContains(other, cmd.Tahun, cmd.Granted, true) || cmd.SID == "preview" {
+	if cmd.SID == "preview" {
+		return pdf, nil
+	}
+
+	if (helper.GrantedContains(audit, cmd.Tahun, cmd.Granted, false) && helper.Contains(audituuid, cmd.SID) && cmd.Tahun == data.Tahun) ||
+		helper.GrantedContains(other, cmd.Tahun, cmd.Granted, true) {
 		return pdf, nil
 	}
 
 	return []byte{}, domainberitaacara.NotGranted()
 }
 
-func buildBeritaAcaraData(tahun, target, auditor1, auditor2, auditee, logo1, logo2 string, tanggal time.Time) domainberitaacara.BeritaAcaraPDF {
-	qrAuditor, _ := helper.GenerateQRBase64("Nama : "+auditor1, 120)
-	qrAuditee, _ := helper.GenerateQRBase64("Nama : "+auditee, 120)
-
-	var hariID = map[time.Weekday]string{
-		time.Monday:    "Senin",
-		time.Tuesday:   "Selasa",
-		time.Wednesday: "Rabu",
-		time.Thursday:  "Kamis",
-		time.Friday:    "Jumat",
-		time.Saturday:  "Sabtu",
-		time.Sunday:    "Minggu",
+func buildBeritaAcaraData(tahun string, target string, auditor1 *string, auditor2 *string, auditee *string, logo1 string, logo2 string, tanggal time.Time) domainberitaacara.BeritaAcaraPDF {
+	var qrAuditor = ""
+	var auditor = ""
+	if auditor1 != nil {
+		qrAuditor, _ = helper.GenerateQRBase64("Nama : "+helper.NullableString(auditor1), 120)
+		auditor = helper.NullableString(auditor1)
+	} else {
+		qrAuditor, _ = helper.GenerateQRBase64("Nama : "+helper.NullableString(auditor2), 120)
+		auditor = helper.NullableString(auditor2)
 	}
+
+	qrAuditee, _ := helper.GenerateQRBase64("Nama : "+helper.NullableString(auditee), 120)
+
+	ctx := helper.DateContext{}
+	ctx.SetStrategy(helper.IndonesianDateFormatter{})
 
 	return domainberitaacara.BeritaAcaraPDF{
 		Tahun:     tahun,
-		Hari:      hariID[tanggal.Weekday()],
-		Tanggal:   tanggal.Format("02 Januari 2006"),
-		Target:    target,
-		Auditor1:  auditor1,
-		Auditor2:  auditor2,
-		Auditee:   auditee,
+		Hari:      ctx.NameDay(tanggal),
+		Tanggal:   ctx.Format(tanggal),
+		Target:    target, //[pr] belum masuk type fakultas, unit, prodi
+		Auditor:   auditor,
+		Auditor1:  helper.NullableString(auditor1),
+		Auditor2:  helper.NullableString(auditor2),
+		Auditee:   helper.NullableString(auditee),
 		Logo1:     logo1,
 		Logo2:     logo2,
 		QrAuditee: qrAuditee,
 		QrAuditor: qrAuditor,
 	}
-}
-
-func contains(list []string, value string) bool {
-	for _, v := range list {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
-
-func grantedContains(audit []string, tahun string, granted string, isother bool) bool {
-	entries := strings.Split(granted, ",")
-	for _, e := range entries {
-		parts := strings.Split(e, "#")
-		if len(parts) != 2 {
-			return false
-		}
-
-		year := strings.TrimSpace(parts[0])
-		level := strings.TrimSpace(parts[1])
-
-		if isother {
-			if contains(audit, level) {
-				return true
-			}
-		} else {
-			if year == tahun && contains(audit, level) {
-				return true
-			}
-		}
-	}
-	return false
 }

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// [pr] belum validasi bahwa auditee auditor buat BA untuk unit & tahun yg ditarget audit
 type CreateBeritaAcaraCommandHandler struct {
 	Repo             domainberitaacara.IBeritaAcaraRepository
 	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository

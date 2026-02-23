@@ -9,6 +9,7 @@ import (
 
 	// "UnpakSiamida/common/domain"
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 
@@ -20,13 +21,6 @@ import (
 	UpdateTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
 	templaterenstradomain "UnpakSiamida/modules/templaterenstra/domain"
 )
-
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
 
 // =======================================================
 // POST /templaterenstra
@@ -74,10 +68,10 @@ func CreateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 		FakultasUnit: fakultasUnit,
 		Kategori:     kategori,
 		Klasifikasi:  klasifikasi,
-		Satuan:       strPtr(satuan),
-		Target:       strPtr(target),
-		TargetMin:    strPtr(targetMin),
-		TargetMax:    strPtr(targetMax),
+		Satuan:       helper.StrPtr(satuan),
+		Target:       helper.StrPtr(target),
+		TargetMin:    helper.StrPtr(targetMin),
+		TargetMax:    helper.StrPtr(targetMax),
 		Tugas:        tugas,
 	}
 
@@ -86,7 +80,7 @@ func CreateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -138,10 +132,10 @@ func UpdateTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 		FakultasUnit: fakultasUnit,
 		Kategori:     kategori,
 		Klasifikasi:  klasifikasi,
-		Satuan:       strPtr(satuan),
-		Target:       strPtr(target),
-		TargetMin:    strPtr(targetMin),
-		TargetMax:    strPtr(targetMax),
+		Satuan:       helper.StrPtr(satuan),
+		Target:       helper.StrPtr(target),
+		TargetMin:    helper.StrPtr(targetMin),
+		TargetMax:    helper.StrPtr(targetMax),
 		Tugas:        tugas,
 	}
 

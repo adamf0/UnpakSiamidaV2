@@ -48,7 +48,7 @@ func CreateJenisFileHandlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"uuid": uuid})
+	return commonpresentation.JsonUUID(c, uuid)
 }
 
 // =======================================================
@@ -165,7 +165,7 @@ func GetJenisFileHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} JenisFiledomain.PagedJenisFiles
+// @Success 200 {object} commondomain.Paged[JenisFiledomain.JenisFile]
 // @Router /JenisFiles [get]
 func GetAllJenisFilesHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -206,23 +206,23 @@ func GetAllJenisFilesHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[JenisFiledomain.JenisFile]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[JenisFiledomain.JenisFile]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[JenisFiledomain.JenisFile]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[JenisFiledomain.JenisFile]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[JenisFiledomain.JenisFile]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllJenisFiles.GetAllJenisFilesQuery,
-		JenisFiledomain.PagedJenisFiles,
+		commondomain.Paged[JenisFiledomain.JenisFile],
 	](context.Background(), query)
 
 	if err != nil {
