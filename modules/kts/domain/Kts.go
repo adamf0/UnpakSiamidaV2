@@ -305,7 +305,7 @@ func UpdateKtsStep2(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -334,7 +334,7 @@ func UpdateKtsStep2(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -386,7 +386,7 @@ func UpdateKtsTindakan(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -414,7 +414,7 @@ func UpdateKtsTindakan(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -484,7 +484,7 @@ func UpdateKtsStep3(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -514,7 +514,7 @@ func UpdateKtsStep3(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -589,7 +589,7 @@ func UpdateKtsStep4(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -621,7 +621,7 @@ func UpdateKtsStep4(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -698,7 +698,7 @@ func UpdateKtsStep5(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
@@ -733,7 +733,7 @@ func UpdateKtsStep5(
 			Target:          prevKts.Target,
 
 			NomorLaporan:     prevKts.NomorLaporan,
-			TanggalLaporan:   helper.StrPtr(prevKts.TanggalLaporan.String()),
+			TanggalLaporan:   helper.TimeToStringPtr(prevKts.TanggalLaporan),
 			KetidaksesuaianP: prevKts.KetidaksesuaianP,
 			KetidaksesuaianL: prevKts.KetidaksesuaianL,
 			KetidaksesuaianO: prevKts.KetidaksesuaianO,
