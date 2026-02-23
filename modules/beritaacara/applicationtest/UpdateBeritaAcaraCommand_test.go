@@ -173,7 +173,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 			expectedError: "BeritaAcara.NotFoundAuditee",
 		},
 		{
-			name: "Fail - DuplicateAssignment (Auditee == Auditor1)",
+			name: "Fail - DuplicateAssigment (Auditee == Auditor1)",
 			cmd: app.UpdateBeritaAcaraCommand{
 				Uuid:             validUuid,
 				Tahun:            validTahun,
@@ -183,7 +183,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditeeUuid, // ❌ duplicate
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "BeritaAcara.DuplicateAssignment",
+			expectedError: "BeritaAcara.DuplicateAssigment",
 		},
 	}
 
