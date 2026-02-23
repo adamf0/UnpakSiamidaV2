@@ -65,8 +65,11 @@ func TestUpdateBeritaAcaraCommand_Success(t *testing.T) {
 	db, terminate := setupBeritaAcaraMySQL(t)
 	defer terminate()
 
-	repo := infra.NewBeritaAcaraRepository(db)
-	handler := &app.UpdateBeritaAcaraCommandHandler{Repo: repo}
+	handler := &app.UpdateBeritaAcaraCommandHandler{
+		Repo:             infra.NewBeritaAcaraRepository(db),
+		RepoFakultasUnit: infraFakultasUnit.NewFakultasUnitRepository(db),
+		RepoUser:         infraUser.NewUserRepository(db),
+	}
 
 	Uuid := "14212231-792f-4935-bb1c-9a38695a4b6b"
 	Tahun := "2080"

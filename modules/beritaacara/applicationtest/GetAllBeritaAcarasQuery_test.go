@@ -10,6 +10,7 @@ import (
 	"UnpakSiamida/common/helper"
 	app "UnpakSiamida/modules/beritaacara/application/GetAllBeritaAcaras"
 	infra "UnpakSiamida/modules/beritaacara/infrastructure"
+	infraUser "UnpakSiamida/modules/user/infrastructure"
 )
 
 func TestGetAllBeritaAcarasIntegration(t *testing.T) {
@@ -17,8 +18,10 @@ func TestGetAllBeritaAcarasIntegration(t *testing.T) {
 	defer cleanup()
 
 	// Use GORM wrapper repo constructor
-	gormrepo := infra.NewBeritaAcaraRepository(db)
-	handler := app.GetAllBeritaAcarasQueryHandler{Repo: gormrepo}
+	handler := app.GetAllBeritaAcarasQueryHandler{
+		Repo:     infra.NewBeritaAcaraRepository(db),
+		RepoUser: infraUser.NewUserRepository(db),
+	}
 
 	page := 1
 	limit := 10
