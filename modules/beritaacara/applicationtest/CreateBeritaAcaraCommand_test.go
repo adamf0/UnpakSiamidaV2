@@ -2,8 +2,10 @@ package applicationtest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	commonDomain "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 	infra "UnpakSiamida/modules/beritaacara/infrastructure"
 	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
@@ -119,7 +121,7 @@ func TestCreateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "NotFoundFakultas",
+			expectedError: "BeritaAcara.NotFoundFakultas",
 		},
 		{
 			name: "Fail - InvalidTanggal",
@@ -131,7 +133,7 @@ func TestCreateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "InvalidTanggal",
+			expectedError: "BeritaAcara.InvalidTanggal",
 		},
 		{
 			name: "Fail - NotFoundAuditee",
@@ -143,7 +145,7 @@ func TestCreateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "NotFoundAuditee",
+			expectedError: "BeritaAcara.NotFoundAuditee",
 		},
 		{
 			name: "Fail - DuplicateAssignment (Auditee == Auditor1)",
@@ -155,7 +157,7 @@ func TestCreateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditeeUuid, // ❌ duplicate
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "DuplicateAssignment",
+			expectedError: "BeritaAcara.DuplicateAssignment",
 		},
 	}
 
@@ -165,7 +167,12 @@ func TestCreateBeritaAcaraCommand_Fail(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Empty(t, uuidStr)
-			assert.Contains(t, err.Error(), tt.expectedError)
+
+			var domainErr commonDomain.Error
+			ok := errors.As(err, &domainErr)
+			assert.True(t, ok)
+
+			assert.Contains(t, domainErr.Code, tt.expectedError)
 		})
 	}
 }

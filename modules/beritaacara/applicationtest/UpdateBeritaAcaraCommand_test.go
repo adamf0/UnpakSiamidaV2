@@ -2,8 +2,10 @@ package applicationtest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	commonDomain "UnpakSiamida/common/domain"
 	app "UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara"
 	infra "UnpakSiamida/modules/beritaacara/infrastructure"
 	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
@@ -119,7 +121,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "Fail - EmptyData",
+			name: "Fail - NotFound",
 			cmd: app.UpdateBeritaAcaraCommand{
 				Uuid:             uuid.NewString(), // ❌ tidak ada
 				Tahun:            validTahun,
@@ -129,7 +131,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "EmptyData",
+			expectedError: "BeritaAcara.NotFound",
 		},
 		{
 			name: "Fail - InvalidTanggal",
@@ -142,7 +144,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "InvalidTanggal",
+			expectedError: "BeritaAcara.InvalidTanggal",
 		},
 		{
 			name: "Fail - NotFoundFakultas",
@@ -155,7 +157,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "NotFoundFakultas",
+			expectedError: "BeritaAcara.NotFoundFakultas",
 		},
 		{
 			name: "Fail - NotFoundAuditee",
@@ -168,7 +170,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditor1Uuid,
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "NotFoundAuditee",
+			expectedError: "BeritaAcara.NotFoundAuditee",
 		},
 		{
 			name: "Fail - DuplicateAssignment (Auditee == Auditor1)",
@@ -181,7 +183,7 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 				Auditor1Uuid:     &validAuditeeUuid, // ❌ duplicate
 				Auditor2Uuid:     &validAuditor2Uuid,
 			},
-			expectedError: "DuplicateAssignment",
+			expectedError: "BeritaAcara.DuplicateAssignment",
 		},
 	}
 
@@ -191,7 +193,12 @@ func TestUpdateBeritaAcaraCommand_Fail(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.Empty(t, updatedUUID)
-			assert.Contains(t, err.Error(), tt.expectedError)
+
+			var domainErr commonDomain.Error
+			ok := errors.As(err, &domainErr)
+			assert.True(t, ok)
+
+			assert.Contains(t, domainErr.Code, tt.expectedError)
 		})
 	}
 }

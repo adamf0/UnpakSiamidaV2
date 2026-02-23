@@ -93,8 +93,11 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
 	"nama_fak_prod_unit": "fu.nama_fak_prod_unit",
+	"auditee":            "u1.name",
+	"auditor1":           "u2.name",
+	"auditor2":           "u3.name",
+	"fakultas":           "fu.nama_fak_prod_unit",
 	"target":             "fu.uuid",
-	"pic":                "",
 }
 
 // ------------------------
@@ -110,7 +113,7 @@ func (r *BeritaAcaraRepository) GetAll(
 	var rows = make([]domainberitaacara.BeritaAcaraDefault, 0)
 	var total int64
 
-	db := r.db.WithContext(ctx).Debug().
+	db := r.db.WithContext(ctx).
 		Table("berita_acara ba").
 		Select(`
 			ba.id as Id,
@@ -120,7 +123,6 @@ func (r *BeritaAcaraRepository) GetAll(
 			fu.uuid as FakultasUnitUuid,
 			fu.nama_fak_prod_unit as FakultasUnit,
 			ba.tanggal as Tanggal,
-			ba.auditee as AuditeeId,
 
 			ba.auditee as AuditeeId,
 			u1.uuid as AuditeeUuid,
@@ -129,7 +131,7 @@ func (r *BeritaAcaraRepository) GetAll(
 			ba.auditor1 as Auditor1Id,
 			u2.uuid as Auditor1Uuid,
 			u2.name as Auditor1,
-			
+
 			ba.auditor2 as Auditor2Id,
 			u3.uuid as Auditor2Uuid,
 			u3.name as Auditor2
@@ -139,11 +141,16 @@ func (r *BeritaAcaraRepository) GetAll(
 		Joins(`LEFT JOIN users u2 ON ba.auditor1 = u2.id`).
 		Joins(`LEFT JOIN users u3 ON ba.auditor2 = u3.id`)
 
-	// -----------------------------------
+	// ==========================================
 	// ADVANCED FILTERS
-	// -----------------------------------
+	// ==========================================
 	for _, f := range searchFilters {
-		targetColumn := strings.ToLower(f.Field)
+
+		targetColumn := strings.ToLower(strings.TrimSpace(f.Field))
+		if targetColumn == "" {
+			continue
+		}
+
 		val := ""
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
@@ -152,61 +159,64 @@ func (r *BeritaAcaraRepository) GetAll(
 			continue
 		}
 
+		// Special case: pic (search across 3 users)
 		if targetColumn == "pic" {
-			db = db.Where("(u1.uuid = ? or u2.uuid = ? or u3.uuid = ?)", val, val, val)
-		} else {
+			db = db.Where("(u1.uuid = ? OR u2.uuid = ? OR u3.uuid = ?)", val, val, val)
+			continue
+		}
 
-			col, ok := allowedSearchColumns[targetColumn]
-			if !ok {
-				continue
+		col, ok := allowedSearchColumns[targetColumn]
+		if !ok || strings.TrimSpace(col) == "" {
+			continue
+		}
+
+		switch strings.ToLower(f.Operator) {
+		case "eq":
+			db = db.Where(clause.Eq{
+				Column: col,
+				Value:  val,
+			})
+		case "neq":
+			db = db.Where(clause.Neq{
+				Column: col,
+				Value:  val,
+			})
+		case "like":
+			db = db.Where(clause.Like{
+				Column: col,
+				Value:  "%" + val + "%",
+			})
+		case "in":
+			rawVals := strings.Split(val, ",")
+			vals := make([]interface{}, 0, len(rawVals))
+
+			for _, v := range rawVals {
+				v = strings.TrimSpace(v)
+				if v != "" {
+					vals = append(vals, v)
+				}
 			}
 
-			switch strings.ToLower(f.Operator) {
-			case "eq":
-				db = db.Where(clause.Eq{
+			if len(vals) > 0 {
+				db = db.Where(clause.IN{
 					Column: col,
-					Value:  val,
+					Values: vals,
 				})
-			case "neq":
-				db = db.Where(clause.Neq{
-					Column: col,
-					Value:  val,
-				})
-			case "like":
-				db = db.Where(clause.Like{
-					Column: col,
-					Value:  "%" + val + "%",
-				})
-			case "in":
-				rawVals := strings.Split(val, ",")
-				vals := make([]interface{}, 0, len(rawVals))
-
-				for _, v := range rawVals {
-					v = strings.TrimSpace(v)
-					if v != "" {
-						vals = append(vals, v)
-					}
-				}
-
-				if len(vals) > 0 {
-					db = db.Where(clause.IN{
-						Column: col,
-						Values: vals,
-					})
-				}
 			}
 		}
 	}
 
-	// -----------------------------------
-	// GLOBAL SEARCH
-	// -----------------------------------
+	// ==========================================
+	// GLOBAL SEARCH (FIXED)
+	// ==========================================
 	if strings.TrimSpace(search) != "" {
-		like := "%" + search + "%"
+		like := "%" + strings.TrimSpace(search) + "%"
 		var conditions []clause.Expression
 
 		for _, col := range allowedSearchColumns {
-			if col == "pic" {
+
+			// skip empty column (anti bug OR  LIKE ...)
+			if strings.TrimSpace(col) == "" {
 				continue
 			}
 
@@ -221,16 +231,17 @@ func (r *BeritaAcaraRepository) GetAll(
 		}
 	}
 
-	// -----------------------------------
-	// COUNT (AMAN)
-	// -----------------------------------
-	if err := db.Count(&total).Error; err != nil {
+	// ==========================================
+	// COUNT (SAFE)
+	// ==========================================
+	countDB := db.Session(&gorm.Session{})
+	if err := countDB.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// -----------------------------------
+	// ==========================================
 	// ORDER + PAGINATION
-	// -----------------------------------
+	// ==========================================
 	db = db.Order("ba.id DESC")
 
 	if page != nil && limit != nil && *limit > 0 {
@@ -238,9 +249,9 @@ func (r *BeritaAcaraRepository) GetAll(
 		db = db.Offset(offset).Limit(*limit)
 	}
 
-	// -----------------------------------
+	// ==========================================
 	// EXECUTE
-	// -----------------------------------
+	// ==========================================
 	if err := db.Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
