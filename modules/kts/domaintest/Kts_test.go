@@ -2,6 +2,7 @@ package domaintest
 
 import (
 	"testing"
+	"time"
 
 	"UnpakSiamida/common/helper"
 	. "UnpakSiamida/modules/kts/domain"
@@ -64,7 +65,7 @@ func TestNewKtsDokumen(t *testing.T) {
 // -------------------- Update Step1 --------------------
 func TestUpdateKtsStep1(t *testing.T) {
 	validUUID := uuid.New()
-	prev := &Kts{UUID: validUUID}
+	prev := &Kts{UUID: validUUID, Auditor: helper.StrPtr("1")}
 	prevKts := &KtsDefault{Tahun: helper.StrPtr("2026")}
 
 	tests := []struct {
@@ -156,7 +157,14 @@ func TestUpdateKtsStep1(t *testing.T) {
 func TestUpdateKtsTindakan(t *testing.T) {
 	validUUID := uuid.New()
 	prev := &Kts{UUID: validUUID}
-	prevKts := &KtsDefault{Tahun: helper.StrPtr("2026")}
+
+	now := time.Now()
+
+	prevKts := &KtsDefault{
+		Tahun:          helper.StrPtr("2026"),
+		TanggalLaporan: &now,
+		Status:         "draft", // karena kamu pakai helper.StrPtr(prevKts.Status)
+	}
 
 	tests := []struct {
 		name       string
