@@ -273,14 +273,14 @@ func SetupUuidAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleAktivitasProker(app *fiber.App) {
-	admin := []string{"admin"}
-	whoamiURL := "http://localhost:3000/whoami"
+	// admin := []string{"admin"}
+	// whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/aktivitasproker/setupuuid", SetupUuidAktivitasProkersHandlerfunc)
 
-	app.Post("/aktivitasproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateAktivitasProkerHandlerfunc)
-	app.Put("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateAktivitasProkerHandlerfunc)
-	app.Delete("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteAktivitasProkerHandlerfunc)
+	app.Post("/aktivitasproker", commonpresentation.JWTMiddleware(), CreateAktivitasProkerHandlerfunc) //commonpresentation.RBACMiddleware(admin, whoamiURL)
+	app.Put("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), UpdateAktivitasProkerHandlerfunc)
+	app.Delete("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), DeleteAktivitasProkerHandlerfunc)
 	app.Get("/AktivitasProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAktivitasProkerHandlerfunc)
 	app.Get("/AktivitasProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllAktivitasProkersHandlerfunc)
 }

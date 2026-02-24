@@ -90,5 +90,9 @@ func RegisterModuleKts(db *gorm.DB, redis *commonDomain.IRedisStore, tg commonin
 		eventKts.NewKtsPdfRequestedEventHandler(*redis),
 	)
 
+	commoninfra.RegisterValidation(export.PublishKtsCommandValidation, "KtsPublish.Validation")
+	commoninfra.RegisterValidation(update.UpdateKtsCommandValidation, "KtsUpdate.Validation")
+	commoninfra.RegisterValidation(export.ExportKtsCommandValidation, "KtsExport.Validation")
+
 	return nil
 }

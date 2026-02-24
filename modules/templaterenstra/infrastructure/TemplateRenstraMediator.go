@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
 	infraIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/infrastructure"
 	create "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
@@ -84,6 +85,10 @@ func RegisterModuleTemplateRenstra(db *gorm.DB) error {
 	](&setupUuid.SetupUuidTemplateRenstraCommandHandler{
 		Repo: repoTemplateRenstra,
 	})
+
+	commoninfra.RegisterValidation(create.CreateTemplateRenstraCommandValidation, "TemplateRenstraCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateTemplateRenstraCommandValidation, "TemplateRenstraUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteTemplateRenstraCommandValidation, "TemplateRenstraDelete.Validation")
 
 	return nil
 }

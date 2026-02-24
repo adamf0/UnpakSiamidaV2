@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -104,97 +103,7 @@ import (
 
 	ktsPresentation "UnpakSiamida/modules/kts/presentation"
 
-	login "UnpakSiamida/modules/account/application/Login"
-
-	createTahunProker "UnpakSiamida/modules/tahunproker/application/CreateTahunProker"
-
-	updateTahunProker "UnpakSiamida/modules/tahunproker/application/UpdateTahunProker"
-
-	deleteTahunProker "UnpakSiamida/modules/tahunproker/application/DeleteTahunProker"
-
-	createMataProgram "UnpakSiamida/modules/mataprogram/application/CreateMataProgram"
-
-	updateMataProgram "UnpakSiamida/modules/mataprogram/application/UpdateMataProgram"
-
-	deleteMataProgram "UnpakSiamida/modules/mataprogram/application/DeleteMataProgram"
-
-	createJadwalProker "UnpakSiamida/modules/jadwalproker/application/CreateJadwalProker"
-
-	updateJadwalProker "UnpakSiamida/modules/jadwalproker/application/UpdateJadwalProker"
-
-	deleteJadwalProker "UnpakSiamida/modules/jadwalproker/application/DeleteJadwalProker"
-
-	createAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
-
-	updateAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/UpdateAktivitasProker"
-
-	deleteAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
-
-	createBeritaAcara "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
-
-	updateBeritaAcara "UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara"
-
-	deleteBeritaAcara "UnpakSiamida/modules/beritaacara/application/DeleteBeritaAcara"
-
-	exportBeritaAcara "UnpakSiamida/modules/beritaacara/application/ExportBeritaAcara"
-
-	createUser "UnpakSiamida/modules/user/application/CreateUser"
-
-	updateUser "UnpakSiamida/modules/user/application/UpdateUser"
-
-	deleteUser "UnpakSiamida/modules/user/application/DeleteUser"
-
-	createStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
-
-	updateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/UpdateStandarRenstra"
-
-	deleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
-
-	createIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
-
-	updateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
-
-	deleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
-
-	createTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/CreateTemplateRenstra"
-
-	updateTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/UpdateTemplateRenstra"
-
-	deleteTemplateRenstra "UnpakSiamida/modules/templaterenstra/application/DeleteTemplateRenstra"
-
-	createTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
-
-	updateTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan"
-
-	deleteTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
-
-	createRenstra "UnpakSiamida/modules/renstra/application/CreateRenstra"
-
-	updateRenstra "UnpakSiamida/modules/renstra/application/UpdateRenstra"
-
-	giveCodeRenstra "UnpakSiamida/modules/renstra/application/GiveCodeAccessRenstra"
-
-	deleteRenstra "UnpakSiamida/modules/renstra/application/DeleteRenstra"
-
-	updateRenstraNilai "UnpakSiamida/modules/renstranilai/application/UpdateRenstraNilai"
-
-	deleteRenstraNilai "UnpakSiamida/modules/renstranilai/application/DeleteRenstraNilai"
-
-	updateDokumenTambahan "UnpakSiamida/modules/dokumentambahan/application/UpdateDokumenTambahan"
-
-	deleteDokumenTambahan "UnpakSiamida/modules/dokumentambahan/application/DeleteDokumenTambahan"
-
-	updateKts "UnpakSiamida/modules/kts/application/UpdateKts"
-
-	exportKts "UnpakSiamida/modules/kts/application/ExportKts"
-
-	generateRenstra "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
-
-	deleteGenerateRenstra "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
-
 	/////////
-
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	commoninfra "UnpakSiamida/common/infrastructure"
 
@@ -449,180 +358,185 @@ func (b *ValidationBehavior) Handle(
 	next mediatr.RequestHandlerFunc,
 ) (interface{}, error) {
 
-	switch cmd := request.(type) {
+	if err := commoninfra.Validate(request); err != nil {
+		return nil, err
+	}
+
+	//[pr] cek lagi ini baru 46/47 yg terdaftar
+	// switch cmd := request.(type) {
 	// === tahun proker Commands ===
-	case createTahunProker.CreateTahunProkerCommand:
-		if err := createTahunProker.CreateTahunProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TahunProkerCreate.Validation", err)
-		}
-	case updateTahunProker.UpdateTahunProkerCommand:
-		if err := updateTahunProker.UpdateTahunProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TahunProker.Validation", err)
-		}
-	case deleteTahunProker.DeleteTahunProkerCommand:
-		if err := deleteTahunProker.DeleteTahunProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TahunProkerDelete.Validation", err)
-		}
+	// case createTahunProker.CreateTahunProkerCommand:
+	// 	if err := createTahunProker.CreateTahunProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TahunProkerCreate.Validation", err)
+	// 	}
+	// case updateTahunProker.UpdateTahunProkerCommand:
+	// 	if err := updateTahunProker.UpdateTahunProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TahunProker.Validation", err)
+	// 	}
+	// case deleteTahunProker.DeleteTahunProkerCommand:
+	// 	if err := deleteTahunProker.DeleteTahunProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TahunProkerDelete.Validation", err)
+	// 	}
 
 	// === mata program Commands ===
-	case createMataProgram.CreateMataProgramCommand:
-		if err := createMataProgram.CreateMataProgramCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("MataProgramCreate.Validation", err)
-		}
-	case updateMataProgram.UpdateMataProgramCommand:
-		if err := updateMataProgram.UpdateMataProgramCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("MataProgram.Validation", err)
-		}
-	case deleteMataProgram.DeleteMataProgramCommand:
-		if err := deleteMataProgram.DeleteMataProgramCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("MataProgramDelete.Validation", err)
-		}
+	// case createMataProgram.CreateMataProgramCommand:
+	// 	if err := createMataProgram.CreateMataProgramCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("MataProgramCreate.Validation", err)
+	// 	}
+	// case updateMataProgram.UpdateMataProgramCommand:
+	// 	if err := updateMataProgram.UpdateMataProgramCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("MataProgram.Validation", err)
+	// 	}
+	// case deleteMataProgram.DeleteMataProgramCommand:
+	// 	if err := deleteMataProgram.DeleteMataProgramCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("MataProgramDelete.Validation", err)
+	// 	}
 
 	// === JadwalProker Commands ===
-	case createJadwalProker.CreateJadwalProkerCommand:
-		if err := createJadwalProker.CreateJadwalProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("JadwalProkerCreate.Validation", err)
-		}
-	case updateJadwalProker.UpdateJadwalProkerCommand:
-		if err := updateJadwalProker.UpdateJadwalProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("JadwalProkerUpdate.Validation", err)
-		}
-	case deleteJadwalProker.DeleteJadwalProkerCommand:
-		if err := deleteJadwalProker.DeleteJadwalProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("JadwalProkerDelete.Validation", err)
-		}
+	// case createJadwalProker.CreateJadwalProkerCommand:
+	// 	if err := createJadwalProker.CreateJadwalProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("JadwalProkerCreate.Validation", err)
+	// 	}
+	// case updateJadwalProker.UpdateJadwalProkerCommand:
+	// 	if err := updateJadwalProker.UpdateJadwalProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("JadwalProkerUpdate.Validation", err)
+	// 	}
+	// case deleteJadwalProker.DeleteJadwalProkerCommand:
+	// 	if err := deleteJadwalProker.DeleteJadwalProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("JadwalProkerDelete.Validation", err)
+	// 	}
 
 	// === AktivitasProker Commands ===
-	case createAktivitasProker.CreateAktivitasProkerCommand:
-		if err := createAktivitasProker.CreateAktivitasProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("AktivitasProkerCreate.Validation", err)
-		}
-	case updateAktivitasProker.UpdateAktivitasProkerCommand:
-		if err := updateAktivitasProker.UpdateAktivitasProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("AktivitasProkerUpdate.Validation", err)
-		}
-	case deleteAktivitasProker.DeleteAktivitasProkerCommand:
-		if err := deleteAktivitasProker.DeleteAktivitasProkerCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("AktivitasProkerDelete.Validation", err)
-		}
+	// case createAktivitasProker.CreateAktivitasProkerCommand:
+	// 	if err := createAktivitasProker.CreateAktivitasProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("AktivitasProkerCreate.Validation", err)
+	// 	}
+	// case updateAktivitasProker.UpdateAktivitasProkerCommand:
+	// 	if err := updateAktivitasProker.UpdateAktivitasProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("AktivitasProkerUpdate.Validation", err)
+	// 	}
+	// case deleteAktivitasProker.DeleteAktivitasProkerCommand:
+	// 	if err := deleteAktivitasProker.DeleteAktivitasProkerCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("AktivitasProkerDelete.Validation", err)
+	// 	}
 
 	// === berita acara Commands ===
-	case createBeritaAcara.CreateBeritaAcaraCommand:
-		if err := createBeritaAcara.CreateBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("BeritaAcaraCreate.Validation", err)
-		}
-	case updateBeritaAcara.UpdateBeritaAcaraCommand:
-		if err := updateBeritaAcara.UpdateBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("BeritaAcaraUpdate.Validation", err)
-		}
-	case deleteBeritaAcara.DeleteBeritaAcaraCommand:
-		if err := deleteBeritaAcara.DeleteBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("BeritaAcaraDelete.Validation", err)
-		}
-	case exportBeritaAcara.PublishBeritaAcaraCommand:
-		if err := exportBeritaAcara.PublishBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("BeritaAcaraPublish.Validation", err)
-		}
-	case exportBeritaAcara.ExportBeritaAcaraCommand:
-		if err := exportBeritaAcara.ExportBeritaAcaraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("BeritaAcaraExport.Validation", err)
-		}
+	// case createBeritaAcara.CreateBeritaAcaraCommand:
+	// 	if err := createBeritaAcara.CreateBeritaAcaraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("BeritaAcaraCreate.Validation", err)
+	// 	}
+	// case updateBeritaAcara.UpdateBeritaAcaraCommand:
+	// 	if err := updateBeritaAcara.UpdateBeritaAcaraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("BeritaAcaraUpdate.Validation", err)
+	// 	}
+	// case deleteBeritaAcara.DeleteBeritaAcaraCommand:
+	// 	if err := deleteBeritaAcara.DeleteBeritaAcaraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("BeritaAcaraDelete.Validation", err)
+	// 	}
+	// case exportBeritaAcara.PublishBeritaAcaraCommand:
+	// 	if err := exportBeritaAcara.PublishBeritaAcaraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("BeritaAcaraPublish.Validation", err)
+	// 	}
+	// case exportBeritaAcara.ExportBeritaAcaraCommand:
+	// 	if err := exportBeritaAcara.ExportBeritaAcaraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("BeritaAcaraExport.Validation", err)
+	// 	}
 
 	// === User Commands ===
-	case createUser.CreateUserCommand:
-		if err := createUser.CreateUserCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("UserCreate.Validation", err)
-		}
-	case updateUser.UpdateUserCommand:
-		if err := updateUser.UpdateUserCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("UserUpdate.Validation", err)
-		}
-	case deleteUser.DeleteUserCommand:
-		if err := deleteUser.DeleteUserCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("UserDelete.Validation", err)
-		}
+	// case createUser.CreateUserCommand:
+	// 	if err := createUser.CreateUserCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("UserCreate.Validation", err)
+	// 	}
+	// case updateUser.UpdateUserCommand:
+	// 	if err := updateUser.UpdateUserCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("UserUpdate.Validation", err)
+	// 	}
+	// case deleteUser.DeleteUserCommand:
+	// 	if err := deleteUser.DeleteUserCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("UserDelete.Validation", err)
+	// 	}
 
 	// === StandarRenstra Commands ===
-	case createStandarRenstra.CreateStandarRenstraCommand:
-		if err := createStandarRenstra.CreateStandarRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("StandarRenstraCreate.Validation", err)
-		}
-	case updateStandarRenstra.UpdateStandarRenstraCommand:
-		if err := updateStandarRenstra.UpdateStandarRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("StandarRenstraUpdate.Validation", err)
-		}
-	case deleteStandarRenstra.DeleteStandarRenstraCommand:
-		if err := deleteStandarRenstra.DeleteStandarRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("StandarRenstraDelete.Validation", err)
-		}
+	// case createStandarRenstra.CreateStandarRenstraCommand:
+	// 	if err := createStandarRenstra.CreateStandarRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("StandarRenstraCreate.Validation", err)
+	// 	}
+	// case updateStandarRenstra.UpdateStandarRenstraCommand:
+	// 	if err := updateStandarRenstra.UpdateStandarRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("StandarRenstraUpdate.Validation", err)
+	// 	}
+	// case deleteStandarRenstra.DeleteStandarRenstraCommand:
+	// 	if err := deleteStandarRenstra.DeleteStandarRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("StandarRenstraDelete.Validation", err)
+	// 	}
 	// === IndikatorRenstra Commands ===
-	case createIndikatorRenstra.CreateIndikatorRenstraCommand:
-		if err := createIndikatorRenstra.CreateIndikatorRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("IndikatorRenstraCreate.Validation", err)
-		}
-	case updateIndikatorRenstra.UpdateIndikatorRenstraCommand:
-		if err := updateIndikatorRenstra.UpdateIndikatorRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("IndikatorRenstraUpdate.Validation", err)
-		}
-	case deleteIndikatorRenstra.DeleteIndikatorRenstraCommand:
-		if err := deleteIndikatorRenstra.DeleteIndikatorRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("IndikatorRenstraDelete.Validation", err)
-		}
+	// case createIndikatorRenstra.CreateIndikatorRenstraCommand:
+	// 	if err := createIndikatorRenstra.CreateIndikatorRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("IndikatorRenstraCreate.Validation", err)
+	// 	}
+	// case updateIndikatorRenstra.UpdateIndikatorRenstraCommand:
+	// 	if err := updateIndikatorRenstra.UpdateIndikatorRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("IndikatorRenstraUpdate.Validation", err)
+	// 	}
+	// case deleteIndikatorRenstra.DeleteIndikatorRenstraCommand:
+	// 	if err := deleteIndikatorRenstra.DeleteIndikatorRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("IndikatorRenstraDelete.Validation", err)
+	// 	}
 	// === TemplateRenstra Commands ===
-	case createTemplateRenstra.CreateTemplateRenstraCommand:
-		if err := createTemplateRenstra.CreateTemplateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateRenstraCreate.Validation", err)
-		}
-	case updateTemplateRenstra.UpdateTemplateRenstraCommand:
-		if err := updateTemplateRenstra.UpdateTemplateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateRenstraUpdate.Validation", err)
-		}
-	case deleteTemplateRenstra.DeleteTemplateRenstraCommand:
-		if err := deleteTemplateRenstra.DeleteTemplateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateRenstraDelete.Validation", err)
-		}
+	// case createTemplateRenstra.CreateTemplateRenstraCommand:
+	// 	if err := createTemplateRenstra.CreateTemplateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateRenstraCreate.Validation", err)
+	// 	}
+	// case updateTemplateRenstra.UpdateTemplateRenstraCommand:
+	// 	if err := updateTemplateRenstra.UpdateTemplateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateRenstraUpdate.Validation", err)
+	// 	}
+	// case deleteTemplateRenstra.DeleteTemplateRenstraCommand:
+	// 	if err := deleteTemplateRenstra.DeleteTemplateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateRenstraDelete.Validation", err)
+	// 	}
 	// === TemplateDokumenTambahan Commands ===
-	case createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand:
-		if err := createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateDokumenTambahanCreate.Validation", err)
-		}
-	case updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand:
-		if err := updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateDokumenTambahanUpdate.Validation", err)
-		}
-	case deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand:
-		if err := deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("TemplateDokumenTambahanDelete.Validation", err)
-		}
+	// case createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommand:
+	// 	if err := createTemplateDokumenTambahan.CreateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateDokumenTambahanCreate.Validation", err)
+	// 	}
+	// case updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommand:
+	// 	if err := updateTemplateDokumenTambahan.UpdateTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateDokumenTambahanUpdate.Validation", err)
+	// 	}
+	// case deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommand:
+	// 	if err := deleteTemplateDokumenTambahan.DeleteTemplateDokumenTambahanCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("TemplateDokumenTambahanDelete.Validation", err)
+	// 	}
 
 	// === Renstra Commands ===
-	case createRenstra.CreateRenstraCommand:
-		if err := createRenstra.CreateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraCreate.Validation", err)
-		}
-	case updateRenstra.UpdateRenstraCommand:
-		if err := updateRenstra.UpdateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraUpdate.Validation", err)
-		}
-	case giveCodeRenstra.GiveCodeAccessRenstraCommand:
-		if err := giveCodeRenstra.GiveCodeAccessRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraGiveCode.Validation", err)
-		}
-	case deleteRenstra.DeleteRenstraCommand:
-		if err := deleteRenstra.DeleteRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraDelete.Validation", err)
-		}
+	// case createRenstra.CreateRenstraCommand:
+	// 	if err := createRenstra.CreateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraCreate.Validation", err)
+	// 	}
+	// case updateRenstra.UpdateRenstraCommand:
+	// 	if err := updateRenstra.UpdateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraUpdate.Validation", err)
+	// 	}
+	// case giveCodeRenstra.GiveCodeAccessRenstraCommand:
+	// 	if err := giveCodeRenstra.GiveCodeAccessRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraGiveCode.Validation", err)
+	// 	}
+	// case deleteRenstra.DeleteRenstraCommand:
+	// 	if err := deleteRenstra.DeleteRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraDelete.Validation", err)
+	// 	}
 
 	// === Generate Renstra Commands ===
-	case generateRenstra.GenerateRenstraCommand:
-		if err := generateRenstra.GenerateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("GenerateRenstra.Validation", err)
-		}
+	// case generateRenstra.GenerateRenstraCommand:
+	// 	if err := generateRenstra.GenerateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("GenerateRenstra.Validation", err)
+	// 	}
 
-	case deleteGenerateRenstra.DeleteGenerateRenstraCommand:
-		if err := deleteGenerateRenstra.DeleteGenerateRenstraCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("DeleteGenerateRenstra.Validation", err)
-		}
+	// case deleteGenerateRenstra.DeleteGenerateRenstraCommand:
+	// 	if err := deleteGenerateRenstra.DeleteGenerateRenstraCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("DeleteGenerateRenstra.Validation", err)
+	// 	}
 
 	// === Preview Template Commands ===
 	// case previewTemplate.GetPreviewTemplateCommand:
@@ -631,62 +545,50 @@ func (b *ValidationBehavior) Handle(
 	// 	}
 
 	// === Generate Login Commands ===
-	case login.LoginCommand:
-		if err := login.LoginCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("Login.Validation", err)
-		}
+	// case login.LoginCommand:
+	// 	if err := login.LoginCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("Login.Validation", err)
+	// 	}
 
 	// === Generate Renstra Nilai Commands ===
-	case updateRenstraNilai.UpdateRenstraNilaiCommand:
-		if err := updateRenstraNilai.UpdateRenstraNilaiCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraNilaiUpdate.Validation", err)
-		}
-	case deleteRenstraNilai.DeleteRenstraNilaiCommand:
-		if err := deleteRenstraNilai.DeleteRenstraNilaiCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("RenstraNilaiDelete.Validation", err)
-		}
+	// case updateRenstraNilai.UpdateRenstraNilaiCommand:
+	// 	if err := updateRenstraNilai.UpdateRenstraNilaiCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraNilaiUpdate.Validation", err)
+	// 	}
+	// case deleteRenstraNilai.DeleteRenstraNilaiCommand:
+	// 	if err := deleteRenstraNilai.DeleteRenstraNilaiCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("RenstraNilaiDelete.Validation", err)
+	// 	}
 
 	// === Generate Dokumen Tambahan Commands ===
-	case updateDokumenTambahan.UpdateDokumenTambahanCommand:
-		if err := updateDokumenTambahan.UpdateDokumenTambahanCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("DokumenTambahanUpdate.Validation", err)
-		}
-	case deleteDokumenTambahan.DeleteDokumenTambahanCommand:
-		if err := deleteDokumenTambahan.DeleteDokumenTambahanCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("DokumenTambahanDelete.Validation", err)
-		}
+	// case updateDokumenTambahan.UpdateDokumenTambahanCommand:
+	// 	if err := updateDokumenTambahan.UpdateDokumenTambahanCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("DokumenTambahanUpdate.Validation", err)
+	// 	}
+	// case deleteDokumenTambahan.DeleteDokumenTambahanCommand:
+	// 	if err := deleteDokumenTambahan.DeleteDokumenTambahanCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("DokumenTambahanDelete.Validation", err)
+	// 	}
 
 	// === Generate KTS Commands ===
-	case updateKts.UpdateKtsCommand:
-		if err := updateKts.UpdateKtsCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("KtsUpdate.Validation", err)
-		}
-	case exportKts.PublishKtsCommand:
-		if err := exportKts.PublishKtsCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("KtsPublish.Validation", err)
-		}
-	case exportKts.ExportKtsCommand:
-		if err := exportKts.ExportKtsCommandValidation(cmd); err != nil {
-			return nil, wrapValidationError("KtsExport.Validation", err)
-		}
+	// case updateKts.UpdateKtsCommand:
+	// 	if err := updateKts.UpdateKtsCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("KtsUpdate.Validation", err)
+	// 	}
+	// case exportKts.PublishKtsCommand:
+	// 	if err := exportKts.PublishKtsCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("KtsPublish.Validation", err)
+	// 	}
+	// case exportKts.ExportKtsCommand:
+	// 	if err := exportKts.ExportKtsCommandValidation(cmd); err != nil {
+	// 		return nil, wrapValidationError("KtsExport.Validation", err)
+	// 	}
 
-	default:
-		// request lain → skip validation
-	}
+	// default:
+	// request lain → skip validation
+	// }
 
 	return next(ctx)
-}
-
-func wrapValidationError(code string, err error) error {
-	if ve, ok := err.(validation.Errors); ok {
-		msgs := make(map[string]string)
-		for field, ferr := range ve {
-			key := strings.ToLower(field)
-			msgs[key] = ferr.Error()
-		}
-		return commoninfra.NewResponseError(code, msgs)
-	}
-	return commoninfra.NewResponseError(code, err.Error())
 }
 
 var (

@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
 	delete "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
 	getAll "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
@@ -86,6 +87,10 @@ func RegisterModuleIndikatorRenstra(db *gorm.DB) error {
 	](&setupUuid.SetupUuidIndikatorRenstraCommandHandler{
 		Repo: repoIndikatorRenstra,
 	})
+
+	commoninfra.RegisterValidation(create.CreateIndikatorRenstraCommandValidation, "IndikatorRenstraCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateIndikatorRenstraCommandValidation, "IndikatorRenstraUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteIndikatorRenstraCommandValidation, "IndikatorRenstraDelete.Validation")
 
 	return nil
 }

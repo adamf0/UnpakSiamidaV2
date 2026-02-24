@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
 	delete "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
 	get "UnpakSiamida/modules/aktivitasproker/application/GetAktivitasProker"
@@ -84,6 +85,10 @@ func RegisterModuleAktivitasProker(db *gorm.DB) error {
 	](&setupUuid.SetupUuidAktivitasProkerCommandHandler{
 		Repo: repoAktivitasProker,
 	})
+
+	commoninfra.RegisterValidation(create.CreateAktivitasProkerCommandValidation, "AktivitasProkerCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateAktivitasProkerCommandValidation, "AktivitasProkerUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteAktivitasProkerCommandValidation, "AktivitasProkerDelete.Validation")
 
 	return nil
 }

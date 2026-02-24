@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	delete "UnpakSiamida/modules/dokumentambahan/application/DeleteDokumenTambahan"
 	getAll "UnpakSiamida/modules/dokumentambahan/application/GetAllDokumenTambahans"
 	get "UnpakSiamida/modules/dokumentambahan/application/GetDokumenTambahan"
@@ -54,6 +55,9 @@ func RegisterModuleDokumenTambahan(db *gorm.DB) error {
 	](&setupUuid.SetupUuidDokumenTambahanCommandHandler{
 		Repo: repoDokumenTambahan,
 	})
+
+	commoninfra.RegisterValidation(update.UpdateDokumenTambahanCommandValidation, "DokumenTambahanUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteDokumenTambahanCommandValidation, "DokumenTambahanDelete.Validation")
 
 	return nil
 }

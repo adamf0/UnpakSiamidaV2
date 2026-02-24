@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
 	create "UnpakSiamida/modules/renstra/application/CreateRenstra"
 	delete "UnpakSiamida/modules/renstra/application/DeleteRenstra"
@@ -92,6 +93,11 @@ func RegisterModuleRenstra(db *gorm.DB) error {
 	](&setupUuid.SetupUuidRenstraCommandHandler{
 		Repo: repoRenstra,
 	})
+
+	commoninfra.RegisterValidation(create.CreateRenstraCommandValidation, "RenstraCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateRenstraCommandValidation, "RenstraUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteRenstraCommandValidation, "RenstraDelete.Validation")
+	commoninfra.RegisterValidation(giveCode.GiveCodeAccessRenstraCommandValidation, "RenstraGiveCode.Validation")
 
 	return nil
 }

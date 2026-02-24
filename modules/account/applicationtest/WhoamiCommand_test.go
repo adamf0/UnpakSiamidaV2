@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const validUuid = "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e"
+
 func TestWhoami_Success(t *testing.T) {
 	db, cleanup := setupAccountMySQL(t)
 	defer cleanup()
@@ -19,7 +21,7 @@ func TestWhoami_Success(t *testing.T) {
 	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
-		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+		SID: validUuid,
 	}
 
 	// validation
@@ -64,7 +66,7 @@ func TestWhoamiIntegration_Failed_UserNotFound(t *testing.T) {
 	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
-		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+		SID: validUuid,
 	}
 
 	err := app.WhoamiCommandValidation(cmd)
@@ -105,7 +107,7 @@ func TestWhoamiIntegration_ContextTimeout(t *testing.T) {
 	handler := app.WhoamiCommandHandler{Repo: repo}
 
 	cmd := app.WhoamiCommand{
-		SID: "56ce6c95-e23f-463b-bcf6-80fa4bea2a1e",
+		SID: validUuid,
 	}
 
 	// validation

@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	infraJenisFile "UnpakSiamida/modules/jenisfile/infrastructure"
 	create "UnpakSiamida/modules/templatedokumentambahan/application/CreateTemplateDokumenTambahan"
 	delete "UnpakSiamida/modules/templatedokumentambahan/application/DeleteTemplateDokumenTambahan"
@@ -80,6 +81,10 @@ func RegisterModuleTemplateDokumenTambahan(db *gorm.DB) error {
 	](&setupUuid.SetupUuidTemplateDokumenTambahanCommandHandler{
 		Repo: repoTemplateDokumenTambahan,
 	})
+
+	commoninfra.RegisterValidation(create.CreateTemplateDokumenTambahanCommandValidation, "TemplateDokumenTambahanCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateTemplateDokumenTambahanCommandValidation, "TemplateDokumenTambahanUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteTemplateDokumenTambahanCommandValidation, "TemplateDokumenTambahanDelete.Validation")
 
 	return nil
 }

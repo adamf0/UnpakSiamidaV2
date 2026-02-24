@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/mataprogram/application/CreateMataProgram"
 	delete "UnpakSiamida/modules/mataprogram/application/DeleteMataProgram"
 	getAll "UnpakSiamida/modules/mataprogram/application/GetAllMataPrograms"
@@ -9,7 +10,6 @@ import (
 	setupUuid "UnpakSiamida/modules/mataprogram/application/SetupUuidMataProgram"
 	update "UnpakSiamida/modules/mataprogram/application/UpdateMataProgram"
 	domainMataProgram "UnpakSiamida/modules/mataprogram/domain"
-
 	infraTahunProker "UnpakSiamida/modules/tahunproker/infrastructure"
 
 	"github.com/mehdihadeli/go-mediatr"
@@ -81,6 +81,10 @@ func RegisterModuleMataProgram(db *gorm.DB) error {
 	](&setupUuid.SetupUuidMataProgramCommandHandler{
 		Repo: repoMataProgram,
 	})
+
+	commoninfra.RegisterValidation(create.CreateMataProgramCommandValidation, "MataProgramCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateMataProgramCommandValidation, "MataProgramUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteMataProgramCommandValidation, "MataProgramDelete.Validation")
 
 	return nil
 }

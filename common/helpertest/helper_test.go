@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+const validUUID = "550e8400-e29b-41d4-a716-446655440000"
+const suffixEmail = "@unpak.ac.id"
+const (
+	logElapsedLabel = "elapsed:"
+	logResultLabel  = "result:"
+	logErrLabel     = "err:"
+)
+
 func TestIsValidUnpakEmail(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -38,8 +46,6 @@ func TestIsValidUnpakEmail(t *testing.T) {
 }
 
 func TestValidateFakultasUnit(t *testing.T) {
-	validUUID := "550e8400-e29b-41d4-a716-446655440000"
-
 	tests := []struct {
 		name  string
 		val   interface{}
@@ -84,8 +90,6 @@ func TestValidateLevel(t *testing.T) {
 }
 
 func TestValidateParent(t *testing.T) {
-	validUUID := "550e8400-e29b-41d4-a716-446655440000"
-
 	tests := []struct {
 		name  string
 		input interface{}
@@ -210,14 +214,14 @@ func TestFormatWIB(t *testing.T) {
 // }
 
 func TestReDoS_Email_LongInput(t *testing.T) {
-	evil := strings.Repeat("a", 5_000_000) + "@unpak.ac.id"
+	evil := strings.Repeat("a", 5_000_000) + suffixEmail
 
 	start := time.Now()
 	ok := helper.IsValidUnpakEmail(evil)
 	elapsed := time.Since(start)
 
-	t.Log("result:", ok)
-	t.Log("elapsed:", elapsed)
+	t.Log(logResultLabel, ok)
+	t.Log(logElapsedLabel, elapsed)
 
 	if elapsed > 200*time.Millisecond {
 		t.Fatalf("Potential DoS: took %v", elapsed)
@@ -225,13 +229,13 @@ func TestReDoS_Email_LongInput(t *testing.T) {
 }
 
 func TestReDoS_Email_AlmostMatch(t *testing.T) {
-	evil := strings.Repeat("a.", 2_000_000) + "@unpak.ac.id"
+	evil := strings.Repeat("a.", 2_000_000) + suffixEmail
 
 	start := time.Now()
 	helper.IsValidUnpakEmail(evil)
 	elapsed := time.Since(start)
 
-	t.Log("elapsed:", elapsed)
+	t.Log(logElapsedLabel, elapsed)
 }
 
 func TestReDoS_UUID_Long(t *testing.T) {
@@ -241,8 +245,8 @@ func TestReDoS_UUID_Long(t *testing.T) {
 	err := helper.ValidateUUIDv4(evil)
 	elapsed := time.Since(start)
 
-	t.Log("err:", err)
-	t.Log("elapsed:", elapsed)
+	t.Log(logErrLabel, err)
+	t.Log(logElapsedLabel, elapsed)
 
 	if elapsed > 200*time.Millisecond {
 		t.Fatalf("UUID validation too slow")
@@ -262,7 +266,7 @@ func FuzzIsValidUnpakEmail(f *testing.F) {
 		"adam@unpak.ac.id",
 		"test..test@unpak.ac.id",
 		"",
-		"@unpak.ac.id",
+		suffixEmail,
 		strings.Repeat("a", 300),
 	}
 
@@ -283,7 +287,7 @@ func FuzzIsValidUnpakEmail(f *testing.F) {
 
 func FuzzValidateUUIDv4(f *testing.F) {
 	seeds := []string{
-		"550e8400-e29b-41d4-a716-446655440000",
+		validUUID,
 		"",
 		"not-a-uuid",
 		strings.Repeat("a", 100),

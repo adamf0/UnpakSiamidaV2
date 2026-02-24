@@ -1,22 +1,25 @@
 package infrastructure
 
 import (
-    // domaingeneraterenstra "UnpakSiamida/modules/generaterenstra/domain"
-    generate "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
-    deletegenerate "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
-    infraRenstra "UnpakSiamida/modules/renstra/infrastructure"
-    
-    infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
-    infraTemplateRenstra "UnpakSiamida/modules/templaterenstra/infrastructure"
-    infraTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/infrastructure"
-    "github.com/mehdihadeli/go-mediatr"
-    // "gorm.io/driver/mysql"
+	// domaingeneraterenstra "UnpakSiamida/modules/generaterenstra/domain"
+	deletegenerate "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
+	generate "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
+	infraRenstra "UnpakSiamida/modules/renstra/infrastructure"
+
+	commoninfra "UnpakSiamida/common/infrastructure"
+	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
+	infraTemplateDokumenTambahan "UnpakSiamida/modules/templatedokumentambahan/infrastructure"
+	infraTemplateRenstra "UnpakSiamida/modules/templaterenstra/infrastructure"
+
+	"github.com/mehdihadeli/go-mediatr"
+
+	// "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-    // "fmt"
+	// "fmt"
 )
 
-func RegisterModuleGenerateRenstra(db *gorm.DB) error{
-    // dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+func RegisterModuleGenerateRenstra(db *gorm.DB) error {
+	// dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
 
 	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	// if err != nil {
@@ -24,40 +27,42 @@ func RegisterModuleGenerateRenstra(db *gorm.DB) error{
 	// 	// panic(err)
 	// }
 
-    repoGenerate := NewGenerateRenstraRepository(db)
-    repoRenstra := infraRenstra.NewRenstraRepository(db)
+	repoGenerate := NewGenerateRenstraRepository(db)
+	repoRenstra := infraRenstra.NewRenstraRepository(db)
 
-    repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
-    repoTemplateRenstra := infraTemplateRenstra.NewTemplateRenstraRepository(db)
-    repoTemplateDokumenTambahan := infraTemplateDokumenTambahan.NewTemplateDokumenTambahanRepository(db)
-    // if err := db.AutoMigrate(&domainrenstra.Renstra{}); err != nil {
+	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
+	repoTemplateRenstra := infraTemplateRenstra.NewTemplateRenstraRepository(db)
+	repoTemplateDokumenTambahan := infraTemplateDokumenTambahan.NewTemplateDokumenTambahanRepository(db)
+	// if err := db.AutoMigrate(&domainrenstra.Renstra{}); err != nil {
 	// 	panic(err)
 	// }
 
-    // Pipeline behavior
-    // mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorRenstra())
+	// Pipeline behavior
+	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorRenstra())
 
-    // Register request handler
-    mediatr.RegisterRequestHandler[
-        generate.GenerateRenstraCommand,
-        string,
-    ](&generate.GenerateRenstraCommandHandler{
-        Repo:                           repoGenerate, //renstra_nilai & dokumen_tambahan
-        RepoRenstra:                    repoRenstra,
-        
-        RepoFakultasUnit:               repoFakultasUnit,
-        RepoTemplateRenstra:            repoTemplateRenstra,
-        RepoTemplateDokumenTambahan:    repoTemplateDokumenTambahan,
-    })
+	// Register request handler
+	mediatr.RegisterRequestHandler[
+		generate.GenerateRenstraCommand,
+		string,
+	](&generate.GenerateRenstraCommandHandler{
+		Repo:        repoGenerate, //renstra_nilai & dokumen_tambahan
+		RepoRenstra: repoRenstra,
 
-    mediatr.RegisterRequestHandler[
-        deletegenerate.DeleteGenerateRenstraCommand,
-        string,
-    ](&deletegenerate.DeleteGenerateRenstraCommandHandler{
-        Repo:                           repoGenerate, //renstra_nilai & dokumen_tambahan
-        RepoRenstra:                    repoRenstra,
-    })
+		RepoFakultasUnit:            repoFakultasUnit,
+		RepoTemplateRenstra:         repoTemplateRenstra,
+		RepoTemplateDokumenTambahan: repoTemplateDokumenTambahan,
+	})
 
+	mediatr.RegisterRequestHandler[
+		deletegenerate.DeleteGenerateRenstraCommand,
+		string,
+	](&deletegenerate.DeleteGenerateRenstraCommandHandler{
+		Repo:        repoGenerate, //renstra_nilai & dokumen_tambahan
+		RepoRenstra: repoRenstra,
+	})
 
-    return nil
+	commoninfra.RegisterValidation(generate.GenerateRenstraCommandValidation, "GenerateRenstra.Validation")
+	commoninfra.RegisterValidation(deletegenerate.DeleteGenerateRenstraCommandValidation, "GenerateRenstraDelete.Validation")
+
+	return nil
 }

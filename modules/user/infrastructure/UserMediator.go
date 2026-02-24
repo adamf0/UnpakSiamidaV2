@@ -108,5 +108,9 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		eventUser.NewUserCreatedEventHandler(tg),
 	)
 
+	commoninfra.RegisterValidation(create.CreateUserCommandValidation, "UserCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateUserCommandValidation, "UserUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteUserCommandValidation, "UserDelete.Validation")
+
 	return nil
 }

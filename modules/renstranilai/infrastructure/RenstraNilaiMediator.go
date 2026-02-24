@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	delete "UnpakSiamida/modules/renstranilai/application/DeleteRenstraNilai"
 	getAll "UnpakSiamida/modules/renstranilai/application/GetAllRenstraNilais"
 	get "UnpakSiamida/modules/renstranilai/application/GetRenstraNilai"
@@ -54,6 +55,9 @@ func RegisterModuleRenstraNilai(db *gorm.DB) error {
 	](&setupUuid.SetupUuidRenstraNilaiCommandHandler{
 		Repo: repoRenstraNilai,
 	})
+
+	commoninfra.RegisterValidation(update.UpdateRenstraNilaiCommandValidation, "RenstraNilaiUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteRenstraNilaiCommandValidation, "RenstraNilaiDelete.Validation")
 
 	return nil
 }

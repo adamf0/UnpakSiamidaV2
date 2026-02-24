@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	create "UnpakSiamida/modules/jadwalproker/application/CreateJadwalProker"
 	delete "UnpakSiamida/modules/jadwalproker/application/DeleteJadwalProker"
@@ -80,6 +81,10 @@ func RegisterModuleJadwalProker(db *gorm.DB) error {
 	](&setupUuid.SetupUuidJadwalProkerCommandHandler{
 		Repo: repoJadwalProker,
 	})
+
+	commoninfra.RegisterValidation(create.CreateJadwalProkerCommandValidation, "JadwalProkerCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateJadwalProkerCommandValidation, "JadwalProkerUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteJadwalProkerCommandValidation, "JadwalProkerDelete.Validation")
 
 	return nil
 }

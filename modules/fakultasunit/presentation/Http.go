@@ -69,7 +69,7 @@ func GetFakultasUnitHandler(c *fiber.Ctx) error {
 // @Param limit query int false "Limit"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} commondomain.Paged[fakultasunitdomain.FakultasUnitDefault]
+// @Success 200 {object} commondomain.Paged[fakultasunitdomain.FakultasUnit]
 // @Router /fakultasunits [get]
 func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")

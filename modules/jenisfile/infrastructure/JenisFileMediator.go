@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 	// "fmt"
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 )
 
 func RegisterModuleJenisFile(db *gorm.DB) error {
@@ -76,6 +77,10 @@ func RegisterModuleJenisFile(db *gorm.DB) error {
 	](&setupUuid.SetupUuidJenisFileCommandHandler{
 		Repo: repoJenisFile,
 	})
+
+	commoninfra.RegisterValidation(create.CreateJenisFileCommandValidation, "JenisFileCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateJenisFileCommandValidation, "JenisFileUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteJenisFileCommandValidation, "JenisFileDelete.Validation")
 
 	return nil
 }

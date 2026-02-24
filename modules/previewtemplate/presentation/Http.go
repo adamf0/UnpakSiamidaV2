@@ -16,7 +16,7 @@ import (
 )
 
 // =======================================================
-// GET /preview/audit/{tahun}/{fakultasUnit}
+// GET /preview/audit/{tipe}/{tahun}/{fakultasUnit}
 // =======================================================
 
 // GetPreviewTemplateHandler godoc
@@ -32,7 +32,7 @@ import (
 // @Failure 404 {object} commoninfra.ResponseError
 // @Failure 409 {object} commoninfra.ResponseError
 // @Failure 500 {object} commoninfra.ResponseError
-// @Router /preview/audit/{tahun}/{fakultasUnit} [get]
+// @Router /preview/audit/{tipe}/{tahun}/{fakultasUnit} [get]
 func GetPreviewTemplateHandler(c *fiber.Ctx) error {
 	tipe := c.Params("tipe")
 	tahun := c.Params("tahun")

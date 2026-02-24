@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"html"
+	"io"
 	"net"
 	"net/url"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 
 	commoninfra "UnpakSiamida/common/infrastructure"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -99,171 +99,288 @@ type ExtraRole struct {
 // =======================
 // MIDDLEWARE
 // =======================
+const logCommonTokenLabel = "common.token"
+const logCommonRbac = "common.rbac"
 
 func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 	if cfg == nil {
 		cfg = DefaultHeaderSecurityConfig()
 	}
 
-	var blocked []*net.IPNet
-	for _, c := range cfg.BlockedCIDRs {
-		_, ipnet, err := net.ParseCIDR(c)
-		if err == nil {
-			blocked = append(blocked, ipnet)
-		}
-	}
+	blocked := parseBlockedCIDRs(cfg.BlockedCIDRs)
 
 	return func(c *fiber.Ctx) error {
+
 		for name, vals := range c.GetReqHeaders() {
 			for _, val := range vals {
-				// 1) Max header length
-				if len(val) > cfg.MaxHeaderLen {
-					return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+1]", "header too long: "+name))
+
+				if err := validateHeaderLength(name, val, cfg); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 2) Malicious control chars
-				if crlfRe.MatchString(val) || nullRe.MatchString(val) {
-					return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+2]", "header ctrl char: "+name))
+				if err := validateControlChars(name, val); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 3) Decode value safely
-				decoded := multiUnescape(html.UnescapeString(val), 3)
-				decoded = zeroWidthRe.ReplaceAllString(decoded, "")
-				decoded = norm.NFKC.String(decoded)
+				decoded := normalizeHeader(val)
 
-				// 4) Dangerous protocols
-				if protoRe.MatchString(decoded) {
-					return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+3]", "protocol attack: "+name))
+				if err := validateProtocol(name, decoded); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 5) Punycode / IDN injection
-				if punyRe.MatchString(decoded) {
-					return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+4]", "punycode forbidden: "+name))
+				if err := validatePunycode(name, decoded); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 6) Zero-width check
-				if zeroWidthRe.MatchString(val) {
-					return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+5]", "zero width attack: "+name))
+				if err := validateZeroWidth(name, val); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 7) Domain allowlist cek untuk URL valid
-				u, err := url.Parse(decoded)
-				if err == nil && u.Host != "" {
-					host := u.Hostname()
-					if !domainAllowed(host, cfg.AllowDomains) {
-						return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+6]", "domain not allowed: "+host))
-					}
-
-					// Optional DNS resolve
-					if cfg.ResolveAndCheck {
-						ctx, cancel := context.WithTimeout(context.Background(), cfg.LookupTimeout)
-						defer cancel()
-						ips, _ := net.DefaultResolver.LookupIP(ctx, "ip", host)
-						for _, ip := range ips {
-							if ipInNets(ip, blocked) {
-								return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+7]", "domain resolves to forbidden IP: "+host))
-							}
-						}
-					}
+				if err := validateURLDomain(decoded, cfg, blocked); err != nil {
+					return badRequest(c, err)
 				}
 
-				// 8) Cek host header spoof (Host harus sama atau allow domain)
-				if strings.ToLower(name) == "host" {
-					host := decoded
-					if !domainAllowed(host, cfg.AllowDomains) {
-						return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+8]", "host header spoof: "+host))
-					}
-				}
-
-				// 9) Cek embedded domain dalam text
-				// hosts := extractHosts(decoded) //ini kenapa null
-				// godump.Dd(hosts, cfg.AllowDomains)
-				// for _, h := range hosts {
-				// 	if !domainAllowed(h, cfg.AllowDomains) {
-				// 		return c.Status(400).JSON(commoninfra.NewResponseError("common.check[A+9]", "embedded domain not allowed: "+h))
-				// 	}
-				// }
-
-				// =======================
-				// 1) Embedded domain check hanya untuk header URL
-				// =======================
-				urlHeaders := []string{"referer", "origin", "location", "refferer", "referrer", "redirect", "url", "http-url", "x-rewrite-url", "x-http-destinationurl", "x-http-host-override", "x-forwarded-host"}
-				for _, h := range urlHeaders {
-					val := c.Get(h)
-					if val == "" {
-						continue
-					}
-
-					decoded := multiUnescape(html.UnescapeString(val), 3)
-					decoded = zeroWidthRe.ReplaceAllString(decoded, "")
-					decoded = norm.NFKC.String(decoded)
-
-					hosts := extractHostsFromText(decoded)
-					// godump.Dd(hosts, cfg.AllowDomains)
-
-					for _, host := range hosts {
-						if !domainAllowed(host, cfg.AllowDomains) {
-							return c.Status(400).JSON(commoninfra.NewResponseError(
-								"common.check[A+9]", "embedded domain not allowed: "+host))
-						}
-					}
+				if err := validateHostHeader(name, decoded, cfg); err != nil {
+					return badRequest(c, err)
 				}
 			}
+		}
+
+		if err := validateEmbeddedDomains(c, cfg); err != nil {
+			return badRequest(c, err)
 		}
 
 		return c.Next()
 	}
 }
 
+// =======================
+// VALIDATION HELPERS
+// =======================
+
+func validateHeaderLength(name, val string, cfg *HeaderSecurityConfig) error {
+	if len(val) > cfg.MaxHeaderLen {
+		return commoninfra.NewResponseError("common.check[A+1]", "header too long: "+name)
+	}
+	return nil
+}
+
+func validateControlChars(name, val string) error {
+	if crlfRe.MatchString(val) || nullRe.MatchString(val) {
+		return commoninfra.NewResponseError("common.check[A+2]", "header ctrl char: "+name)
+	}
+	return nil
+}
+
+func normalizeHeader(val string) string {
+	decoded := multiUnescape(html.UnescapeString(val), 3)
+	decoded = zeroWidthRe.ReplaceAllString(decoded, "")
+	return norm.NFKC.String(decoded)
+}
+
+func validateProtocol(name, decoded string) error {
+	if protoRe.MatchString(decoded) {
+		return commoninfra.NewResponseError("common.check[A+3]", "protocol attack: "+name)
+	}
+	return nil
+}
+
+func validatePunycode(name, decoded string) error {
+	if punyRe.MatchString(decoded) {
+		return commoninfra.NewResponseError("common.check[A+4]", "punycode forbidden: "+name)
+	}
+	return nil
+}
+
+func validateZeroWidth(name, val string) error {
+	if zeroWidthRe.MatchString(val) {
+		return commoninfra.NewResponseError("common.check[A+5]", "zero width attack: "+name)
+	}
+	return nil
+}
+
+func validateURLDomain(decoded string, cfg *HeaderSecurityConfig, blocked []*net.IPNet) error {
+	u, err := url.Parse(decoded)
+	if err != nil || u.Host == "" {
+		return nil
+	}
+
+	host := u.Hostname()
+
+	if !domainAllowed(host, cfg.AllowDomains) {
+		return commoninfra.NewResponseError("common.check[A+6]", "domain not allowed: "+host)
+	}
+
+	if cfg.ResolveAndCheck {
+		if err := resolveAndCheckIP(host, cfg.LookupTimeout, blocked); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func resolveAndCheckIP(host string, timeout time.Duration, blocked []*net.IPNet) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ips, _ := net.DefaultResolver.LookupIP(ctx, "ip", host)
+
+	for _, ip := range ips {
+		if ipInNets(ip, blocked) {
+			return commoninfra.NewResponseError("common.check[A+7]", "domain resolves to forbidden IP: "+host)
+		}
+	}
+
+	return nil
+}
+
+func validateHostHeader(name, decoded string, cfg *HeaderSecurityConfig) error {
+	if strings.ToLower(name) != "host" {
+		return nil
+	}
+
+	if !domainAllowed(decoded, cfg.AllowDomains) {
+		return commoninfra.NewResponseError("common.check[A+8]", "host header spoof: "+decoded)
+	}
+	return nil
+}
+
+func validateEmbeddedDomains(c *fiber.Ctx, cfg *HeaderSecurityConfig) error {
+
+	urlHeaders := []string{
+		"referer", "origin", "location", "refferer",
+		"referrer", "redirect", "url", "http-url",
+		"x-rewrite-url", "x-http-destinationurl",
+		"x-http-host-override", "x-forwarded-host",
+	}
+
+	for _, h := range urlHeaders {
+		val := c.Get(h)
+		if val == "" {
+			continue
+		}
+
+		decoded := normalizeHeader(val)
+		hosts := extractHostsFromText(decoded)
+
+		for _, host := range hosts {
+			if !domainAllowed(host, cfg.AllowDomains) {
+				return commoninfra.NewResponseError(
+					"common.check[A+9]",
+					"embedded domain not allowed: "+host,
+				)
+			}
+		}
+	}
+
+	return nil
+}
+
+// =======================
+// UTILITIES
+// =======================
+
+func badRequest(c *fiber.Ctx, err error) error {
+	return c.Status(400).JSON(err)
+}
+
+func parseBlockedCIDRs(cidrs []string) []*net.IPNet {
+	var blocked []*net.IPNet
+	for _, c := range cidrs {
+		_, ipnet, err := net.ParseCIDR(c)
+		if err == nil {
+			blocked = append(blocked, ipnet)
+		}
+	}
+	return blocked
+}
+
 func JWTMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.token", "authorization header missing"))
+		tokenStr, err := extractBearerToken(c)
+		if err != nil {
+			return err
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.token", "authorization header format must be Bearer token"))
+		token, err := parseJWT(tokenStr)
+		if err != nil {
+			return err
 		}
 
-		tokenStr := parts[1]
-
-		// Parse & validate token
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("invalid signing method")
-			}
-			return jwtSecret, nil
-		})
-
-		if err != nil || !token.Valid {
-			if err != nil {
-				return c.Status(400).JSON(commoninfra.NewResponseError("common.token", err.Error()))
-			}
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.token", "invalid token"))
+		claims, err := validateClaims(token)
+		if err != nil {
+			return err
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.token", "invalid token claims"))
-		}
+		injectRequestValues(c, claims, tokenStr)
 
-		if exp, ok := claims["exp"].(float64); ok && int64(exp) < time.Now().Unix() {
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.token", "token expired"))
-		}
-
-		// Inject sid ke form value
-		if sid, ok := claims["sid"].(string); ok {
-			c.Request().PostArgs().Set("sid", sid)
-		}
-
-		c.Request().PostArgs().Set("token", tokenStr)
-		// c.Locals("token", tokenStr)
-
-		// lanjut ke handler berikutnya
 		return c.Next()
 	}
+}
+
+func extractBearerToken(c *fiber.Ctx) (string, error) {
+	authHeader := c.Get("Authorization")
+	log.Printf("Authorization header: %s", authHeader)
+
+	if authHeader == "" {
+		log.Println("Authorization header missing")
+		return "", c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "authorization header missing"))
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		log.Println("Invalid authorization header format")
+		return "", c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "authorization header format must be Bearer token"))
+	}
+
+	token := parts[1]
+	log.Printf("Token: %s", token)
+	return token, nil
+}
+
+func parseJWT(tokenStr string) (*jwt.Token, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return jwtSecret, nil
+	})
+
+	if err != nil {
+		return nil, fiber.NewError(400, err.Error())
+	}
+
+	if !token.Valid {
+		return nil, fiber.NewError(400, "invalid token")
+	}
+
+	return token, nil
+}
+
+func validateClaims(token *jwt.Token) (jwt.MapClaims, error) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fiber.NewError(400, "invalid token claims")
+	}
+
+	if exp, ok := claims["exp"].(float64); ok {
+		if int64(exp) < time.Now().Unix() {
+			return nil, fiber.NewError(400, "token expired")
+		}
+	}
+
+	return claims, nil
+}
+
+func injectRequestValues(c *fiber.Ctx, claims jwt.MapClaims, tokenStr string) {
+	if sid, ok := claims["sid"].(string); ok {
+		c.Request().PostArgs().Set("sid", sid)
+	}
+
+	c.Request().PostArgs().Set("token", tokenStr)
 }
 
 func getTahun(c *fiber.Ctx) string {
@@ -275,111 +392,164 @@ func getTahun(c *fiber.Ctx) string {
 
 func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		authHeader := c.Get("Authorization")
-		log.Printf("[RBAC] Authorization header: %s", authHeader)
 
-		if authHeader == "" {
-			log.Println("[RBAC] Authorization header missing")
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "authorization header missing"))
-		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			log.Println("[RBAC] Invalid authorization header format")
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "authorization header format must be Bearer token"))
-		}
-		token := parts[1]
-		log.Printf("[RBAC] Token: %s", token)
-
-		req, err := http.NewRequest("GET", whoamiURL, nil)
+		token, err := extractBearerToken(c)
 		if err != nil {
-			log.Printf("[RBAC] Failed to create request: %v", err)
-			return c.Status(500).JSON(commoninfra.NewResponseError("common.rbac", "Failed to create request: "+err.Error()))
+			return err
 		}
-		req.Header.Set("Authorization", "Bearer "+token)
 
-		client := &http.Client{}
-		resp, err := client.Do(req)
+		user, err := fetchWhoAmI(token, whoamiURL, c)
 		if err != nil {
-			log.Printf("[RBAC] Failed to call whoami: %v", err)
-			return c.Status(500).JSON(commoninfra.NewResponseError("common.rbac", "Failed to call whoami: "+err.Error()))
-		}
-		defer resp.Body.Close()
-
-		body, _ := ioutil.ReadAll(resp.Body)
-		log.Printf("[RBAC] Whoami response status: %d, body: %s", resp.StatusCode, string(body))
-
-		if resp.StatusCode != 200 {
-			var errResp struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-			}
-			if err := json.Unmarshal(body, &errResp); err == nil && errResp.Message != "" {
-				log.Printf("[RBAC] Whoami error code: %s, message: %s", errResp.Code, errResp.Message)
-				return c.Status(400).JSON(commoninfra.NewResponseError(errResp.Code, errResp.Message))
-			}
-			log.Println("[RBAC] Whoami response not JSON or invalid format")
-			return c.Status(401).JSON(commoninfra.NewResponseError("common.rbac", "Invalid format response"))
+			return err
 		}
 
-		var user Account
-		if err := json.Unmarshal(body, &user); err != nil {
-			log.Printf("[RBAC] Failed to parse whoami response: %v", err)
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "Failed to parse whoami response"))
-		}
-		log.Printf("[RBAC] Whoami user: %+v", user)
-
-		if user.Level == "admin" {
+		if isAdmin(user) {
 			log.Println("[RBAC] User is admin, access granted")
 			return c.Next()
 		}
 
-		tahun := getTahun(c) //c.Query("tahun") -> /?tahun=
-		log.Printf("[RBAC] Tahun: %s", tahun)
-		if tahun == "" {
-			log.Println("[RBAC] Tahun query param missing")
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "Query parameter 'tahun' is required"))
-		}
-		tahunInt, err := strconv.Atoi(tahun)
-		if err != nil || tahunInt < 2000 {
-			log.Printf("[RBAC] Tahun query invalid: %s", tahun)
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "Query parameter 'tahun' invalid"))
+		tahun, err := validateTahun(c)
+		if err != nil {
+			return err
 		}
 
-		hasAccess := false
-		grantedAccess := []string{}
-		for _, r := range user.ExtraRole {
-			key := r.Tahun + "#" + r.Role
-			grantedAccess = append(grantedAccess, key)
-
-			log.Printf("[RBAC] Acces data: %s = %s", r.Tahun, tahun)
-			if r.Tahun == tahun {
-				role := strings.ToLower(strings.TrimSpace(r.Role))
-				for _, w := range whitelist {
-					log.Printf("[RBAC] role: %s = %s", role, strings.ToLower(w))
-					if role == strings.ToLower(w) {
-						hasAccess = true
-						log.Printf("[RBAC] User has role '%s' for tahun %s, access granted", r.Role, r.Tahun)
-						break
-					}
-				}
-			}
-			if hasAccess {
-				break
-			}
-		}
-
+		hasAccess, grantedAccess := checkRoleAccess(user, tahun, whitelist)
 		if !hasAccess {
 			log.Println("[RBAC] Access denied")
-			return c.Status(400).JSON(commoninfra.NewResponseError("common.rbac", "Access denied"))
+			return c.Status(400).
+				JSON(commoninfra.NewResponseError(logCommonRbac, "Access denied"))
 		}
 
+		c.Request().PostArgs().Set("grantedaccess", strings.Join(grantedAccess, ", "))
 		log.Println("[RBAC] Middleware passed, continue to handler")
-		grantedAccessStr := strings.Join(grantedAccess, ", ")
-		c.Request().PostArgs().Set("grantedaccess", grantedAccessStr)
 
 		return c.Next()
 	}
+}
+
+//
+// ========================
+// WHOAMI CALL
+// ========================
+//
+
+func fetchWhoAmI(token, whoamiURL string, c *fiber.Ctx) (*Account, error) {
+	req, err := http.NewRequest("GET", whoamiURL, nil)
+	if err != nil {
+		log.Printf("[RBAC] Failed to create request: %v", err)
+		return nil, c.Status(500).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "Failed to create request: "+err.Error()))
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[RBAC] Failed to call whoami: %v", err)
+		return nil, c.Status(500).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "Failed to call whoami: "+err.Error()))
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Printf("[RBAC] Whoami response status: %d, body: %s", resp.StatusCode, string(body))
+
+	if resp.StatusCode != 200 {
+		return nil, handleWhoAmIError(body, c)
+	}
+
+	var user Account
+	if err := json.Unmarshal(body, &user); err != nil {
+		log.Printf("[RBAC] Failed to parse whoami response: %v", err)
+		return nil, c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "Failed to parse whoami response"))
+	}
+
+	log.Printf("[RBAC] Whoami user: %+v", user)
+	return &user, nil
+}
+
+func handleWhoAmIError(body []byte, c *fiber.Ctx) error {
+	var errResp struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+
+	if err := json.Unmarshal(body, &errResp); err == nil && errResp.Message != "" {
+		log.Printf("[RBAC] Whoami error code: %s, message: %s", errResp.Code, errResp.Message)
+		return c.Status(400).
+			JSON(commoninfra.NewResponseError(errResp.Code, errResp.Message))
+	}
+
+	log.Println("[RBAC] Whoami response not JSON or invalid format")
+	return c.Status(401).
+		JSON(commoninfra.NewResponseError(logCommonRbac, "Invalid format response"))
+}
+
+//
+// ========================
+// VALIDATION
+// ========================
+//
+
+func isAdmin(user *Account) bool {
+	return user.Level == "admin"
+}
+
+func validateTahun(c *fiber.Ctx) (string, error) {
+	tahun := getTahun(c)
+	log.Printf("[RBAC] Tahun: %s", tahun)
+
+	if tahun == "" {
+		return "", c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "Query parameter 'tahun' is required"))
+	}
+
+	tahunInt, err := strconv.Atoi(tahun)
+	if err != nil || tahunInt < 2000 {
+		return "", c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "Query parameter 'tahun' invalid"))
+	}
+
+	return tahun, nil
+}
+
+//
+// ========================
+// ROLE CHECK
+// ========================
+//
+
+func checkRoleAccess(user *Account, tahun string, whitelist []string) (bool, []string) {
+
+	grantedAccess := []string{}
+
+	for _, r := range user.ExtraRole {
+		key := r.Tahun + "#" + r.Role
+		grantedAccess = append(grantedAccess, key)
+
+		if r.Tahun != tahun {
+			continue
+		}
+
+		role := strings.ToLower(strings.TrimSpace(r.Role))
+		if roleInWhitelist(role, whitelist) {
+			log.Printf("[RBAC] User has role '%s' for tahun %s, access granted", r.Role, r.Tahun)
+			return true, grantedAccess
+		}
+	}
+
+	return false, grantedAccess
+}
+
+func roleInWhitelist(role string, whitelist []string) bool {
+	for _, w := range whitelist {
+		if role == strings.ToLower(w) {
+			return true
+		}
+	}
+	return false
 }
 
 func WSError(conn *websocket.Conn, code string, msg string) error {

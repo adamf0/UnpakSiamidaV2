@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/beritaacara/application/CreateBeritaAcara"
 	delete "UnpakSiamida/modules/beritaacara/application/DeleteBeritaAcara"
 	export "UnpakSiamida/modules/beritaacara/application/ExportBeritaAcara"
@@ -114,6 +115,12 @@ func RegisterModuleBeritaAcara(db *gorm.DB, redis *commonDomain.IRedisStore) err
 	mediatr.RegisterNotificationHandler[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](
 		eventBeritaAcara.NewBeritaAcaraPdfRequestedEventHandler(*redis),
 	)
+
+	commoninfra.RegisterValidation(create.CreateBeritaAcaraCommandValidation, "BeritaAcaraCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateBeritaAcaraCommandValidation, "BeritaAcaraUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteBeritaAcaraCommandValidation, "BeritaAcaraDelete.Validation")
+	commoninfra.RegisterValidation(export.PublishBeritaAcaraCommandValidation, "BeritaAcaraPublish.Validation")
+	commoninfra.RegisterValidation(export.ExportBeritaAcaraCommandValidation, "BeritaAcaraExport.Validation")
 
 	return nil
 }
