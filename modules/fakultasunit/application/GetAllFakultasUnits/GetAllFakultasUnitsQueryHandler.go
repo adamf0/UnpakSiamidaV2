@@ -1,47 +1,48 @@
 package application
 
 import (
-    "context"
-    "time"
-    domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	commondomain "UnpakSiamida/common/domain"
+	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	"context"
+	"time"
 )
 
 type GetAllFakultasUnitsQueryHandler struct {
-    Repo domainfakultasunit.IFakultasUnitRepository
+	Repo domainfakultasunit.IFakultasUnitRepository
 }
 
 func (h *GetAllFakultasUnitsQueryHandler) Handle(
-    ctx context.Context,
-    q GetAllFakultasUnitsQuery,
-) (domainfakultasunit.PagedFakultasUnits, error) {
-    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx context.Context,
+	q GetAllFakultasUnitsQuery,
+) (commondomain.Paged[domainfakultasunit.FakultasUnit], error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-    
-    fakultasunits, total, err := h.Repo.GetAll(
-        ctx,
-        q.Search,
-        q.SearchFilters,
-        q.Page,
-        q.Limit,
-    )
-    if err != nil {
-        return domainfakultasunit.PagedFakultasUnits{}, err
-    }
 
-    currentPage := 1
-    totalPages := 1
+	fakultasunits, total, err := h.Repo.GetAll(
+		ctx,
+		q.Search,
+		q.SearchFilters,
+		q.Page,
+		q.Limit,
+	)
+	if err != nil {
+		return commondomain.Paged[domainfakultasunit.FakultasUnit]{}, err
+	}
 
-    if q.Page != nil {
-        currentPage = *q.Page
-    }
-    if q.Limit != nil && *q.Limit > 0 {
-        totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
-    }
+	currentPage := 1
+	totalPages := 1
 
-    return domainfakultasunit.PagedFakultasUnits{
-        Data:  fakultasunits,
-        Total: total,
-        CurrentPage: currentPage,
-        TotalPages:  totalPages,
-    }, nil
+	if q.Page != nil {
+		currentPage = *q.Page
+	}
+	if q.Limit != nil && *q.Limit > 0 {
+		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
+	}
+
+	return commondomain.Paged[domainfakultasunit.FakultasUnit]{
+		Data:        fakultasunits,
+		Total:       total,
+		CurrentPage: currentPage,
+		TotalPages:  totalPages,
+	}, nil
 }

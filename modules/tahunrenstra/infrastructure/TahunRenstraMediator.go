@@ -1,17 +1,20 @@
 package infrastructure
 
 import (
-    domainTahunRenstra "UnpakSiamida/modules/tahunrenstra/domain"
-    get "UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra"
-    getAll "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
-    "github.com/mehdihadeli/go-mediatr"
-    // "gorm.io/driver/mysql"
+	commondomain "UnpakSiamida/common/domain"
+	get "UnpakSiamida/modules/tahunrenstra/application/GetActiveTahunRenstra"
+	getAll "UnpakSiamida/modules/tahunrenstra/application/GetAllTahunRenstras"
+	domainTahunRenstra "UnpakSiamida/modules/tahunrenstra/domain"
+
+	"github.com/mehdihadeli/go-mediatr"
+
+	// "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-    // "fmt"
+	// "fmt"
 )
 
-func RegisterModuleTahunRenstra(db *gorm.DB) error{
-    // dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true&loc=Local"
+func RegisterModuleTahunRenstra(db *gorm.DB) error {
+	// dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true&loc=Local"
 
 	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	// if err != nil {
@@ -19,28 +22,28 @@ func RegisterModuleTahunRenstra(db *gorm.DB) error{
 	// 	// panic(err)
 	// }
 
-    repoTahunRenstra := NewTahunRenstraRepository(db)
+	repoTahunRenstra := NewTahunRenstraRepository(db)
 	// if err := db.AutoMigrate(&domainTahunRenstra.TahunRenstra{}); err != nil {
 	// 	panic(err)
 	// }
 
-    // Pipeline behavior
-    // mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorTahunRenstra())
+	// Pipeline behavior
+	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorTahunRenstra())
 
-    // Register request handler
-    mediatr.RegisterRequestHandler[
-        get.GetActiveTahunRenstraQuery,
-        *domainTahunRenstra.TahunRenstra,
-    ](&get.GetActiveTahunRenstraQueryHandler{
-        Repo: repoTahunRenstra,
-    })
+	// Register request handler
+	mediatr.RegisterRequestHandler[
+		get.GetActiveTahunRenstraQuery,
+		*domainTahunRenstra.TahunRenstra,
+	](&get.GetActiveTahunRenstraQueryHandler{
+		Repo: repoTahunRenstra,
+	})
 
-    mediatr.RegisterRequestHandler[
-        getAll.GetAllTahunRenstrasQuery,
-        domainTahunRenstra.PagedTahunRenstras,
-    ](&getAll.GetAllTahunRenstrasQueryHandler{
-        Repo: repoTahunRenstra,
-    })
+	mediatr.RegisterRequestHandler[
+		getAll.GetAllTahunRenstrasQuery,
+		commondomain.Paged[domainTahunRenstra.TahunRenstra],
+	](&getAll.GetAllTahunRenstrasQueryHandler{
+		Repo: repoTahunRenstra,
+	})
 
-    return nil
+	return nil
 }

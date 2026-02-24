@@ -234,7 +234,7 @@ func GetIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} indikatorrenstradomain.PagedIndikatorRenstras
+// @Success 200 {object} commondomain.Paged[indikatorrenstradomain.IndikatorRenstraDefault]
 // @Router /indikatorrenstras [get]
 func GetAllIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -275,23 +275,23 @@ func GetAllIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[indikatorrenstradomain.IndikatorRenstraDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[indikatorrenstradomain.IndikatorRenstraDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[indikatorrenstradomain.IndikatorRenstraDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[indikatorrenstradomain.IndikatorRenstraDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[indikatorrenstradomain.IndikatorRenstraDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllIndikatorRenstras.GetAllIndikatorRenstrasQuery,
-		indikatorrenstradomain.PagedIndikatorRenstras,
+		commondomain.Paged[indikatorrenstradomain.IndikatorRenstraDefault],
 	](context.Background(), query)
 
 	if err != nil {

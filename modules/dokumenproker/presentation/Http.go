@@ -195,7 +195,7 @@ func GetDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} DokumenProkerdomain.PagedDokumenProkers
+// @Success 200 {object} commondomain.Paged[DokumenProkerdomain.DokumenProkerDefault]
 // @Router /DokumenProkers [get]
 func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -236,23 +236,23 @@ func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[DokumenProkerdomain.DokumenProkerDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[DokumenProkerdomain.DokumenProkerDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[DokumenProkerdomain.DokumenProkerDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[DokumenProkerdomain.DokumenProkerDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[DokumenProkerdomain.DokumenProkerDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllDokumenProkers.GetAllDokumenProkersQuery,
-		DokumenProkerdomain.PagedDokumenProkers,
+		commondomain.Paged[DokumenProkerdomain.DokumenProkerDefault],
 	](context.Background(), query)
 
 	if err != nil {

@@ -171,7 +171,7 @@ func GetTahunProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} TahunProkerdomain.PagedTahunProkers
+// @Success 200 {object} commondomain.Paged[TahunProkerdomain.TahunProker]
 // @Router /TahunProkers [get]
 func GetAllTahunProkersHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -212,23 +212,23 @@ func GetAllTahunProkersHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[TahunProkerdomain.TahunProker]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[TahunProkerdomain.TahunProker]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[TahunProkerdomain.TahunProker]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[TahunProkerdomain.TahunProker]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[TahunProkerdomain.TahunProker]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllTahunProkers.GetAllTahunProkersQuery,
-		TahunProkerdomain.PagedTahunProkers,
+		commondomain.Paged[TahunProkerdomain.TahunProker],
 	](context.Background(), query)
 
 	if err != nil {

@@ -69,7 +69,7 @@ func GetFakultasUnitHandler(c *fiber.Ctx) error {
 // @Param limit query int false "Limit"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} fakultasunitdomain.PagedFakultasUnits
+// @Success 200 {object} commondomain.Paged[fakultasunitdomain.FakultasUnitDefault]
 // @Router /fakultasunits [get]
 func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -111,24 +111,23 @@ func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
-
+	var adapter commonpresentation.OutputAdapter[fakultasunitdomain.FakultasUnit]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[fakultasunitdomain.FakultasUnit]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[fakultasunitdomain.FakultasUnit]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[fakultasunitdomain.FakultasUnit]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[fakultasunitdomain.FakultasUnit]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllFakultasUnits.GetAllFakultasUnitsQuery,
-		fakultasunitdomain.PagedFakultasUnits,
+		commondomain.Paged[fakultasunitdomain.FakultasUnit],
 	](context.Background(), query)
 
 	if err != nil {

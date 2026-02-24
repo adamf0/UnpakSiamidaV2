@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	get2 "UnpakSiamida/modules/laporan/application/GetMonitoringIndikator"
 	get "UnpakSiamida/modules/laporan/application/GetMonitoringProker"
 	domainlaporan "UnpakSiamida/modules/laporan/domain"
@@ -32,14 +33,14 @@ func RegisterModuleLaporan(db *gorm.DB) error {
 	// Register request handler
 	mediatr.RegisterRequestHandler[
 		get.GetMonitoringProkerByTargetTahunQuery,
-		domainlaporan.Paged[domainlaporan.MonitoringProker],
+		commondomain.Paged[domainlaporan.MonitoringProker],
 	](&get.GetMonitoringProkerByTargetTahunQueryHandler{
 		Repo: repoLaporan,
 	})
 
 	mediatr.RegisterRequestHandler[
 		get2.GetMonitoringIndikatorByIndikatorTahunQuery,
-		domainlaporan.Paged[domainlaporan.MonitoringIndikator],
+		commondomain.Paged[domainlaporan.MonitoringIndikator],
 	](&get2.GetMonitoringIndikatorByIndikatorTahunQueryHandler{
 		Repo: repoLaporan,
 	})

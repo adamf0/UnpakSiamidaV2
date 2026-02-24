@@ -201,7 +201,7 @@ func GetUserHandler(c *fiber.Ctx) error {
 // @Param search query string false "Search keyword"
 // @Param filters query string false "Search filters (field:op:value;...)"
 // @Produce json
-// @Success 200 {object} userdomain.PagedUsers
+// @Success 200 {object} commondomain.Paged[userdomain.User]
 // @Router /users [get]
 func GetAllUsersHandler(c *fiber.Ctx) error {
 
@@ -243,23 +243,23 @@ func GetAllUsersHandler(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[userdomain.User]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[userdomain.User]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[userdomain.User]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[userdomain.User]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[userdomain.User]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllUsers.GetAllUsersQuery,
-		userdomain.PagedUsers,
+		commondomain.Paged[userdomain.User],
 	](context.Background(), query)
 
 	if err != nil {

@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	create "UnpakSiamida/modules/user/application/CreateUser"
 	delete "UnpakSiamida/modules/user/application/DeleteUser"
 	getAllOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
@@ -73,7 +74,7 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllUsersQuery,
-		domainuser.PagedUsers,
+		commondomain.Paged[domainuser.User],
 	](&getAll.GetAllUsersQueryHandler{
 		Repo: repoUser,
 	})

@@ -59,7 +59,7 @@ func GetActiveTahunRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} TahunRenstradomain.PagedTahunRenstras
+// @Success 200 {object} commondomain.Paged[TahunRenstradomain.TahunRenstra]
 // @Router /tahunrenstras [get]
 func GetAllTahunRenstrasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging") // default mode = paging
@@ -99,22 +99,22 @@ func GetAllTahunRenstrasHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	// Pilih adapter sesuai mode
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[TahunRenstradomain.TahunRenstra]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[TahunRenstradomain.TahunRenstra]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[TahunRenstradomain.TahunRenstra]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[TahunRenstradomain.TahunRenstra]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[TahunRenstradomain.TahunRenstra]{}
 	}
 
 	// Ambil data
-	TahunRenstras, err := mediatr.Send[GetAllTahunRenstras.GetAllTahunRenstrasQuery, TahunRenstradomain.PagedTahunRenstras](context.Background(), query)
+	TahunRenstras, err := mediatr.Send[GetAllTahunRenstras.GetAllTahunRenstrasQuery, commondomain.Paged[TahunRenstradomain.TahunRenstra]](context.Background(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}

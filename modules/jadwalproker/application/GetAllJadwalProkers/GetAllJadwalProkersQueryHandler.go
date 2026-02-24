@@ -1,6 +1,7 @@
 package application
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	domainJadwalProker "UnpakSiamida/modules/jadwalproker/domain"
 	"context"
 	"time"
@@ -13,7 +14,7 @@ type GetAllJadwalProkersQueryHandler struct {
 func (h *GetAllJadwalProkersQueryHandler) Handle(
 	ctx context.Context,
 	q GetAllJadwalProkersQuery,
-) (domainJadwalProker.PagedJadwalProkers, error) {
+) (commondomain.Paged[domainJadwalProker.JadwalProkerDefault], error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -25,7 +26,7 @@ func (h *GetAllJadwalProkersQueryHandler) Handle(
 		q.Limit,
 	)
 	if err != nil {
-		return domainJadwalProker.PagedJadwalProkers{}, err
+		return commondomain.Paged[domainJadwalProker.JadwalProkerDefault]{}, err
 	}
 
 	currentPage := 1
@@ -38,7 +39,7 @@ func (h *GetAllJadwalProkersQueryHandler) Handle(
 		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
 	}
 
-	return domainJadwalProker.PagedJadwalProkers{
+	return commondomain.Paged[domainJadwalProker.JadwalProkerDefault]{
 		Data:        JadwalProkers,
 		Total:       total,
 		CurrentPage: currentPage,

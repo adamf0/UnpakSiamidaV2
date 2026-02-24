@@ -242,7 +242,7 @@ func GetRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Tags Renstra
 // @Param tahun path string true "Tahun"
 // @Produce json
-// @Success 200 {object} renstradomain.RenstraDefault
+// @Success 200 {object} commondomain.Paged[renstradomain.RenstraDefault]
 // @Failure 400 {object} commoninfra.ResponseError
 // @Failure 404 {object} commoninfra.ResponseError
 // @Failure 409 {object} commoninfra.ResponseError
@@ -305,23 +305,23 @@ func GetRenstraByTahunTargetHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[renstradomain.RenstraDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[renstradomain.RenstraDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[renstradomain.RenstraDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[renstradomain.RenstraDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[renstradomain.RenstraDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllRenstras.GetAllRenstrasQuery,
-		renstradomain.PagedRenstras,
+		commondomain.Paged[renstradomain.RenstraDefault],
 	](context.Background(), query)
 
 	if err != nil {
@@ -339,7 +339,7 @@ func GetRenstraByTahunTargetHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} renstradomain.PagedRenstras
+// @Success 200 {object} commondomain.Paged[renstradomain.RenstraDefault]
 // @Router /renstras [get]
 func GetAllRenstrasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -380,23 +380,23 @@ func GetAllRenstrasHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[renstradomain.RenstraDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[renstradomain.RenstraDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[renstradomain.RenstraDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[renstradomain.RenstraDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[renstradomain.RenstraDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllRenstras.GetAllRenstrasQuery,
-		renstradomain.PagedRenstras,
+		commondomain.Paged[renstradomain.RenstraDefault],
 	](context.Background(), query)
 
 	if err != nil {

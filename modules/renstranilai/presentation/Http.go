@@ -164,7 +164,7 @@ func GetRenstraNilaiHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} renstranilaidomain.PagedRenstraNilais
+// @Success 200 {object} commondomain.Paged[renstranilaidomain.RenstraNilaiDefault]
 // @Router /renstranilais [get]
 func GetAllRenstraNilaisHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -205,23 +205,23 @@ func GetAllRenstraNilaisHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[renstranilaidomain.RenstraNilaiDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[renstranilaidomain.RenstraNilaiDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[renstranilaidomain.RenstraNilaiDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[renstranilaidomain.RenstraNilaiDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[renstranilaidomain.RenstraNilaiDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllRenstraNilais.GetAllRenstraNilaisQuery,
-		renstranilaidomain.PagedRenstraNilais,
+		commondomain.Paged[renstranilaidomain.RenstraNilaiDefault],
 	](context.Background(), query)
 
 	if err != nil {

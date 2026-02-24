@@ -152,7 +152,7 @@ func GetKtsHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} Ktsdomain.PagedKtss
+// @Success 200 {object} commondomain.Paged[Ktsdomain.KtsDefault]
 // @Router /Ktss [get]
 func GetAllKtssHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -193,23 +193,23 @@ func GetAllKtssHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[Ktsdomain.KtsDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[Ktsdomain.KtsDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[Ktsdomain.KtsDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[Ktsdomain.KtsDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[Ktsdomain.KtsDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllKtss.GetAllKtssQuery,
-		Ktsdomain.PagedKtss,
+		commondomain.Paged[Ktsdomain.KtsDefault],
 	](context.Background(), query)
 
 	if err != nil {

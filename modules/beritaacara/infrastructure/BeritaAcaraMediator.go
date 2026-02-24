@@ -93,7 +93,7 @@ func RegisterModuleBeritaAcara(db *gorm.DB, redis *commonDomain.IRedisStore) err
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllBeritaAcarasQuery,
-		domainBeritaAcara.PagedBeritaAcaras,
+		commonDomain.Paged[domainBeritaAcara.BeritaAcaraDefault],
 	](&getAll.GetAllBeritaAcarasQueryHandler{
 		Repo:     repoBeritaAcara,
 		RepoUser: repoUser,

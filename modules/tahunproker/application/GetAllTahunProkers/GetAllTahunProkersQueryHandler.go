@@ -1,6 +1,7 @@
 package application
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
 	"context"
 	"time"
@@ -13,7 +14,7 @@ type GetAllTahunProkersQueryHandler struct {
 func (h *GetAllTahunProkersQueryHandler) Handle(
 	ctx context.Context,
 	q GetAllTahunProkersQuery,
-) (domaintahunproker.PagedTahunProkers, error) {
+) (commondomain.Paged[domaintahunproker.TahunProker], error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -25,7 +26,7 @@ func (h *GetAllTahunProkersQueryHandler) Handle(
 		q.Limit,
 	)
 	if err != nil {
-		return domaintahunproker.PagedTahunProkers{}, err
+		return commondomain.Paged[domaintahunproker.TahunProker]{}, err
 	}
 
 	currentPage := 1
@@ -38,7 +39,7 @@ func (h *GetAllTahunProkersQueryHandler) Handle(
 		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
 	}
 
-	return domaintahunproker.PagedTahunProkers{
+	return commondomain.Paged[domaintahunproker.TahunProker]{
 		Data:        TahunProkers,
 		Total:       total,
 		CurrentPage: currentPage,

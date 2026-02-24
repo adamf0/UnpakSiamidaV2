@@ -176,7 +176,7 @@ func GetJadwalProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} JadwalProkerdomain.PagedJadwalProkers
+// @Success 200 {object} commondomain.Paged[JadwalProkerdomain.JadwalProkerDefault]
 // @Router /JadwalProkers [get]
 func GetAllJadwalProkersHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -217,23 +217,23 @@ func GetAllJadwalProkersHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[JadwalProkerdomain.JadwalProkerDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[JadwalProkerdomain.JadwalProkerDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[JadwalProkerdomain.JadwalProkerDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[JadwalProkerdomain.JadwalProkerDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[JadwalProkerdomain.JadwalProkerDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllJadwalProkers.GetAllJadwalProkersQuery,
-		JadwalProkerdomain.PagedJadwalProkers,
+		commondomain.Paged[JadwalProkerdomain.JadwalProkerDefault],
 	](context.Background(), query)
 
 	if err != nil {

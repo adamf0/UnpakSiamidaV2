@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	create "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
 	delete "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
 	getAll "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
@@ -67,7 +68,7 @@ func RegisterModuleIndikatorRenstra(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllIndikatorRenstrasQuery,
-		domainindikatorrenstra.PagedIndikatorRenstras,
+		commondomain.Paged[domainindikatorrenstra.IndikatorRenstraDefault],
 	](&getAll.GetAllIndikatorRenstrasQueryHandler{
 		Repo: repoIndikatorRenstra,
 	})

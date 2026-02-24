@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	create "UnpakSiamida/modules/tahunproker/application/CreateTahunProker"
 	delete "UnpakSiamida/modules/tahunproker/application/DeleteTahunProker"
 	getAll "UnpakSiamida/modules/tahunproker/application/GetAllTahunProkers"
@@ -64,7 +65,7 @@ func RegisterModuleTahunProker(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllTahunProkersQuery,
-		domainTahunProker.PagedTahunProkers,
+		commondomain.Paged[domainTahunProker.TahunProker],
 	](&getAll.GetAllTahunProkersQueryHandler{
 		Repo: repoTahunProker,
 	})

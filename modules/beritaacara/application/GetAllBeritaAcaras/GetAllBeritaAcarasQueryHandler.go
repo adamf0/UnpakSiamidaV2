@@ -1,6 +1,7 @@
 package application
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	"UnpakSiamida/common/helper"
 	domainberitaacara "UnpakSiamida/modules/beritaacara/domain"
 	domainuser "UnpakSiamida/modules/user/domain"
@@ -18,7 +19,7 @@ type GetAllBeritaAcarasQueryHandler struct {
 func (h *GetAllBeritaAcarasQueryHandler) Handle(
 	ctx context.Context,
 	q GetAllBeritaAcarasQuery,
-) (domainberitaacara.PagedBeritaAcaras, error) {
+) (commondomain.Paged[domainberitaacara.BeritaAcaraDefault], error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -54,7 +55,7 @@ func (h *GetAllBeritaAcarasQueryHandler) Handle(
 		q.Limit,
 	)
 	if err != nil {
-		return domainberitaacara.PagedBeritaAcaras{}, err
+		return commondomain.Paged[domainberitaacara.BeritaAcaraDefault]{}, err
 	}
 
 	currentPage := 1
@@ -67,7 +68,7 @@ func (h *GetAllBeritaAcarasQueryHandler) Handle(
 		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
 	}
 
-	return domainberitaacara.PagedBeritaAcaras{
+	return commondomain.Paged[domainberitaacara.BeritaAcaraDefault]{
 		Data:        BeritaAcaras,
 		Total:       total,
 		CurrentPage: currentPage,

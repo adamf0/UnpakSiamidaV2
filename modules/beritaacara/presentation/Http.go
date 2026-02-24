@@ -310,7 +310,7 @@ func GetBeritaAcaraHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} BeritaAcaradomain.PagedBeritaAcaras
+// @Success 200 {object} commondomain.Paged[BeritaAcaradomain.BeritaAcaraDefault]
 // @Router /BeritaAcaras [get]
 func GetAllBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -359,23 +359,23 @@ func GetAllBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[BeritaAcaradomain.BeritaAcaraDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[BeritaAcaradomain.BeritaAcaraDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[BeritaAcaradomain.BeritaAcaraDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[BeritaAcaradomain.BeritaAcaraDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[BeritaAcaradomain.BeritaAcaraDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllBeritaAcaras.GetAllBeritaAcarasQuery,
-		BeritaAcaradomain.PagedBeritaAcaras,
+		commondomain.Paged[BeritaAcaradomain.BeritaAcaraDefault],
 	](context.Background(), query)
 
 	if err != nil {

@@ -226,7 +226,7 @@ func GetTemplateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} templaterenstradomain.PagedTemplateRenstras
+// @Success 200 {object} commondomain.Paged[templaterenstradomain.TemplateRenstraDefault]
 // @Router /templaterenstras [get]
 func GetAllTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging") // default mode = paging
@@ -266,22 +266,22 @@ func GetAllTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	// Pilih adapter sesuai mode
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[templaterenstradomain.TemplateRenstraDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[templaterenstradomain.TemplateRenstraDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[templaterenstradomain.TemplateRenstraDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[templaterenstradomain.TemplateRenstraDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[templaterenstradomain.TemplateRenstraDefault]{}
 	}
 
 	// Ambil data
-	templaterenstras, err := mediatr.Send[GetAllTemplateRenstras.GetAllTemplateRenstrasQuery, templaterenstradomain.PagedTemplateRenstras](context.Background(), query)
+	templaterenstras, err := mediatr.Send[GetAllTemplateRenstras.GetAllTemplateRenstrasQuery, commondomain.Paged[templaterenstradomain.TemplateRenstraDefault]](context.Background(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}

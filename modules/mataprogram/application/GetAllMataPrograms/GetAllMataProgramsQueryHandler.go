@@ -1,6 +1,7 @@
 package application
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	domainmataprogram "UnpakSiamida/modules/mataprogram/domain"
 	"context"
 	"time"
@@ -13,7 +14,7 @@ type GetAllMataProgramsQueryHandler struct {
 func (h *GetAllMataProgramsQueryHandler) Handle(
 	ctx context.Context,
 	q GetAllMataProgramsQuery,
-) (domainmataprogram.PagedMataPrograms, error) {
+) (commondomain.Paged[domainmataprogram.MataProgram], error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -25,7 +26,7 @@ func (h *GetAllMataProgramsQueryHandler) Handle(
 		q.Limit,
 	)
 	if err != nil {
-		return domainmataprogram.PagedMataPrograms{}, err
+		return commondomain.Paged[domainmataprogram.MataProgram]{}, err
 	}
 
 	currentPage := 1
@@ -38,7 +39,7 @@ func (h *GetAllMataProgramsQueryHandler) Handle(
 		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
 	}
 
-	return domainmataprogram.PagedMataPrograms{
+	return commondomain.Paged[domainmataprogram.MataProgram]{
 		Data:        MataPrograms,
 		Total:       total,
 		CurrentPage: currentPage,

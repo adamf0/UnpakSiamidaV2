@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	create "UnpakSiamida/modules/jadwalproker/application/CreateJadwalProker"
 	delete "UnpakSiamida/modules/jadwalproker/application/DeleteJadwalProker"
@@ -68,7 +69,7 @@ func RegisterModuleJadwalProker(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllJadwalProkersQuery,
-		domainJadwalProker.PagedJadwalProkers,
+		commondomain.Paged[domainJadwalProker.JadwalProkerDefault],
 	](&getAll.GetAllJadwalProkersQueryHandler{
 		Repo: repoJadwalProker,
 	})

@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	create "UnpakSiamida/modules/mataprogram/application/CreateMataProgram"
 	delete "UnpakSiamida/modules/mataprogram/application/DeleteMataProgram"
 	getAll "UnpakSiamida/modules/mataprogram/application/GetAllMataPrograms"
@@ -69,7 +70,7 @@ func RegisterModuleMataProgram(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllMataProgramsQuery,
-		domainMataProgram.PagedMataPrograms,
+		commondomain.Paged[domainMataProgram.MataProgram],
 	](&getAll.GetAllMataProgramsQueryHandler{
 		Repo: repoMataProgram,
 	})

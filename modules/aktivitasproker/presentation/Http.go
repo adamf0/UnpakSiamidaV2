@@ -194,7 +194,7 @@ func GetAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} AktivitasProkerdomain.PagedAktivitasProkers
+// @Success 200 {object} commondomain.Paged[AktivitasProkerdomain.AktivitasProkerDefault]
 // @Router /AktivitasProkers [get]
 func GetAllAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -235,23 +235,23 @@ func GetAllAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[AktivitasProkerdomain.AktivitasProkerDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[AktivitasProkerdomain.AktivitasProkerDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[AktivitasProkerdomain.AktivitasProkerDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[AktivitasProkerdomain.AktivitasProkerDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[AktivitasProkerdomain.AktivitasProkerDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllAktivitasProkers.GetAllAktivitasProkersQuery,
-		AktivitasProkerdomain.PagedAktivitasProkers,
+		commondomain.Paged[AktivitasProkerdomain.AktivitasProkerDefault],
 	](context.Background(), query)
 
 	if err != nil {

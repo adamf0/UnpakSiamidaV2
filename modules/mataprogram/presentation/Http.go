@@ -173,7 +173,7 @@ func GetMataProgramHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} MataProgramdomain.PagedMataPrograms
+// @Success 200 {object} commondomain.Paged[MataProgramdomain.MataProgram]
 // @Router /MataPrograms [get]
 func GetAllMataProgramsHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -214,23 +214,23 @@ func GetAllMataProgramsHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[MataProgramdomain.MataProgram]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[MataProgramdomain.MataProgram]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[MataProgramdomain.MataProgram]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[MataProgramdomain.MataProgram]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[MataProgramdomain.MataProgram]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllMataPrograms.GetAllMataProgramsQuery,
-		MataProgramdomain.PagedMataPrograms,
+		commondomain.Paged[MataProgramdomain.MataProgram],
 	](context.Background(), query)
 
 	if err != nil {

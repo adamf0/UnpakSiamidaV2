@@ -57,7 +57,7 @@ func RegisterModuleKts(db *gorm.DB, redis *commonDomain.IRedisStore, tg commonin
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllKtssQuery,
-		domainKts.PagedKtss,
+		commonDomain.Paged[domainKts.KtsDefault],
 	](&getAll.GetAllKtssQueryHandler{
 		Repo: repoKts,
 	})

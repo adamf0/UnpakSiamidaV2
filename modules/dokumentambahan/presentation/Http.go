@@ -158,7 +158,7 @@ func GetDokumenTambahanHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} dokumentambahandomain.PagedDokumenTambahans
+// @Success 200 {object} commondomain.Paged[dokumentambahandomain.DokumenTambahanDefault]
 // @Router /dokumentambahans [get]
 func GetAllDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -199,23 +199,23 @@ func GetAllDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[dokumentambahandomain.DokumenTambahanDefault]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[dokumentambahandomain.DokumenTambahanDefault]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[dokumentambahandomain.DokumenTambahanDefault]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[dokumentambahandomain.DokumenTambahanDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[dokumentambahandomain.DokumenTambahanDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllDokumenTambahans.GetAllDokumenTambahansQuery,
-		dokumentambahandomain.PagedDokumenTambahans,
+		commondomain.Paged[dokumentambahandomain.DokumenTambahanDefault],
 	](context.Background(), query)
 
 	if err != nil {

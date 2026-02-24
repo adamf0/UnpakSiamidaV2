@@ -7,10 +7,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
 
-	// "UnpakSiamida/common/domain"
 	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
+	domainstandarrenstra "UnpakSiamida/modules/standarrenstra/domain"
 
 	CreateStandarRenstra "UnpakSiamida/modules/standarrenstra/application/CreateStandarRenstra"
 	DeleteStandarRenstra "UnpakSiamida/modules/standarrenstra/application/DeleteStandarRenstra"
@@ -166,7 +166,7 @@ func GetStandarRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} standarrenstradomain.PagedStandarRenstras
+// @Success 200 {object} commondomain.Paged[domainstandarrenstra.StandarRenstra]
 // @Router /standarrenstras [get]
 func GetAllStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging") // default mode = paging
@@ -206,22 +206,22 @@ func GetAllStandarRenstrasHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	// Pilih adapter sesuai mode
-	var adapter OutputAdapter
+	var adapter commonpresentation.OutputAdapter[domainstandarrenstra.StandarRenstra]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter{}
+		adapter = &commonpresentation.AllAdapter[domainstandarrenstra.StandarRenstra]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter{}
+		adapter = &commonpresentation.NDJSONAdapter[domainstandarrenstra.StandarRenstra]{}
 	case "sse":
-		adapter = &SSEAdapter{}
+		adapter = &commonpresentation.SSEAdapter[domainstandarrenstra.StandarRenstra]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter{}
+		adapter = &commonpresentation.PagingAdapter[domainstandarrenstra.StandarRenstra]{}
 	}
 
 	// Ambil data
-	standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, standarrenstradomain.PagedStandarRenstras](context.Background(), query)
+	standarrenstras, err := mediatr.Send[GetAllStandarRenstras.GetAllStandarRenstrasQuery, commondomain.Paged[domainstandarrenstra.StandarRenstra]](context.Background(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}

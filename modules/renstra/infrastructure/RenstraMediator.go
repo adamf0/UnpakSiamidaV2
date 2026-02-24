@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	infraFakultasUnit "UnpakSiamida/modules/fakultasunit/infrastructure"
 	create "UnpakSiamida/modules/renstra/application/CreateRenstra"
 	delete "UnpakSiamida/modules/renstra/application/DeleteRenstra"
@@ -80,7 +81,7 @@ func RegisterModuleRenstra(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllRenstrasQuery,
-		domainrenstra.PagedRenstras,
+		commondomain.Paged[domainrenstra.RenstraDefault],
 	](&getAll.GetAllRenstrasQueryHandler{
 		Repo: repoRenstra,
 	})

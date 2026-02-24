@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
 
+	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	laporan "UnpakSiamida/modules/laporan/domain"
@@ -44,24 +45,23 @@ func GetMonitoringProkerHandlerfunc(c *fiber.Ctx) error {
 		TargetUuid: target,
 	}
 
-	var adapter OutputAdapter[laporan.MonitoringProker]
-
+	var adapter commonpresentation.OutputAdapter[laporan.MonitoringProker]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter[laporan.MonitoringProker]{}
+		adapter = &commonpresentation.AllAdapter[laporan.MonitoringProker]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter[laporan.MonitoringProker]{}
+		adapter = &commonpresentation.NDJSONAdapter[laporan.MonitoringProker]{}
 	case "sse":
-		adapter = &SSEAdapter[laporan.MonitoringProker]{}
+		adapter = &commonpresentation.SSEAdapter[laporan.MonitoringProker]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter[laporan.MonitoringProker]{}
+		adapter = &commonpresentation.PagingAdapter[laporan.MonitoringProker]{}
 	}
 
 	result, err := mediatr.Send[
 		GetMonitoringProker.GetMonitoringProkerByTargetTahunQuery,
-		laporan.Paged[laporan.MonitoringProker],
+		commondomain.Paged[laporan.MonitoringProker],
 	](context.Background(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
@@ -80,7 +80,7 @@ func GetMonitoringProkerHandlerfunc(c *fiber.Ctx) error {
 // @Param tahun path string true "Tahun"
 // @Param indikator path string true "Indikator UUID" format(indikator)
 // @Produce json
-// @Success 200 {object} laporan.MonitoringIndikator
+// @Success 200 {object} commondomain.Paged[laporan.MonitoringIndikator]
 // @Failure 400 {object} commoninfra.ResponseError
 // @Failure 404 {object} commoninfra.ResponseError
 // @Failure 409 {object} commoninfra.ResponseError
@@ -100,24 +100,23 @@ func GetMonitoringIndikatorHandlerfunc(c *fiber.Ctx) error {
 		IndikatorUuid: indikator,
 	}
 
-	var adapter OutputAdapter[laporan.MonitoringIndikator]
-
+	var adapter commonpresentation.OutputAdapter[laporan.MonitoringIndikator]
 	switch mode {
 	case "all":
-		adapter = &AllAdapter[laporan.MonitoringIndikator]{}
+		adapter = &commonpresentation.AllAdapter[laporan.MonitoringIndikator]{}
 	case "ndjson":
-		adapter = &NDJSONAdapter[laporan.MonitoringIndikator]{}
+		adapter = &commonpresentation.NDJSONAdapter[laporan.MonitoringIndikator]{}
 	case "sse":
-		adapter = &SSEAdapter[laporan.MonitoringIndikator]{}
+		adapter = &commonpresentation.SSEAdapter[laporan.MonitoringIndikator]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &PagingAdapter[laporan.MonitoringIndikator]{}
+		adapter = &commonpresentation.PagingAdapter[laporan.MonitoringIndikator]{}
 	}
 
 	result, err := mediatr.Send[
 		GetMonitoringIndikator.GetMonitoringIndikatorByIndikatorTahunQuery,
-		laporan.Paged[laporan.MonitoringIndikator],
+		commondomain.Paged[laporan.MonitoringIndikator],
 	](context.Background(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)

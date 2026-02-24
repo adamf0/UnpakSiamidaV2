@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	create "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
 	delete "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
 	get "UnpakSiamida/modules/aktivitasproker/application/GetAktivitasProker"
@@ -72,7 +73,7 @@ func RegisterModuleAktivitasProker(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllAktivitasProkersQuery,
-		domainAktivitasProker.PagedAktivitasProkers,
+		commondomain.Paged[domainAktivitasProker.AktivitasProkerDefault],
 	](&getAll.GetAllAktivitasProkersQueryHandler{
 		Repo: repoAktivitasProker,
 	})
