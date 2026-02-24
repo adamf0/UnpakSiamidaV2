@@ -101,7 +101,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedAktivitasProkers"
+                            "$ref": "#/definitions/domain.Paged-domain_AktivitasProkerDefault"
                         }
                     }
                 }
@@ -199,7 +199,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedBeritaAcaras"
+                            "$ref": "#/definitions/domain.Paged-domain_BeritaAcaraDefault"
                         }
                     }
                 }
@@ -297,7 +297,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedDokumenProkers"
+                            "$ref": "#/definitions/domain.Paged-domain_DokumenProkerDefault"
                         }
                     }
                 }
@@ -395,7 +395,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedJadwalProkers"
+                            "$ref": "#/definitions/domain.Paged-domain_JadwalProkerDefault"
                         }
                     }
                 }
@@ -493,7 +493,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedJenisFiles"
+                            "$ref": "#/definitions/domain.Paged-domain_JenisFile"
                         }
                     }
                 }
@@ -591,7 +591,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedKtss"
+                            "$ref": "#/definitions/domain.Paged-domain_KtsDefault"
                         }
                     }
                 }
@@ -689,7 +689,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedMataPrograms"
+                            "$ref": "#/definitions/domain.Paged-domain_MataProgram"
                         }
                     }
                 }
@@ -725,7 +725,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.MonitoringIndikator"
+                            "$ref": "#/definitions/domain.Paged-domain_MonitoringIndikator"
                         }
                     },
                     "400": {
@@ -786,7 +786,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.MonitoringProker"
+                            "$ref": "#/definitions/domain.Paged-domain_MonitoringProker"
                         }
                     },
                     "400": {
@@ -908,7 +908,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedTahunProkers"
+                            "$ref": "#/definitions/domain.Paged-domain_TahunProker"
                         }
                     }
                 }
@@ -1230,7 +1230,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Nama Tahun",
+                        "description": "Tahun",
                         "name": "tahun",
                         "in": "formData",
                         "required": true
@@ -1308,6 +1308,118 @@
                 }
             }
         },
+        "/beritaacara/export/:uuid": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Publish existing Kts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of export Kts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
+        "/beritaacara/preview/:uuid": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Publish existing Kts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of export Kts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            }
+        },
         "/beritaacara/{uuid}": {
             "put": {
                 "produces": [
@@ -1328,7 +1440,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Nama Tahun",
+                        "description": "Tahun",
                         "name": "tahun",
                         "in": "formData",
                         "required": true
@@ -1372,6 +1484,60 @@
                 "responses": {
                     "200": {
                         "description": "uuid of updated BeritaAcara",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure.ResponseError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kts"
+                ],
+                "summary": "Publish existing Kts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Kts UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "uuid of export Kts",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1953,7 +2119,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedDokumenTambahans"
+                            "$ref": "#/definitions/domain.Paged-domain_DokumenTambahanDefault"
                         }
                     }
                 }
@@ -2051,7 +2217,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedFakultasUnits"
+                            "$ref": "#/definitions/domain.Paged-domain_FakultasUnit"
                         }
                     }
                 }
@@ -2416,7 +2582,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedIndikatorRenstras"
+                            "$ref": "#/definitions/domain.Paged-domain_IndikatorRenstraDefault"
                         }
                     }
                 }
@@ -3099,7 +3265,7 @@
                 }
             }
         },
-        "/preview/audit/{tahun}/{fakultasUnit}": {
+        "/preview/audit/{tipe}/{tahun}/{fakultasUnit}": {
             "get": {
                 "description": "Mengambil data preview template berdasarkan tahun dan fakultas unit",
                 "produces": [
@@ -3385,7 +3551,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.RenstraDefault"
+                            "$ref": "#/definitions/domain.Paged-domain_RenstraDefault"
                         }
                     },
                     "400": {
@@ -3970,7 +4136,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedRenstraNilais"
+                            "$ref": "#/definitions/domain.Paged-domain_RenstraNilaiDefault"
                         }
                     }
                 }
@@ -4015,7 +4181,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedRenstras"
+                            "$ref": "#/definitions/domain.Paged-domain_RenstraDefault"
                         }
                     }
                 }
@@ -4283,7 +4449,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedStandarRenstras"
+                            "$ref": "#/definitions/domain.Paged-domain_StandarRenstra"
                         }
                     }
                 }
@@ -4543,7 +4709,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedTahunRenstras"
+                            "$ref": "#/definitions/domain.Paged-domain_TahunRenstra"
                         }
                     }
                 }
@@ -4785,7 +4951,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedTemplateDokumenTambahans"
+                            "$ref": "#/definitions/domain.Paged-domain_TemplateDokumenTambahanDefault"
                         }
                     }
                 }
@@ -5185,7 +5351,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedTemplateRenstras"
+                            "$ref": "#/definitions/domain.Paged-domain_TemplateRenstraDefault"
                         }
                     }
                 }
@@ -5545,7 +5711,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.PagedUsers"
+                            "$ref": "#/definitions/domain.Paged-domain_User"
                         }
                     }
                 }
@@ -6169,7 +6335,13 @@
                 "auditee": {
                     "type": "string"
                 },
+                "auditeeUuid": {
+                    "type": "string"
+                },
                 "auditor": {
+                    "type": "string"
+                },
+                "auditorUuid": {
                     "type": "string"
                 },
                 "closingBy": {
@@ -6177,6 +6349,9 @@
                 },
                 "dokumenTambahan": {
                     "type": "integer"
+                },
+                "hasilTemuan": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -6211,11 +6386,20 @@
                 "ketidaksesuaianR": {
                     "type": "string"
                 },
+                "namaAuditee": {
+                    "type": "string"
+                },
+                "namaAuditor": {
+                    "type": "string"
+                },
                 "nomorLaporan": {
                     "description": "auditor (1)",
                     "type": "string"
                 },
                 "pertanyaan": {
+                    "type": "string"
+                },
+                "referensi": {
                     "type": "string"
                 },
                 "renstraId": {
@@ -6458,7 +6642,7 @@
                 }
             }
         },
-        "domain.PagedAktivitasProkers": {
+        "domain.Paged-domain_AktivitasProkerDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6478,7 +6662,7 @@
                 }
             }
         },
-        "domain.PagedBeritaAcaras": {
+        "domain.Paged-domain_BeritaAcaraDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6498,7 +6682,7 @@
                 }
             }
         },
-        "domain.PagedDokumenProkers": {
+        "domain.Paged-domain_DokumenProkerDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6518,7 +6702,7 @@
                 }
             }
         },
-        "domain.PagedDokumenTambahans": {
+        "domain.Paged-domain_DokumenTambahanDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6538,7 +6722,7 @@
                 }
             }
         },
-        "domain.PagedFakultasUnits": {
+        "domain.Paged-domain_FakultasUnit": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6558,7 +6742,7 @@
                 }
             }
         },
-        "domain.PagedIndikatorRenstras": {
+        "domain.Paged-domain_IndikatorRenstraDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6578,7 +6762,7 @@
                 }
             }
         },
-        "domain.PagedJadwalProkers": {
+        "domain.Paged-domain_JadwalProkerDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6598,7 +6782,7 @@
                 }
             }
         },
-        "domain.PagedJenisFiles": {
+        "domain.Paged-domain_JenisFile": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6618,7 +6802,7 @@
                 }
             }
         },
-        "domain.PagedKtss": {
+        "domain.Paged-domain_KtsDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6638,7 +6822,7 @@
                 }
             }
         },
-        "domain.PagedMataPrograms": {
+        "domain.Paged-domain_MataProgram": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6658,7 +6842,67 @@
                 }
             }
         },
-        "domain.PagedRenstraNilais": {
+        "domain.Paged-domain_MonitoringIndikator": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.MonitoringIndikator"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Paged-domain_MonitoringProker": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.MonitoringProker"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Paged-domain_RenstraDefault": {
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RenstraDefault"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Paged-domain_RenstraNilaiDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6678,28 +6922,7 @@
                 }
             }
         },
-        "domain.PagedRenstras": {
-            "type": "object",
-            "properties": {
-                "current_page": {
-                    "type": "integer"
-                },
-                "data": {
-                    "description": "[]Renstra",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.RenstraDefault"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "domain.PagedStandarRenstras": {
+        "domain.Paged-domain_StandarRenstra": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6719,7 +6942,7 @@
                 }
             }
         },
-        "domain.PagedTahunProkers": {
+        "domain.Paged-domain_TahunProker": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6739,7 +6962,7 @@
                 }
             }
         },
-        "domain.PagedTahunRenstras": {
+        "domain.Paged-domain_TahunRenstra": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6759,7 +6982,7 @@
                 }
             }
         },
-        "domain.PagedTemplateDokumenTambahans": {
+        "domain.Paged-domain_TemplateDokumenTambahanDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6779,7 +7002,7 @@
                 }
             }
         },
-        "domain.PagedTemplateRenstras": {
+        "domain.Paged-domain_TemplateRenstraDefault": {
             "type": "object",
             "properties": {
                 "current_page": {
@@ -6799,7 +7022,7 @@
                 }
             }
         },
-        "domain.PagedUsers": {
+        "domain.Paged-domain_User": {
             "type": "object",
             "properties": {
                 "current_page": {
