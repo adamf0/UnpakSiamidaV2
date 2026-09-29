@@ -225,12 +225,14 @@ func (r *TemplateRenstraRepository) GetAll(
 			tr.klasifikasi            AS Klasifikasi,
 			tr.satuan                 AS Satuan,
 			tr.target                 AS Target,
+			i.operator                AS Operator,
+			i.tipe_target             AS TipeTarget,
 			tr.target_min             AS TargetMin,
 			tr.target_max             AS TargetMax,
 			tr.tugas                  AS Tugas
 	` + baseFrom + whereClause + orderBy + pagination
 
-	if err := r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).Debug().
 		Raw(selectQuery, args...).
 		Scan(&result).Error; err != nil {
 		return nil, 0, err
@@ -294,6 +296,8 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 		tr.klasifikasi AS Klasifikasi,
 		tr.satuan AS Satuan,
 		tr.target AS Target,
+		i.operator AS Operator,
+		i.tipe_target AS TipeTarget,
 		tr.target_min AS TargetMin,
 		tr.target_max AS TargetMax,
 		tr.tugas AS Tugas

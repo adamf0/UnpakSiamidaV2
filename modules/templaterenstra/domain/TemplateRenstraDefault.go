@@ -5,23 +5,25 @@ import (
 )
 
 type TemplateRenstraDefault struct {
-	ID           	   		uint       
-	UUID         	   		uuid.UUID  
-	Tahun              		string	
-	StandarRenstraUuid    	uuid.UUID  
-	StandarRenstraID 		uint	
-	StandarRenstra          string
-	IndikatorRenstraUuid    uuid.UUID  
-	IndikatorRenstraID 		uint	
-	Indikator          		string	  
-	IsPertanyaan       		bool 	  
-	FakultasUnitID       	uint
-	FakultasUnit       		string 	  
-	Kategori           		string 	  
-	Klasifikasi        		string	  
-	Satuan             		*string	  
-	Target             		*string	  
-	TargetMin          		*string	  
-	TargetMax          		*string	  
-	Tugas              		string	  
+	ID                   uint
+	UUID                 uuid.UUID
+	Tahun                string
+	StandarRenstraUuid   uuid.UUID
+	StandarRenstraID     uint
+	StandarRenstra       string
+	IndikatorRenstraUuid uuid.UUID
+	IndikatorRenstraID   uint
+	Indikator            string
+	IsPertanyaan         bool
+	FakultasUnitID       uint
+	FakultasUnit         string
+	Kategori             string
+	Klasifikasi          string
+	Satuan               *string
+	Target               *string
+	Operator             *string
+	TipeTarget           *string
+	TargetMin            *string
+	TargetMax            *string
+	Tugas                string
 }
