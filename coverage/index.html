@@ -111,7 +111,7 @@
 				
 				<option value="file27">UnpakSiamida/modules/beritaacara/application/SetupUuidBeritaAcara/SetupUuidBeritaAcaraCommandHandler.go (0.0%)</option>
 				
-				<option value="file28">UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara/UpdateBeritaAcaraCommandHandler.go (87.5%)</option>
+				<option value="file28">UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara/UpdateBeritaAcaraCommandHandler.go (85.9%)</option>
 				
 				<option value="file29">UnpakSiamida/modules/beritaacara/application/UpdateBeritaAcara/UpdateBeritaAcaraCommandValidation.go (100.0%)</option>
 				
@@ -337,7 +337,7 @@
 				
 				<option value="file140">UnpakSiamida/modules/templatedokumentambahan/application/SetupUuidTemplateDokumenTambahan/SetupUuidTemplateDokumenTambahanCommandHandler.go (0.0%)</option>
 				
-				<option value="file141">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (73.2%)</option>
+				<option value="file141">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandHandler.go (70.7%)</option>
 				
 				<option value="file142">UnpakSiamida/modules/templatedokumentambahan/application/UpdateTemplateDokumenTambahan/UpdateTemplateDokumenTambahanCommandValidation.go (100.0%)</option>
 				
@@ -1822,7 +1822,7 @@ func (h *CreateBeritaAcaraCommandHandler) Handle(
                                 return nil // optional field → ignore invalid
                         }</span>
                         <span class="cov8" title="1">auditor1, err := h.RepoUser.GetByUuid(ctxg, uuidAuditor1)
-                        if err != nil </span><span class="cov8" title="1">{
+                        if err != nil </span><span class="cov0" title="0">{
                                 return nil
                         }</span>
                         <span class="cov8" title="1">idAuditor1 = &amp;auditor1.ID
@@ -1838,7 +1838,7 @@ func (h *CreateBeritaAcaraCommandHandler) Handle(
                                 return nil
                         }</span>
                         <span class="cov8" title="1">auditor2, err := h.RepoUser.GetByUuid(ctxg, uuidAuditor2)
-                        if err != nil </span><span class="cov0" title="0">{
+                        if err != nil </span><span class="cov8" title="1">{
                                 return nil
                         }</span>
                         <span class="cov8" title="1">idAuditor2 = &amp;auditor2.ID
@@ -2489,7 +2489,7 @@ func (h *UpdateBeritaAcaraCommandHandler) Handle(
                                 return nil // optional field → ignore invalid
                         }</span>
                         <span class="cov8" title="1">auditor1, err := h.RepoUser.GetByUuid(ctxg, uuidAuditor1)
-                        if err != nil </span><span class="cov8" title="1">{
+                        if err != nil </span><span class="cov0" title="0">{
                                 return nil
                         }</span>
                         <span class="cov8" title="1">idAuditor1 = &amp;auditor1.ID
@@ -9237,7 +9237,7 @@ func (h *UpdateTemplateDokumenTambahanCommandHandler) Handle(
                         if errors.Is(err, gorm.ErrRecordNotFound) </span><span class="cov8" title="1">{
                                 return domaintemplatedokumentambahan.JenisFileNotFound()
                         }</span>
-                        <span class="cov8" title="1">return err</span>
+                        <span class="cov0" title="0">return err</span>
                 }
                 <span class="cov8" title="1">jenisfile = r
                 return nil</span>

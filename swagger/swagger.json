@@ -7522,6 +7522,9 @@
                 "klasifikasi": {
                     "type": "string"
                 },
+                "operator": {
+                    "type": "string"
+                },
                 "satuan": {
                     "type": "string"
                 },
@@ -7544,6 +7547,9 @@
                     "type": "string"
                 },
                 "targetMin": {
+                    "type": "string"
+                },
+                "tipeTarget": {
                     "type": "string"
                 },
                 "tugas": {
