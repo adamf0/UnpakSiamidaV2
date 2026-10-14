@@ -36,8 +36,8 @@ request.log
 coverage/
 
 # Documentation & notes
-docs/
 *.md
 *.txt
 note
 ws_tes.html
+
