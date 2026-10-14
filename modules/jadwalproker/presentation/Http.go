@@ -258,7 +258,7 @@ func ModuleJadwalProker(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/jadwalproker/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidJadwalProkersHandlerfunc)
+	app.Get("/jadwalproker/setupuuid", SetupUuidJadwalProkersHandlerfunc)
 
 	app.Post("/jadwalproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJadwalProkerHandlerfunc)
 	app.Put("/jadwalproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJadwalProkerHandlerfunc)

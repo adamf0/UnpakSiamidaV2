@@ -274,7 +274,7 @@ func ModuleTemplateDokumenTambahan(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/templatedokumentambahan/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidTemplateDokumenTambahansHandlerfunc)
+	app.Get("/templatedokumentambahan/setupuuid", SetupUuidTemplateDokumenTambahansHandlerfunc)
 
 	app.Post("/templatedokumentambahan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTemplateDokumenTambahanHandlerfunc)
 	// app.Put("/templatedokumentambahan/:uuid", commonpresentation.JWTMiddleware(), UpdateTemplateDokumenTambahanHandlerfunc)

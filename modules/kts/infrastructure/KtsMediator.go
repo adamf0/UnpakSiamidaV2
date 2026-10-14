@@ -2,8 +2,10 @@ package infrastructure
 
 import (
 	export "UnpakSiamida/modules/kts/application/ExportKts"
+	generate "UnpakSiamida/modules/kts/application/GenerateKts"
 	getAll "UnpakSiamida/modules/kts/application/GetAllKtss"
 	get "UnpakSiamida/modules/kts/application/GetKts"
+	getTemuan "UnpakSiamida/modules/kts/application/GetTemuanKts"
 	setupUuid "UnpakSiamida/modules/kts/application/SetupUuidKts"
 	update "UnpakSiamida/modules/kts/application/UpdateKts"
 	domainKts "UnpakSiamida/modules/kts/domain"
@@ -13,8 +15,10 @@ import (
 	commoninfra "UnpakSiamida/common/infrastructure"
 	infraUser "UnpakSiamida/modules/user/infrastructure"
 
+	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
 	"gorm.io/gorm"
+
 )
 
 func RegisterModuleKts(db *gorm.DB, redis *commonDomain.IRedisStore, tg commoninfra.TelegramSender) error {
@@ -68,6 +72,21 @@ func RegisterModuleKts(db *gorm.DB, redis *commonDomain.IRedisStore, tg commonin
 	](&setupUuid.SetupUuidKtsCommandHandler{
 		Repo: repoKts,
 	})
+
+	mediatr.RegisterRequestHandler[
+		getTemuan.GetTemuanKtsQuery,
+		[]domainKts.TemuanKts,
+	](&getTemuan.GetTemuanKtsQueryHandler{
+		Repo: repoKts,
+	})
+
+	mediatr.RegisterRequestHandler[
+		generate.GenerateKtsCommand,
+		*uuid.UUID,
+	](&generate.GenerateKtsCommandHandler{
+		Repo: repoKts,
+	})
+
 
 	// =========================
 	// Domain Event Handler

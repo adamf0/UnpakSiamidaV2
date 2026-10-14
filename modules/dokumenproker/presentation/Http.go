@@ -2,9 +2,13 @@ package presentation
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
@@ -16,94 +20,110 @@ import (
 	CreateDokumenProker "UnpakSiamida/modules/dokumenproker/application/CreateDokumenProker"
 	DeleteDokumenProker "UnpakSiamida/modules/dokumenproker/application/DeleteDokumenProker"
 	GetAllDokumenProkers "UnpakSiamida/modules/dokumenproker/application/GetAllDokumenProkers"
-	GetDokumenProker "UnpakSiamida/modules/dokumenproker/application/GetDokumenProker"
+	GetDokumenProkerDefault "UnpakSiamida/modules/dokumenproker/application/GetDokumenProkerDefault"
 	SetupUuidDokumenProker "UnpakSiamida/modules/dokumenproker/application/SetupUuidDokumenProker"
 	UpdateDokumenProker "UnpakSiamida/modules/dokumenproker/application/UpdateDokumenProker"
 )
 
 // =======================================================
-// POST /dokumenproker
+// POST /dokumenproker & /pelaporandokumen
 // =======================================================
 
-// CreateDokumenProkerHandler godoc
-// @Summary Create new DokumenProker
-// @Tags DokumenProker
-// @Param fakultas_unit formData string true "Fakultas/Unit Uuid"
-// @Param mata_program formData string true "Mata Program Uuid"
-// @Param jenis_dokumen formData string true "Jenis Dokumen"
-// @Param file formData string true "file"
-// @Param status formData string true "Status"
-// @Param catatan formData string false "Catatan"
-// @Produce json
-// @Success 200 {object} map[string]string "uuid of created DokumenProker"
-// @Failure 400 {object} commoninfra.ResponseError
-// @Failure 404 {object} commoninfra.ResponseError
-// @Failure 409 {object} commoninfra.ResponseError
-// @Failure 500 {object} commoninfra.ResponseError
-// @Router /dokumenproker [post]
 func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
-
 	fakultas_unit := c.FormValue("fakultas_unit")
 	mata_program := c.FormValue("mata_program")
+	if mata_program == "" {
+		mata_program = c.FormValue("id_mata_program")
+	}
 	jenis_dokumen := c.FormValue("jenis_dokumen")
-	file := c.FormValue("file")
 	status := c.FormValue("status")
+	if status == "" {
+		status = c.FormValue("status_verifikasi")
+	}
 	catatan := helper.StrPtr(c.FormValue("catatan"))
+
+	fileName := strings.TrimSpace(c.FormValue("file"))
+	fileHeader, errFile := c.FormFile("file")
+	if errFile == nil && fileHeader != nil {
+		uploadDir := "./upload/pelaporan_dokumen"
+		if err := os.MkdirAll(uploadDir, 0755); err == nil {
+			ext := filepath.Ext(fileHeader.Filename)
+			if ext == "" {
+				ext = ".pdf"
+			}
+			savedName := fmt.Sprintf("dokumen-%s%s", uuid.NewString(), ext)
+			dest := filepath.Join(uploadDir, savedName)
+			if err := c.SaveFile(fileHeader, dest); err == nil {
+				fileName = savedName
+			}
+		}
+	}
 
 	cmd := CreateDokumenProker.CreateDokumenProkerCommand{
 		FakultasUuid:    fakultas_unit,
 		MataProgramUuid: mata_program,
 		JenisDokumen:    jenis_dokumen,
-		File:            file,
+		File:            fileName,
 		Status:          status,
 		Catatan:         catatan,
 	}
 
-	uuid, err := mediatr.Send[CreateDokumenProker.CreateDokumenProkerCommand, string](context.Background(), cmd)
+	uuidResult, err := mediatr.Send[CreateDokumenProker.CreateDokumenProkerCommand, string](context.Background(), cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
 
-	return commonpresentation.JsonUUID(c, uuid)
+	return commonpresentation.JsonUUID(c, uuidResult)
 }
 
 // =======================================================
-// PUT /dokumenproker/{uuid}
+// PUT /dokumenproker/{uuid} & /pelaporandokumen/{uuid}
 // =======================================================
 
-// UpdateDokumenProkerHandler godoc
-// @Summary Update existing DokumenProker
-// @Tags DokumenProker
-// @Param uuid path string true "DokumenProker UUID" format(uuid)
-// @Param fakultas_unit formData string true "Fakultas/Unit Uuid"
-// @Param mata_program formData string true "Mata Program Uuid"
-// @Param jenis_dokumen formData string true "Jenis Dokumen"
-// @Param file formData string true "file"
-// @Param status formData string true "Status"
-// @Param catatan formData string false "Catatan"
-// @Produce json
-// @Success 200 {object} map[string]string "uuid of updated DokumenProker"
-// @Failure 400 {object} commoninfra.ResponseError
-// @Failure 404 {object} commoninfra.ResponseError
-// @Failure 409 {object} commoninfra.ResponseError
-// @Failure 500 {object} commoninfra.ResponseError
-// @Router /dokumenproker/{uuid} [put]
 func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
+	uuidParam := c.Params("uuid")
+	if uuidParam == "" {
+		uuidParam = c.FormValue("uuid")
+	}
+	if uuidParam == "" {
+		uuidParam = c.FormValue("id")
+	}
 
-	uuid := c.Params("uuid")
 	fakultas_unit := c.FormValue("fakultas_unit")
 	mata_program := c.FormValue("mata_program")
+	if mata_program == "" {
+		mata_program = c.FormValue("id_mata_program")
+	}
 	jenis_dokumen := c.FormValue("jenis_dokumen")
-	file := c.FormValue("file")
 	status := c.FormValue("status")
+	if status == "" {
+		status = c.FormValue("status_verifikasi")
+	}
 	catatan := helper.StrPtr(c.FormValue("catatan"))
 
+	fileName := strings.TrimSpace(c.FormValue("file"))
+	fileHeader, errFile := c.FormFile("file")
+	if errFile == nil && fileHeader != nil {
+		uploadDir := "./upload/pelaporan_dokumen"
+		if err := os.MkdirAll(uploadDir, 0755); err == nil {
+			ext := filepath.Ext(fileHeader.Filename)
+			if ext == "" {
+				ext = ".pdf"
+			}
+			savedName := fmt.Sprintf("dokumen-%s%s", uuid.NewString(), ext)
+			dest := filepath.Join(uploadDir, savedName)
+			if err := c.SaveFile(fileHeader, dest); err == nil {
+				fileName = savedName
+			}
+		}
+	}
+
 	cmd := UpdateDokumenProker.UpdateDokumenProkerCommand{
-		Uuid:            uuid,
+		Uuid:            uuidParam,
 		FakultasUuid:    fakultas_unit,
 		MataProgramUuid: mata_program,
 		JenisDokumen:    jenis_dokumen,
-		File:            file,
+		File:            fileName,
 		Status:          status,
 		Catatan:         catatan,
 	}
@@ -117,26 +137,59 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 }
 
 // =======================================================
-// DELETE /dokumenproker/{uuid}
+// PUT/POST Verifikasi
 // =======================================================
 
-// DeleteDokumenProkerHandler godoc
-// @Summary Delete a DokumenProker
-// @Tags DokumenProker
-// @Param uuid path string true "DokumenProker UUID" format(uuid)
-// @Produce json
-// @Success 200 {object} map[string]string "uuid of deleted DokumenProker"
-// @Failure 400 {object} commoninfra.ResponseError
-// @Failure 404 {object} commoninfra.ResponseError
-// @Failure 409 {object} commoninfra.ResponseError
-// @Failure 500 {object} commoninfra.ResponseError
-// @Router /dokumenproker/{uuid} [delete]
-func DeleteDokumenProkerHandlerfunc(c *fiber.Ctx) error {
+func VerifikasiDokumenProkerHandlerfunc(c *fiber.Ctx) error {
+	uuidParam := c.Params("uuid")
+	if uuidParam == "" {
+		uuidParam = c.FormValue("uuid")
+	}
+	if uuidParam == "" {
+		uuidParam = c.FormValue("id")
+	}
 
-	uuid := c.Params("uuid")
+	status := c.FormValue("status_verifikasi")
+	if status == "" {
+		status = c.FormValue("status")
+	}
+	catatan := helper.StrPtr(c.FormValue("catatan"))
+
+	if strings.ToLower(strings.TrimSpace(status)) == "gagal_terverifikasi" {
+		if catatan == nil || strings.TrimSpace(*catatan) == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"code":    "DokumenProker.CatatanRequired",
+				"message": "Catatan wajib diisi jika status gagal terverifikasi",
+			})
+		}
+	}
+
+	cmd := UpdateDokumenProker.UpdateDokumenProkerCommand{
+		Uuid:    uuidParam,
+		Status:  status,
+		Catatan: catatan,
+	}
+
+	updatedID, err := mediatr.Send[UpdateDokumenProker.UpdateDokumenProkerCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{"uuid": updatedID, "message": "berhasil verifikasi"})
+}
+
+// =======================================================
+// DELETE /dokumenproker/{uuid} & /pelaporandokumen/{uuid}
+// =======================================================
+
+func DeleteDokumenProkerHandlerfunc(c *fiber.Ctx) error {
+	uuidParam := c.Params("uuid")
+	if uuidParam == "" {
+		uuidParam = c.FormValue("uuid")
+	}
 
 	cmd := DeleteDokumenProker.DeleteDokumenProkerCommand{
-		Uuid: uuid,
+		Uuid: uuidParam,
 	}
 
 	deletedID, err := mediatr.Send[DeleteDokumenProker.DeleteDokumenProkerCommand, string](context.Background(), cmd)
@@ -148,55 +201,34 @@ func DeleteDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 }
 
 // =======================================================
-// GET /DokumenProker/{uuid}
+// GET /DokumenProker/{uuid} & /PelaporanDokumen/{uuid}
 // =======================================================
 
-// GetDokumenProkerHandler godoc
-// @Summary Get DokumenProker by UUID
-// @Tags DokumenProker
-// @Param uuid path string true "DokumenProker UUID" format(uuid)
-// @Produce json
-// @Success 200 {object} DokumenProkerdomain.DokumenProker
-// @Failure 400 {object} commoninfra.ResponseError
-// @Failure 404 {object} commoninfra.ResponseError
-// @Failure 409 {object} commoninfra.ResponseError
-// @Failure 500 {object} commoninfra.ResponseError
-// @Router /DokumenProker/{uuid} [get]
 func GetDokumenProkerHandlerfunc(c *fiber.Ctx) error {
-	uuid := c.Params("uuid")
+	uuidParam := c.Params("uuid")
 
-	query := GetDokumenProker.GetDokumenProkerByUuidQuery{Uuid: uuid}
+	query := GetDokumenProkerDefault.GetDokumenProkerDefaultByUuidQuery{Uuid: uuidParam}
 
-	DokumenProker, err := mediatr.Send[
-		GetDokumenProker.GetDokumenProkerByUuidQuery,
-		*DokumenProkerdomain.DokumenProker,
+	dokumenProker, err := mediatr.Send[
+		GetDokumenProkerDefault.GetDokumenProkerDefaultByUuidQuery,
+		*DokumenProkerdomain.DokumenProkerDefault,
 	](context.Background(), query)
 
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
 
-	if DokumenProker == nil {
+	if dokumenProker == nil {
 		return c.Status(404).JSON(fiber.Map{"error": "DokumenProker not found"})
 	}
 
-	return c.JSON(DokumenProker)
+	return c.JSON(dokumenProker)
 }
 
 // =======================================================
-// GET /DokumenProkers
+// GET /DokumenProkers & /PelaporanDokumens
 // =======================================================
 
-// GetAllDokumenProkersHandler godoc
-// @Summary Get all DokumenProkers
-// @Tags DokumenProker
-// @Param mode query string false "paging | all | ndjson | sse"
-// @Param page query int false "Page number"
-// @Param limit query int false "Limit per page"
-// @Param search query string false "Search keyword"
-// @Produce json
-// @Success 200 {object} commondomain.Paged[DokumenProkerdomain.DokumenProkerDefault]
-// @Router /DokumenProkers [get]
 func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
 	page := c.QueryInt("page", 1)
@@ -229,6 +261,91 @@ func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 				Value:    ptr,
 			})
 		}
+	}
+
+	target := strings.TrimSpace(c.Params("target"))
+	if target == "" {
+		target = strings.TrimSpace(c.Query("target"))
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if target == "" {
+		filterFakultasUnit := strings.TrimSpace(c.Query("filter_fakultas_unit"))
+		if filterFakultasUnit == "" {
+			filterFakultasUnit = strings.TrimSpace(c.Query("fakultas_unit"))
+		}
+		if filterFakultasUnit != "" && filterFakultasUnit != "all" && filterFakultasUnit != "semua" {
+			target = filterFakultasUnit
+		}
+	}
+
+	level := strings.TrimSpace(c.FormValue("level"))
+	fakultasUnit := strings.TrimSpace(c.FormValue("fakultas_unit"))
+	if fakultasUnit == "" {
+		fakultasUnit = strings.TrimSpace(c.FormValue("target"))
+	}
+	if fakultasUnit == "" {
+		if fu, ok := c.Locals("fakultas_unit").(string); ok {
+			fakultasUnit = fu
+		}
+	}
+
+	// For non-admin, restrict to their own fakultas_unit forwarded from whoami
+	if level != "admin" && fakultasUnit != "" && fakultasUnit != "0" {
+		target = fakultasUnit
+	}
+
+	if target != "" && target != "all" && target != "semua" {
+		field := "id_fakultas_unit"
+		if strings.Contains(target, "-") {
+			field = "fakultasunituuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &target,
+		})
+	}
+
+	filterTahun := strings.TrimSpace(c.Query("filter_tahun"))
+	if filterTahun == "" {
+		filterTahun = strings.TrimSpace(c.Query("tahun"))
+	}
+	if filterTahun != "" && filterTahun != "all" && filterTahun != "semua" {
+		field := "tahun"
+		if strings.Contains(filterTahun, "-") {
+			field = "tahunuuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &filterTahun,
+		})
+	}
+
+	filterStatus := strings.TrimSpace(c.Query("filter_status"))
+	if filterStatus == "" {
+		filterStatus = strings.TrimSpace(c.Query("status_verifikasi"))
+	}
+	if filterStatus == "" {
+		filterStatus = strings.TrimSpace(c.Query("status"))
+	}
+	if filterStatus != "" && filterStatus != "all" && filterStatus != "semua" {
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "status_verifikasi",
+			Operator: "eq",
+			Value:    &filterStatus,
+		})
+	}
+
+	sid := strings.TrimSpace(c.FormValue("sid"))
+	if sid != "" {
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "sid",
+			Operator: "eq",
+			Value:    &sid,
+		})
 	}
 
 	query := GetAllDokumenProkers.GetAllDokumenProkersQuery{
@@ -274,14 +391,37 @@ func SetupUuidDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleDokumenProker(app *fiber.App) {
-	admin := []string{"admin"}
+	roles := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/dokumenproker/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidDokumenProkersHandlerfunc)
+	app.Get("/dokumenproker/setupuuid", SetupUuidDokumenProkersHandlerfunc)
+	app.Get("/pelaporandokumen/setupuuid", SetupUuidDokumenProkersHandlerfunc)
 
-	app.Post("/dokumenproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateDokumenProkerHandlerfunc)
-	app.Put("/dokumenproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateDokumenProkerHandlerfunc)
-	app.Delete("/dokumenproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteDokumenProkerHandlerfunc)
-	app.Get("/DokumenProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetDokumenProkerHandlerfunc)
-	app.Get("/DokumenProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllDokumenProkersHandlerfunc)
+	app.Post("/dokumenproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateDokumenProkerHandlerfunc)
+	app.Post("/pelaporandokumen", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateDokumenProkerHandlerfunc)
+
+	app.Put("/dokumenproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateDokumenProkerHandlerfunc)
+	app.Put("/pelaporandokumen/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateDokumenProkerHandlerfunc)
+
+	app.Put("/dokumenproker/:uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), VerifikasiDokumenProkerHandlerfunc)
+	app.Put("/pelaporandokumen/:uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), VerifikasiDokumenProkerHandlerfunc)
+	app.Post("/pelaporandokumen/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), VerifikasiDokumenProkerHandlerfunc)
+
+	app.Delete("/dokumenproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), DeleteDokumenProkerHandlerfunc)
+	app.Delete("/pelaporandokumen/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), DeleteDokumenProkerHandlerfunc)
+
+	app.Get("/DokumenProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetDokumenProkerHandlerfunc)
+	app.Get("/dokumenproker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetDokumenProkerHandlerfunc)
+	app.Get("/PelaporanDokumen/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetDokumenProkerHandlerfunc)
+	app.Get("/pelaporandokumen/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetDokumenProkerHandlerfunc)
+
+	app.Get("/DokumenProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/dokumenprokers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/DokumenProkers/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/dokumenprokers/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+
+	app.Get("/PelaporanDokumens", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/pelaporandokumens", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/PelaporanDokumens/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
+	app.Get("/pelaporandokumens/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllDokumenProkersHandlerfunc)
 }

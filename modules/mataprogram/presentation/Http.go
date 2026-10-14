@@ -39,7 +39,13 @@ import (
 func CreateMataProgramHandlerfunc(c *fiber.Ctx) error {
 
 	tahun := c.FormValue("tahun")
+	if tahun == "" {
+		tahun = c.FormValue("id_master_tahun")
+	}
 	mataprogram := c.FormValue("mataprogram")
+	if mataprogram == "" {
+		mataprogram = c.FormValue("mata_program")
+	}
 
 	cmd := CreateMataProgram.CreateMataProgramCommand{
 		TahunUuid:   tahun,
@@ -76,7 +82,13 @@ func UpdateMataProgramHandlerfunc(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 
 	tahun := c.FormValue("tahun")
+	if tahun == "" {
+		tahun = c.FormValue("id_master_tahun")
+	}
 	mataprogram := c.FormValue("mataprogram")
+	if mataprogram == "" {
+		mataprogram = c.FormValue("mata_program")
+	}
 
 	cmd := UpdateMataProgram.UpdateMataProgramCommand{
 		Uuid:        uuid,
@@ -173,7 +185,7 @@ func GetMataProgramHandlerfunc(c *fiber.Ctx) error {
 // @Param limit query int false "Limit per page"
 // @Param search query string false "Search keyword"
 // @Produce json
-// @Success 200 {object} commondomain.Paged[MataProgramdomain.MataProgram]
+// @Success 200 {object} commondomain.Paged[MataProgramdomain.MataProgramDefault]
 // @Router /MataPrograms [get]
 func GetAllMataProgramsHandlerfunc(c *fiber.Ctx) error {
 	mode := c.Query("mode", "paging")
@@ -214,23 +226,23 @@ func GetAllMataProgramsHandlerfunc(c *fiber.Ctx) error {
 		SearchFilters: filters,
 	}
 
-	var adapter commonpresentation.OutputAdapter[MataProgramdomain.MataProgram]
+	var adapter commonpresentation.OutputAdapter[MataProgramdomain.MataProgramDefault]
 	switch mode {
 	case "all":
-		adapter = &commonpresentation.AllAdapter[MataProgramdomain.MataProgram]{}
+		adapter = &commonpresentation.AllAdapter[MataProgramdomain.MataProgramDefault]{}
 	case "ndjson":
-		adapter = &commonpresentation.NDJSONAdapter[MataProgramdomain.MataProgram]{}
+		adapter = &commonpresentation.NDJSONAdapter[MataProgramdomain.MataProgramDefault]{}
 	case "sse":
-		adapter = &commonpresentation.SSEAdapter[MataProgramdomain.MataProgram]{}
+		adapter = &commonpresentation.SSEAdapter[MataProgramdomain.MataProgramDefault]{}
 	default:
 		query.Page = &page
 		query.Limit = &limit
-		adapter = &commonpresentation.PagingAdapter[MataProgramdomain.MataProgram]{}
+		adapter = &commonpresentation.PagingAdapter[MataProgramdomain.MataProgramDefault]{}
 	}
 
 	result, err := mediatr.Send[
 		GetAllMataPrograms.GetAllMataProgramsQuery,
-		commondomain.Paged[MataProgramdomain.MataProgram],
+		commondomain.Paged[MataProgramdomain.MataProgramDefault],
 	](context.Background(), query)
 
 	if err != nil {
@@ -255,11 +267,13 @@ func ModuleMataProgram(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/mataprogram/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidMataProgramsHandlerfunc)
+	app.Get("/mataprogram/setupuuid", SetupUuidMataProgramsHandlerfunc)
 
 	app.Post("/mataprogram", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateMataProgramHandlerfunc)
 	app.Put("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateMataProgramHandlerfunc)
 	app.Delete("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteMataProgramHandlerfunc)
+	app.Get("/mataprogram/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
+	app.Get("/mataprograms", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
 	app.Get("/MataProgram/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
 	app.Get("/MataPrograms", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
 }

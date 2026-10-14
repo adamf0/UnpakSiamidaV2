@@ -238,10 +238,10 @@ func SetupUuidDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleDokumenTambahan(app *fiber.App) {
 	admin := []string{"admin"}
-	audit := []string{"auditee", "auditor2"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/dokumentambahan/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidDokumenTambahansHandlerfunc)
+	app.Get("/dokumentambahan/setupuuid", SetupUuidDokumenTambahansHandlerfunc)
 
 	//hanya admin
 	app.Delete("/dokumentambahan/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteDokumenTambahanHandlerfunc)

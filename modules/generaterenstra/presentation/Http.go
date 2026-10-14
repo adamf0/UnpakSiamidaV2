@@ -81,8 +81,9 @@ func DeleteRenstraQuestionHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleGenerateRenstra(app *fiber.App) {
 	admin := []string{"admin"}
+	auditRoles := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Post("/renstra/generate", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), GenerateRenstraHandlerfunc)
+	app.Post("/renstra/generate", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(auditRoles, whoamiURL), GenerateRenstraHandlerfunc)
 	app.Delete("/renstra/generate/question", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraQuestionHandlerfunc)
 }

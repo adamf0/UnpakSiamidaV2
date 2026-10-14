@@ -74,7 +74,7 @@ func (h *ExportBeritaAcaraCommandHandler) Handle(
 		return []byte{}, domainberitaacara.GeneratePDF(err.Error())
 	}
 
-	if cmd.SID == "preview" {
+	if cmd.SID == "preview" || cmd.Granted == "" {
 		return pdf, nil
 	}
 

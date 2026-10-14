@@ -29,10 +29,10 @@ func (h *CreateMataProgramCommandHandler) Handle(
 
 	var tahunprokerId uint
 	tahunproker, err := h.RepoTahunProker.GetByUuid(ctx, tahunprokerUUID)
-	if err != nil {
-		tahunprokerId = tahunproker.ID
-	} else {
+	if err != nil || tahunproker == nil {
 		tahunprokerId = 0
+	} else {
+		tahunprokerId = tahunproker.ID
 	}
 
 	result := domainmataprogram.NewMataProgram(

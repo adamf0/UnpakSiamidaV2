@@ -1,6 +1,7 @@
 package application
 
 import (
+	"UnpakSiamida/common/domain"
 	"UnpakSiamida/common/helper"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	"context"
@@ -21,6 +22,10 @@ func (h *TreeIndikatorRenstraQueryHandler) Handle(
 	tahunint, err := helper.ParseInt64(q.Tahun)
 	if (err != nil && (err.Error() == "Number out of range" || err.Error() == "Must be a number" || err.Error() == "Invalid number")) || tahunint <= 2000 {
 		return []domainindikatorrenstra.IndikatorTree{}, domainindikatorrenstra.InvalidTahun()
+	}
+
+	if tahunint <= 2023 {
+		return []domainindikatorrenstra.IndikatorTree{}, domain.FailureError("IndikatorRenstra.MigrasiFitur", "masih migrasi fitur")
 	}
 
 	tree, err := h.Repo.GetIndikatorTree(

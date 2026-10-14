@@ -397,11 +397,11 @@ func SetupUuidBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleBeritaAcara(app *fiber.App) {
-	admin := []string{"admin"}
+	// admin := []string{"admin"}
 	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/beritaacara/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidBeritaAcarasHandlerfunc)
+	app.Get("/beritaacara/setupuuid", SetupUuidBeritaAcarasHandlerfunc)
 
 	app.Post("/beritaacara", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), CreateBeritaAcaraHandlerfunc)
 	app.Put("/beritaacara/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateBeritaAcaraHandlerfunc)

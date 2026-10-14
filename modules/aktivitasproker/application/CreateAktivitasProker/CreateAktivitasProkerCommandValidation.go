@@ -10,7 +10,6 @@ func CreateAktivitasProkerCommandValidation(cmd CreateAktivitasProkerCommand) er
 	return validation.ValidateStruct(&cmd,
 		validation.Field(&cmd.FakultasUuid,
 			validation.Required.Error("Fakultas cannot be blank"),
-			validation.By(helper.ValidateUUIDv4),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 		validation.Field(&cmd.MataProgramUuid,

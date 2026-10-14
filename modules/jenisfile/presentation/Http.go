@@ -247,7 +247,7 @@ func ModuleJenisFile(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/jenisfile/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidJenisFilesHandlerfunc)
+	app.Get("/jenisfile/setupuuid", SetupUuidJenisFilesHandlerfunc)
 
 	app.Post("/jenisfile", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateJenisFileHandlerfunc)
 	app.Put("/jenisfile/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateJenisFileHandlerfunc)

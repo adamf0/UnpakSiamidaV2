@@ -104,10 +104,13 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"indikator": "i.indikator",
-	"standar":   "ms.nama ",
-	"tahun":     "i.tahun",
+	"indikator":   "i.indikator",
+	"standar":     "ms.nama ",
+	"tahun":       "i.tahun",
+	"tipetarget":  "i.tipe_target",
+	"operator":    "i.operator",
 }
+
 
 // ------------------------
 // GET ALL
@@ -444,7 +447,34 @@ func joinPath(path []int) string {
 	return out
 }
 
+func (r *IndikatorRenstraRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *IndikatorRenstraRepository) SetupUuid(ctx context.Context) error {
+	if err := r.ensureUuidColumn(ctx, "master_indikator_renstra"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

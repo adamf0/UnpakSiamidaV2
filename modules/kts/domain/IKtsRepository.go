@@ -19,5 +19,8 @@ type IKtsRepository interface {
 	Update(ctx context.Context, kts *Kts) error
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SetupUuid(ctx context.Context) error
+	GetTemuanKts(ctx context.Context, renstraUuid string, tugas string, tahun string) ([]TemuanKts, error)
+	GenerateKtsFromTemuan(ctx context.Context, renstraNilaiId *uint, renstraNilaiUuid *string, dokumenTambahanId *uint, dokumenTambahanUuid *string, auditorId string) (*uuid.UUID, error)
 	WithTx(ctx context.Context, fn func(txRepo IKtsRepositoryTx) error) error
 }
+

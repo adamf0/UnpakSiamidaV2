@@ -2,6 +2,7 @@ package domain
 
 import (
 	"slices"
+	"strings"
 	"time"
 
 	common "UnpakSiamida/common/domain"
@@ -16,7 +17,7 @@ type DokumenProker struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement"`
 	UUID         uuid.UUID `gorm:"type:char(36);uniqueIndex"`
 	MataProgram  uint      `gorm:"column:id_mata_program"`
-	FakultasUnit uint      `gorm:"column:fakultas_unit"`
+	FakultasUnit uint      `gorm:"column:id_fakultas_unit"`
 	JenisDokumen string    `gorm:"column:jenis_dokumen"`
 	File         string    `gorm:"column:file"`
 	Status       string    `gorm:"column:status_verifikasi"`
@@ -38,6 +39,9 @@ func NewDokumenProker(mataprogram uint, fakultasunit uint, jenis_dokumen string,
 	if !isValidJenisDokumen(jenis_dokumen) {
 		return common.FailureValue[*DokumenProker](InvalidJenisDokumen())
 	}
+	if status == "" {
+		status = "belum_terverifikasi"
+	}
 	if !isValidStatus(status) {
 		return common.FailureValue[*DokumenProker](InvalidStatus())
 	}
@@ -46,9 +50,9 @@ func NewDokumenProker(mataprogram uint, fakultasunit uint, jenis_dokumen string,
 		UUID:         uuid.New(),
 		FakultasUnit: fakultasunit,
 		MataProgram:  mataprogram,
-		JenisDokumen: jenis_dokumen,
+		JenisDokumen: strings.ToUpper(strings.TrimSpace(jenis_dokumen)),
 		File:         file,
-		Status:       status,
+		Status:       strings.ToLower(strings.TrimSpace(status)),
 		Catatan:      catatan,
 	}
 
@@ -90,15 +94,19 @@ func UpdateDokumenProker(
 	if !isValidJenisDokumen(jenis_dokumen) {
 		return common.FailureValue[*DokumenProker](InvalidJenisDokumen())
 	}
-	if !isValidStatus(status) {
+	if status != "" && !isValidStatus(status) {
 		return common.FailureValue[*DokumenProker](InvalidStatus())
 	}
 
 	prev.FakultasUnit = fakultasunit
 	prev.MataProgram = mataprogram
-	prev.JenisDokumen = jenis_dokumen
-	prev.File = file
-	prev.Status = status
+	prev.JenisDokumen = strings.ToUpper(strings.TrimSpace(jenis_dokumen))
+	if file != "" {
+		prev.File = file
+	}
+	if status != "" {
+		prev.Status = strings.ToLower(strings.TrimSpace(status))
+	}
 	prev.Catatan = catatan
 
 	prev.Raise(event.DokumenProkerUpdatedEvent{
@@ -111,8 +119,14 @@ func UpdateDokumenProker(
 }
 
 func isValidJenisDokumen(jenis string) bool {
-	return slices.Contains([]string{"PROPOSAL/TOR", "SK", "LAPORAN", "SOP"}, jenis)
+	j := strings.ToUpper(strings.TrimSpace(jenis))
+	return slices.Contains([]string{"PROPOSAL/TOR", "SK", "LAPORAN", "SOP", "DOCUMENT PENDUKUNG", "DOKUMEN PENDUKUNG"}, j)
 }
-func isValidStatus(jenis string) bool {
-	return slices.Contains([]string{"belum_terverifikasi", "gagal_terverifikasi", "terverifikasi"}, jenis)
+
+func isValidStatus(status string) bool {
+	s := strings.ToLower(strings.TrimSpace(status))
+	if s == "" {
+		return true
+	}
+	return slices.Contains([]string{"belum_terverifikasi", "gagal_terverifikasi", "terverifikasi"}, s)
 }

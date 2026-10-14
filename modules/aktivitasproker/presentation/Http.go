@@ -13,11 +13,13 @@ import (
 	AktivitasProkerdomain "UnpakSiamida/modules/aktivitasproker/domain"
 
 	CreateAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
+	CreatePelaporanPelaksanaan "UnpakSiamida/modules/aktivitasproker/application/CreatePelaporanPelaksanaan"
 	DeleteAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
 	GetAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/GetAktivitasProker"
 	GetAllAktivitasProkers "UnpakSiamida/modules/aktivitasproker/application/GetAllAktivitasProkers"
 	SetupUuidAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/SetupUuidAktivitasProker"
 	UpdateAktivitasProker "UnpakSiamida/modules/aktivitasproker/application/UpdateAktivitasProker"
+	UpdatePelaporanPelaksanaan "UnpakSiamida/modules/aktivitasproker/application/UpdatePelaporanPelaksanaan"
 )
 
 // =======================================================
@@ -46,8 +48,17 @@ func CreateAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 	mata_program := c.FormValue("mata_program")
 	aktivitas := c.FormValue("aktivitas")
 	pic := c.FormValue("pic")
-	tangga_rk_awal := c.FormValue("tangga_rk_awal")
+	tangga_rk_awal := c.FormValue("tanggal_rk_awal")
+	if tangga_rk_awal == "" {
+		tangga_rk_awal = c.FormValue("target_rk_awal")
+	}
+	if tangga_rk_awal == "" {
+		tangga_rk_awal = c.FormValue("tangga_rk_awal")
+	}
 	tanggal_rk_akhir := c.FormValue("tanggal_rk_akhir")
+	if tanggal_rk_akhir == "" {
+		tanggal_rk_akhir = c.FormValue("target_rk_akhir")
+	}
 
 	cmd := CreateAktivitasProker.CreateAktivitasProkerCommand{
 		FakultasUuid:    fakultas_unit,
@@ -59,6 +70,59 @@ func CreateAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	uuid, err := mediatr.Send[CreateAktivitasProker.CreateAktivitasProkerCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return commonpresentation.JsonUUID(c, uuid)
+}
+
+// =======================================================
+// POST /pelaporanpelaksanaan
+// =======================================================
+
+func CreatePelaporanPelaksanaanHandlerfunc(c *fiber.Ctx) error {
+	fakultas_unit := c.FormValue("fakultas_unit")
+	mata_program := c.FormValue("mata_program")
+	aktivitas := c.FormValue("aktivitas")
+	pic := c.FormValue("pic")
+	tanggal_rk_awal := c.FormValue("tanggal_rk_awal")
+	if tanggal_rk_awal == "" {
+		tanggal_rk_awal = c.FormValue("target_rk_awal")
+	}
+	if tanggal_rk_awal == "" {
+		tanggal_rk_awal = c.FormValue("tangga_rk_awal")
+	}
+	tanggal_rk_akhir := c.FormValue("tanggal_rk_akhir")
+	if tanggal_rk_akhir == "" {
+		tanggal_rk_akhir = c.FormValue("target_rk_akhir")
+	}
+
+	status_realisasi := c.FormValue("status_realisasi")
+	tanggal_r_awal := c.FormValue("target_r_awal")
+	if tanggal_r_awal == "" {
+		tanggal_r_awal = c.FormValue("tanggal_r_awal")
+	}
+	tanggal_r_akhir := c.FormValue("target_r_akhir")
+	if tanggal_r_akhir == "" {
+		tanggal_r_akhir = c.FormValue("tanggal_r_akhir")
+	}
+	detail := c.FormValue("detail")
+
+	cmd := CreatePelaporanPelaksanaan.CreatePelaporanPelaksanaanCommand{
+		FakultasUuid:    fakultas_unit,
+		MataProgramUuid: mata_program,
+		Aktivitas:       aktivitas,
+		PIC:             pic,
+		TanggalRKAwal:   tanggal_rk_awal,
+		TanggalRKAkhir:  tanggal_rk_akhir,
+		StatusRealisasi: status_realisasi,
+		TanggalRAwal:    tanggal_r_awal,
+		TanggalRAkhir:   tanggal_r_akhir,
+		Detail:          detail,
+	}
+
+	uuid, err := mediatr.Send[CreatePelaporanPelaksanaan.CreatePelaporanPelaksanaanCommand, string](context.Background(), cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -94,8 +158,17 @@ func UpdateAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 	mata_program := c.FormValue("mata_program")
 	aktivitas := c.FormValue("aktivitas")
 	pic := c.FormValue("pic")
-	tangga_rk_awal := c.FormValue("tangga_rk_awal")
+	tangga_rk_awal := c.FormValue("tanggal_rk_awal")
+	if tangga_rk_awal == "" {
+		tangga_rk_awal = c.FormValue("target_rk_awal")
+	}
+	if tangga_rk_awal == "" {
+		tangga_rk_awal = c.FormValue("tangga_rk_awal")
+	}
 	tanggal_rk_akhir := c.FormValue("tanggal_rk_akhir")
+	if tanggal_rk_akhir == "" {
+		tanggal_rk_akhir = c.FormValue("target_rk_akhir")
+	}
 
 	cmd := UpdateAktivitasProker.UpdateAktivitasProkerCommand{
 		Uuid:            uuid,
@@ -108,6 +181,46 @@ func UpdateAktivitasProkerHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	updatedID, err := mediatr.Send[UpdateAktivitasProker.UpdateAktivitasProkerCommand, string](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{"uuid": updatedID})
+}
+
+// =======================================================
+// PUT /pelaporanpelaksanaan/{uuid}
+// =======================================================
+
+func UpdatePelaporanPelaksanaanHandlerfunc(c *fiber.Ctx) error {
+	uuid := c.Params("uuid")
+	if uuid == "" {
+		uuid = c.FormValue("uuid")
+	}
+	if uuid == "" {
+		uuid = c.FormValue("id")
+	}
+
+	status_realisasi := c.FormValue("status_realisasi")
+	tanggal_r_awal := c.FormValue("target_r_awal")
+	if tanggal_r_awal == "" {
+		tanggal_r_awal = c.FormValue("tanggal_r_awal")
+	}
+	tanggal_r_akhir := c.FormValue("target_r_akhir")
+	if tanggal_r_akhir == "" {
+		tanggal_r_akhir = c.FormValue("tanggal_r_akhir")
+	}
+	detail := c.FormValue("detail")
+
+	cmd := UpdatePelaporanPelaksanaan.UpdatePelaporanPelaksanaanCommand{
+		Uuid:            uuid,
+		StatusRealisasi: status_realisasi,
+		TanggalRAwal:    tanggal_r_awal,
+		TanggalRAkhir:   tanggal_r_akhir,
+		Detail:          detail,
+	}
+
+	updatedID, err := mediatr.Send[UpdatePelaporanPelaksanaan.UpdatePelaporanPelaksanaanCommand, string](context.Background(), cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -230,6 +343,91 @@ func GetAllAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
+	target := strings.TrimSpace(c.Params("target"))
+	if target == "" {
+		target = strings.TrimSpace(c.Query("target"))
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if target == "" {
+		filterFakultasUnit := strings.TrimSpace(c.Query("filter_fakultas_unit"))
+		if filterFakultasUnit == "" {
+			filterFakultasUnit = strings.TrimSpace(c.Query("fakultas_unit"))
+		}
+		if filterFakultasUnit != "" && filterFakultasUnit != "all" && filterFakultasUnit != "semua" {
+			target = filterFakultasUnit
+		}
+	}
+
+	level := strings.TrimSpace(c.FormValue("level"))
+	fakultasUnit := strings.TrimSpace(c.FormValue("fakultas_unit"))
+	if fakultasUnit == "" {
+		fakultasUnit = strings.TrimSpace(c.FormValue("target"))
+	}
+	if fakultasUnit == "" {
+		if fu, ok := c.Locals("fakultas_unit").(string); ok {
+			fakultasUnit = fu
+		}
+	}
+
+	// For non-admin, restrict to their own fakultas_unit forwarded from whoami
+	if level != "admin" && fakultasUnit != "" && fakultasUnit != "0" {
+		target = fakultasUnit
+	}
+
+	if target != "" && target != "all" && target != "semua" {
+		field := "id_fakultas_unit"
+		if strings.Contains(target, "-") {
+			field = "fakultasunituuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &target,
+		})
+	}
+
+	filterTahun := strings.TrimSpace(c.Query("filter_tahun"))
+	if filterTahun == "" {
+		filterTahun = strings.TrimSpace(c.Query("tahun"))
+	}
+	if filterTahun != "" && filterTahun != "all" && filterTahun != "semua" {
+		field := "tahun"
+		if strings.Contains(filterTahun, "-") {
+			field = "tahunuuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &filterTahun,
+		})
+	}
+
+	filterStatus := strings.TrimSpace(c.Query("filter_status"))
+	if filterStatus == "" {
+		filterStatus = strings.TrimSpace(c.Query("status_realisasi"))
+	}
+	if filterStatus == "" {
+		filterStatus = strings.TrimSpace(c.Query("status"))
+	}
+	if filterStatus != "" && filterStatus != "all" && filterStatus != "semua" {
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "status_realisasi",
+			Operator: "eq",
+			Value:    &filterStatus,
+		})
+	}
+
+	sid := strings.TrimSpace(c.FormValue("sid"))
+	if sid != "" {
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "sid",
+			Operator: "eq",
+			Value:    &sid,
+		})
+	}
+
 	query := GetAllAktivitasProkers.GetAllAktivitasProkersQuery{
 		Search:        search,
 		SearchFilters: filters,
@@ -273,14 +471,31 @@ func SetupUuidAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleAktivitasProker(app *fiber.App) {
-	// admin := []string{"admin"}
-	// whoamiURL := "http://localhost:3000/whoami"
+	roles := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit"}
+	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/aktivitasproker/setupuuid", SetupUuidAktivitasProkersHandlerfunc)
 
-	app.Post("/aktivitasproker", commonpresentation.JWTMiddleware(), CreateAktivitasProkerHandlerfunc) //commonpresentation.RBACMiddleware(admin, whoamiURL)
-	app.Put("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), UpdateAktivitasProkerHandlerfunc)
-	app.Delete("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), DeleteAktivitasProkerHandlerfunc)
-	app.Get("/AktivitasProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAktivitasProkerHandlerfunc)
-	app.Get("/AktivitasProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllAktivitasProkersHandlerfunc)
+	app.Post("/aktivitasproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateAktivitasProkerHandlerfunc)
+	app.Put("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateAktivitasProkerHandlerfunc)
+	app.Delete("/aktivitasproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), DeleteAktivitasProkerHandlerfunc)
+	app.Get("/AktivitasProker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAktivitasProkerHandlerfunc)
+	app.Get("/aktivitasproker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAktivitasProkerHandlerfunc)
+	app.Get("/AktivitasProkers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/aktivitasprokers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/AktivitasProkers/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/aktivitasprokers/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+
+	// Pelaporan Pelaksanaan endpoints
+	app.Post("/pelaporanpelaksanaan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreatePelaporanPelaksanaanHandlerfunc)
+	app.Put("/pelaporanpelaksanaan/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdatePelaporanPelaksanaanHandlerfunc)
+	app.Put("/pelaporanpelaksanaan/:uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdatePelaporanPelaksanaanHandlerfunc)
+	app.Post("/pelaporanpelaksanaan/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdatePelaporanPelaksanaanHandlerfunc)
+	app.Delete("/pelaporanpelaksanaan/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), DeleteAktivitasProkerHandlerfunc)
+	app.Get("/PelaporanPelaksanaan/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAktivitasProkerHandlerfunc)
+	app.Get("/pelaporanpelaksanaan/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAktivitasProkerHandlerfunc)
+	app.Get("/PelaporanPelaksanaans", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/pelaporanpelaksanaans", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/PelaporanPelaksanaans/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetAllAktivitasProkersHandlerfunc)
+	app.Get("/pelaporanpelaksanaans/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllAktivitasProkersHandlerfunc)
 }

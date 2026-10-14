@@ -11,15 +11,19 @@ import (
 )
 
 type User struct {
-	common.Entity
-	ID           uint      `gorm:"primaryKey;autoIncrement"`
-	UUID         uuid.UUID `gorm:"type:char(36);uniqueIndex"`
-	Username     string    `gorm:"column:nidn_username;size:100;not null"`
-	Password     string    `gorm:"type:longtext;not null"`
-	Name         string    `gorm:"size:255;not null"`
-	Email        string    `gorm:"size:255;"`
-	Level        string    `gorm:"size:255;"`
-	FakultasUnit *int      `gorm:"column:fakultas_unit;"`
+	common.Entity    `json:"-"`
+	ID               uint      `gorm:"primaryKey;autoIncrement" json:"ID"`
+	UUID             uuid.UUID `gorm:"type:char(36);uniqueIndex" json:"UUID"`
+	Username         string    `gorm:"column:nidn_username;size:100;not null" json:"Username"`
+	Password         string    `gorm:"type:longtext;not null" json:"-"`
+	Name             string    `gorm:"size:255;not null" json:"Name"`
+	Email            string    `gorm:"size:255;" json:"Email"`
+	Level            string    `gorm:"size:255;" json:"Level"`
+	FakultasUnit     *int      `gorm:"column:fakultas_unit;" json:"FakultasUnit"`
+	NamaFakultasUnit *string   `gorm:"column:nama_fak_prod_unit;->" json:"NamaFakultasUnit,omitempty"`
+	UuidFakultasUnit *string   `gorm:"column:uuid_fakultas_unit;->" json:"UuidFakultasUnit,omitempty"`
+	IdUserMerge      *uint     `gorm:"column:id_user_merge;" json:"IdUserMerge"`
+	NamaUserMerge    *string   `gorm:"column:nama_user_merge;->" json:"NamaUserMerge,omitempty"`
 }
 
 func (User) TableName() string {
@@ -100,13 +104,11 @@ func UpdateUser(
 		prev.Password = *password
 	}
 
+	prev.Username = username
 	prev.Name = name
 	prev.Email = email
 	prev.Level = level
-
-	if fakultasunit != nil {
-		prev.FakultasUnit = fakultasunit
-	}
+	prev.FakultasUnit = fakultasunit
 
 	prev.Raise(event.UserUpdatedEvent{
 		EventID:      uuid.New(),

@@ -10,10 +10,18 @@ type MonitoringIndikator struct {
 	Fakultas         string `json:"Fakultas"`
 
 	IndikatorId   int    `json:"IndikatorId"`
-	IndikatorUuid string `json:"UndikatorUuid"`
+	IndikatorUuid string `json:"IndikatorUuid"`
+	UndikatorUuid string `json:"UndikatorUuid,omitempty"`
 	Indikator     string `json:"Indikator"`
 	TipeTarget    string `json:"TipeTarget"`
+	Operator      *string `json:"Operator"`
 
-	Capaian        float64 `json:"Capaian"`
-	CapaianAuditor float64 `json:"CapaianAuditor"`
+	Target      *string `json:"Target"`
+	TargetMin   *string `json:"TargetMin"`
+	TargetMax   *string `json:"TargetMax"`
+	RangeTarget *string `json:"RangeTarget"`
+	Satuan      *string `json:"Satuan"`
+
+	Capaian        *string `json:"Capaian"`
+	CapaianAuditor *string `json:"CapaianAuditor"`
 }

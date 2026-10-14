@@ -10,7 +10,6 @@ func CreateDokumenProkerCommandValidation(cmd CreateDokumenProkerCommand) error 
 	return validation.ValidateStruct(&cmd,
 		validation.Field(&cmd.FakultasUuid,
 			validation.Required.Error("Fakultas cannot be blank"),
-			validation.By(helper.ValidateUUIDv4),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 		validation.Field(&cmd.MataProgramUuid,
@@ -24,10 +23,6 @@ func CreateDokumenProkerCommandValidation(cmd CreateDokumenProkerCommand) error 
 		),
 		validation.Field(&cmd.File,
 			validation.Required.Error("File cannot be blank"),
-			validation.By(helper.NoXSSFullScanWithDecode()),
-		),
-		validation.Field(&cmd.Status,
-			validation.Required.Error("Status cannot be blank"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 	)

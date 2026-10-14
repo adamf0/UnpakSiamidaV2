@@ -49,13 +49,21 @@ func (r *MataProgramRepository) GetDefaultByUuid(
 	id uuid.UUID,
 ) (*domainMataProgram.MataProgramDefault, error) {
 
-	// Ambil hanya kolom yang benar-benar ada di struct MataProgramDefault
 	var rowData domainMataProgram.MataProgramDefault
 
 	err := r.db.WithContext(ctx).
-		Table("mata_program").
-		Select("id, uuid, nama").
-		Where("uuid = ?", id).
+		Table("mata_program mp").
+		Select(`
+			mp.id as Id,
+			mp.uuid as UUID,
+			mp.id_master_tahun as TahunId,
+			mt.uuid as TahunUUID,
+			mt.tahun as Tahun,
+			mt.status as Status,
+			mp.mata_program as MataProgram
+		`).
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+		Where("mp.uuid = ?", id).
 		Take(&rowData).Error
 
 	if err != nil {
@@ -70,7 +78,11 @@ func (r *MataProgramRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"nama": "nama",
+	"tahun":        "mt.tahun",
+	"tahunuuid":    "mt.uuid",
+	"status":       "mt.status",
+	"mataprogram":  "mp.mata_program",
+	"mata_program": "mp.mata_program",
 }
 
 // ------------------------
@@ -81,12 +93,23 @@ func (r *MataProgramRepository) GetAll(
 	search string,
 	searchFilters []commondomainMataProgram.SearchFilter,
 	page, limit *int,
-) ([]domainMataProgram.MataProgram, int64, error) {
+) ([]domainMataProgram.MataProgramDefault, int64, error) {
 
-	var MataPrograms = make([]domainMataProgram.MataProgram, 0)
+	var MataPrograms = make([]domainMataProgram.MataProgramDefault, 0)
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&domainMataProgram.MataProgram{})
+	db := r.db.WithContext(ctx).
+		Table("mata_program mp").
+		Select(`
+			mp.id as Id,
+			mp.uuid as UUID,
+			mp.id_master_tahun as TahunId,
+			mt.uuid as TahunUUID,
+			mt.tahun as Tahun,
+			mt.status as Status,
+			mp.mata_program as MataProgram
+		`).
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -102,10 +125,6 @@ func (r *MataProgramRepository) GetAll(
 			} else {
 				value = "" // nil dianggap kosong
 			}
-
-			// if value == "" {
-			// 	continue
-			// }
 
 			// Validate allowed column
 			col, ok := allowedSearchColumns[field]
@@ -161,7 +180,7 @@ func (r *MataProgramRepository) GetAll(
 		return nil, 0, err
 	}
 
-	db = db.Order("id DESC")
+	db = db.Order("mp.id DESC")
 
 	// -------------------------------
 	// PAGINATION
@@ -211,7 +230,34 @@ func (r *MataProgramRepository) Delete(ctx context.Context, uid uuid.UUID) error
 		Delete(&domainMataProgram.MataProgram{}).Error
 }
 
+func (r *MataProgramRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *MataProgramRepository) SetupUuid(ctx context.Context) error {
+	if err := r.ensureUuidColumn(ctx, "mata_program"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

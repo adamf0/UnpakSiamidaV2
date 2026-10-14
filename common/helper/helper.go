@@ -31,6 +31,9 @@ var (
 	reURLEncoded  = regexp.MustCompile(`%[0-9A-Fa-f]{2}`)
 	reURLEncoded2 = regexp.MustCompile(`%25[0-9A-Fa-f]{2}`)
 	reNonASCII    = regexp.MustCompile(`[^\x20-\x7F]`)
+	reStandardEmail = regexp.MustCompile(
+		`^[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$`,
+	)
 )
 
 func IsValidUnpakEmail(email string) bool {
@@ -38,10 +41,10 @@ func IsValidUnpakEmail(email string) bool {
 		return false
 	}
 
-	// 1. Base pattern
+	// 1. Base pattern (unpak.ac.id or standard valid email)
 	reg := regexp.MustCompile(reUnpakEmail.String())
 
-	if !reg.MatchString(email) {
+	if !reg.MatchString(email) && !reStandardEmail.MatchString(email) {
 		return false
 	}
 
@@ -189,6 +192,9 @@ func ValidateLevel(value interface{}) error {
 		"admin":    {},
 		"user":     {},
 		"fakultas": {},
+		"auditee":  {},
+		"auditor1": {},
+		"auditor2": {},
 	}
 
 	if _, exists := validLevels[val]; !exists {

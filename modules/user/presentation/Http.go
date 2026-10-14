@@ -17,6 +17,7 @@ import (
 	GetAllUserOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
 	GetAllUsers "UnpakSiamida/modules/user/application/GetAllUsers"
 	GetUser "UnpakSiamida/modules/user/application/GetUser"
+	MergeUser "UnpakSiamida/modules/user/application/MergeUser"
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
@@ -25,6 +26,16 @@ import (
 // =======================================================
 // POST /user
 // =======================================================
+
+type UserPayload struct {
+	Name             string `json:"name" form:"name"`
+	Username         string `json:"username" form:"username"`
+	Password         string `json:"password" form:"password"`
+	Email            string `json:"email" form:"email"`
+	Level            string `json:"level" form:"level"`
+	FakultasUnit     string `json:"FakultasUnit" form:"FakultasUnit"`
+	UuidFakultasUnit string `json:"uuid_fakultas_unit" form:"uuid_fakultas_unit"`
+}
 
 // CreateUserHandler godoc
 // @Summary Create new User
@@ -43,14 +54,48 @@ import (
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /user [post]
 func CreateUserHandler(c *fiber.Ctx) error {
+	var p UserPayload
+	_ = c.BodyParser(&p)
+
+	name := p.Name
+	if name == "" {
+		name = c.FormValue("name")
+	}
+	username := p.Username
+	if username == "" {
+		username = c.FormValue("username")
+	}
+	password := p.Password
+	if password == "" {
+		password = c.FormValue("password")
+	}
+	email := p.Email
+	if email == "" {
+		email = c.FormValue("email")
+	}
+	level := p.Level
+	if level == "" {
+		level = c.FormValue("level")
+	}
+
+	fu := p.FakultasUnit
+	if fu == "" {
+		fu = p.UuidFakultasUnit
+	}
+	if fu == "" {
+		fu = c.FormValue("FakultasUnit")
+	}
+	if fu == "" {
+		fu = c.FormValue("uuid_fakultas_unit")
+	}
 
 	cmd := CreateUser.CreateUserCommand{
-		Name:             c.FormValue("name"),
-		Username:         c.FormValue("username"),
-		Password:         c.FormValue("password"),
-		Email:            c.FormValue("email"),
-		Level:            c.FormValue("level"),
-		UuidFakultasUnit: helper.StrPtr(c.FormValue("FakultasUnit")),
+		Name:             name,
+		Username:         username,
+		Password:         password,
+		Email:            email,
+		Level:            level,
+		UuidFakultasUnit: helper.StrPtr(fu),
 	}
 
 	uuid, err := mediatr.Send[
@@ -87,8 +132,41 @@ func CreateUserHandler(c *fiber.Ctx) error {
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /user/{uuid} [put]
 func UpdateUserHandler(c *fiber.Ctx) error {
+	var p UserPayload
+	_ = c.BodyParser(&p)
 
-	password := c.FormValue("password")
+	name := p.Name
+	if name == "" {
+		name = c.FormValue("name")
+	}
+	username := p.Username
+	if username == "" {
+		username = c.FormValue("username")
+	}
+	password := p.Password
+	if password == "" {
+		password = c.FormValue("password")
+	}
+	email := p.Email
+	if email == "" {
+		email = c.FormValue("email")
+	}
+	level := p.Level
+	if level == "" {
+		level = c.FormValue("level")
+	}
+
+	fu := p.FakultasUnit
+	if fu == "" {
+		fu = p.UuidFakultasUnit
+	}
+	if fu == "" {
+		fu = c.FormValue("FakultasUnit")
+	}
+	if fu == "" {
+		fu = c.FormValue("uuid_fakultas_unit")
+	}
+
 	var passwordPtr *string
 	if password != "" {
 		passwordPtr = &password
@@ -96,12 +174,12 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 
 	cmd := UpdateUser.UpdateUserCommand{
 		Uuid:             c.Params("uuid"),
-		Name:             c.FormValue("name"),
-		Username:         c.FormValue("username"),
+		Name:             name,
+		Username:         username,
 		Password:         passwordPtr,
-		Email:            c.FormValue("email"),
-		Level:            c.FormValue("level"),
-		UuidFakultasUnit: helper.StrPtr(c.FormValue("FakultasUnit")),
+		Email:            email,
+		Level:            level,
+		UuidFakultasUnit: helper.StrPtr(fu),
 	}
 
 	updatedID, err := mediatr.Send[
@@ -304,11 +382,52 @@ func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
+// =======================================================
+// POST /users/merge
+// =======================================================
+
+type MergeUserPayload struct {
+	PrimaryUUID    string   `json:"primary_uuid"`
+	SecondaryUUIDs []string `json:"secondary_uuids"`
+	PrimaryID      *uint    `json:"primary_id"`
+	SecondaryIDs   []uint   `json:"secondary_ids"`
+}
+
+// MergeUserHandler godoc
+// @Summary Merge multiple secondary users into a primary user
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string "message"
+// @Router /users/merge [post]
+func MergeUserHandler(c *fiber.Ctx) error {
+	var p MergeUserPayload
+	if err := c.BodyParser(&p); err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	cmd := MergeUser.MergeUserCommand{
+		PrimaryUUID:    p.PrimaryUUID,
+		SecondaryUUIDs: p.SecondaryUUIDs,
+		PrimaryID:      p.PrimaryID,
+		SecondaryIDs:   p.SecondaryIDs,
+	}
+
+	message, err := mediatr.Send[MergeUser.MergeUserCommand, string](c.Context(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{
+		"message": message,
+	})
+}
+
 func ModuleUser(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/user/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidUsersHandlerfunc)
+	app.Get("/user/setupuuid", SetupUuidUsersHandlerfunc)
 
 	app.Post("/user", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateUserHandler)
 	app.Put("/user/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateUserHandler)
@@ -317,4 +436,8 @@ func ModuleUser(app *fiber.App) {
 	app.Get("/users", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUsersHandler)
 
 	app.Get("/user-options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUserOptionsHandler)
+
+	app.Post("/users/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
+	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 }
+

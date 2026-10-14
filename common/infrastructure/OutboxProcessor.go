@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"time"
@@ -16,6 +17,14 @@ type OutboxProcessor struct {
 }
 
 func (p *OutboxProcessor) Process(ctx context.Context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[outbox] Process recovered from panic: %v\n", r)
+		}
+	}()
+	if p == nil || p.DB == nil {
+		return nil
+	}
 	var messages []OutboxMessage
 
 	if err := p.DB.
@@ -37,7 +46,13 @@ func (p *OutboxProcessor) Process(ctx context.Context) error {
 func (p *OutboxProcessor) processMessage(
 	ctx context.Context,
 	msg *OutboxMessage,
-) error {
+) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in outbox processing: %v", r)
+			log.Printf("[outbox] Recovered panic for %s: %v\n", msg.Type, r)
+		}
+	}()
 
 	log.Println("[outbox] Execute:", msg.Type)
 

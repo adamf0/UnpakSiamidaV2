@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
+	"time"
 
 	domaindokumenproker "UnpakSiamida/modules/dokumenproker/domain"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
 	domainmataprogram "UnpakSiamida/modules/mataprogram/domain"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
@@ -27,9 +29,14 @@ func (h *CreateDokumenProkerCommandHandler) Handle(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	uuidFakultas, err := uuid.Parse(cmd.FakultasUuid)
-	if err != nil {
-		return "", domaindokumenproker.InvalidFakultas()
+	var fakultasID uint
+	uuidFakultas, errFakultasUuid := uuid.Parse(strings.TrimSpace(cmd.FakultasUuid))
+	if errFakultasUuid != nil {
+		parsedID, errConv := strconv.ParseUint(strings.TrimSpace(cmd.FakultasUuid), 10, 64)
+		if errConv != nil || parsedID == 0 {
+			return "", domaindokumenproker.InvalidFakultas()
+		}
+		fakultasID = uint(parsedID)
 	}
 
 	uuidMataProgram, err := uuid.Parse(cmd.MataProgramUuid)
@@ -44,18 +51,21 @@ func (h *CreateDokumenProkerCommandHandler) Handle(
 
 	g, ctxg := errgroup.WithContext(ctx)
 
-	// query FakultasUnit
-	g.Go(func() error {
-		var err error
-		fakultas, err = h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultas)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domaindokumenproker.NotFoundFakultas()
+	// query FakultasUnit if UUID was provided
+	if errFakultasUuid == nil {
+		g.Go(func() error {
+			var err error
+			fakultas, err = h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultas)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return domaindokumenproker.NotFoundFakultas()
+				}
+				return err
 			}
-			return err
-		}
-		return nil
-	})
+			fakultasID = fakultas.ID
+			return nil
+		})
+	}
 
 	g.Go(func() error {
 		var err error
@@ -75,7 +85,7 @@ func (h *CreateDokumenProkerCommandHandler) Handle(
 
 	result := domaindokumenproker.NewDokumenProker(
 		mataprogram.Id,
-		fakultas.ID,
+		fakultasID,
 		cmd.JenisDokumen,
 		cmd.File,
 		cmd.Status,

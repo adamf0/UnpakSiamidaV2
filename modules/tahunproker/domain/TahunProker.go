@@ -36,9 +36,6 @@ func NewTahunProker(tahun string, status string) common.ResultValue[*TahunProker
 	if !hasValidStatus(status) {
 		return common.FailureValue[*TahunProker](InvalidStatus())
 	}
-	if !hasValidStatus(status) {
-		return common.FailureValue[*TahunProker](InvalidStatus())
-	}
 
 	tahunproker := &TahunProker{
 		UUID:   uuid.New(),

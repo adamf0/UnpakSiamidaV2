@@ -41,9 +41,27 @@ type RenstraDefault struct {
 	Type     string  `json:"Type"`
 	Fakultas *string `json:"Fakultas"`
 
+	TotalRenstra        string `json:"TotalRenstra"`
 	TotalRenstraAuditee string `json:"TotalRenstraAuditee"`
 	TotalRenstraAuditor string `json:"TotalRenstraAuditor"`
 	TotalDokumen        string `json:"TotalDokumen"`
 	TotalDokumenAuditee string `json:"TotalDokumenAuditee"`
 	TotalDokumenAuditor string `json:"TotalDokumenAuditor"`
+
+	TotalTemuanAuditor1Renstra string `json:"TotalTemuanAuditor1Renstra"`
+	TotalTemuanAuditor1Dokumen string `json:"TotalTemuanAuditor1Dokumen"`
+	TotalTemuanAuditor1        string `json:"TotalTemuanAuditor1"`
+	TotalTemuanAuditor2Renstra string `json:"TotalTemuanAuditor2Renstra"`
+	TotalTemuanAuditor2Dokumen string `json:"TotalTemuanAuditor2Dokumen"`
+	TotalTemuanAuditor2        string `json:"TotalTemuanAuditor2"`
+	TotalKtsBelumDibuat          string `json:"TotalKtsBelumDibuat"`
+	TotalKtsDraf                 string `json:"TotalKtsDraf"`
+	TotalKtsMenungguVerif        string `json:"TotalKtsMenungguVerif"`
+	TotalKtsTerimaAuditee        string `json:"TotalKtsTerimaAuditee"`
+	TotalKtsTolakAuditee         string `json:"TotalKtsTolakAuditee"`
+	TotalKtsMenungguPenyelesaian string `json:"TotalKtsMenungguPenyelesaian"`
+	TotalKtsTindakanPenyelesaian string `json:"TotalKtsTindakanPenyelesaian"`
+	TotalKtsTutup                string `json:"TotalKtsTutup"`
+	TotalKtsProses               string `json:"TotalKtsProses"`
+	TotalKts                     string `json:"TotalKts"`
 }

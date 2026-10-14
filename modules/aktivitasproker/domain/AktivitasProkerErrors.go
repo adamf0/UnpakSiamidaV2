@@ -44,3 +44,11 @@ func InvalidDate(target string) domain.Error {
 func InvalidDateRange() domain.Error {
 	return domain.NotFoundError("AktivitasProker.InvalidDateRange", "tanggal rk akhir must not be earlier than tanggal rk awal")
 }
+
+func InvalidStatusRealisasi() domain.Error {
+	return domain.NotFoundError("AktivitasProker.InvalidStatusRealisasi", "status realisasi must be terlaksana or belum_terlaksana")
+}
+
+func InvalidRealisasiDateRange() domain.Error {
+	return domain.NotFoundError("AktivitasProker.InvalidRealisasiDateRange", "target realisasi akhir must not be earlier than target realisasi awal")
+}

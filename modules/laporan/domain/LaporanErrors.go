@@ -19,3 +19,7 @@ func InvalidIndikator() domain.Error {
 func InvalidTahun() domain.Error {
 	return domain.NotFoundError("Laporan.InvalidTahun", "tahun is invalid")
 }
+
+func MigrasiFitur() domain.Error {
+	return domain.FailureError("Laporan.MigrasiFitur", "masih migrasi fitur")
+}

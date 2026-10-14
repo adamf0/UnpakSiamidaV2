@@ -4,11 +4,13 @@ import (
 	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/aktivitasproker/application/CreateAktivitasProker"
+	createPelaporan "UnpakSiamida/modules/aktivitasproker/application/CreatePelaporanPelaksanaan"
 	delete "UnpakSiamida/modules/aktivitasproker/application/DeleteAktivitasProker"
 	get "UnpakSiamida/modules/aktivitasproker/application/GetAktivitasProker"
 	getAll "UnpakSiamida/modules/aktivitasproker/application/GetAllAktivitasProkers"
 	setupUuid "UnpakSiamida/modules/aktivitasproker/application/SetupUuidAktivitasProker"
 	update "UnpakSiamida/modules/aktivitasproker/application/UpdateAktivitasProker"
+	updatePelaporan "UnpakSiamida/modules/aktivitasproker/application/UpdatePelaporanPelaksanaan"
 	domainAktivitasProker "UnpakSiamida/modules/aktivitasproker/domain"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	infraMataProgram "UnpakSiamida/modules/mataprogram/infrastructure"
@@ -50,12 +52,28 @@ func RegisterModuleAktivitasProker(db *gorm.DB) error {
 	})
 
 	mediatr.RegisterRequestHandler[
+		createPelaporan.CreatePelaporanPelaksanaanCommand,
+		string,
+	](&createPelaporan.CreatePelaporanPelaksanaanCommandHandler{
+		Repo:             repoAktivitasProker,
+		RepoFakultasUnit: repoFakultasUnit,
+		RepoMataProgram:  repoMataProgram,
+	})
+
+	mediatr.RegisterRequestHandler[
 		update.UpdateAktivitasProkerCommand,
 		string,
 	](&update.UpdateAktivitasProkerCommandHandler{
 		Repo:             repoAktivitasProker,
 		RepoFakultasUnit: repoFakultasUnit,
 		RepoMataProgram:  repoMataProgram,
+	})
+
+	mediatr.RegisterRequestHandler[
+		updatePelaporan.UpdatePelaporanPelaksanaanCommand,
+		string,
+	](&updatePelaporan.UpdatePelaporanPelaksanaanCommandHandler{
+		Repo: repoAktivitasProker,
 	})
 
 	mediatr.RegisterRequestHandler[
@@ -87,7 +105,9 @@ func RegisterModuleAktivitasProker(db *gorm.DB) error {
 	})
 
 	commoninfra.RegisterValidation(create.CreateAktivitasProkerCommandValidation, "AktivitasProkerCreate.Validation")
+	commoninfra.RegisterValidation(createPelaporan.CreatePelaporanPelaksanaanCommandValidation, "PelaporanPelaksanaanCreate.Validation")
 	commoninfra.RegisterValidation(update.UpdateAktivitasProkerCommandValidation, "AktivitasProkerUpdate.Validation")
+	commoninfra.RegisterValidation(updatePelaporan.UpdatePelaporanPelaksanaanCommandValidation, "PelaporanPelaksanaanUpdate.Validation")
 	commoninfra.RegisterValidation(delete.DeleteAktivitasProkerCommandValidation, "AktivitasProkerDelete.Validation")
 
 	return nil

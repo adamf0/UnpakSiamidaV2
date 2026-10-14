@@ -7,6 +7,7 @@ import (
 	getAllOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
 	getAll "UnpakSiamida/modules/user/application/GetAllUsers"
 	get "UnpakSiamida/modules/user/application/GetUser"
+	merge "UnpakSiamida/modules/user/application/MergeUser"
 	setupUuid "UnpakSiamida/modules/user/application/SetupUuidUser"
 	update "UnpakSiamida/modules/user/application/UpdateUser"
 	domainuser "UnpakSiamida/modules/user/domain"
@@ -90,6 +91,13 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		setupUuid.SetupUuidUserCommand,
 		string,
 	](&setupUuid.SetupUuidUserCommandHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		merge.MergeUserCommand,
+		string,
+	](&merge.MergeUserCommandHandler{
 		Repo: repoUser,
 	})
 

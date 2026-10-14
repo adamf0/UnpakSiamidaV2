@@ -67,6 +67,9 @@ func (r *DokumenProkerRepository) GetDefaultByUuid(
 		drp.id_mata_program as MataProgramId,
 		mp.uuid as MataProgramUUID,
 		mp.mata_program as MataProgram,
+		mp.id_master_tahun as TahunId,
+		mt.uuid as TahunUUID,
+		mt.tahun as Tahun,
 		drp.jenis_dokumen as JenisDokumen,
 		drp.file as File,
 		drp.status_verifikasi as Status,
@@ -74,6 +77,7 @@ func (r *DokumenProkerRepository) GetDefaultByUuid(
 	`).
 		Joins("JOIN v_fakultas_unit vfu ON drp.id_fakultas_unit = vfu.id").
 		Joins("JOIN mata_program mp ON drp.id_mata_program = mp.id").
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 		Where("drp.uuid = ?", id).
 		Take(&rowData).Error
 
@@ -89,7 +93,23 @@ func (r *DokumenProkerRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"target": "vfu.nama_fak_prod_unit",
+	"target":            "vfu.nama_fak_prod_unit",
+	"fakultasunit":      "vfu.nama_fak_prod_unit",
+	"fakultasunituuid":  "vfu.uuid",
+	"id_fakultas_unit":  "drp.id_fakultas_unit",
+	"fakultasunitid":    "drp.id_fakultas_unit",
+	"mataprogram":       "mp.mata_program",
+	"mataprogramuuid":   "mp.uuid",
+	"id_mata_program":   "drp.id_mata_program",
+	"tahun":             "mt.tahun",
+	"tahunuuid":         "mt.uuid",
+	"tahunid":           "mp.id_master_tahun",
+	"jenis_dokumen":     "drp.jenis_dokumen",
+	"jenisdokumen":      "drp.jenis_dokumen",
+	"status":            "drp.status_verifikasi",
+	"status_verifikasi": "drp.status_verifikasi",
+	"catatan":           "drp.catatan",
+	"file":              "drp.file",
 }
 
 // ------------------------
@@ -111,36 +131,67 @@ func (r *DokumenProkerRepository) GetAll(
 			drp.id as ID,
 			drp.uuid as UUID,
 			drp.id_fakultas_unit as FakultasUnitId,
-            vfu.uuid as FakultasUnitUuid,
+			vfu.uuid as FakultasUnitUuid,
 			vfu.nama_fak_prod_unit as FakultasUnit,
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
 			vfu.fakultas as Fakultas,
-            drp.id_mata_program as MataProgramId,
-            mp.uuid as MataProgramUUID,
-            mp.mata_program as MataProgram,
-            drp.jenis_dokumen as JenisDokumen,
-            drp.file as File,
-            drp.status_verifikasi as Status,
-            drp.catatan as Catatan
+			drp.id_mata_program as MataProgramId,
+			mp.uuid as MataProgramUUID,
+			mp.mata_program as MataProgram,
+			mp.id_master_tahun as TahunId,
+			mt.uuid as TahunUUID,
+			mt.tahun as Tahun,
+			drp.jenis_dokumen as JenisDokumen,
+			drp.file as File,
+			drp.status_verifikasi as Status,
+			drp.catatan as Catatan
 		`).
-		Joins(`v_fakultas_unit vfu ON jp.id_fakultas_unit = vfu.id`).
-		Joins(`mata_program mp ON drp.id_mata_program = mp.id`)
+		Joins(`JOIN v_fakultas_unit vfu ON drp.id_fakultas_unit = vfu.id`).
+		Joins(`JOIN mata_program mp ON drp.id_mata_program = mp.id`).
+		Joins(`LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id`)
 
 	// -----------------------------------
 	// ADVANCED FILTERS
 	// -----------------------------------
 	for _, f := range searchFilters {
-		col, ok := allowedSearchColumns[strings.ToLower(f.Field)]
-		if !ok {
-			continue
-		}
-
+		fieldLower := strings.ToLower(strings.TrimSpace(f.Field))
 		val := ""
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
 		}
 		if val == "" {
+			continue
+		}
+
+		if fieldLower == "sid" {
+			var userRow struct {
+				Level        string `gorm:"column:level"`
+				FakultasUnit *uint  `gorm:"column:fakultas_unit"`
+			}
+			if err := r.db.WithContext(ctx).
+				Table("users").
+				Select("level, fakultas_unit").
+				Where("uuid = ?", val).
+				Take(&userRow).Error; err == nil {
+				if strings.ToLower(strings.TrimSpace(userRow.Level)) != "admin" {
+					if userRow.FakultasUnit != nil && *userRow.FakultasUnit > 0 {
+						db = db.Where("drp.id_fakultas_unit = ?", *userRow.FakultasUnit)
+					} else {
+						db = db.Where("1 = 0")
+					}
+				}
+			}
+			continue
+		}
+
+		if (fieldLower == "status_verifikasi" || fieldLower == "status") && strings.ToLower(val) == "belum_terverifikasi" {
+			db = db.Where("(drp.status_verifikasi = 'belum_terverifikasi' OR drp.status_verifikasi IS NULL OR drp.status_verifikasi = '')")
+			continue
+		}
+
+		col, ok := allowedSearchColumns[fieldLower]
+		if !ok {
 			continue
 		}
 
@@ -249,7 +300,34 @@ func (r *DokumenProkerRepository) Delete(ctx context.Context, uid uuid.UUID) err
 		Delete(&domaindokumenproker.DokumenProker{}).Error
 }
 
+func (r *DokumenProkerRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *DokumenProkerRepository) SetupUuid(ctx context.Context) error {
+	if err := r.ensureUuidColumn(ctx, "dokumen_realisasi_proker"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

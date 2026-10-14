@@ -1,0 +1,69 @@
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker Metadata (Tags & Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_IMAGE || secrets.DOCKERHUB_IMAGE || format('{0}/unpaksiamida', secrets.DOCKERHUB_USERNAME || 'adamf0') }}
+          flavor: |
+            latest=false
+          tags: |
+            # Tag 'latest' hanya saat push ke branch default (main)
+            type=raw,value=latest,enable={{is_default_branch}}
+
+            # Versioning berdasarkan short commit SHA (contoh: sha-1805c1b)
+            type=sha,format=short,prefix=sha-
+
+            # Versioning berdasarkan timestamp build (contoh: 20261014-160530)
+            type=raw,value={{date 'YYYYMMDD-HHmmss'}},enable={{is_default_branch}}
+
+            # Tag berdasarkan nama branch
+            type=ref,event=branch
+
+            # Versioning semantic release saat push Git Tag (contoh: v1.0.0 -> 1.0.0, 1.0, 1)
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

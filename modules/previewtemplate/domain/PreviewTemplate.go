@@ -7,6 +7,8 @@ type PreviewTemplate struct {
 	Tahun               int
 	IndikatorId         int
 	Indikator           string
+	Dokumen             string
+	Pertanyaan          string
 	IndikatorTahun      int
 	IsPertanyaan        int
 

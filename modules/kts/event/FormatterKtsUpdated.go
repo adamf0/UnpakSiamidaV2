@@ -4,6 +4,7 @@ import (
 	helper "UnpakSiamida/common/helper"
 	"bytes"
 	"html/template"
+	"strings"
 )
 
 type KtsUpdatedView struct {
@@ -33,28 +34,25 @@ type KtsUpdatedView struct {
 	Terjadi             string
 }
 
+func formatDate(dateStr *string, factory helper.FormatterFactory) string {
+	if dateStr == nil || strings.TrimSpace(*dateStr) == "" {
+		return "-"
+	}
+	return helper.NewDateChain(*dateStr).
+		UseParseStrategy(factory.CreateParser()).
+		Parse().
+		UseFormatStrategy(factory.CreateFormatter()).
+		FormatString()
+}
+
 func RenderKtsUpdatedTemplate(e KtsUpdatedEvent) string {
 	ctx := helper.DateContext{}
 	ctx.SetStrategy(helper.IndonesianDateFormatter{})
 
 	factory := helper.DateLayoutFirstFactory{}
-	TanggalClosing := helper.NewDateChain(*e.TanggalClosing).
-		UseParseStrategy(factory.CreateParser()).
-		Parse().
-		UseFormatStrategy(factory.CreateFormatter()).
-		FormatString()
-
-	TanggalPenyelesaian := helper.NewDateChain(*e.TanggalPenyelesaian).
-		UseParseStrategy(factory.CreateParser()).
-		Parse().
-		UseFormatStrategy(factory.CreateFormatter()).
-		FormatString()
-
-	TanggalClosingFinal := helper.NewDateChain(*e.TanggalClosingFinal).
-		UseParseStrategy(factory.CreateParser()).
-		Parse().
-		UseFormatStrategy(factory.CreateFormatter()).
-		FormatString()
+	TanggalClosing := formatDate(e.TanggalClosing, factory)
+	TanggalPenyelesaian := formatDate(e.TanggalPenyelesaian, factory)
+	TanggalClosingFinal := formatDate(e.TanggalClosingFinal, factory)
 
 	view := KtsUpdatedView{
 		UUID:                e.KtsUUID.String(),

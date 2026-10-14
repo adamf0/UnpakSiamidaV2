@@ -14,7 +14,7 @@ type GetAllMataProgramsQueryHandler struct {
 func (h *GetAllMataProgramsQueryHandler) Handle(
 	ctx context.Context,
 	q GetAllMataProgramsQuery,
-) (commondomain.Paged[domainmataprogram.MataProgram], error) {
+) (commondomain.Paged[domainmataprogram.MataProgramDefault], error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -26,7 +26,7 @@ func (h *GetAllMataProgramsQueryHandler) Handle(
 		q.Limit,
 	)
 	if err != nil {
-		return commondomain.Paged[domainmataprogram.MataProgram]{}, err
+		return commondomain.Paged[domainmataprogram.MataProgramDefault]{}, err
 	}
 
 	currentPage := 1
@@ -39,7 +39,7 @@ func (h *GetAllMataProgramsQueryHandler) Handle(
 		totalPages = int((total + int64(*q.Limit) - 1) / int64(*q.Limit))
 	}
 
-	return commondomain.Paged[domainmataprogram.MataProgram]{
+	return commondomain.Paged[domainmataprogram.MataProgramDefault]{
 		Data:        MataPrograms,
 		Total:       total,
 		CurrentPage: currentPage,

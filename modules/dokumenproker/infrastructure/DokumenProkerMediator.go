@@ -6,11 +6,13 @@ import (
 	delete "UnpakSiamida/modules/dokumenproker/application/DeleteDokumenProker"
 	getAll "UnpakSiamida/modules/dokumenproker/application/GetAllDokumenProkers"
 	get "UnpakSiamida/modules/dokumenproker/application/GetDokumenProker"
+	getDefault "UnpakSiamida/modules/dokumenproker/application/GetDokumenProkerDefault"
 	setupUuid "UnpakSiamida/modules/dokumenproker/application/SetupUuidDokumenProker"
 	update "UnpakSiamida/modules/dokumenproker/application/UpdateDokumenProker"
 	domainDokumenProker "UnpakSiamida/modules/dokumenproker/domain"
 	infraFakultas "UnpakSiamida/modules/fakultasunit/infrastructure"
 	infraMataProgram "UnpakSiamida/modules/mataprogram/infrastructure"
+	commoninfra "UnpakSiamida/common/infrastructure"
 
 	"github.com/mehdihadeli/go-mediatr"
 
@@ -72,6 +74,13 @@ func RegisterModuleDokumenProker(db *gorm.DB) error {
 	})
 
 	mediatr.RegisterRequestHandler[
+		getDefault.GetDokumenProkerDefaultByUuidQuery,
+		*domainDokumenProker.DokumenProkerDefault,
+	](&getDefault.GetDokumenProkerDefaultByUuidQueryHandler{
+		Repo: repoDokumenProker,
+	})
+
+	mediatr.RegisterRequestHandler[
 		getAll.GetAllDokumenProkersQuery,
 		commondomain.Paged[domainDokumenProker.DokumenProkerDefault],
 	](&getAll.GetAllDokumenProkersQueryHandler{
@@ -84,6 +93,10 @@ func RegisterModuleDokumenProker(db *gorm.DB) error {
 	](&setupUuid.SetupUuidDokumenProkerCommandHandler{
 		Repo: repoDokumenProker,
 	})
+
+	commoninfra.RegisterValidation(create.CreateDokumenProkerCommandValidation, "DokumenProkerCreate.Validation")
+	commoninfra.RegisterValidation(update.UpdateDokumenProkerCommandValidation, "DokumenProkerUpdate.Validation")
+	commoninfra.RegisterValidation(delete.DeleteDokumenProkerCommandValidation, "DokumenProkerDelete.Validation")
 
 	return nil
 }

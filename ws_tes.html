@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview WS PDF</title>
+  </head>
+  <body>
+    <h2>Preview PDF via WebSocket</h2>
+  </body>
+  <script>
+    const uuid = "8d974e90-7792-4710-82ae-30bc181a0d29"; // contoh UUID
+    // const token =
+    //   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzA3MDkyOTcsInNpZCI6IjA1ZjM5NmM3LTY2M2QtNDQ0OS1hMDZiLWVhMDFiNDg4NzhkMyJ9.G7_5hoxwknS4HlvfijDwD6KwsXKUekzE1ulyqafA0dw";
+    const token =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzA3MTA2MjAsInNpZCI6IjA1ZjM5NmM3LTY2M2QtNDQ0OS1hMDZiLWVhMDFiNDg4NzhkMyJ9.WU0xsNhwdvilkUbhrJgUDydujBTfO6lIBA11zUnPjM8";
+
+    function downloadBeritaAcara(uuid, token) {
+      fetch(
+        `http://localhost:3000/beritaacara/export/${uuid}?token=${token}&ctxtahun=2024`,
+        {
+          headers: {
+            Accept: "application/pdf",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+        .then(async (response) => {
+          const contentType = response.headers.get("Content-Type") || "";
+
+          // Jika response JSON → alert message
+          if (contentType.includes("application/json")) {
+            const json = await response.json();
+            alert(json.message || "Terjadi error pada aplikasi");
+            throw new Error(json.message || "Terjadi error pada aplikasi");
+          }
+
+          // Jika bukan PDF atau status bukan 200 → alert server
+          if (!response.ok || !contentType.includes("application/pdf")) {
+            alert("Ada masalah pada server");
+            throw new Error("Server error");
+          }
+
+          // Response PDF → proses download
+          const contentLength = response.headers.get("Content-Length");
+          const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+          const reader = response.body.getReader();
+          const chunks = [];
+          let received = 0;
+
+          function read() {
+            return reader.read().then(({ done, value }) => {
+              if (done) {
+                const blob = new Blob(chunks, { type: "application/pdf" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "berita_acara.pdf";
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                return;
+              }
+              chunks.push(value);
+              received += value.length;
+              if (total)
+                console.log(
+                  `Progress: ${Math.round((received / total) * 100)}%`,
+                );
+              return read();
+            });
+          }
+
+          return read();
+        })
+        .catch((err) => console.error(err));
+    }
+
+    // Pakai:
+    downloadBeritaAcara(uuid, token);
+  </script>
+</html>

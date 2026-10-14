@@ -149,10 +149,10 @@ func SetupUuidFakultasUnitsHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleFakultasUnit(app *fiber.App) {
-	admin := []string{"admin"}
-	whoamiURL := "http://localhost:3000/whoami"
+	// admin := []string{"admin"}
+	// whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/fakultasunit/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidFakultasUnitsHandlerfunc)
+	app.Get("/fakultasunit/setupuuid", SetupUuidFakultasUnitsHandlerfunc)
 
 	app.Get("/fakultasunit/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetFakultasUnitHandler)
 	app.Get("/fakultasunits", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllFakultasUnitsHandler)

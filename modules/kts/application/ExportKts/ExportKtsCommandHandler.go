@@ -72,7 +72,7 @@ func (h *ExportKtsCommandHandler) Handle(
 		return []byte{}, domainkts.GeneratePDF(err.Error())
 	}
 
-	if cmd.SID == "preview" {
+	if cmd.SID == "preview" || cmd.Granted == "" {
 		return pdf, nil
 	}
 

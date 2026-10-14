@@ -16,10 +16,14 @@ type DokumenProkerDefault struct {
 
 	MataProgramId   uint       `json:"MataProgramId"`
 	MataProgramUUID *uuid.UUID `json:"MataProgramUuid"`
-	MataProgram     string
+	MataProgram     string     `json:"MataProgram"`
 
-	JenisDokumen string  `gorm:"JenisDokumen"`
-	File         string  `gorm:"File"`
-	Status       string  `gorm:"Status"`
-	Catatan      *string `gorm:"Catatan"`
+	TahunId   uint       `json:"TahunId"`
+	TahunUUID *uuid.UUID `json:"TahunUuid"`
+	Tahun     string     `json:"Tahun"`
+
+	JenisDokumen string  `json:"JenisDokumen"`
+	File         string  `json:"File"`
+	Status       string  `json:"Status"`
+	Catatan      *string `json:"Catatan"`
 }

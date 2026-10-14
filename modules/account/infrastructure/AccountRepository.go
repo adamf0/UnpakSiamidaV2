@@ -22,7 +22,7 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 
 	// GORM query
 	err := r.db.WithContext(ctx).
-		Where("nidn_username = ? AND password = ?", username, password).
+		Where("nidn_username = ? AND `password` = ?", username, password).
 		First(&user).Error
 
 	if err != nil {
@@ -33,7 +33,7 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 	}
 
 	// Ambil extrarole dari renstra
-	extraRoles, err := r.getExtraRole(ctx, user.NidnUsername)
+	extraRoles, err := r.getExtraRole(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}

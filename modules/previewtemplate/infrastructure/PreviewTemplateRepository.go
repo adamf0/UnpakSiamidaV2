@@ -91,6 +91,8 @@ func (r *PreviewTemplateRepository) GetByTahunTag(
 				dt.tahun AS Tahun,
 				NULL AS IndikatorId,
 				dt.pertanyaan AS Indikator,
+				jf.nama AS Dokumen,
+				dt.pertanyaan AS Pertanyaan,
 				NULL AS IndikatorTahun,
 				1 AS IsPertanyaan,
 				NULL AS ParentIndikatorId,

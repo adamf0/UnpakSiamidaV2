@@ -22,18 +22,31 @@ func NewUserRepository(db *gorm.DB) domainuser.IUserRepository {
 }
 
 // ------------------------
+// ------------------------
 // GET BY UUID
 // ------------------------
 func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.User, error) {
 	var user domainuser.User
 
-	err := r.db.WithContext(ctx).
-		Where("uuid = ?", uid).
+	err := r.db.WithContext(ctx).Table("users").
+		Select(`
+			users.id,
+			users.uuid,
+			users.nidn_username,
+			users.password,
+			users.name,
+			users.email,
+			users.level,
+			users.fakultas_unit,
+			users.id_user_merge,
+			mu.name as nama_user_merge,
+			fu.nama_fak_prod_unit,
+			fu.uuid as uuid_fakultas_unit
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
+		Joins("LEFT JOIN users mu ON users.id_user_merge = mu.id").
+		Where("users.uuid = ?", uid).
 		First(&user).Error
-
-	// if errors.Is(err, gorm.ErrRecordNotFound) {
-	// 	return nil, domainuser.NotFound(uid.String())
-	// }
 
 	if err != nil {
 		return nil, err
@@ -44,11 +57,12 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"name":          "name",
-	"username":      "nidn_username",
-	"email":         "email",
-	"level":         "level",
-	"fakultas_unit": "fakultas_unit",
+	"name":          "users.name",
+	"username":      "users.nidn_username",
+	"email":         "users.email",
+	"level":         "users.level",
+	"fakultas_unit": "fu.nama_fak_prod_unit",
+	"id_user_merge": "users.id_user_merge",
 }
 
 func (r *UserRepository) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
@@ -75,7 +89,23 @@ func (r *UserRepository) GetAll(
 	var users = make([]domainuser.User, 0)
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&domainuser.User{})
+	db := r.db.WithContext(ctx).Table("users").
+		Select(`
+			users.id,
+			users.uuid,
+			users.nidn_username,
+			users.password,
+			users.name,
+			users.email,
+			users.level,
+			users.fakultas_unit,
+			users.id_user_merge,
+			mu.name as nama_user_merge,
+			fu.nama_fak_prod_unit,
+			fu.uuid as uuid_fakultas_unit
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
+		Joins("LEFT JOIN users mu ON users.id_user_merge = mu.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -91,10 +121,6 @@ func (r *UserRepository) GetAll(
 			} else {
 				value = "" // nil dianggap kosong
 			}
-
-			// if value == "" {
-			// 	continue
-			// }
 
 			// Validate allowed column
 			col, ok := allowedSearchColumns[field]
@@ -168,7 +194,7 @@ func (r *UserRepository) GetAll(
 	// -------------------------------
 	// EXECUTE QUERY
 	// -------------------------------
-	if err := db.Order("created_at DESC").Find(&users).Error; err != nil {
+	if err := db.Order("users.id DESC").Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -179,8 +205,7 @@ func (r *UserRepository) GetAll(
 // CREATE
 // ------------------------
 func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) error {
-	// return r.db.WithContext(ctx).Create(user).Error
-	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("users").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
 		return err
 	}
 
@@ -191,9 +216,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) erro
 // UPDATE
 // ------------------------
 func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) error {
-	// return r.db.WithContext(ctx).Save(user).Error
-
-	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("users").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
 		return err
 	}
 
@@ -204,12 +227,92 @@ func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) erro
 // DELETE (by UUID)
 // ------------------------
 func (r *UserRepository) Delete(ctx context.Context, uid uuid.UUID) error {
-	return r.db.WithContext(ctx).
+	return r.db.WithContext(ctx).Table("users").
 		Where("uuid = ?", uid).
 		Delete(&domainuser.User{}).Error
 }
 
+// ------------------------
+// MERGE USER
+// ------------------------
+func (r *UserRepository) MergeUser(ctx context.Context, primaryID uint, secondaryIDs []uint) error {
+	_ = r.ensureIdUserMergeColumn(ctx)
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Akun primary tidak boleh merujuk ke merge lain
+		if err := tx.Exec("UPDATE `users` SET `id_user_merge` = NULL WHERE `id` = ?", primaryID).Error; err != nil {
+			return err
+		}
+
+		// 2. Akun secondary di-update id_user_merge = primaryID
+		if len(secondaryIDs) > 0 {
+			if err := tx.Table("users").Where("id IN (?)", secondaryIDs).Update("id_user_merge", primaryID).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// ------------------------
+// UNMERGE USER
+// ------------------------
+func (r *UserRepository) UnmergeUser(ctx context.Context, userID uint) error {
+	return r.db.WithContext(ctx).Exec("UPDATE `users` SET `id_user_merge` = NULL WHERE `id` = ?", userID).Error
+}
+
+func (r *UserRepository) ensureIdUserMergeColumn(ctx context.Context) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'users'
+		  AND COLUMN_NAME = 'id_user_merge'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := "ALTER TABLE `users` ADD COLUMN `id_user_merge` INT UNSIGNED NULL AFTER `fakultas_unit`"
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *UserRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *UserRepository) SetupUuid(ctx context.Context) error {
+	_ = r.ensureIdUserMergeColumn(ctx)
+	if err := r.ensureUuidColumn(ctx, "users"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

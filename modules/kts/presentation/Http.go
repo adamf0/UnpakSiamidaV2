@@ -17,10 +17,16 @@ import (
 
 	DeleteKts "UnpakSiamida/modules/kts/application/DeleteKts"
 	ExportKts "UnpakSiamida/modules/kts/application/ExportKts"
+	GenerateKts "UnpakSiamida/modules/kts/application/GenerateKts"
 	GetAllKtss "UnpakSiamida/modules/kts/application/GetAllKtss"
 	GetKts "UnpakSiamida/modules/kts/application/GetKts"
+	GetTemuanKts "UnpakSiamida/modules/kts/application/GetTemuanKts"
 	SetupUuidKts "UnpakSiamida/modules/kts/application/SetupUuidKts"
 	UpdateKts "UnpakSiamida/modules/kts/application/UpdateKts"
+
+	"strconv"
+
+	"github.com/google/uuid"
 )
 
 // =======================================================
@@ -389,20 +395,134 @@ func SetupUuidKtssHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
+// GetTemuanKtsHandlerfunc godoc
+// @Summary Get Temuan Kts for Renstra
+// @Tags Kts
+// @Param renstra_uuid path string false "Renstra UUID"
+// @Param tugas query string false "auditor1 | auditor2"
+// @Param tahun query string false "Tahun"
+// @Produce json
+// @Router /kts/temuan/{renstra_uuid} [get]
+func GetTemuanKtsHandlerfunc(c *fiber.Ctx) error {
+	renstraUuid := c.Params("renstra_uuid")
+	if renstraUuid == "" {
+		renstraUuid = c.Query("renstra_uuid")
+	}
+	tugas := c.Query("tugas")
+	tahun := c.Query("tahun")
+
+	query := GetTemuanKts.GetTemuanKtsQuery{
+		RenstraUUID: renstraUuid,
+		Tugas:       tugas,
+		Tahun:       tahun,
+	}
+
+	results, err := mediatr.Send[
+		GetTemuanKts.GetTemuanKtsQuery,
+		[]Ktsdomain.TemuanKts,
+	](context.Background(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(results)
+}
+
+// GenerateKtsHandlerfunc godoc
+// @Summary Generate Kts from Temuan
+// @Tags Kts
+// @Param renstra_nilai_id formData int false "ID Renstra Nilai"
+// @Param dokumen_tambahan_id formData int false "ID Dokumen Tambahan"
+// @Param auditor_id formData string false "Auditor ID"
+// @Produce json
+// @Success 200 {object} map[string]string "uuid of generated Kts"
+// @Router /kts/generate [post]
+func GenerateKtsHandlerfunc(c *fiber.Ctx) error {
+	rnInput := strings.TrimSpace(c.FormValue("renstra_nilai_uuid"))
+	if rnInput == "" {
+		rnInput = strings.TrimSpace(c.FormValue("renstra_nilai_id"))
+	}
+	if rnInput == "" {
+		rnInput = strings.TrimSpace(c.FormValue("renstra_nilai"))
+	}
+
+	dtInput := strings.TrimSpace(c.FormValue("dokumen_tambahan_uuid"))
+	if dtInput == "" {
+		dtInput = strings.TrimSpace(c.FormValue("dokumen_tambahan_id"))
+	}
+	if dtInput == "" {
+		dtInput = strings.TrimSpace(c.FormValue("dokumen_tambahan"))
+	}
+
+	var rnIDPtr *uint
+	var rnUUIDPtr *string
+	if rnInput != "" {
+		if val, err := strconv.ParseUint(rnInput, 10, 32); err == nil && val > 0 {
+			uVal := uint(val)
+			rnIDPtr = &uVal
+		} else {
+			rnUUIDPtr = &rnInput
+		}
+	}
+
+	var dtIDPtr *uint
+	var dtUUIDPtr *string
+	if dtInput != "" {
+		if val, err := strconv.ParseUint(dtInput, 10, 32); err == nil && val > 0 {
+			uVal := uint(val)
+			dtIDPtr = &uVal
+		} else {
+			dtUUIDPtr = &dtInput
+		}
+	}
+
+	auditorID := strings.TrimSpace(c.FormValue("auditor_id"))
+	if auditorID == "" {
+		auditorID = strings.TrimSpace(c.FormValue("sid"))
+	}
+
+	cmd := GenerateKts.GenerateKtsCommand{
+		RenstraNilaiID:      rnIDPtr,
+		RenstraNilaiUUID:    rnUUIDPtr,
+		DokumenTambahanID:   dtIDPtr,
+		DokumenTambahanUUID: dtUUIDPtr,
+		AuditorID:           auditorID,
+	}
+
+	resUUID, err := mediatr.Send[
+		GenerateKts.GenerateKtsCommand,
+		*uuid.UUID,
+	](context.Background(), cmd)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{
+		"uuid": resUUID.String(),
+	})
+}
+
 func ModuleKts(app *fiber.App) {
 	admin := []string{"admin"}
 	audit := []string{"auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/kts/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidKtssHandlerfunc)
+	app.Get("/kts/setupuuid", SetupUuidKtssHandlerfunc)
 	app.Delete("/ks/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteKtsHandlerfunc)
 
 	app.Put("/kts/:tahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), UpdateKtsHandlerfunc)
 
-	app.Get("/Kts/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetKtsHandlerfunc)
-	app.Get("/Ktss", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllKtssHandlerfunc)
+	// Sub-routes must be registered BEFORE generic /Kts/:uuid parameterized route
+	app.Get("/kts/temuan", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTemuanKtsHandlerfunc)
+	app.Get("/kts/temuan/:renstra_uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTemuanKtsHandlerfunc)
+	app.Post("/kts/generate", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), GenerateKtsHandlerfunc)
 
 	app.Get("/kts/publish/:uuid", commonpresentation.JWTMiddleware(), PublishKtsHandlerfunc)
 	app.Get("/kts/preview/:uuid", PreviewKtsHandlerfunc) //private network
 	app.Get("/kts/export/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(audit, whoamiURL), ExportKtsHandlerfunc)
+
+	app.Get("/Ktss", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllKtssHandlerfunc)
+	app.Get("/Kts/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetKtsHandlerfunc)
 }

@@ -7,8 +7,8 @@ import (
 )
 
 type AktivitasProkerDefault struct {
-	Id               uint
-	UUID             uuid.UUID
+	Id               uint       `json:"Id"`
+	UUID             uuid.UUID  `json:"UUID"`
 	FakultasUnitId   uint       `json:"FakultasUnitId"`
 	FakultasUnitUUID *uuid.UUID `json:"FakultasUnitUuid"`
 	FakultasUnit     string     `json:"FakultasUnit"`
@@ -18,10 +18,18 @@ type AktivitasProkerDefault struct {
 
 	MataProgramId   uint       `json:"MataProgramId"`
 	MataProgramUUID *uuid.UUID `json:"MataProgramUuid"`
-	MataProgram     string
+	MataProgram     string     `json:"MataProgram"`
 
-	Aktivitas      string
-	PIC            string
-	TanggalRKAwal  time.Time `gorm:"tanggal_rk_awal"`
-	TanggalRKAkhir time.Time `gorm:"tanggal_rk_akhir"`
+	TahunId   *uint      `json:"TahunId"`
+	TahunUUID *uuid.UUID `json:"TahunUuid"`
+	Tahun     *string    `json:"Tahun"`
+
+	Aktivitas       string     `json:"Aktivitas"`
+	PIC             string     `json:"PIC"`
+	TanggalRKAwal   time.Time  `json:"TanggalRKAwal"`
+	TanggalRKAkhir  time.Time  `json:"TanggalRKAkhir"`
+	StatusRealisasi *string    `json:"StatusRealisasi"`
+	TanggalRAwal    *time.Time `json:"TanggalRAwal"`
+	TanggalRAkhir   *time.Time `json:"TanggalRAkhir"`
+	Detail          *string    `json:"Detail"`
 }

@@ -20,5 +20,7 @@ type IUserRepository interface {
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SetupUuid(ctx context.Context) error
+	MergeUser(ctx context.Context, primaryID uint, secondaryIDs []uint) error
+	UnmergeUser(ctx context.Context, userID uint) error
 	WithTx(ctx context.Context, fn func(txRepo IUserRepositoryTx) error) error
 }

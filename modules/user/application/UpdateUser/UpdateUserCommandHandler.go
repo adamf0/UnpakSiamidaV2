@@ -62,22 +62,25 @@ func (h *UpdateUserCommandHandler) Handle(
 	// -------------------------
 	// HANDLE FakultasUnit (string → int pointer)
 	// -------------------------
-	fakultasUnitUUID := uuid.New()
-	if cmd.UuidFakultasUnit != nil {
-		parsed, err := uuid.Parse(*cmd.UuidFakultasUnit)
+	var fu *int
+	var targetNama *string
+	var targetType *string
+
+	if cmd.UuidFakultasUnit != nil && strings.TrimSpace(*cmd.UuidFakultasUnit) != "" {
+		parsed, err := uuid.Parse(strings.TrimSpace(*cmd.UuidFakultasUnit))
 		if err != nil {
 			return "", domainuser.InvalidParsing("Fakultas Unit")
 		}
-		fakultasUnitUUID = parsed
+		target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, parsed)
+		if err == nil && target != nil {
+			fuId := int(target.ID)
+			fu = &fuId
+			targetNama = &target.Nama
+			targetType = &target.Type
+		}
+	} else if cmd.Level == "fakultas" || cmd.Level == "auditee" {
+		fu = existingUser.FakultasUnit
 	}
-
-	var fu *int
-	fuId := 0
-	target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, fakultasUnitUUID)
-	if target != nil {
-		fuId = int(target.ID)
-	}
-	fu = &fuId
 
 	// -------------------------
 	// AGGREGATE ROOT LOGIC
@@ -91,8 +94,8 @@ func (h *UpdateUserCommandHandler) Handle(
 		cmd.Email,
 		cmd.Level,
 		fu,
-		&target.Nama,
-		&target.Type,
+		targetNama,
+		targetType,
 	)
 
 	if !result.IsSuccess {

@@ -1,0 +1,43 @@
+# Git and CI
+.git
+.github
+.gitignore
+
+# Local binaries
+app
+*.exe
+*.test
+*.out
+test_linux_bin
+app_test_bin
+
+# Environment & Sensitive files
+.env
+*.pem
+*.key
+
+# Database dumps & backup files
+*.sql
+*.sql.gz
+dump-*
+backup_*
+
+# Uploaded files & temporary storage
+upload/
+tmp/
+scratch/
+.DS_Store
+
+# Logs
+*.log
+request.log
+
+# Test coverage
+coverage/
+
+# Documentation & notes
+docs/
+*.md
+*.txt
+note
+ws_tes.html

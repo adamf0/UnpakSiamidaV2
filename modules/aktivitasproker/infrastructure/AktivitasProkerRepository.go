@@ -67,13 +67,21 @@ func (r *AktivitasProkerRepository) GetDefaultByUuid(
 		a.id_mata_program as MataProgramId,
 		mp.uuid as MataProgramUUID,
 		mp.mata_program as MataProgram,
+		mp.id_master_tahun as TahunId,
+		mt.uuid as TahunUUID,
+		mt.tahun as Tahun,
 		a.aktivitas as Aktivitas,
 		a.PIC as PIC,
 		a.target_rk_awal as TanggalRKAwal,
-		a.target_rk_akhir as TanggalRKAkhir
+		a.target_rk_akhir as TanggalRKAkhir,
+		a.status_realisasi as StatusRealisasi,
+		a.target_r_awal as TanggalRAwal,
+		a.target_r_akhir as TanggalRAkhir,
+		a.detail as Detail
 	`).
 		Joins("JOIN v_fakultas_unit vfu ON a.id_fakultas_unit = vfu.id").
 		Joins("JOIN mata_program mp ON a.id_mata_program = mp.id").
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 		Where("a.uuid = ?", id).
 		Take(&rowData).Error
 
@@ -89,7 +97,20 @@ func (r *AktivitasProkerRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"target": "vfu.nama_fak_prod_unit",
+	"target":           "vfu.nama_fak_prod_unit",
+	"fakultasunit":     "vfu.nama_fak_prod_unit",
+	"fakultasunituuid": "vfu.uuid",
+	"id_fakultas_unit": "a.id_fakultas_unit",
+	"fakultasunitid":   "a.id_fakultas_unit",
+	"mataprogram":      "mp.mata_program",
+	"mataprogramuuid":  "mp.uuid",
+	"aktivitas":        "a.aktivitas",
+	"pic":              "a.PIC",
+	"tahun":            "mt.tahun",
+	"tahunuuid":        "mt.uuid",
+	"status_realisasi": "a.status_realisasi",
+	"statusrealisasi":  "a.status_realisasi",
+	"detail":           "a.detail",
 }
 
 // ------------------------
@@ -107,7 +128,6 @@ func (r *AktivitasProkerRepository) GetAll(
 
 	db := r.db.WithContext(ctx).
 		Table("aktivitas a").
-		Table("aktivitas a").
 		Select(`
 		a.id as ID,
 		a.uuid as UUID,
@@ -120,28 +140,63 @@ func (r *AktivitasProkerRepository) GetAll(
 		a.id_mata_program as MataProgramId,
 		mp.uuid as MataProgramUUID,
 		mp.mata_program as MataProgram,
+		mp.id_master_tahun as TahunId,
+		mt.uuid as TahunUUID,
+		mt.tahun as Tahun,
 		a.aktivitas as Aktivitas,
 		a.PIC as PIC,
 		a.target_rk_awal as TanggalRKAwal,
-		a.target_rk_akhir as TanggalRKAkhir
+		a.target_rk_akhir as TanggalRKAkhir,
+		a.status_realisasi as StatusRealisasi,
+		a.target_r_awal as TanggalRAwal,
+		a.target_r_akhir as TanggalRAkhir,
+		a.detail as Detail
 	`).
 		Joins("JOIN v_fakultas_unit vfu ON a.id_fakultas_unit = vfu.id").
-		Joins("JOIN mata_program mp ON a.id_mata_program = mp.id")
+		Joins("JOIN mata_program mp ON a.id_mata_program = mp.id").
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id")
 
 	// -----------------------------------
 	// ADVANCED FILTERS
 	// -----------------------------------
 	for _, f := range searchFilters {
-		col, ok := allowedSearchColumns[strings.ToLower(f.Field)]
-		if !ok {
-			continue
-		}
-
+		fieldLower := strings.ToLower(strings.TrimSpace(f.Field))
 		val := ""
 		if f.Value != nil {
 			val = strings.TrimSpace(*f.Value)
 		}
 		if val == "" {
+			continue
+		}
+
+		if fieldLower == "sid" {
+			var userRow struct {
+				Level        string `gorm:"column:level"`
+				FakultasUnit *uint  `gorm:"column:fakultas_unit"`
+			}
+			if err := r.db.WithContext(ctx).
+				Table("users").
+				Select("level, fakultas_unit").
+				Where("uuid = ?", val).
+				Take(&userRow).Error; err == nil {
+				if strings.ToLower(strings.TrimSpace(userRow.Level)) != "admin" {
+					if userRow.FakultasUnit != nil && *userRow.FakultasUnit > 0 {
+						db = db.Where("a.id_fakultas_unit = ?", *userRow.FakultasUnit)
+					} else {
+						db = db.Where("1 = 0")
+					}
+				}
+			}
+			continue
+		}
+
+		if (fieldLower == "status_realisasi" || fieldLower == "status") && strings.ToLower(val) == "belum_dilaporkan" {
+			db = db.Where("(a.status_realisasi IS NULL OR a.status_realisasi = '')")
+			continue
+		}
+
+		col, ok := allowedSearchColumns[fieldLower]
+		if !ok {
 			continue
 		}
 
@@ -250,7 +305,34 @@ func (r *AktivitasProkerRepository) Delete(ctx context.Context, uid uuid.UUID) e
 		Delete(&domainaktivitasproker.AktivitasProker{}).Error
 }
 
+func (r *AktivitasProkerRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *AktivitasProkerRepository) SetupUuid(ctx context.Context) error {
+	if err := r.ensureUuidColumn(ctx, "aktivitas"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

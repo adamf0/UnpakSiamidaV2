@@ -244,7 +244,7 @@ func ModuleStandarRenstra(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/standarrenstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidStandarRenstrasHandlerfunc)
+	app.Get("/standarrenstra/setupuuid", SetupUuidStandarRenstrasHandlerfunc)
 
 	app.Post("/standarrenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateStandarRenstraHandlerfunc)
 	app.Put("/standarrenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateStandarRenstraHandlerfunc)

@@ -70,7 +70,7 @@ func RegisterModuleMataProgram(db *gorm.DB) error {
 
 	mediatr.RegisterRequestHandler[
 		getAll.GetAllMataProgramsQuery,
-		commondomain.Paged[domainMataProgram.MataProgram],
+		commondomain.Paged[domainMataProgram.MataProgramDefault],
 	](&getAll.GetAllMataProgramsQueryHandler{
 		Repo: repoMataProgram,
 	})

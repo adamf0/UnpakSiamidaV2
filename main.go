@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -34,6 +38,10 @@ import (
 	aktivitasprokerInfrastructure "UnpakSiamida/modules/aktivitasproker/infrastructure"
 
 	aktivitasprokerPresentation "UnpakSiamida/modules/aktivitasproker/presentation"
+
+	dokumenprokerInfrastructure "UnpakSiamida/modules/dokumenproker/infrastructure"
+
+	dokumenprokerPresentation "UnpakSiamida/modules/dokumenproker/presentation"
 
 	laporanInfrastructure "UnpakSiamida/modules/laporan/infrastructure"
 
@@ -103,6 +111,18 @@ import (
 
 	ktsPresentation "UnpakSiamida/modules/kts/presentation"
 
+	swotInfrastructure "UnpakSiamida/modules/swot/infrastructure"
+
+	swotPresentation "UnpakSiamida/modules/swot/presentation"
+
+	riskassessmentInfrastructure "UnpakSiamida/modules/riskassessment/infrastructure"
+
+	riskassessmentPresentation "UnpakSiamida/modules/riskassessment/presentation"
+
+	prokerv3Infrastructure "UnpakSiamida/modules/prokerv3/infrastructure"
+
+	prokerv3Presentation "UnpakSiamida/modules/prokerv3/presentation"
+
 	/////////
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -138,16 +158,18 @@ func mustStart(name string, fn func() error) {
 // @host localhost:3000
 // @BasePath /
 func main() {
+	loadEnv(".env")
 	cfg := commonpresentation.DefaultHeaderSecurityConfig()
 	cfg.ResolveAndCheck = false
 
 	app := fiber.New(fiber.Config{
-		// DisableStartupMessage: true,
-		ReadBufferSize: 16 * 1024,
+		// BodyLimit 150 MB to prevent 413 Request Entity Too Large during document uploads
+		BodyLimit:      150 * 1024 * 1024,
+		ReadBufferSize: 32 * 1024,
 		// Prefork:        true, // gunakan semua CPU cores
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  10 * time.Second,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	})
 	// app.Use(recover())
 	app.Use(cors.New(cors.Config{
@@ -285,8 +307,24 @@ func main() {
 		return aktivitasprokerInfrastructure.RegisterModuleAktivitasProker(db)
 	})
 
+	mustStart("Dokumen Proker Module", func() error { //buat pelaporan dokumen
+		return dokumenprokerInfrastructure.RegisterModuleDokumenProker(db)
+	})
+
 	mustStart("Laporan Module", func() error { //buat audit
 		return laporanInfrastructure.RegisterModuleLaporan(db)
+	})
+
+	mustStart("Swot Module", func() error {
+		return swotInfrastructure.RegisterModuleSwot(db)
+	})
+
+	mustStart("Risk Assessment Module", func() error {
+		return riskassessmentInfrastructure.RegisterModuleRiskAssessment(db)
+	})
+
+	mustStart("Proker V3 Module", func() error {
+		return prokerv3Infrastructure.RegisterModuleProkerV3(db)
 	})
 
 	if len(startupErrors) > 0 {
@@ -327,7 +365,20 @@ func main() {
 	mataprogramPresentation.ModuleMataProgram(app)
 	jadwalprokerPresentation.ModuleJadwalProker(app)
 	aktivitasprokerPresentation.ModuleAktivitasProker(app)
+	dokumenprokerPresentation.ModuleDokumenProker(app)
 	laporanPresentation.ModuleMonitoringProker(app)
+	swotPresentation.ModuleSwot(app)
+	riskassessmentPresentation.ModuleRiskAssessment(app, db)
+	prokerv3Presentation.ModuleProkerV3(app, db)
+
+	app.Static("/upload", "./upload")
+	app.Get("/upload/*", func(c *fiber.Ctx) error {
+		legacyPath := filepath.Join("/Applications/XAMPP/xamppfiles/htdocs/unpak_jamintu_lpmi/public/upload", c.Params("*"))
+		if _, err := os.Stat(legacyPath); err == nil {
+			return c.SendFile(legacyPath)
+		}
+		return c.Status(404).SendString("File not found")
+	})
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -374,7 +425,35 @@ func NewMySQL() (*gorm.DB, error) {
 	var err error
 
 	once.Do(func() {
-		dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
+		loadEnv(".env")
+		dsn := os.Getenv("MYSQL_DSN")
+		if dsn == "" {
+			dsn = os.Getenv("DB_DSN")
+		}
+		if dsn == "" && (os.Getenv("DB_HOST") != "" || os.Getenv("DB_NAME") != "") {
+			user := os.Getenv("DB_USER")
+			if user == "" {
+				user = "root"
+			}
+			pass := os.Getenv("DB_PASS")
+			if pass == "" {
+				pass = os.Getenv("DB_PASSWORD")
+			}
+			host := os.Getenv("DB_HOST")
+			if host == "" {
+				host = "127.0.0.1"
+			}
+			port := os.Getenv("DB_PORT")
+			if port == "" {
+				port = "3306"
+			}
+			name := os.Getenv("DB_NAME")
+			dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local", user, pass, host, port, name)
+		}
+		if dsn == "" {
+			err = errors.New("mysql dsn env (MYSQL_DSN) not configured")
+			return
+		}
 
 		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 		if err != nil {
@@ -392,9 +471,45 @@ func NewMySQL() (*gorm.DB, error) {
 	return db, err
 }
 
+func loadEnv(filename string) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, val, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		val = strings.TrimSpace(val)
+		val = strings.Trim(val, `"'`)
+		if key != "" && os.Getenv(key) == "" {
+			_ = os.Setenv(key, val)
+		}
+	}
+}
+
 func NewRedisStore() *commoninfra.RedisStore {
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		host := os.Getenv("REDIS_HOST")
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port := os.Getenv("REDIS_PORT")
+		if port == "" {
+			port = "6379"
+		}
+		redisAddr = host + ":" + port
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisAddr,
 		DB:   0,
 	})
 

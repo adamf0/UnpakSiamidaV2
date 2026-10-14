@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 
 	domainaktivitasproker "UnpakSiamida/modules/aktivitasproker/domain"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
@@ -35,9 +37,14 @@ func (h *UpdateAktivitasProkerCommandHandler) Handle(
 		return "", domainaktivitasproker.InvalidUuid()
 	}
 
-	uuidFakultas, err := uuid.Parse(cmd.FakultasUuid)
-	if err != nil {
-		return "", domainaktivitasproker.InvalidFakultas()
+	var fakultasID uint
+	uuidFakultas, errFakultasUuid := uuid.Parse(strings.TrimSpace(cmd.FakultasUuid))
+	if errFakultasUuid != nil {
+		parsedID, errConv := strconv.ParseUint(strings.TrimSpace(cmd.FakultasUuid), 10, 64)
+		if errConv != nil || parsedID == 0 {
+			return "", domainaktivitasproker.InvalidFakultas()
+		}
+		fakultasID = uint(parsedID)
 	}
 
 	uuidMataProgram, err := uuid.Parse(cmd.MataProgramUuid)
@@ -69,25 +76,28 @@ func (h *UpdateAktivitasProkerCommandHandler) Handle(
 		return nil
 	})
 
-	// query FakultasUnit
-	g.Go(func() error {
-		var err error
-		fakultas, err = h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultas)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domainaktivitasproker.NotFoundFakultas()
+	// query FakultasUnit if UUID was provided
+	if errFakultasUuid == nil {
+		g.Go(func() error {
+			var err error
+			fakultas, err = h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultas)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return domainaktivitasproker.NotFoundFakultas()
+				}
+				return err
 			}
-			return err
-		}
-		return nil
-	})
+			fakultasID = fakultas.ID
+			return nil
+		})
+	}
 
 	g.Go(func() error {
 		var err error
 		mataprogram, err = h.RepoMataProgram.GetDefaultByUuid(ctxg, uuidMataProgram)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return domainaktivitasproker.NotFoundFakultas()
+				return domainaktivitasproker.NotFoundMataProgram()
 			}
 			return err
 		}
@@ -104,7 +114,7 @@ func (h *UpdateAktivitasProkerCommandHandler) Handle(
 		existingAktivitasProker,
 		uuidAktivitasProker,
 		mataprogram.Id,
-		fakultas.ID,
+		fakultasID,
 		cmd.Aktivitas,
 		cmd.PIC,
 		cmd.TanggalRKAwal,

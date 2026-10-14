@@ -237,7 +237,34 @@ func (r *JadwalProkerRepository) Delete(ctx context.Context, uid uuid.UUID) erro
 		Delete(&domainJadwalProker.JadwalProker{}).Error
 }
 
+func (r *JadwalProkerRepository) ensureUuidColumn(ctx context.Context, tableName string) error {
+	var colCount int64
+	checkSQL := `
+		SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = ?
+		  AND COLUMN_NAME = 'uuid'
+	`
+	if err := r.db.WithContext(ctx).Raw(checkSQL, tableName).Scan(&colCount).Error; err != nil {
+		return err
+	}
+
+	if colCount == 0 {
+		alterSQL := fmt.Sprintf("ALTER TABLE `%s` ADD COLUMN `uuid` CHAR(36) NULL AFTER `id`", tableName)
+		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *JadwalProkerRepository) SetupUuid(ctx context.Context) error {
+	if err := r.ensureUuidColumn(ctx, "jadwal_proker"); err != nil {
+		return err
+	}
+
 	const chunkSize = 500
 
 	var ids []uint

@@ -38,7 +38,7 @@ func UpdateTemplateRenstraCommandValidation(cmd UpdateTemplateRenstraCommand) er
 		),
 		validation.Field(&cmd.Klasifikasi,
 			validation.Required.Error("Klasifikasi cannot be blank"),
-			validation.In("minor", "major").Error("Klasifikasi invalid value"),
+			validation.In("minor", "major", "observe").Error("Klasifikasi invalid value"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 		// validation.Field(&cmd.Target,

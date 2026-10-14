@@ -114,53 +114,7 @@ func (r *LaporanRepository) GetMonitoringIndikatorByIndikatorTahun(
 	tahun string,
 	page, limit *int,
 ) ([]domainlaporan.MonitoringIndikator, int64, error) {
-	var result = make([]domainlaporan.MonitoringIndikator, 0)
-	var total int64
-
-	db := r.db.WithContext(ctx).
-		Table("renstra_nilai rn").
-		Select(`
-		r.tahun as Tahun,
-		r.fakultas_unit as FakultasUnitId,
-		vfu.uuid as FakultasUnitUuid,
-		vfu.nama_fak_prod_unit as FakultasUnit,
-		vfu.jenjang as Jenjang,
-		vfu.type as Type,
-		vfu.fakultas as Fakultas,
-		mir.id as IndikatorId,
-		mir.uuid as IndikatorUuid,
-		mir.indikator as Indikator,
-		mir.tipe_target as TipeTarget,
-		rn.capaian as Capaian,
-		rn.capaian_auditor as CapaianAuditor
-	`).
-		Joins("JOIN renstra r ON rn.id_renstra = r.id").
-		Joins("JOIN template_renstra tr ON rn.template_renstra = tr.id").
-		Joins("JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
-		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
-		Where("mir.uuid = ? AND r.tahun = ?", uuidIndikator.String(), tahun).
-		Order("vfu.id ASC")
-
-	// Hitung total
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	// Pagination
-	if page != nil && limit != nil && *limit > 0 {
-		p := *page
-		l := *limit
-		if p < 1 {
-			p = 1
-		}
-		offset := (p - 1) * l
-		db = db.Limit(l).Offset(offset)
-	}
-
-	// Order & eksekusi query
-	if err := db.Scan(&result).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return result, total, nil
+	adapter := GetLaporanAdapter(r.db, tahun)
+	return adapter.GetMonitoringIndikator(ctx, uuidIndikator, tahun, page, limit)
 }
+

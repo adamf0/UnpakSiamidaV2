@@ -82,18 +82,60 @@ var (
 )
 
 type Account struct {
-	UUID         string      `json:"uuid"`
-	NidnUsername string      `json:"nidn_username"`
-	Password     string      `json:"password"`
-	Level        string      `json:"level"`
-	Name         string      `json:"name"`
-	Email        string      `json:"email"`
-	FakultasUnit string      `json:"fakultas_unit"`
-	ExtraRole    []ExtraRole `gorm:"-" json:"extrarole,omitempty"`
+	UUID         string      `json:"UUID"`
+	NidnUsername string      `json:"Username"`
+	Password     string      `json:"Password"`
+	Level        string      `json:"Level"`
+	Name         string      `json:"Name"`
+	Email        string      `json:"Email"`
+	FakultasUnit string      `json:"FakultasUnit"`
+	ExtraRole    []ExtraRole `gorm:"-" json:"ExtraRole,omitempty"`
 }
 type ExtraRole struct {
 	Tahun string `json:"tahun"`
 	Role  string `json:"role"`
+}
+
+func (a *Account) UnmarshalJSON(data []byte) error {
+	type Alias Account
+	aux := &struct {
+		UuidLower         *string     `json:"uuid"`
+		NidnUsernameLower *string     `json:"nidn_username"`
+		PasswordLower     *string     `json:"password"`
+		LevelLower        *string     `json:"level"`
+		NameLower         *string     `json:"name"`
+		EmailLower        *string     `json:"email"`
+		FakultasUnitLower *string     `json:"fakultas_unit"`
+		ExtraRoleLower    []ExtraRole `json:"extrarole,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(a),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if a.UUID == "" && aux.UuidLower != nil {
+		a.UUID = *aux.UuidLower
+	}
+	if a.NidnUsername == "" && aux.NidnUsernameLower != nil {
+		a.NidnUsername = *aux.NidnUsernameLower
+	}
+	if a.Level == "" && aux.LevelLower != nil {
+		a.Level = *aux.LevelLower
+	}
+	if a.Name == "" && aux.NameLower != nil {
+		a.Name = *aux.NameLower
+	}
+	if a.Email == "" && aux.EmailLower != nil {
+		a.Email = *aux.EmailLower
+	}
+	if a.FakultasUnit == "" && aux.FakultasUnitLower != nil {
+		a.FakultasUnit = *aux.FakultasUnitLower
+	}
+	if len(a.ExtraRole) == 0 && len(aux.ExtraRoleLower) > 0 {
+		a.ExtraRole = aux.ExtraRoleLower
+	}
+	return nil
 }
 
 // =======================
@@ -302,15 +344,20 @@ func JWTMiddleware() fiber.Handler {
 		if err != nil {
 			return err
 		}
+		if tokenStr == "" {
+			return nil
+		}
 
 		token, err := parseJWT(tokenStr)
 		if err != nil {
-			return err
+			return c.Status(400).
+				JSON(commoninfra.NewResponseError(logCommonTokenLabel, err.Error()))
 		}
 
 		claims, err := validateClaims(token)
 		if err != nil {
-			return err
+			return c.Status(400).
+				JSON(commoninfra.NewResponseError(logCommonTokenLabel, err.Error()))
 		}
 
 		injectRequestValues(c, claims, tokenStr)
@@ -320,7 +367,7 @@ func JWTMiddleware() fiber.Handler {
 }
 
 func extractBearerToken(c *fiber.Ctx) (string, error) {
-	authHeader := c.Get("Authorization")
+	authHeader := strings.TrimSpace(c.Get("Authorization"))
 	log.Printf("Authorization header: %s", authHeader)
 
 	if authHeader == "" {
@@ -336,7 +383,13 @@ func extractBearerToken(c *fiber.Ctx) (string, error) {
 			JSON(commoninfra.NewResponseError(logCommonRbac, "authorization header format must be Bearer token"))
 	}
 
-	token := parts[1]
+	token := strings.TrimSpace(parts[1])
+	if token == "" || token == "undefined" || token == "null" {
+		log.Println("Authorization token is invalid or missing")
+		return "", c.Status(400).
+			JSON(commoninfra.NewResponseError(logCommonRbac, "authorization token is invalid"))
+	}
+
 	log.Printf("Token: %s", token)
 	return token, nil
 }
@@ -390,6 +443,18 @@ func getTahun(c *fiber.Ctx) string {
 	return c.Query("ctxtahun")
 }
 
+func hasAnyRoleInWhitelist(user *Account, whitelist []string) bool {
+	if roleInWhitelist(user.Level, whitelist) {
+		return true
+	}
+	for _, r := range user.ExtraRole {
+		if roleInWhitelist(r.Role, whitelist) {
+			return true
+		}
+	}
+	return false
+}
+
 func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -397,23 +462,62 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		if err != nil {
 			return err
 		}
+		if token == "" {
+			return nil
+		}
 
 		user, err := fetchWhoAmI(token, whoamiURL, c)
 		if err != nil {
 			return err
 		}
 
+		if !isAdmin(user) {
+			c.Request().PostArgs().Set("fakultas_unit", user.FakultasUnit)
+			c.Request().PostArgs().Set("target", user.FakultasUnit)
+		} else {
+			if len(c.Request().PostArgs().Peek("fakultas_unit")) == 0 && user.FakultasUnit != "" {
+				c.Request().PostArgs().Set("fakultas_unit", user.FakultasUnit)
+			}
+			if len(c.Request().PostArgs().Peek("target")) == 0 && user.FakultasUnit != "" {
+				c.Request().PostArgs().Set("target", user.FakultasUnit)
+			}
+		}
+		c.Request().PostArgs().Set("level", user.Level)
+		c.Request().PostArgs().Set("username", user.NidnUsername)
+		c.Request().PostArgs().Set("name", user.Name)
+		c.Request().PostArgs().Set("user_uuid", user.UUID)
+
+		c.Locals("user", user)
+		c.Locals("fakultas_unit", user.FakultasUnit)
+		c.Locals("target", user.FakultasUnit)
+		c.Locals("level", user.Level)
+
 		if isAdmin(user) {
 			log.Println("[RBAC] User is admin, access granted")
 			return c.Next()
 		}
 
-		tahun, err := validateTahun(c)
+		tahun := getTahun(c)
+		if tahun == "" {
+			if len(whitelist) == 0 || hasAnyRoleInWhitelist(user, whitelist) {
+				log.Println("[RBAC] Access granted without tahun")
+				return c.Next()
+			}
+			log.Println("[RBAC] Access denied: role not in whitelist")
+			return c.Status(400).
+				JSON(commoninfra.NewResponseError(logCommonRbac, "Access denied"))
+		}
+
+		tahun, err = validateTahun(c)
 		if err != nil {
 			return err
 		}
 
 		hasAccess, grantedAccess := checkRoleAccess(user, tahun, whitelist)
+		if !hasAccess && roleInWhitelist(user.Level, whitelist) {
+			hasAccess = true
+		}
+
 		if !hasAccess {
 			log.Println("[RBAC] Access denied")
 			return c.Status(400).

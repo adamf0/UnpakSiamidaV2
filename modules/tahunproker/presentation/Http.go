@@ -253,11 +253,18 @@ func ModuleTahunProker(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/tahunproker/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidTahunProkersHandlerfunc)
+	app.Get("/tahunproker/setupuuid", SetupUuidTahunProkersHandlerfunc)
 
 	app.Post("/tahunproker", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTahunProkerHandlerfunc)
 	app.Put("/tahunproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateTahunProkerHandlerfunc)
 	app.Delete("/tahunproker/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTahunProkerHandlerfunc)
 	app.Get("/tahunproker/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTahunProkerHandlerfunc)
 	app.Get("/tahunprokers", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTahunProkersHandlerfunc)
+
+	// Alias routes for master_tahun / mastertahun
+	app.Post("/mastertahun", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTahunProkerHandlerfunc)
+	app.Put("/mastertahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateTahunProkerHandlerfunc)
+	app.Delete("/mastertahun/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTahunProkerHandlerfunc)
+	app.Get("/mastertahun/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTahunProkerHandlerfunc)
+	app.Get("/mastertahuns", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTahunProkersHandlerfunc)
 }

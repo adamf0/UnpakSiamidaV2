@@ -244,10 +244,10 @@ func SetupUuidRenstraNilaisHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleRenstraNilai(app *fiber.App) {
 	admin := []string{"admin"}
-	audit := []string{"auditee", "auditor1", "auditor2"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/renstranilai/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidRenstraNilaisHandlerfunc)
+	app.Get("/renstranilai/setupuuid", SetupUuidRenstraNilaisHandlerfunc)
 
 	//hanya admin
 	app.Delete("/renstranilai/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteRenstraNilaiHandlerfunc)

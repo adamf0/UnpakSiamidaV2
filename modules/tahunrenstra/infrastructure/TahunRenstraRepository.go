@@ -162,5 +162,22 @@ func (r *TahunRenstraRepository) GetAll(
 		return nil, 0, err
 	}
 
+	// Pastikan tahun 2023 selalu muncul di list
+	has2023 := false
+	for _, t := range TahunRenstras {
+		if t.Tahun == "2023" {
+			has2023 = true
+			break
+		}
+	}
+	if !has2023 {
+		TahunRenstras = append(TahunRenstras, domainTahunRenstra.TahunRenstra{
+			Tahun:  "2023",
+			Status: "no-active",
+		})
+		total++
+	}
+
 	return TahunRenstras, total, nil
 }
+

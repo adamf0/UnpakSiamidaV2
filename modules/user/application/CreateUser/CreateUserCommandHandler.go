@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
@@ -25,36 +26,23 @@ func (h *CreateUserCommandHandler) Handle(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	fakultasUnitUUID := uuid.New()
-	if cmd.UuidFakultasUnit != nil {
-		parsed, err := uuid.Parse(*cmd.UuidFakultasUnit)
+	var fu *int
+	var targetNama *string
+	var targetType *string
+
+	if cmd.UuidFakultasUnit != nil && strings.TrimSpace(*cmd.UuidFakultasUnit) != "" {
+		parsed, err := uuid.Parse(strings.TrimSpace(*cmd.UuidFakultasUnit))
 		if err != nil {
 			return "", domainuser.InvalidParsing("Fakultas Unit")
 		}
-		fakultasUnitUUID = parsed
+		target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, parsed)
+		if err == nil && target != nil {
+			fuId := int(target.ID)
+			fu = &fuId
+			targetNama = &target.Nama
+			targetType = &target.Type
+		}
 	}
-
-	var fu *int
-	fuId := 0
-	target, err := h.RepoFakultasUnit.GetDefaultByUuid(ctx, fakultasUnitUUID)
-	if target != nil {
-		fuId = int(target.ID)
-	}
-	fu = &fuId
-
-	// if cmd.FakultasUnit != nil {
-	// 	raw := strings.TrimSpace(*cmd.FakultasUnit)
-
-	// 	if raw != "" {
-	// 		parsed, err := strconv.ParseInt(raw, 10, 64)
-	// 		if err != nil {
-	// 			return "", err
-	// 		}
-
-	// 		v := int(parsed)
-	// 		fu = &v
-	// 	}
-	// }
 
 	result := domainuser.NewUser(
 		cmd.Username,
@@ -63,8 +51,8 @@ func (h *CreateUserCommandHandler) Handle(
 		cmd.Email,
 		cmd.Level,
 		fu,
-		&target.Nama,
-		&target.Type,
+		targetNama,
+		targetType,
 	)
 
 	//[pr] event dispatch
@@ -75,7 +63,7 @@ func (h *CreateUserCommandHandler) Handle(
 
 	createUser := result.Value
 
-	err = h.Repo.WithTx(ctx, func(txRepo domainuser.IUserRepositoryTx) error {
+	err := h.Repo.WithTx(ctx, func(txRepo domainuser.IUserRepositoryTx) error {
 
 		if err := txRepo.Create(ctx, createUser); err != nil {
 			return err

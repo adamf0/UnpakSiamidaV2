@@ -27,6 +27,8 @@ type Kts struct {
 	NomorLaporan     *string    `gorm:"column:nomor_laporan"`
 	TanggalLaporan   *time.Time `gorm:"column:tanggal_laporan;type:date"`
 	Auditor          *string    `gorm:"column:auditor"`
+	Referensi        *string    `gorm:"column:referensi"`
+	HasilTemuan      *string    `gorm:"column:hasil_temuan"`
 	KetidaksesuaianP *string    `gorm:"column:uraian_ketidaksesuaian_p"`
 	KetidaksesuaianL *string    `gorm:"column:uraian_ketidaksesuaian_l"`
 	KetidaksesuaianO *string    `gorm:"column:uraian_ketidaksesuaian_o"`
@@ -34,6 +36,7 @@ type Kts struct {
 	AkarMasalah      *string    `gorm:"column:akar_masalah"`
 	TindakanKoreksi  *string    `gorm:"column:tindakan_koreksi"`
 	AccAuditor       *uint      `gorm:"column:acc_auditor"`
+
 
 	// auditee
 	StatusAccAuditee  *uint   `gorm:"column:status_acc_auditee"`

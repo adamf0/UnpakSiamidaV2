@@ -15,9 +15,9 @@ type IMataProgramRepository interface {
 		search string,
 		searchFilters []commonDomain.SearchFilter,
 		page, limit *int,
-	) ([]MataProgram, int64, error)
-	Create(ctx context.Context, tahunproker *MataProgram) error
-	Update(ctx context.Context, tahunproker *MataProgram) error
+	) ([]MataProgramDefault, int64, error)
+	Create(ctx context.Context, mataprogram *MataProgram) error
+	Update(ctx context.Context, mataprogram *MataProgram) error
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SetupUuid(ctx context.Context) error
 }

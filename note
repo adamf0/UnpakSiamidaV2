@@ -1,0 +1,6 @@
+review ulang:
+-semua modul belum ada soft delete, ini ada kaitannya menjaga data tetap ada dalam keadaan apapun
+cuman ada 1 masalah yaitu jika data indikator di softdelete dan buat indikator baru dengan data yg sama, dalam pengecekan uniq akan jadi masalah karena indikator di tahun tersebut sudah ada sebelumnya (keadaan pencarian deleted at is null || not null)
+solusi yg terpikirkan tidak pakai deleted at namun di semua relasi di hapus dengan catatan operasi CUD tertangkap di outboxpattern dan notif ke telegram agar bisa di trace
+
+-masalah generate renstra ini masih mengadopsi yg lama, perlu tinjau lagi apakah perlu ganti konsep atau tidak. konsep lama mengandalkan bulk tanpa bisa di trace sama sekali.

@@ -422,7 +422,7 @@ func ModuleRenstra(app *fiber.App) {
 	audit := []string{"auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
-	app.Get("/renstra/setupuuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SetupUuidRenstrasHandlerfunc)
+	app.Get("/renstra/setupuuid", SetupUuidRenstrasHandlerfunc)
 
 	app.Post("/renstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateRenstraHandlerfunc)
 	app.Put("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateRenstraHandlerfunc)
