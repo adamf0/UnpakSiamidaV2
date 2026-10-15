@@ -373,7 +373,11 @@ func main() {
 
 	app.Static("/upload", "./upload")
 	app.Get("/upload/*", func(c *fiber.Ctx) error {
-		legacyPath := filepath.Join("/Applications/XAMPP/xamppfiles/htdocs/unpak_jamintu_lpmi/public/upload", c.Params("*"))
+		path := os.Getenv("PATH")
+		if path == "" {
+			path = "/Applications/XAMPP/xamppfiles/htdocs/unpak_jamintu_lpmi/public/upload"
+		}
+		legacyPath := filepath.Join(path, c.Params("*"))
 		if _, err := os.Stat(legacyPath); err == nil {
 			return c.SendFile(legacyPath)
 		}
