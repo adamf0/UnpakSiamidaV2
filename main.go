@@ -398,7 +398,9 @@ func main() {
 
 	app.Get("/swagger/*", swagger.HandlerDefault)
 	go commoninfra.StartOutboxWorker(ctx, outboxProcessor)
-	app.Listen(":3000")
+	if err := app.Listen(":3000"); err != nil {
+		fmt.Printf("Server listen error: %v\n", err)
+	}
 }
 
 type ValidationBehavior struct{}

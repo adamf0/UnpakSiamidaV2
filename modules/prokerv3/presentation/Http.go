@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -2269,7 +2268,6 @@ func GetAktivitasDetailHandler(db *gorm.DB) fiber.Handler {
 	}
 }
 
-var ensureDokumenOnce sync.Once
 
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
@@ -2290,77 +2288,6 @@ func copyFile(src, dst string) error {
 	return out.Sync()
 }
 
-func ensureDokumenTable(ctx context.Context, db *gorm.DB) {
-	ensureDokumenOnce.Do(func() {
-		_ = db.AutoMigrate(&domain.MatrixProkerDokumen{})
-		_ = db.WithContext(ctx).Exec(`
-			CREATE TABLE IF NOT EXISTS matrix_proker_dokumen (
-				id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-				uuid VARCHAR(36) NOT NULL UNIQUE,
-				id_matrik_proker BIGINT UNSIGNED NOT NULL,
-				jenis_dokumen VARCHAR(100) NOT NULL,
-				nama_file VARCHAR(255) NOT NULL,
-				file VARCHAR(500) NOT NULL,
-				file_url VARCHAR(500) NOT NULL,
-				file_size BIGINT DEFAULT 0,
-				file_type VARCHAR(100) DEFAULT '',
-				status_verifikasi VARCHAR(100) DEFAULT 'belum_terverifikasi',
-				catatan TEXT NULL,
-				catatan_penolakan TEXT NULL,
-				keterangan TEXT NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-				deleted_at DATETIME NULL,
-				KEY idx_matrik_proker (id_matrik_proker),
-				KEY idx_deleted_at (deleted_at)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-		`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN catatan TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN catatan_penolakan TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN keterangan TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status VARCHAR(50) DEFAULT 'draft';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_verifikator VARCHAR(50) DEFAULT 'draft';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_verifikator TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_anggaran VARCHAR(50) DEFAULT 'menunggu_verifikator';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_anggaran TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN realisasi DOUBLE NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_penolakan TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status VARCHAR(50) DEFAULT 'draft';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_penolakan TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status_verifikator VARCHAR(50) DEFAULT 'draft';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_verifikator TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status_anggaran VARCHAR(50) DEFAULT 'menunggu_verifikator';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_anggaran TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upml_at DATETIME NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upmf_at DATETIME NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upms_at DATETIME NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upml VARCHAR(50) DEFAULT 'menunggu';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upmf VARCHAR(50) DEFAULT 'menunggu';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upms VARCHAR(50) DEFAULT 'menunggu';`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upml TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upmf TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upms TEXT NULL;`).Error
-		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upml = 'menunggu' WHERE status_upml IS NULL OR status_upml = '';`).Error
-		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upms = 'menunggu' WHERE status_upms IS NULL OR status_upms = '';`).Error
-		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upmf = 'menunggu' WHERE (status_upmf IS NULL OR status_upmf = '');`).Error
-		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upml = 'disetujui', status_upms = 'disetujui', status_upmf = 'disetujui' WHERE status = 'disetujui';`).Error
-		_ = db.WithContext(ctx).Exec(`
-			ALTER TABLE matrix_proker_dokumen 
-			MODIFY COLUMN status_verifikasi VARCHAR(100) NULL DEFAULT 'belum_terverifikasi';
-		`).Error
-		_ = db.WithContext(ctx).Exec(`
-			UPDATE matrix_proker_dokumen 
-			SET catatan = keterangan 
-			WHERE (catatan IS NULL OR catatan = '') AND (keterangan IS NOT NULL AND keterangan != '');
-		`).Error
-		_ = db.WithContext(ctx).Exec(`
-			UPDATE matrix_proker_dokumen 
-			SET keterangan = catatan 
-			WHERE (keterangan IS NULL OR keterangan = '') AND (catatan IS NOT NULL AND catatan != '');
-		`).Error
-	})
-}
-
 // =======================================================
 // GET /proker_v3/:uuid/dokumen (Daftar matrix_proker_dokumen)
 // =======================================================
@@ -2368,8 +2295,6 @@ func GetProkerDokumenHandler(db *gorm.DB) fiber.Handler {
 	repo := infra.NewProkerV3Repository(db)
 
 	return func(c *fiber.Ctx) error {
-		ensureDokumenTable(c.Context(), db)
-
 		rawUuid := c.Params("uuid")
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err != nil {
@@ -2408,8 +2333,6 @@ func UploadProkerDokumenChunkHandler(db *gorm.DB) fiber.Handler {
 	repo := infra.NewProkerV3Repository(db)
 
 	return func(c *fiber.Ctx) error {
-		ensureDokumenTable(c.Context(), db)
-
 		rawUuid := c.Params("uuid")
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err != nil {
@@ -2739,8 +2662,6 @@ func UploadProkerDokumenHandler(db *gorm.DB) fiber.Handler {
 	repo := infra.NewProkerV3Repository(db)
 
 	return func(c *fiber.Ctx) error {
-		ensureDokumenTable(c.Context(), db)
-
 		rawUuid := c.Params("uuid")
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err != nil {
@@ -2954,7 +2875,6 @@ func UpdateVerifikasiDokumenHandler(db *gorm.DB) fiber.Handler {
 }
 
 func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
-	ensureDokumenTable(context.Background(), db)
 	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "anggaran", "keuangan", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
