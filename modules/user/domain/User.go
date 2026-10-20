@@ -22,8 +22,21 @@ type User struct {
 	FakultasUnit     *int      `gorm:"column:fakultas_unit;" json:"FakultasUnit"`
 	NamaFakultasUnit *string   `gorm:"column:nama_fak_prod_unit;->" json:"NamaFakultasUnit,omitempty"`
 	UuidFakultasUnit *string   `gorm:"column:uuid_fakultas_unit;->" json:"UuidFakultasUnit,omitempty"`
-	IdUserMerge      *uint     `gorm:"column:id_user_merge;" json:"IdUserMerge"`
-	NamaUserMerge    *string   `gorm:"column:nama_user_merge;->" json:"NamaUserMerge,omitempty"`
+	IdUserMerge      *uint             `gorm:"column:id_user_merge;" json:"IdUserMerge"`
+	NamaUserMerge    *string           `gorm:"column:nama_user_merge;->" json:"NamaUserMerge,omitempty"`
+	UserAbac         []UserAbacSummary `gorm:"-" json:"UserAbac"`
+}
+
+type UserAbacSummary struct {
+	ID               uint   `json:"ID"`
+	UUID             string `json:"UUID"`
+	IdUser           uint   `json:"IdUser"`
+	Tahun            string `json:"Tahun"`
+	IdFakultasUnit   uint   `json:"IdFakultasUnit"`
+	NamaFakultasUnit string `json:"NamaFakultasUnit"`
+	Role             string `json:"Role"`
+	ComputedRole     string `json:"ComputedRole"`
+	Status           string `json:"Status"`
 }
 
 func (User) TableName() string {

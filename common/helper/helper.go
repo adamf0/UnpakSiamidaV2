@@ -189,12 +189,14 @@ func ValidateLevel(value interface{}) error {
 	}
 
 	validLevels := map[string]struct{}{
-		"admin":    {},
-		"user":     {},
-		"fakultas": {},
-		"auditee":  {},
-		"auditor1": {},
-		"auditor2": {},
+		"admin":     {},
+		"user":      {},
+		"fakultas":  {},
+		"auditee":   {},
+		"auditor1":  {},
+		"auditor2":  {},
+		"anggaran":  {},
+		"evaluator": {},
 	}
 
 	if _, exists := validLevels[val]; !exists {

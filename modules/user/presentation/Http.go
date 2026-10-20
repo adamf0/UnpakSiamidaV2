@@ -21,6 +21,8 @@ import (
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
+
+	"gorm.io/gorm"
 )
 
 // =======================================================
@@ -423,7 +425,7 @@ func MergeUserHandler(c *fiber.Ctx) error {
 	})
 }
 
-func ModuleUser(app *fiber.App) {
+func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
@@ -439,5 +441,14 @@ func ModuleUser(app *fiber.App) {
 
 	app.Post("/users/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
+
+	if len(dbs) > 0 && dbs[0] != nil {
+		db := dbs[0]
+		_ = db.Exec("ALTER TABLE `users` MODIFY COLUMN `level` VARCHAR(100) NOT NULL DEFAULT 'user'")
+		app.Get("/user-abac", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUserAbacHandler(db))
+		app.Post("/user-abac", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateUserAbacHandler(db))
+		app.Put("/user-abac/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateUserAbacHandler(db))
+		app.Delete("/user-abac/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteUserAbacHandler(db))
+	}
 }
 

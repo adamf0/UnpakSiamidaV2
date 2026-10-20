@@ -21,6 +21,17 @@ type AktivitasV2 struct {
 	Anggaran         float64   `gorm:"column:anggaran;default:0" json:"Anggaran"`
 	Realisasi        *float64  `gorm:"column:realisasi" json:"Realisasi"`
 	Status           string    `gorm:"column:status;size:50;default:'draft'" json:"Status"`
+	CatatanPenolakan string    `gorm:"column:catatan_penolakan;type:text" json:"CatatanPenolakan"`
+	StatusVerifikator string   `gorm:"column:status_verifikator;size:50;default:'draft'" json:"StatusVerifikator"`
+	CatatanVerifikator string  `gorm:"column:catatan_verifikator;type:text" json:"CatatanVerifikator"`
+	StatusAnggaran   string    `gorm:"column:status_anggaran;size:50;default:'menunggu_verifikator'" json:"StatusAnggaran"`
+	CatatanAnggaran  string    `gorm:"column:catatan_anggaran;type:text" json:"CatatanAnggaran"`
+	StatusUpml       string    `gorm:"column:status_upml;size:50;default:'menunggu'" json:"StatusUpml"`
+	CatatanTolakUpml string    `gorm:"column:catatan_tolak_upml;type:text" json:"CatatanTolakUpml"`
+	StatusUpmf       string    `gorm:"column:status_upmf;size:50;default:'menunggu'" json:"StatusUpmf"`
+	CatatanTolakUpmf string    `gorm:"column:catatan_tolak_upmf;type:text" json:"CatatanTolakUpmf"`
+	StatusUpms       string    `gorm:"column:status_upms;size:50;default:'menunggu'" json:"StatusUpms"`
+	CatatanTolakUpms string    `gorm:"column:catatan_tolak_upms;type:text" json:"CatatanTolakUpms"`
 	CreatedAt        time.Time `gorm:"column:created_at;autoCreateTime" json:"CreatedAt"`
 	UpdatedAt        time.Time `gorm:"column:updated_at;autoUpdateTime" json:"UpdatedAt"`
 }

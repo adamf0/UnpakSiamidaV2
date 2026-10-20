@@ -67,6 +67,13 @@ type ProkerV3Default struct {
 	Output            string    `json:"Output"`
 	Outcome           string    `json:"Outcome"`
 	Status            string    `json:"Status"`
+	CatatanPenolakan  string    `json:"CatatanPenolakan"`
+	StatusVerifikator string    `json:"StatusVerifikator"`
+	CatatanVerifikator string   `json:"CatatanVerifikator"`
+	StatusAnggaran    string    `json:"StatusAnggaran"`
+	CatatanAnggaran   string    `json:"CatatanAnggaran"`
+	TypeFakultasUnit  string    `json:"TypeFakultasUnit"`
+	ParentFakultas    string    `json:"ParentFakultas"`
 	PIC               string    `json:"PIC"`
 	TotalAktivitas    int64     `json:"TotalAktivitas"`
 	TotalAnggaran     float64   `json:"TotalAnggaran"`
@@ -91,6 +98,17 @@ type AktivitasV2Default struct {
 	Anggaran              float64                     `json:"Anggaran"`
 	Realisasi             *float64                    `json:"Realisasi"`
 	Status                string                      `json:"Status"`
+	CatatanPenolakan      string                      `json:"CatatanPenolakan"`
+	StatusVerifikator     string                      `json:"StatusVerifikator"`
+	CatatanVerifikator    string                      `json:"CatatanVerifikator"`
+	StatusAnggaran        string                      `json:"StatusAnggaran"`
+	CatatanAnggaran       string                      `json:"CatatanAnggaran"`
+	StatusUpml            string                      `json:"StatusUpml"`
+	CatatanTolakUpml      string                      `json:"CatatanTolakUpml"`
+	StatusUpmf            string                      `json:"StatusUpmf"`
+	CatatanTolakUpmf      string                      `json:"CatatanTolakUpmf"`
+	StatusUpms            string                      `json:"StatusUpms"`
+	CatatanTolakUpms      string                      `json:"CatatanTolakUpms"`
 	CreatedAt             time.Time                   `json:"CreatedAt"`
 	UpdatedAt             time.Time                   `json:"UpdatedAt"`
 	TimelinesCount        int                         `json:"TimelinesCount"`

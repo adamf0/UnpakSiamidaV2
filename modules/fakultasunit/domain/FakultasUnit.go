@@ -15,6 +15,7 @@ type FakultasUnit struct {
 	Jenjang      string     `gorm:"column:jenjang;"`
 	Type         string     `gorm:"column:type;"`
 	Fakultas     string     `gorm:"column:fakultas;"`
+	KodeFakultas string     `gorm:"column:kode_fakultas;"`
 }
 func (FakultasUnit) TableName() string {
 	return "v_fakultas_unit"

@@ -1,7 +1,7 @@
 package domain
 
 type Account struct {
-	ID           string       `json:"-"`
+	ID           uint         `gorm:"column:id;primaryKey" json:"-"`
 	UUID         string       `json:"UUID"`
 	NidnUsername string       `json:"Username"`
 	Password     string       `json:"-"`
@@ -9,7 +9,7 @@ type Account struct {
 	Name         string       `json:"Name"`
 	Email        string       `json:"Email"`
 	FakultasUnit string       `json:"FakultasUnit"`
-	ExtraRole    []ExtraRole  `gorm:"-"; json:"ExtraRole,omitempty"`
+	ExtraRole    []ExtraRole  `gorm:"-" json:"ExtraRole,omitempty"`
 }
 
 func (Account) TableName() string {

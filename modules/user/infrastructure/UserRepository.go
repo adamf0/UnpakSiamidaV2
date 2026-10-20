@@ -52,6 +52,30 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 		return nil, err
 	}
 
+	var abacSummaries []domainuser.UserAbacSummary
+	_ = r.db.WithContext(ctx).Table("user_abac").
+		Select(`
+			user_abac.id,
+			user_abac.uuid,
+			user_abac.id_user,
+			user_abac.tahun,
+			user_abac.id_fakultas_unit,
+			user_abac.role,
+			user_abac.status,
+			fu.nama_fak_prod_unit,
+			CASE
+				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+				WHEN fu.type = 'unit' THEN 'upml'
+				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+				ELSE 'upmf'
+			END AS computed_role
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
+		Where("user_abac.id_user = ?", user.ID).
+		Order("user_abac.tahun DESC, user_abac.id DESC").
+		Find(&abacSummaries).Error
+	user.UserAbac = abacSummaries
+
 	return &user, nil
 }
 
@@ -196,6 +220,73 @@ func (r *UserRepository) GetAll(
 	// -------------------------------
 	if err := db.Order("users.id DESC").Find(&users).Error; err != nil {
 		return nil, 0, err
+	}
+
+	if len(users) > 0 {
+		userIds := make([]uint, len(users))
+		for i, u := range users {
+			userIds[i] = u.ID
+		}
+
+		type AbacRow struct {
+			ID               uint   `gorm:"column:id"`
+			UUID             string `gorm:"column:uuid"`
+			IdUser           uint   `gorm:"column:id_user"`
+			Tahun            string `gorm:"column:tahun"`
+			IdFakultasUnit   uint   `gorm:"column:id_fakultas_unit"`
+			Role             string `gorm:"column:role"`
+			Status           string `gorm:"column:status"`
+			NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
+			ComputedRole     string `gorm:"column:computed_role"`
+		}
+
+		var abacRows []AbacRow
+		err := r.db.WithContext(ctx).Table("user_abac").
+			Select(`
+				user_abac.id,
+				user_abac.uuid,
+				user_abac.id_user,
+				user_abac.tahun,
+				user_abac.id_fakultas_unit,
+				user_abac.role,
+				user_abac.status,
+				fu.nama_fak_prod_unit,
+				CASE
+					WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+					WHEN fu.type = 'unit' THEN 'upml'
+					WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+					ELSE 'upmf'
+				END AS computed_role
+			`).
+			Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
+			Where("user_abac.id_user IN ?", userIds).
+			Order("user_abac.tahun DESC, user_abac.id DESC").
+			Find(&abacRows).Error
+
+		if err == nil {
+			abacMap := make(map[uint][]domainuser.UserAbacSummary)
+			for _, row := range abacRows {
+				abacMap[row.IdUser] = append(abacMap[row.IdUser], domainuser.UserAbacSummary{
+					ID:               row.ID,
+					UUID:             row.UUID,
+					IdUser:           row.IdUser,
+					Tahun:            row.Tahun,
+					IdFakultasUnit:   row.IdFakultasUnit,
+					NamaFakultasUnit: row.NamaFakultasUnit,
+					Role:             row.Role,
+					ComputedRole:     row.ComputedRole,
+					Status:           row.Status,
+				})
+			}
+
+			for i := range users {
+				if items, ok := abacMap[users[i].ID]; ok {
+					users[i].UserAbac = items
+				} else {
+					users[i].UserAbac = []domainuser.UserAbacSummary{}
+				}
+			}
+		}
 	}
 
 	return users, total, nil

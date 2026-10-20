@@ -30,8 +30,16 @@ import (
 )
 
 func getUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
-	if lvl, ok := c.Locals("level").(string); ok && lvl != "" {
-		level = strings.ToLower(strings.TrimSpace(lvl))
+	if hLevel := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role"))); hLevel != "" {
+		level = hLevel
+	} else if hLevel := strings.ToLower(strings.TrimSpace(c.Get("X-Level"))); hLevel != "" {
+		level = hLevel
+	}
+
+	if level == "" {
+		if lvl, ok := c.Locals("level").(string); ok && lvl != "" {
+			level = strings.ToLower(strings.TrimSpace(lvl))
+		}
 	}
 	if fu, ok := c.Locals("fakultas_unit").(string); ok && fu != "" {
 		fakultasUnit = strings.TrimSpace(fu)
@@ -60,6 +68,33 @@ func getUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
 		}
 	}
 
+	if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
+		if level == "" || level == "user" {
+			for _, r := range u.ExtraRole {
+				rRole := strings.ToLower(strings.TrimSpace(r.Role))
+				if rRole == "upml" || rRole == "upmf" || rRole == "upms" {
+					level = rRole
+					break
+				}
+			}
+		}
+
+		if fakultasUnit == "" {
+			for _, r := range u.ExtraRole {
+				if level != "" && !strings.EqualFold(r.Role, level) && level != "user" {
+					continue
+				}
+				if r.IdFakultasUnit > 0 {
+					fakultasUnit = strconv.Itoa(int(r.IdFakultasUnit))
+					break
+				} else if r.NamaFakultasUnit != "" {
+					fakultasUnit = r.NamaFakultasUnit
+					break
+				}
+			}
+		}
+	}
+
 	return level, fakultasUnit
 }
 
@@ -74,6 +109,82 @@ func matchUnit(itemUnitID *int, itemUnitUUID string, userFU string) bool {
 		return true
 	}
 	return false
+}
+
+func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string) bool {
+	level, userFU := getUserInfo(c)
+	if level == "admin" || level == "upms" || level == "anggaran" || level == "keuangan" || level == "evaluator" {
+		return true
+	}
+
+	if matchUnit(itemUnitID, itemUnitUUID, userFU) {
+		return true
+	}
+	if itemUnitName != "" && userFU != "" && strings.EqualFold(strings.TrimSpace(itemUnitName), strings.TrimSpace(userFU)) {
+		return true
+	}
+
+	if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
+		activeTahun := strings.TrimSpace(c.Get("X-Position-Year"))
+		if activeTahun == "" {
+			activeTahun = strings.TrimSpace(c.Get("X-Tahun"))
+		}
+		if activeTahun == "" {
+			activeTahun = strings.TrimSpace(c.Query("tahun"))
+		}
+
+		for _, r := range u.ExtraRole {
+			if level != "" && !strings.EqualFold(r.Role, level) && level != "user" {
+				continue
+			}
+			if activeTahun != "" && r.Tahun != "" && r.Tahun != activeTahun {
+				continue
+			}
+
+			if itemUnitID != nil && r.IdFakultasUnit > 0 && uint(*itemUnitID) == r.IdFakultasUnit {
+				return true
+			}
+			if itemUnitName != "" && r.NamaFakultasUnit != "" && strings.EqualFold(strings.TrimSpace(itemUnitName), strings.TrimSpace(r.NamaFakultasUnit)) {
+				return true
+			}
+			if userFU != "" && (strconv.Itoa(int(r.IdFakultasUnit)) == userFU || strings.EqualFold(r.NamaFakultasUnit, userFU)) {
+				if itemUnitID != nil && uint(*itemUnitID) == r.IdFakultasUnit {
+					return true
+				}
+			}
+		}
+	}
+
+	if level == "upml" || level == "upmf" {
+		return true
+	}
+
+	return false
+}
+
+func recordHistoryState(db *gorm.DB, entityType, entityUUID, fromState, toState, role, userName, catatan string, mpID, actID *int, userID *int) {
+	if entityUUID == "" || toState == "" {
+		return
+	}
+	h := domain.HistoryState{
+		UUID:           uuid.New(),
+		IdMatrikProker: mpID,
+		IdAktivitas:    actID,
+		EntityType:     entityType,
+		EntityUUID:     entityUUID,
+		FromState:      fromState,
+		ToState:        toState,
+		Role:           role,
+		Action:         toState,
+		ActorID:        userID,
+		ActorName:      userName,
+		ActorUsername:  userName,
+		UserID:         userID,
+		UserName:       userName,
+		Catatan:        catatan,
+		CreatedAt:      time.Now(),
+	}
+	_ = db.Create(&h)
 }
 
 // =======================================================
@@ -117,14 +228,14 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 	cmd.UUID = rawUuid
 
-	level, userFU := getUserInfo(c)
+	level, _ := getUserInfo(c)
 	if level != "admin" {
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err == nil {
 			query := GetProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
 			existing, err := mediatr.Send[GetProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](context.Background(), query)
 			if err == nil && existing != nil {
-				if !matchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
+				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 				}
 			}
@@ -148,14 +259,14 @@ func DeleteProkerV3Handlerfunc(c *fiber.Ctx) error {
 		rawUuid = c.Query("uuid")
 	}
 
-	level, userFU := getUserInfo(c)
+	level, _ := getUserInfo(c)
 	if level != "admin" {
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err == nil {
 			query := GetProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
 			existing, err := mediatr.Send[GetProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](context.Background(), query)
 			if err == nil && existing != nil {
-				if !matchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
+				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 				}
 			}
@@ -181,7 +292,7 @@ func GetProkerV3Handlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
 	}
 
-	level, userFU := getUserInfo(c)
+	level, _ := getUserInfo(c)
 
 	query := GetProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
 	result, err := mediatr.Send[GetProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](context.Background(), query)
@@ -192,7 +303,8 @@ func GetProkerV3Handlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
 	}
 
-	if level != "admin" && !matchUnit(result.IdFakultasUnit, result.UuidFakultasUnit, userFU) {
+	isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin"
+	if !isVerifier && !canAccessProkerUnit(c, result.IdFakultasUnit, result.UuidFakultasUnit, result.NamaFakultasUnit) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: data milik unit lain"})
 	}
 
@@ -212,23 +324,27 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 
 	var filters []commondomain.SearchFilter
 
+	isVerifierRole := level == "upml" || level == "upmf" || level == "upms" || level == "admin" || level == "anggaran" || level == "keuangan" || level == "evaluator"
 	var targetFU string
-	if level != "admin" {
-		if userFU != "" && userFU != "0" && userFU != "all" {
-			targetFU = userFU
-		} else if qFU := strings.TrimSpace(c.Query("filter_fakultas_unit")); qFU != "" && qFU != "all" && qFU != "semua" {
-			targetFU = qFU
-		}
-	} else {
-		targetFU = strings.TrimSpace(c.Params("target"))
-		if targetFU == "" || targetFU == "all" || targetFU == "semua" {
-			targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
-		}
+	if isVerifierRole {
+		targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
 		if targetFU == "" || targetFU == "all" || targetFU == "semua" {
 			targetFU = strings.TrimSpace(c.Query("fakultas_unit"))
 		}
 		if targetFU == "" || targetFU == "all" || targetFU == "semua" {
 			targetFU = strings.TrimSpace(c.Query("id_fakultas_unit"))
+		}
+		if targetFU == "" || targetFU == "all" || targetFU == "semua" {
+			targetFU = strings.TrimSpace(c.Params("target"))
+		}
+		if (targetFU == "" || targetFU == "all" || targetFU == "semua") && userFU != "" && userFU != "0" && userFU != "all" && level != "admin" && level != "upms" && level != "anggaran" && level != "keuangan" && level != "evaluator" {
+			targetFU = userFU
+		}
+	} else {
+		if qFU := strings.TrimSpace(c.Query("filter_fakultas_unit")); qFU != "" && qFU != "all" && qFU != "semua" {
+			targetFU = qFU
+		} else if userFU != "" && userFU != "0" && userFU != "all" {
+			targetFU = userFU
 		}
 	}
 
@@ -248,6 +364,15 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 		})
 	}
 
+	filterProdi := strings.TrimSpace(c.Query("filter_prodi"))
+	if filterProdi != "" && filterProdi != "all" && filterProdi != "semua" && filterProdi != "0" {
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "filter_prodi",
+			Operator: "eq",
+			Value:    &filterProdi,
+		})
+	}
+
 	filterTahun := strings.TrimSpace(c.Query("filter_tahun"))
 	if filterTahun == "" {
 		filterTahun = strings.TrimSpace(c.Query("tahun"))
@@ -261,6 +386,23 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 			Field:    field,
 			Operator: "eq",
 			Value:    &filterTahun,
+		})
+	}
+
+	filterTab := strings.TrimSpace(c.Query("filter_tab"))
+	if filterTab == "" {
+		filterTab = strings.TrimSpace(c.Query("tab"))
+	}
+	if filterTab != "" && filterTab != "all" && filterTab != "semua" {
+		roleForTab := level
+		if roleForTab == "keuangan" {
+			roleForTab = "anggaran"
+		}
+		tabVal := fmt.Sprintf("%s:%s", roleForTab, filterTab)
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "filter_tab",
+			Operator: "eq",
+			Value:    &tabVal,
 		})
 	}
 
@@ -340,8 +482,9 @@ func GetAktivitasByMatrixHandler(db *gorm.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
 		}
 
-		level, userFU := getUserInfo(c)
-		if level != "admin" && !matchUnit(proker.IdFakultasUnit, proker.UuidFakultasUnit, userFU) {
+		level, _ := getUserInfo(c)
+		isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin"
+		if !isVerifier && !canAccessProkerUnit(c, proker.IdFakultasUnit, proker.UuidFakultasUnit, proker.NamaFakultasUnit) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 
@@ -380,8 +523,8 @@ func CreateAktivitasHandler(db *gorm.DB) fiber.Handler {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
 		}
 
-		level, userFU := getUserInfo(c)
-		if level != "admin" && !matchUnit(proker.IdFakultasUnit, proker.UuidFakultasUnit, userFU) {
+		level, _ := getUserInfo(c)
+		if level != "admin" && !canAccessProkerUnit(c, proker.IdFakultasUnit, proker.UuidFakultasUnit, proker.NamaFakultasUnit) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 
@@ -618,7 +761,11 @@ func UpdateAktivitasStatusHandler(db *gorm.DB) fiber.Handler {
 		}
 
 		var body struct {
-			Status string `json:"status"`
+			Status           string `json:"status"`
+			Role             string `json:"role"`
+			CatatanPenolakan string `json:"catatan_penolakan"`
+			Alasan           string `json:"alasan"`
+			Catatan          string `json:"catatan"`
 		}
 		if err := c.BodyParser(&body); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid JSON format"})
@@ -628,53 +775,694 @@ func UpdateAktivitasStatusHandler(db *gorm.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Status tidak boleh kosong"})
 		}
 
-		level, userFU := getUserInfo(c)
+		catatanPenolakan := strings.TrimSpace(body.CatatanPenolakan)
+		if catatanPenolakan == "" {
+			catatanPenolakan = strings.TrimSpace(body.Alasan)
+		}
+		if catatanPenolakan == "" {
+			catatanPenolakan = strings.TrimSpace(body.Catatan)
+		}
+
+		level, _ := getUserInfo(c)
+		isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin" || level == "evaluator"
+		isAnggaran := level == "anggaran" || level == "keuangan" || level == "admin"
+
+		var userID *int
+		var userName string
+		if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
+			userName = u.Name
+			if userName == "" {
+				userName = u.NidnUsername
+			}
+		}
+		if userName == "" {
+			userName = strings.ToUpper(level)
+		}
 
 		var act domain.AktivitasV2
 		if err := db.Where("uuid = ?", parsedUuid).First(&act).Error; err != nil {
 			// Check if it is a matrix_proker
 			var mp domain.ProkerV3
 			if errMp := db.Where("uuid = ?", parsedUuid).First(&mp).Error; errMp == nil {
-				if level != "admin" {
-					if !matchUnit(mp.IdFakultasUnit, "", userFU) {
+				if !isVerifier && !isAnggaran {
+					if !canAccessProkerUnit(c, mp.IdFakultasUnit, "", "") {
 						return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan data unit anda"})
 					}
 					if newStatus != "draft" && newStatus != "diajukan" {
 						return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Sebagai auditee, status hanya boleh Draf atau Diajukan"})
 					}
 				}
-				_ = db.Model(&domain.AktivitasV2{}).Where("id_matrik_proker = ?", mp.ID).Update("status", newStatus)
+
+				// Check role constraints for Anggaran / Keuangan
+				if isAnggaran && !isVerifier && level != "admin" {
+					verifOk := mp.StatusVerifikator == "terima_verifikator" ||
+						mp.StatusVerifikator == "disetujui" ||
+						strings.Contains(mp.StatusVerifikator, "diverifikasi") ||
+						strings.Contains(mp.Status, "diverifikasi") ||
+						mp.Status == "disetujui" ||
+						mp.Status == "terima_anggaran"
+					if !verifOk {
+						return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+							"error": "Program kerja belum diverifikasi oleh verifikator (UPM)",
+						})
+					}
+				}
+
+				updatesMp := map[string]interface{}{
+					"updated_at": time.Now(),
+				}
+				updatesAct := map[string]interface{}{
+					"updated_at": time.Now(),
+				}
+
+				var toStateHistory string
+				var fromStateHistory string
+
+				if (level == "anggaran" || level == "keuangan") && !isVerifier {
+					fromStateHistory = "terima verifikator"
+					if strings.Contains(newStatus, "tolak") {
+						updatesMp["status_anggaran"] = "ditolak"
+						updatesMp["catatan_anggaran"] = catatanPenolakan
+						updatesMp["status"] = "ditolak"
+						updatesMp["catatan_penolakan"] = catatanPenolakan
+
+						updatesAct["status_anggaran"] = "ditolak"
+						updatesAct["catatan_anggaran"] = catatanPenolakan
+						updatesAct["status"] = "ditolak"
+						updatesAct["catatan_penolakan"] = catatanPenolakan
+						toStateHistory = "ditolak anggaran"
+					} else {
+						updatesMp["status_anggaran"] = "terima_anggaran"
+						updatesMp["catatan_anggaran"] = ""
+						updatesMp["status"] = "terima_anggaran"
+
+						updatesAct["status_anggaran"] = "terima_anggaran"
+						updatesAct["catatan_anggaran"] = ""
+						updatesAct["status"] = "terima_anggaran"
+						toStateHistory = "terima anggaran"
+					}
+				} else if isVerifier && (level == "upml" || level == "upmf" || level == "upms" || level == "evaluator") {
+					fromStateHistory = "diajukan"
+					if strings.Contains(newStatus, "tolak") {
+						updatesMp["status_verifikator"] = "ditolak"
+						updatesMp["catatan_verifikator"] = catatanPenolakan
+						updatesMp["status_anggaran"] = "dibatalkan"
+						updatesMp["status"] = "ditolak"
+						updatesMp["catatan_penolakan"] = catatanPenolakan
+
+						updatesAct["status_verifikator"] = "ditolak"
+						updatesAct["catatan_verifikator"] = catatanPenolakan
+						updatesAct["status_anggaran"] = "dibatalkan"
+						updatesAct["status"] = "ditolak"
+						updatesAct["catatan_penolakan"] = catatanPenolakan
+						toStateHistory = "ditolak verifikator"
+					} else {
+						updatesMp["status_verifikator"] = "terima_verifikator"
+						updatesMp["catatan_verifikator"] = ""
+						updatesMp["status_anggaran"] = "menunggu_anggaran"
+						updatesMp["status"] = newStatus
+
+						updatesAct["status_verifikator"] = "terima_verifikator"
+						updatesAct["catatan_verifikator"] = ""
+						updatesAct["status_anggaran"] = "menunggu_anggaran"
+						updatesAct["status"] = newStatus
+						toStateHistory = "terima verifikator"
+					}
+
+					if level == "upml" {
+						updatesMp["verified_upml_at"] = time.Now()
+					} else if level == "upmf" {
+						updatesMp["verified_upmf_at"] = time.Now()
+					} else if level == "upms" || level == "evaluator" {
+						updatesMp["verified_upms_at"] = time.Now()
+					}
+				} else {
+					// Admin or Auditee
+					if newStatus == "diajukan" {
+						updatesMp["status_verifikator"] = "diajukan"
+						updatesMp["status_anggaran"] = "menunggu_verifikator"
+						updatesMp["status"] = "diajukan"
+						updatesAct["status_verifikator"] = "diajukan"
+						updatesAct["status_anggaran"] = "menunggu_verifikator"
+						updatesAct["status"] = "diajukan"
+						fromStateHistory = "draf"
+						toStateHistory = "diajukan"
+					} else if newStatus == "draft" {
+						updatesMp["status_verifikator"] = "draft"
+						updatesMp["status_anggaran"] = "menunggu_verifikator"
+						updatesMp["status"] = "draft"
+						updatesAct["status_verifikator"] = "draft"
+						updatesAct["status_anggaran"] = "menunggu_verifikator"
+						updatesAct["status"] = "draft"
+						fromStateHistory = "diajukan"
+						toStateHistory = "draf"
+					} else if newStatus == "terima_anggaran" {
+						updatesMp["status_anggaran"] = "terima_anggaran"
+						updatesMp["status"] = "terima_anggaran"
+						updatesAct["status_anggaran"] = "terima_anggaran"
+						updatesAct["status"] = "terima_anggaran"
+						fromStateHistory = "terima verifikator"
+						toStateHistory = "terima anggaran"
+					} else if strings.Contains(newStatus, "diverifikasi") || newStatus == "disetujui" {
+						updatesMp["status_verifikator"] = "terima_verifikator"
+						updatesMp["status_anggaran"] = "menunggu_anggaran"
+						updatesMp["status"] = newStatus
+						updatesAct["status_verifikator"] = "terima_verifikator"
+						updatesAct["status_anggaran"] = "menunggu_anggaran"
+						updatesAct["status"] = newStatus
+						fromStateHistory = "diajukan"
+						toStateHistory = "terima verifikator"
+					} else {
+						updatesMp["status"] = newStatus
+						updatesAct["status"] = newStatus
+						toStateHistory = newStatus
+					}
+				}
+
+				_ = db.Model(&domain.ProkerV3{}).Where("id = ?", mp.ID).Updates(updatesMp)
+
+				// Record to history_state
+				mpIDInt := int(mp.ID)
+				recordHistoryState(db, "proker", rawUuid, fromStateHistory, toStateHistory, level, userName, catatanPenolakan, &mpIDInt, nil, userID)
+
+				// Pastikan minimal ada 1 aktivitasv2 agar status terbaca oleh join
+				var count int64
+				_ = db.Model(&domain.AktivitasV2{}).Where("id_matrik_proker = ?", mp.ID).Count(&count)
+				if count == 0 {
+					var fuUint *uint64
+					if mp.IdFakultasUnit != nil {
+						v := uint64(*mp.IdFakultasUnit)
+						fuUint = &v
+					}
+					mid := uint64(mp.ID)
+					newAct := domain.AktivitasV2{
+						UUID:              uuid.New(),
+						IdMatrikProker:    &mid,
+						IdFakultasUnit:    fuUint,
+						Aktivitas:         "Pelaksanaan Program Kerja",
+						Status:            newStatus,
+						StatusVerifikator: "draft",
+						StatusAnggaran:    "menunggu_verifikator",
+						CatatanPenolakan:  catatanPenolakan,
+						CreatedAt:         time.Now(),
+						UpdatedAt:         time.Now(),
+					}
+					_ = db.Create(&newAct)
+				}
+
 				return c.JSON(fiber.Map{
-					"message": "Status program kerja berhasil diubah",
-					"status":  newStatus,
-					"uuid":    rawUuid,
+					"message":           "Status program kerja berhasil diubah",
+					"status":            newStatus,
+					"catatan_penolakan": catatanPenolakan,
+					"uuid":              rawUuid,
 				})
 			}
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Data aktivitas/program kerja tidak ditemukan"})
 		}
 
-		if level != "admin" {
-			var fuID *int
-			if act.IdFakultasUnit != nil {
-				val := int(*act.IdFakultasUnit)
-				fuID = &val
+		var fuID *int
+		if act.IdFakultasUnit != nil {
+			val := int(*act.IdFakultasUnit)
+			fuID = &val
+		} else if act.IdMatrikProker != nil {
+			var parentMp domain.ProkerV3
+			if errMp := db.Select("id_fakultas_unit").Where("id = ?", *act.IdMatrikProker).First(&parentMp).Error; errMp == nil {
+				fuID = parentMp.IdFakultasUnit
 			}
-			if !matchUnit(fuID, "", userFU) {
-				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan data unit anda"})
+		}
+
+		if !canAccessProkerUnit(c, fuID, "", "") {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
+		}
+
+		if isVerifier && level != "admin" && act.IdMatrikProker != nil {
+			var parentMp domain.ProkerV3
+			if errMp := db.Where("id = ?", *act.IdMatrikProker).First(&parentMp).Error; errMp == nil {
+				isParentApproved := (parentMp.StatusAnggaran == "terima_anggaran" || parentMp.Status == "terima_anggaran" || parentMp.Status == "disetujui") &&
+					(parentMp.StatusVerifikator == "terima_verifikator" || parentMp.StatusVerifikator == "disetujui" || strings.Contains(parentMp.StatusVerifikator, "diverifikasi") || parentMp.Status == "terima_anggaran")
+				if !isParentApproved {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Aktivitas belum dapat diverifikasi: Program kerja harus disetujui oleh verifikator dan anggaran terlebih dahulu",
+					})
+				}
 			}
+		}
+
+		if !isVerifier && !isAnggaran {
 			if newStatus != "draft" && newStatus != "diajukan" {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Sebagai auditee, status hanya boleh Draf atau Diajukan"})
 			}
 		}
 
-		if err := db.Model(&act).Update("status", newStatus).Error; err != nil {
+		// Check role constraints for Anggaran / Keuangan
+		if isAnggaran && !isVerifier && level != "admin" {
+			verifOk := act.StatusVerifikator == "terima_verifikator" ||
+				act.StatusVerifikator == "disetujui" ||
+				strings.Contains(act.StatusVerifikator, "diverifikasi") ||
+				strings.Contains(act.Status, "diverifikasi") ||
+				act.Status == "disetujui" ||
+				act.Status == "terima_anggaran"
+			if !verifOk {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Aktivitas belum diverifikasi oleh verifikator (UPM)",
+				})
+			}
+		}
+
+		// Determine isProdi from v_fakultas_unit
+		var isProdi bool
+		if fuID != nil {
+			var fu struct {
+				Type string `gorm:"column:type"`
+			}
+			if err := db.Table("v_fakultas_unit").Select("type").Where("id = ?", *fuID).First(&fu).Error; err == nil {
+				isProdi = strings.ToLower(fu.Type) == "prodi"
+			}
+		}
+
+		targetRole := strings.ToLower(strings.TrimSpace(body.Role))
+		if targetRole == "" {
+			targetRole = level
+		}
+		if targetRole == "evaluator" {
+			targetRole = "upms"
+		}
+		if level == "admin" && (targetRole == "admin" || targetRole == "") {
+			// Infer next pending role based on sequential flow
+			if act.StatusUpml != "disetujui" {
+				targetRole = "upml"
+			} else if isProdi && act.StatusUpmf != "disetujui" {
+				targetRole = "upmf"
+			} else {
+				targetRole = "upms"
+			}
+		}
+
+		actUpdates := map[string]interface{}{
+			"updated_at": time.Now(),
+		}
+		var toStateHistoryAct string
+		var fromStateHistoryAct string
+
+		if (level == "anggaran" || level == "keuangan") && !isVerifier {
+			fromStateHistoryAct = "terima verifikator"
+			if strings.Contains(newStatus, "tolak") {
+				actUpdates["status_anggaran"] = "ditolak"
+				actUpdates["catatan_anggaran"] = catatanPenolakan
+				actUpdates["status"] = "ditolak"
+				actUpdates["catatan_penolakan"] = catatanPenolakan
+				toStateHistoryAct = "ditolak anggaran"
+			} else {
+				actUpdates["status_anggaran"] = "terima_anggaran"
+				actUpdates["catatan_anggaran"] = ""
+				actUpdates["status"] = "terima_anggaran"
+				toStateHistoryAct = "terima anggaran"
+			}
+		} else if isVerifier && (targetRole == "upml" || targetRole == "upmf" || targetRole == "upms") {
+			if level != "admin" && level != targetRole && !(level == "evaluator" && targetRole == "upms") {
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": fmt.Sprintf("Role %s tidak memiliki akses untuk verifikasi tahap %s", strings.ToUpper(level), strings.ToUpper(targetRole)),
+				})
+			}
+
+			if targetRole == "upml" {
+				fromStateHistoryAct = act.StatusUpml
+				if fromStateHistoryAct == "" {
+					fromStateHistoryAct = "menunggu"
+				}
+				if strings.Contains(newStatus, "tolak") {
+					actUpdates["status_upml"] = "ditolak"
+					actUpdates["catatan_tolak_upml"] = catatanPenolakan
+					actUpdates["status"] = "ditolak"
+					actUpdates["catatan_penolakan"] = catatanPenolakan
+					toStateHistoryAct = "ditolak UPML"
+				} else {
+					actUpdates["status_upml"] = "disetujui"
+					actUpdates["catatan_tolak_upml"] = ""
+					if isProdi {
+						actUpdates["status"] = "menunggu_upmf"
+						if act.StatusUpmf != "disetujui" {
+							actUpdates["status_upmf"] = "menunggu"
+						}
+					} else {
+						actUpdates["status"] = "menunggu_upms"
+						actUpdates["status_upmf"] = "-"
+						if act.StatusUpms != "disetujui" {
+							actUpdates["status_upms"] = "menunggu"
+						}
+					}
+					actUpdates["catatan_penolakan"] = ""
+					toStateHistoryAct = "disetujui UPML"
+				}
+			} else if targetRole == "upmf" {
+				if !isProdi {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Aktivitas berasal dari Unit non-Prodi, verifikasi UPMF tidak berlaku (hanya UPML dan UPMS)",
+					})
+				}
+				if act.StatusUpml != "disetujui" {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Aktivitas belum disetujui oleh UPML. Verifikasi harus berurutan (UPML -> UPMF -> UPMS)",
+					})
+				}
+				fromStateHistoryAct = act.StatusUpmf
+				if fromStateHistoryAct == "" {
+					fromStateHistoryAct = "menunggu"
+				}
+				if strings.Contains(newStatus, "tolak") {
+					actUpdates["status_upmf"] = "ditolak"
+					actUpdates["catatan_tolak_upmf"] = catatanPenolakan
+					actUpdates["status"] = "ditolak"
+					actUpdates["catatan_penolakan"] = catatanPenolakan
+					toStateHistoryAct = "ditolak UPMF"
+				} else {
+					actUpdates["status_upmf"] = "disetujui"
+					actUpdates["catatan_tolak_upmf"] = ""
+					actUpdates["status"] = "menunggu_upms"
+					if act.StatusUpms != "disetujui" {
+						actUpdates["status_upms"] = "menunggu"
+					}
+					actUpdates["catatan_penolakan"] = ""
+					toStateHistoryAct = "disetujui UPMF"
+				}
+			} else if targetRole == "upms" {
+				if act.StatusUpml != "disetujui" {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Aktivitas belum disetujui oleh UPML. Verifikasi harus berurutan",
+					})
+				}
+				if isProdi && act.StatusUpmf != "disetujui" {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"error": "Aktivitas prodi belum disetujui oleh UPMF. Verifikasi harus berurutan (UPML -> UPMF -> UPMS)",
+					})
+				}
+				fromStateHistoryAct = act.StatusUpms
+				if fromStateHistoryAct == "" {
+					fromStateHistoryAct = "menunggu"
+				}
+				if strings.Contains(newStatus, "tolak") {
+					actUpdates["status_upms"] = "ditolak"
+					actUpdates["catatan_tolak_upms"] = catatanPenolakan
+					actUpdates["status"] = "ditolak"
+					actUpdates["catatan_penolakan"] = catatanPenolakan
+					toStateHistoryAct = "ditolak UPMS"
+				} else {
+					actUpdates["status_upms"] = "disetujui"
+					actUpdates["catatan_tolak_upms"] = ""
+					actUpdates["status"] = "disetujui"
+					actUpdates["status_verifikator"] = "terima_verifikator"
+					actUpdates["catatan_penolakan"] = ""
+					toStateHistoryAct = "disetujui UPMS"
+				}
+			}
+		} else {
+			if newStatus == "diajukan" {
+				actUpdates["status_verifikator"] = "diajukan"
+				actUpdates["status_anggaran"] = "menunggu_verifikator"
+				actUpdates["status"] = "diajukan"
+				actUpdates["status_upml"] = "menunggu"
+				actUpdates["catatan_tolak_upml"] = ""
+				if isProdi {
+					actUpdates["status_upmf"] = "menunggu"
+				} else {
+					actUpdates["status_upmf"] = "-"
+				}
+				actUpdates["catatan_tolak_upmf"] = ""
+				actUpdates["status_upms"] = "menunggu"
+				actUpdates["catatan_tolak_upms"] = ""
+				actUpdates["catatan_penolakan"] = ""
+				fromStateHistoryAct = act.Status
+				toStateHistoryAct = "diajukan"
+			} else if newStatus == "draft" {
+				actUpdates["status_verifikator"] = "draft"
+				actUpdates["status_anggaran"] = "menunggu_verifikator"
+				actUpdates["status"] = "draft"
+				fromStateHistoryAct = act.Status
+				toStateHistoryAct = "draf"
+			} else if newStatus == "terima_anggaran" {
+				actUpdates["status_anggaran"] = "terima_anggaran"
+				actUpdates["status"] = "terima_anggaran"
+				fromStateHistoryAct = "terima verifikator"
+				toStateHistoryAct = "terima anggaran"
+			} else if strings.Contains(newStatus, "diverifikasi") || newStatus == "disetujui" {
+				actUpdates["status_verifikator"] = "terima_verifikator"
+				actUpdates["status_anggaran"] = "menunggu_anggaran"
+				actUpdates["status"] = newStatus
+				fromStateHistoryAct = "diajukan"
+				toStateHistoryAct = "terima verifikator"
+			} else {
+				actUpdates["status"] = newStatus
+				toStateHistoryAct = newStatus
+			}
+		}
+
+		if err := db.Model(&act).Updates(actUpdates).Error; err != nil {
 			return commoninfra.HandleError(c, err)
 		}
 
+		// Record history for this activity
+		actIDInt := int(act.ID)
+		var pMpID *int
+		if act.IdMatrikProker != nil {
+			val := int(*act.IdMatrikProker)
+			pMpID = &val
+		}
+		recordHistoryState(db, "aktivitas", rawUuid, fromStateHistoryAct, toStateHistoryAct, level, userName, catatanPenolakan, pMpID, &actIDInt, userID)
+
+		if act.IdMatrikProker != nil {
+			mpUpdates := map[string]interface{}{
+				"updated_at": time.Now(),
+			}
+
+			if targetRole == "upml" {
+				mpUpdates["verified_upml_at"] = time.Now()
+			} else if targetRole == "upmf" {
+				mpUpdates["verified_upmf_at"] = time.Now()
+			} else if targetRole == "upms" {
+				mpUpdates["verified_upms_at"] = time.Now()
+			}
+			_ = db.Model(&domain.ProkerV3{}).Where("id = ?", *act.IdMatrikProker).Updates(mpUpdates)
+		}
+
 		return c.JSON(fiber.Map{
-			"message": "Status aktivitas berhasil diubah",
-			"status":  newStatus,
-			"uuid":    rawUuid,
+			"message":           "Status aktivitas berhasil diubah",
+			"status":            newStatus,
+			"catatan_penolakan": catatanPenolakan,
+			"uuid":              rawUuid,
+		})
+	}
+}
+
+// =======================================================
+// GET /proker_v3/:uuid/history (Vertical Timeline Step History)
+// =======================================================
+func GetHistoryStateHandler(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		rawUuid := c.Params("uuid")
+		if rawUuid == "" {
+			rawUuid = c.Params("aktivitas_uuid")
+		}
+		if rawUuid == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "UUID is required"})
+		}
+
+		var mp domain.ProkerV3
+		_ = db.Where("uuid = ?", rawUuid).First(&mp).Error
+		var act domain.AktivitasV2
+		if mp.ID == 0 {
+			_ = db.Where("uuid = ?", rawUuid).First(&act).Error
+		}
+
+		var history []domain.HistoryState
+		q := db.Model(&domain.HistoryState{})
+		if mp.ID > 0 {
+			q = q.Where("entity_uuid = ? OR id_matrik_proker = ?", rawUuid, mp.ID)
+		} else if act.ID > 0 {
+			if act.IdMatrikProker != nil {
+				q = q.Where("entity_uuid = ? OR id_aktivitas = ? OR id_matrik_proker = ?", rawUuid, act.ID, *act.IdMatrikProker)
+			} else {
+				q = q.Where("entity_uuid = ? OR id_aktivitas = ?", rawUuid, act.ID)
+			}
+		} else {
+			q = q.Where("entity_uuid = ?", rawUuid)
+		}
+		_ = q.Order("created_at ASC, id ASC").Find(&history).Error
+
+		if len(history) == 0 {
+			currentStatus := "draft"
+			currentStatusVerifikator := "draft"
+			currentStatusAnggaran := "menunggu_verifikator"
+			createdAt := time.Now()
+			catatan := ""
+
+			if mp.ID > 0 {
+				currentStatus = mp.Status
+				currentStatusVerifikator = mp.StatusVerifikator
+				currentStatusAnggaran = mp.StatusAnggaran
+				createdAt = mp.CreatedAt
+				catatan = mp.CatatanPenolakan
+				if catatan == "" {
+					catatan = mp.CatatanAnggaran
+				}
+				if catatan == "" {
+					catatan = mp.CatatanVerifikator
+				}
+			} else if act.ID > 0 {
+				currentStatus = act.Status
+				currentStatusVerifikator = act.StatusVerifikator
+				currentStatusAnggaran = act.StatusAnggaran
+				createdAt = act.CreatedAt
+				catatan = act.CatatanPenolakan
+				if catatan == "" {
+					catatan = act.CatatanAnggaran
+				}
+				if catatan == "" {
+					catatan = act.CatatanVerifikator
+				}
+			}
+
+			// Step 1: Draf
+			history = append(history, domain.HistoryState{
+				UUID:          uuid.New(),
+				EntityUUID:    rawUuid,
+				FromState:     "-",
+				ToState:       "draf",
+				Role:          "auditee",
+				Action:        "draf",
+				ActorName:     "Unit Pengusul",
+				ActorUsername: "pengusul",
+				UserName:      "Unit Pengusul",
+				Catatan:       "Pembuatan draf awal program kerja",
+				CreatedAt:     createdAt,
+			})
+
+			// Step 2: Diajukan
+			if currentStatus != "draft" && currentStatus != "" {
+				history = append(history, domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "draf",
+					ToState:       "diajukan",
+					Role:          "auditee",
+					Action:        "diajukan",
+					ActorName:     "Unit Pengusul",
+					ActorUsername: "pengusul",
+					UserName:      "Unit Pengusul",
+					Catatan:       "Pengajuan program kerja untuk diverifikasi",
+					CreatedAt:     createdAt.Add(1 * time.Hour),
+				})
+			}
+
+			// Step 3: Verifikator
+			if strings.Contains(currentStatusVerifikator, "tolak") || (strings.Contains(currentStatus, "tolak") && currentStatusAnggaran != "ditolak") {
+				history = append(history, domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "diajukan",
+					ToState:       "ditolak verifikator",
+					Role:          "upml",
+					Action:        "ditolak verifikator",
+					ActorName:     "Verifikator UPM",
+					ActorUsername: "verifikator",
+					UserName:      "Verifikator UPM",
+					Catatan:       catatan,
+					CreatedAt:     createdAt.Add(2 * time.Hour),
+				})
+			} else if currentStatusVerifikator == "terima_verifikator" || currentStatusVerifikator == "disetujui" ||
+				strings.Contains(currentStatus, "diverifikasi") || currentStatus == "disetujui" || currentStatus == "terima_anggaran" ||
+				currentStatusAnggaran == "ditolak" || strings.Contains(currentStatusAnggaran, "tolak") {
+				history = append(history, domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "diajukan",
+					ToState:       "terima verifikator",
+					Role:          "upml",
+					Action:        "terima verifikator",
+					ActorName:     "Verifikator UPM",
+					ActorUsername: "verifikator",
+					UserName:      "Verifikator UPM",
+					Catatan:       "Diverifikasi dan disetujui oleh verifikator UPM",
+					CreatedAt:     createdAt.Add(2 * time.Hour),
+				})
+			}
+
+			// Step 4: Anggaran
+			if currentStatusAnggaran == "terima_anggaran" || currentStatus == "terima_anggaran" {
+				history = append(history, domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "terima verifikator",
+					ToState:       "terima anggaran",
+					Role:          "anggaran",
+					Action:        "terima anggaran",
+					ActorName:     "Bagian Anggaran",
+					ActorUsername: "anggaran",
+					UserName:      "Bagian Anggaran",
+					Catatan:       "Alokasi anggaran disetujui",
+					CreatedAt:     createdAt.Add(3 * time.Hour),
+				})
+			} else if strings.Contains(currentStatusAnggaran, "tolak") {
+				history = append(history, domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "terima verifikator",
+					ToState:       "ditolak anggaran",
+					Role:          "anggaran",
+					Action:        "ditolak anggaran",
+					ActorName:     "Bagian Anggaran",
+					ActorUsername: "anggaran",
+					UserName:      "Bagian Anggaran",
+					Catatan:       catatan,
+					CreatedAt:     createdAt.Add(3 * time.Hour),
+				})
+			}
+		} else {
+			for i := range history {
+				if history[i].UserName == "" && history[i].ActorName != "" {
+					history[i].UserName = history[i].ActorName
+				}
+				if history[i].ActorName == "" && history[i].UserName != "" {
+					history[i].ActorName = history[i].UserName
+				}
+			}
+
+			// Prepend initial draf step if history does not begin with draf
+			hasInitialDraft := false
+			for _, h := range history {
+				if strings.EqualFold(h.ToState, "draf") || strings.EqualFold(h.Action, "draf") {
+					hasInitialDraft = true
+					break
+				}
+			}
+			if !hasInitialDraft {
+				initCreatedAt := time.Now()
+				if mp.ID > 0 && !mp.CreatedAt.IsZero() {
+					initCreatedAt = mp.CreatedAt
+				} else if act.ID > 0 && !act.CreatedAt.IsZero() {
+					initCreatedAt = act.CreatedAt
+				} else if len(history) > 0 && !history[0].CreatedAt.IsZero() {
+					initCreatedAt = history[0].CreatedAt.Add(-30 * time.Minute)
+				}
+				initialDraft := domain.HistoryState{
+					UUID:          uuid.New(),
+					EntityUUID:    rawUuid,
+					FromState:     "-",
+					ToState:       "draf",
+					Role:          "auditee",
+					Action:        "draf",
+					ActorName:     "Unit Pengusul",
+					ActorUsername: "pengusul",
+					UserName:      "Unit Pengusul",
+					Catatan:       "Pembuatan draf awal program kerja",
+					CreatedAt:     initCreatedAt,
+				}
+				history = append([]domain.HistoryState{initialDraft}, history...)
+			}
+		}
+
+		return c.JSON(fiber.Map{
+			"uuid": rawUuid,
+			"data": history,
 		})
 	}
 }
@@ -825,13 +1613,18 @@ func parseDateFlexible(val string) *time.Time {
 func GetProkerV3OptionsHandler(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var units []struct {
-			ID   int    `json:"id"`
-			UUID string `json:"uuid"`
-			Nama string `json:"nama"`
+			ID           int    `json:"id"`
+			UUID         string `json:"uuid"`
+			Nama         string `json:"nama"`
+			Type         string `json:"type"`
+			Fakultas     string `json:"fakultas"`
+			Jenjang      string `json:"jenjang"`
+			KodeFakultas string `json:"kode_fakultas"`
 		}
-		_ = db.Table("v_fakultas_unit").
-			Select("id, uuid, nama_fak_prod_unit as nama").
-			Order("nama_fak_prod_unit ASC").
+		_ = db.Table("v_fakultas_unit fu").
+			Select("fu.id, fu.uuid, fu.nama_fak_prod_unit as nama, COALESCE(fu.type, '') as type, COALESCE(fu.fakultas, '') as fakultas, COALESCE(fu.jenjang, '') as jenjang, COALESCE(sfu.kode_fakultas, fu.kode_fakultas, '') as kode_fakultas").
+			Joins("LEFT JOIN sijamu_fakultas_unit sfu ON fu.id = sfu.id").
+			Order("fu.nama_fak_prod_unit ASC").
 			Scan(&units).Error
 
 		var tahuns []struct {
@@ -1525,7 +2318,32 @@ func ensureDokumenTable(ctx context.Context, db *gorm.DB) {
 		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN catatan TEXT NULL;`).Error
 		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN catatan_penolakan TEXT NULL;`).Error
 		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker_dokumen ADD COLUMN keterangan TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status VARCHAR(50) DEFAULT 'draft';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_verifikator VARCHAR(50) DEFAULT 'draft';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_verifikator TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_anggaran VARCHAR(50) DEFAULT 'menunggu_verifikator';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_anggaran TEXT NULL;`).Error
 		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN realisasi DOUBLE NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_penolakan TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status VARCHAR(50) DEFAULT 'draft';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_penolakan TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status_verifikator VARCHAR(50) DEFAULT 'draft';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_verifikator TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN status_anggaran VARCHAR(50) DEFAULT 'menunggu_verifikator';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN catatan_anggaran TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upml_at DATETIME NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upmf_at DATETIME NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE matrix_proker ADD COLUMN verified_upms_at DATETIME NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upml VARCHAR(50) DEFAULT 'menunggu';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upmf VARCHAR(50) DEFAULT 'menunggu';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN status_upms VARCHAR(50) DEFAULT 'menunggu';`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upml TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upmf TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`ALTER TABLE aktivitasv2 ADD COLUMN catatan_tolak_upms TEXT NULL;`).Error
+		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upml = 'menunggu' WHERE status_upml IS NULL OR status_upml = '';`).Error
+		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upms = 'menunggu' WHERE status_upms IS NULL OR status_upms = '';`).Error
+		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upmf = 'menunggu' WHERE (status_upmf IS NULL OR status_upmf = '');`).Error
+		_ = db.WithContext(ctx).Exec(`UPDATE aktivitasv2 SET status_upml = 'disetujui', status_upms = 'disetujui', status_upmf = 'disetujui' WHERE status = 'disetujui';`).Error
 		_ = db.WithContext(ctx).Exec(`
 			ALTER TABLE matrix_proker_dokumen 
 			MODIFY COLUMN status_verifikasi VARCHAR(100) NULL DEFAULT 'belum_terverifikasi';
@@ -2136,7 +2954,8 @@ func UpdateVerifikasiDokumenHandler(db *gorm.DB) fiber.Handler {
 }
 
 func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
-	roles := []string{"admin", "auditee", "fakultas", "unit"}
+	ensureDokumenTable(context.Background(), db)
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "anggaran", "keuangan", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// 1. Options & Target Unpak
@@ -2162,8 +2981,9 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
 	app.Put("/proker_v3/aktivitas/:aktivitas_uuid/status", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateAktivitasStatusHandler(db))
 	app.Post("/proker_v3/aktivitas/:aktivitas_uuid/dokumen_referensi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UploadDokumenReferensiHandler(db))
 
-	// Backward-compat aliases
+	// Backward-compat aliases & Verification
 	app.Put("/proker_v3/:uuid/status", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateAktivitasStatusHandler(db))
+	app.Put("/proker_v3/:uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateAktivitasStatusHandler(db))
 	app.Post("/proker_v3/:uuid/dokumen_referensi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UploadDokumenReferensiHandler(db))
 
 	// 4. Timeline CRUD & Upload files
@@ -2194,4 +3014,9 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
 	app.Put("/proker_v3/dokumen/:doc_uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateVerifikasiDokumenHandler(db))
 	app.Put("/proker_v3/dokumen/:doc_uuid/status", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateVerifikasiDokumenHandler(db))
 	app.Put("/proker_v3/:uuid/dokumen/:doc_uuid/verifikasi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateVerifikasiDokumenHandler(db))
+
+	// 6. History State
+	app.Get("/proker_v3/:uuid/history", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler(db))
+	app.Get("/proker_v3/history/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler(db))
+	app.Get("/proker_v3/aktivitas/:aktivitas_uuid/history", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler(db))
 }

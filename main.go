@@ -346,7 +346,7 @@ func main() {
 	commoninfra.RegisterEvent[eventKts.KtsPdfRequestedEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
-	userPresentation.ModuleUser(app)
+	userPresentation.ModuleUser(app, db)
 	standarrenstraPresentation.ModuleStandarRenstra(app)
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
 	tahunrenstraPresentation.ModuleTahunRenstra(app)

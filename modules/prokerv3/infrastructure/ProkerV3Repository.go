@@ -55,6 +55,8 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			mp_t.id_fakultas_unit as IdFakultasUnit,
 			COALESCE(fu.nama_fak_prod_unit, '') as NamaFakultasUnit,
 			COALESCE(fu.uuid, '') as UuidFakultasUnit,
+			COALESCE(fu.type, '') as TypeFakultasUnit,
+			COALESCE(fu.fakultas, '') as ParentFakultas,
 			mp_t.id_mata_program as IdMataProgram,
 			COALESCE(prog.mata_program, '') as NamaProgram,
 			COALESCE(mt.tahun, '2026') as Tahun,
@@ -71,7 +73,12 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mp_t.output, '') as Output,
 			COALESCE(mp_t.outcome, '') as Outcome,
 			COALESCE((SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
-			COALESCE((SELECT a.status FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), 'draft') as Status,
+			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
+			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
+			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
+			COALESCE(mp_t.catatan_verifikator, '') as CatatanVerifikator,
+			COALESCE(NULLIF(mp_t.status_anggaran, ''), 'menunggu_verifikator') as StatusAnggaran,
+			COALESCE(mp_t.catatan_anggaran, '') as CatatanAnggaran,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
@@ -115,6 +122,11 @@ var allowedSearchColumns = map[string]string{
 	"fakultas_unit":        "fu.uuid",
 	"fakultasunituuid":     "fu.uuid",
 	"filter_fakultas_unit": "mp_t.id_fakultas_unit",
+	"filter_prodi":         "fu.id",
+	"id_prodi":             "fu.id",
+	"prodi":                "fu.nama_fak_prod_unit",
+	"filter_tab":           "filter_tab",
+	"tab":                  "tab",
 }
 
 // ------------------------
@@ -138,6 +150,8 @@ func (r *ProkerV3Repository) GetAll(
 			mp_t.id_fakultas_unit as IdFakultasUnit,
 			COALESCE(fu.nama_fak_prod_unit, '') as NamaFakultasUnit,
 			COALESCE(fu.uuid, '') as UuidFakultasUnit,
+			COALESCE(fu.type, '') as TypeFakultasUnit,
+			COALESCE(fu.fakultas, '') as ParentFakultas,
 			mp_t.id_mata_program as IdMataProgram,
 			COALESCE(prog.mata_program, '') as NamaProgram,
 			COALESCE(mt.tahun, '2026') as Tahun,
@@ -154,7 +168,12 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(mp_t.output, '') as Output,
 			COALESCE(mp_t.outcome, '') as Outcome,
 			COALESCE((SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
-			COALESCE((SELECT a.status FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), 'draft') as Status,
+			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
+			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
+			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
+			COALESCE(mp_t.catatan_verifikator, '') as CatatanVerifikator,
+			COALESCE(NULLIF(mp_t.status_anggaran, ''), 'menunggu_verifikator') as StatusAnggaran,
+			COALESCE(mp_t.catatan_anggaran, '') as CatatanAnggaran,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
@@ -180,13 +199,37 @@ func (r *ProkerV3Repository) GetAll(
 			}
 
 			if col, ok := allowedSearchColumns[field]; ok {
-				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" {
+				if field == "filter_prodi" || field == "id_prodi" || field == "prodi" {
 					if _, err := uuid.Parse(val); err == nil {
 						db = db.Where("fu.uuid = ?", val)
 					} else if valInt, err := strconv.Atoi(val); err == nil {
 						db = db.Where("mp_t.id_fakultas_unit = ?", valInt)
 					} else {
-						db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR fu.nama_fak_prod_unit LIKE ?)", val, val, "%"+val+"%")
+						db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.nama_fak_prod_unit LIKE ?)", val, "%"+val+"%")
+					}
+					continue
+				}
+
+				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" {
+					if strings.Contains(val, ",") {
+						parts := strings.Split(val, ",")
+						var ids []int
+						for _, p := range parts {
+							if id, err := strconv.Atoi(strings.TrimSpace(p)); err == nil {
+								ids = append(ids, id)
+							}
+						}
+						if len(ids) > 0 {
+							db = db.Where("mp_t.id_fakultas_unit IN (?)", ids)
+							continue
+						}
+					}
+					if _, err := uuid.Parse(val); err == nil {
+						db = db.Where("(fu.uuid = ? OR (fu.kode_fakultas IS NOT NULL AND fu.kode_fakultas != '' AND fu.kode_fakultas = (SELECT kode_fakultas FROM v_fakultas_unit WHERE uuid = ? LIMIT 1)) OR fu.fakultas = (SELECT nama_fak_prod_unit FROM v_fakultas_unit WHERE uuid = ? LIMIT 1) OR fu.fakultas = (SELECT fakultas FROM v_fakultas_unit WHERE uuid = ? LIMIT 1))", val, val, val, val)
+					} else if valInt, err := strconv.Atoi(val); err == nil {
+						db = db.Where("(mp_t.id_fakultas_unit = ? OR (fu.kode_fakultas IS NOT NULL AND fu.kode_fakultas != '' AND fu.kode_fakultas = (SELECT kode_fakultas FROM v_fakultas_unit WHERE id = ? LIMIT 1)) OR fu.fakultas = (SELECT nama_fak_prod_unit FROM v_fakultas_unit WHERE id = ? LIMIT 1) OR fu.fakultas = (SELECT fakultas FROM v_fakultas_unit WHERE id = ? LIMIT 1))", valInt, valInt, valInt, valInt)
+					} else {
+						db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR fu.kode_fakultas = ? OR fu.nama_fak_prod_unit LIKE ? OR fu.fakultas LIKE ?)", val, val, val, "%"+val+"%", "%"+val+"%")
 					}
 					continue
 				}
@@ -202,6 +245,39 @@ func (r *ProkerV3Repository) GetAll(
 
 				if field == "tahunuuid" {
 					db = db.Where("mt.uuid = ?", val)
+					continue
+				}
+
+				if field == "filter_tab" || field == "tab" {
+					parts := strings.Split(val, ":")
+					var role, tab string
+					if len(parts) == 2 {
+						role = strings.ToLower(strings.TrimSpace(parts[0]))
+						tab = strings.ToLower(strings.TrimSpace(parts[1]))
+					} else {
+						tab = strings.ToLower(strings.TrimSpace(val))
+					}
+
+					if role == "anggaran" || role == "keuangan" {
+						switch tab {
+						case "terima":
+							db = db.Where("(mp_t.status_anggaran IN ('terima_anggaran', 'disetujui') OR mp_t.status IN ('terima_anggaran', 'terima anggaran'))")
+						case "tolak":
+							db = db.Where("(mp_t.status_anggaran = 'ditolak' OR (mp_t.status LIKE '%ditolak%' AND (mp_t.status_anggaran = 'ditolak' OR (mp_t.catatan_anggaran IS NOT NULL AND mp_t.catatan_anggaran != ''))))")
+						case "menunggu":
+							db = db.Where("COALESCE(mp_t.status_anggaran, '') NOT IN ('terima_anggaran', 'disetujui', 'ditolak') AND COALESCE(mp_t.status, '') NOT IN ('terima_anggaran', 'terima anggaran')")
+						}
+					} else {
+						// Verifikator (upml, upmf, upms, evaluator, admin)
+						switch tab {
+						case "terima":
+							db = db.Where("(mp_t.status_verifikator IN ('terima_verifikator', 'disetujui') OR mp_t.status IN ('disetujui', 'terima_anggaran', 'terima anggaran') OR mp_t.status_verifikator LIKE '%diverifikasi%' OR mp_t.status LIKE '%diverifikasi%')")
+						case "tolak":
+							db = db.Where("(mp_t.status_verifikator = 'ditolak' OR (mp_t.status LIKE '%ditolak%' AND (mp_t.status_verifikator = 'ditolak' OR (mp_t.catatan_verifikator IS NOT NULL AND mp_t.catatan_verifikator != '') OR (mp_t.catatan_penolakan IS NOT NULL AND mp_t.catatan_penolakan != ''))))")
+						case "menunggu":
+							db = db.Where("COALESCE(mp_t.status_verifikator, '') NOT IN ('terima_verifikator', 'disetujui', 'ditolak') AND COALESCE(mp_t.status, '') NOT IN ('disetujui', 'terima_anggaran', 'terima anggaran') AND COALESCE(mp_t.status_verifikator, '') NOT LIKE '%diverifikasi%' AND COALESCE(mp_t.status, '') NOT LIKE '%diverifikasi%'")
+						}
+					}
 					continue
 				}
 
@@ -399,9 +475,20 @@ func (r *ProkerV3Repository) GetAktivitasByMatrikId(ctx context.Context, matrikI
 			Masalah:          a.Masalah,
 			Anggaran:         a.Anggaran,
 			Realisasi:        a.Realisasi,
-			Status:           a.Status,
-			CreatedAt:        a.CreatedAt,
-			UpdatedAt:        a.UpdatedAt,
+			Status:             a.Status,
+			CatatanPenolakan:   a.CatatanPenolakan,
+			StatusVerifikator:  a.StatusVerifikator,
+			CatatanVerifikator: a.CatatanVerifikator,
+			StatusAnggaran:     a.StatusAnggaran,
+			CatatanAnggaran:    a.CatatanAnggaran,
+			StatusUpml:         a.StatusUpml,
+			CatatanTolakUpml:   a.CatatanTolakUpml,
+			StatusUpmf:         a.StatusUpmf,
+			CatatanTolakUpmf:   a.CatatanTolakUpmf,
+			StatusUpms:         a.StatusUpms,
+			CatatanTolakUpms:   a.CatatanTolakUpms,
+			CreatedAt:          a.CreatedAt,
+			UpdatedAt:          a.UpdatedAt,
 		}
 
 		// Load timelines
@@ -535,9 +622,20 @@ func (r *ProkerV3Repository) GetAktivitasByUuid(ctx context.Context, uid uuid.UU
 		Masalah:          a.Masalah,
 		Anggaran:         a.Anggaran,
 		Realisasi:        a.Realisasi,
-		Status:           a.Status,
-		CreatedAt:        a.CreatedAt,
-		UpdatedAt:        a.UpdatedAt,
+		Status:             a.Status,
+		CatatanPenolakan:   a.CatatanPenolakan,
+		StatusVerifikator:  a.StatusVerifikator,
+		CatatanVerifikator: a.CatatanVerifikator,
+		StatusAnggaran:     a.StatusAnggaran,
+		CatatanAnggaran:    a.CatatanAnggaran,
+		StatusUpml:         a.StatusUpml,
+		CatatanTolakUpml:   a.CatatanTolakUpml,
+		StatusUpmf:         a.StatusUpmf,
+		CatatanTolakUpmf:   a.CatatanTolakUpmf,
+		StatusUpms:         a.StatusUpms,
+		CatatanTolakUpms:   a.CatatanTolakUpms,
+		CreatedAt:          a.CreatedAt,
+		UpdatedAt:          a.UpdatedAt,
 	}
 
 	// Timelines

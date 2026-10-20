@@ -35,9 +35,10 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 
 	repoUser := NewUserRepository(db)
 	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
-	// if err := db.AutoMigrate(&domainuser.User{}); err != nil {
-	// 	panic(err)
-	// }
+
+	if db != nil {
+		_ = db.Exec("ALTER TABLE `users` MODIFY COLUMN `level` VARCHAR(100) NOT NULL DEFAULT 'user'")
+	}
 
 	// Pipeline behavior
 	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorUser())

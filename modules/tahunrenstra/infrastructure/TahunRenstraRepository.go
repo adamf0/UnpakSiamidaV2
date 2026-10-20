@@ -178,6 +178,30 @@ func (r *TahunRenstraRepository) GetAll(
 		total++
 	}
 
+	// Pastikan tahun-tahun dari user_abac juga muncul di list
+	var abacYears []string
+	_ = r.db.WithContext(ctx).Table("user_abac").
+		Distinct("tahun").
+		Where("tahun IS NOT NULL AND tahun != ''").
+		Pluck("tahun", &abacYears).Error
+
+	existingYearMap := make(map[string]bool)
+	for _, t := range TahunRenstras {
+		existingYearMap[t.Tahun] = true
+	}
+
+	for _, y := range abacYears {
+		y = strings.TrimSpace(y)
+		if y != "" && !existingYearMap[y] {
+			existingYearMap[y] = true
+			TahunRenstras = append([]domainTahunRenstra.TahunRenstra{{
+				Tahun:  y,
+				Status: "active",
+			}}, TahunRenstras...)
+			total++
+		}
+	}
+
 	return TahunRenstras, total, nil
 }
 

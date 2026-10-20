@@ -495,7 +495,7 @@ func GetAllSwotsHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleSwot(app *fiber.App) {
-	roles := []string{"admin", "auditee", "fakultas", "unit"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Post("/swot", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateSwotHandlerfunc)

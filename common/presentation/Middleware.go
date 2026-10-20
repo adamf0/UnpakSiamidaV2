@@ -92,8 +92,10 @@ type Account struct {
 	ExtraRole    []ExtraRole `gorm:"-" json:"ExtraRole,omitempty"`
 }
 type ExtraRole struct {
-	Tahun string `json:"tahun"`
-	Role  string `json:"role"`
+	Tahun            string `json:"tahun"`
+	Role             string `json:"role"`
+	IdFakultasUnit   uint   `json:"id_fakultas_unit,omitempty"`
+	NamaFakultasUnit string `json:"nama_fakultas_unit,omitempty"`
 }
 
 func (a *Account) UnmarshalJSON(data []byte) error {
@@ -107,6 +109,7 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 		EmailLower        *string     `json:"email"`
 		FakultasUnitLower *string     `json:"fakultas_unit"`
 		ExtraRoleLower    []ExtraRole `json:"extrarole,omitempty"`
+		ExtraRoleSnake    []ExtraRole `json:"extra_role,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(a),
@@ -134,6 +137,8 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 	}
 	if len(a.ExtraRole) == 0 && len(aux.ExtraRoleLower) > 0 {
 		a.ExtraRole = aux.ExtraRoleLower
+	} else if len(a.ExtraRole) == 0 && len(aux.ExtraRoleSnake) > 0 {
+		a.ExtraRole = aux.ExtraRoleSnake
 	}
 	return nil
 }
@@ -491,6 +496,40 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		c.Locals("fakultas_unit", user.FakultasUnit)
 		c.Locals("target", user.FakultasUnit)
 		c.Locals("level", user.Level)
+
+		if activeRole := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role"))); activeRole != "" {
+			c.Locals("level", activeRole)
+		} else if activeRole := strings.ToLower(strings.TrimSpace(c.Get("X-Level"))); activeRole != "" {
+			c.Locals("level", activeRole)
+		}
+
+		currentLevel := ""
+		if lvl, ok := c.Locals("level").(string); ok {
+			currentLevel = strings.ToLower(strings.TrimSpace(lvl))
+		}
+		if currentLevel == "" {
+			currentLevel = strings.ToLower(strings.TrimSpace(user.Level))
+		}
+
+		if (user.FakultasUnit == "" || c.Locals("fakultas_unit") == "") && len(user.ExtraRole) > 0 {
+			for _, r := range user.ExtraRole {
+				if currentLevel != "" && !strings.EqualFold(r.Role, currentLevel) && currentLevel != "user" {
+					continue
+				}
+				if r.IdFakultasUnit > 0 {
+					c.Locals("fakultas_unit", strconv.Itoa(int(r.IdFakultasUnit)))
+					c.Locals("target", strconv.Itoa(int(r.IdFakultasUnit)))
+					if r.NamaFakultasUnit != "" {
+						c.Locals("target", r.NamaFakultasUnit)
+					}
+					break
+				} else if r.NamaFakultasUnit != "" {
+					c.Locals("fakultas_unit", r.NamaFakultasUnit)
+					c.Locals("target", r.NamaFakultasUnit)
+					break
+				}
+			}
+		}
 
 		if isAdmin(user) {
 			log.Println("[RBAC] User is admin, access granted")

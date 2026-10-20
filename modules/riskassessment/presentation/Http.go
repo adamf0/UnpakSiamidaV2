@@ -873,7 +873,7 @@ func GetRiskOptionsHandler(db *gorm.DB) fiber.Handler {
 }
 
 func ModuleRiskAssessment(app *fiber.App, db *gorm.DB) {
-	roles := []string{"admin", "auditee", "fakultas", "unit"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// Dynamic Master Data Endpoints
