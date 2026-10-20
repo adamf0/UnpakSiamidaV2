@@ -108,6 +108,9 @@ func (h *UpdateBeritaAcaraCommandHandler) Handle(
 	g.Go(func() error {
 		f, err := h.RepoFakultasUnit.GetDefaultByUuid(ctxg, uuidFakultasUnit)
 		if err != nil {
+			if ctxg.Err() != nil {
+				return ctxg.Err()
+			}
 			return domainberitaacara.NotFoundFakultas()
 		}
 		fakultas = f
@@ -117,6 +120,9 @@ func (h *UpdateBeritaAcaraCommandHandler) Handle(
 	g.Go(func() error {
 		u, err := h.RepoUser.GetByUuid(ctxg, uuidAuditee)
 		if err != nil {
+			if ctxg.Err() != nil {
+				return ctxg.Err()
+			}
 			return domainberitaacara.NotFoundAuditee()
 		}
 		auditee = u

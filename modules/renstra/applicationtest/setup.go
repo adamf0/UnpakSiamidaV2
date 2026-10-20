@@ -76,6 +76,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             name varchar(255) NOT NULL,
             email varchar(255) DEFAULT NULL,
             fakultas_unit int(11) DEFAULT NULL,
+            id_user_merge int(10) UNSIGNED DEFAULT NULL,
             foto text DEFAULT NULL,
             email_verified_at timestamp NULL DEFAULT NULL,
             remember_token varchar(100) DEFAULT NULL,
@@ -83,6 +84,19 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at timestamp NULL DEFAULT NULL,
             updated_at timestamp NULL DEFAULT NULL
         );
+
+		DROP TABLE IF EXISTS user_abac;
+		CREATE TABLE user_abac (
+			id int(10) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
+			uuid char(36) DEFAULT NULL,
+			id_user int(10) UNSIGNED NOT NULL,
+			tahun varchar(10) NOT NULL,
+			id_fakultas_unit int(10) UNSIGNED NOT NULL,
+			role varchar(50) DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'active',
+			created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+		);
 
         DROP TABLE IF EXISTS m_fakultas;
         CREATE TABLE m_fakultas (

@@ -198,6 +198,7 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
             name varchar(255) NOT NULL,
             email varchar(255) DEFAULT NULL,
             fakultas_unit int(11) DEFAULT NULL,
+            id_user_merge int(10) UNSIGNED DEFAULT NULL,
             foto text DEFAULT NULL,
             email_verified_at timestamp NULL DEFAULT NULL,
             remember_token varchar(100) DEFAULT NULL,
@@ -205,6 +206,19 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
             created_at timestamp NULL DEFAULT NULL,
             updated_at timestamp NULL DEFAULT NULL
         );
+
+		DROP TABLE IF EXISTS user_abac;
+		CREATE TABLE user_abac (
+			id int(10) UNSIGNED PRIMARY KEY AUTO_INCREMENT NOT NULL,
+			uuid char(36) DEFAULT NULL,
+			id_user int(10) UNSIGNED NOT NULL,
+			tahun varchar(10) NOT NULL,
+			id_fakultas_unit int(10) UNSIGNED NOT NULL,
+			role varchar(50) DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'active',
+			created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+		);
 
         INSERT INTO users (id, uuid, nidn_username, password, level, name, email, fakultas_unit, foto, email_verified_at, remember_token, reset_password, created_at, updated_at) VALUES
         (2, 'f524cbfd-b5aa-41d9-9a94-d9d5065918b4', 'admin', '123', 'admin', 'Admin', NULL, NULL, 'Tangkapan Layar 2025-10-17 pukul 09.48.28.png', NULL, '$2y$10$OKzK1M/XuKAuUCtfQ6FvBeZpyxjQYkMQnj8QcySVzY/cQ7Xk8s1hW', 0, '2023-05-18 18:45:52', '2025-10-22 06:02:49'),
