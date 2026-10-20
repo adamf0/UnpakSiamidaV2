@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"strconv"
+	"strings"
 )
 
 type RiskAssessmentRepository struct {
@@ -279,4 +281,118 @@ func (r *RiskAssessmentRepository) Update(ctx context.Context, item *domainRisk.
 // ------------------------
 func (r *RiskAssessmentRepository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).Table("risk_assessments").Where("uuid = ?", uid).Delete(&domainRisk.RiskAssessment{}).Error
+}
+
+// ------------------------
+// MASTER OPTIONS
+// ------------------------
+func (r *RiskAssessmentRepository) GetCriteria(ctx context.Context, tipe string) ([]domainRisk.RiskCriteriaItem, error) {
+	var items []domainRisk.RiskCriteriaItem
+	q := r.db.WithContext(ctx).Table("risk_criteria").Order("tipe ASC, skor ASC")
+	if tipe != "" {
+		q = q.Where("tipe = ?", strings.ToUpper(tipe))
+	}
+	if err := q.Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *RiskAssessmentRepository) GetLevels(ctx context.Context) ([]domainRisk.RiskLevelItem, error) {
+	var items []domainRisk.RiskLevelItem
+	if err := r.db.WithContext(ctx).Table("risk_levels").Order("min_skor ASC, id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *RiskAssessmentRepository) GetCategories(ctx context.Context) ([]domainRisk.RiskCategoryItem, error) {
+	var items []domainRisk.RiskCategoryItem
+	if err := r.db.WithContext(ctx).Table("risk_categories").Order("id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *RiskAssessmentRepository) GetStatuses(ctx context.Context) ([]domainRisk.RiskStatusItem, error) {
+	var items []domainRisk.RiskStatusItem
+	if err := r.db.WithContext(ctx).Table("risk_statuses").Order("urutan ASC, id ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *RiskAssessmentRepository) GetPrograms(ctx context.Context, fu, thn, search string) ([]domainRisk.RiskMataProgramItem, error) {
+	var programs []domainRisk.RiskMataProgramItem
+	q := r.db.WithContext(ctx).Table("mata_program mp").
+		Select("mp.id, mp.uuid, mp.mata_program, mp.id_fakultas_unit, mp.id_master_tahun, mt.tahun").
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+		Order("mp.mata_program ASC")
+
+	if fu != "" {
+		if id, err := strconv.Atoi(fu); err == nil {
+			q = q.Where("mp.id_fakultas_unit = ?", id)
+		} else {
+			q = q.Joins("LEFT JOIN sijamu_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
+				Where("fu.uuid = ?", fu)
+		}
+	}
+	if thn != "" {
+		if id, err := strconv.Atoi(thn); err == nil {
+			q = q.Where("mp.id_master_tahun = ? OR mt.tahun = ?", id, thn)
+		} else {
+			q = q.Where("mt.uuid = ? OR mt.tahun = ?", thn, thn)
+		}
+	}
+	if search != "" {
+		q = q.Where("mp.mata_program LIKE ?", "%"+search+"%")
+	}
+
+	if err := q.Find(&programs).Error; err != nil {
+		return nil, err
+	}
+	return programs, nil
+}
+
+func (r *RiskAssessmentRepository) GetOptions(ctx context.Context, fu, thn string) (*domainRisk.RiskOptionsResult, error) {
+	criteria, err := r.GetCriteria(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	levels, err := r.GetLevels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	categories, err := r.GetCategories(ctx)
+	if err != nil {
+		return nil, err
+	}
+	statuses, err := r.GetStatuses(ctx)
+	if err != nil {
+		return nil, err
+	}
+	programs, err := r.GetPrograms(ctx, fu, thn, "")
+	if err != nil {
+		return nil, err
+	}
+
+	var kemungkinan []domainRisk.RiskCriteriaItem
+	var dampak []domainRisk.RiskCriteriaItem
+	for _, cr := range criteria {
+		if strings.EqualFold(cr.Tipe, "KEMUNGKINAN") {
+			kemungkinan = append(kemungkinan, cr)
+		} else if strings.EqualFold(cr.Tipe, "DAMPAK") {
+			dampak = append(dampak, cr)
+		}
+	}
+
+	return &domainRisk.RiskOptionsResult{
+		Criteria:    criteria,
+		Kemungkinan: kemungkinan,
+		Dampak:      dampak,
+		Levels:      levels,
+		Categories:  categories,
+		Statuses:    statuses,
+		Programs:    programs,
+	}, nil
 }

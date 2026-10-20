@@ -472,3 +472,136 @@ func (r *UserRepository) InsertOutbox(
 ) error {
 	return r.db.WithContext(ctx).Create(msg).Error
 }
+
+// ------------------------
+// USER ABAC METHODS
+// ------------------------
+func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role, search, userUuid, fuUuid string) ([]domainuser.UserAbac, error) {
+	query := r.db.WithContext(ctx).Table("user_abac").
+		Select(`
+			user_abac.id,
+			user_abac.uuid,
+			user_abac.id_user,
+			user_abac.tahun,
+			user_abac.id_fakultas_unit,
+			user_abac.role,
+			user_abac.status,
+			user_abac.created_at,
+			user_abac.updated_at,
+			u.name as user_name,
+			u.nidn_username as user_username,
+			u.email as user_email,
+			u.uuid as user_uuid,
+			u.level as user_level,
+			fu.nama_fak_prod_unit as nama_fakultas_unit,
+			fu.uuid as uuid_fakultas_unit,
+			fu.type as type_fakultas_unit,
+			fu.fakultas as fakultas_unit_parent,
+			CASE
+				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+				WHEN fu.type = 'unit' THEN 'upml'
+				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+				ELSE 'upmf'
+			END AS computed_role
+		`).
+		Joins("LEFT JOIN users u ON user_abac.id_user = u.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id")
+
+	if tahun != "" && tahun != "all" {
+		query = query.Where("user_abac.tahun = ?", tahun)
+	}
+
+	if status != "" && status != "all" {
+		query = query.Where("user_abac.status = ?", status)
+	}
+
+	if userUuid != "" {
+		query = query.Where("u.uuid = ?", userUuid)
+	}
+
+	if fuUuid != "" {
+		query = query.Where("fu.uuid = ?", fuUuid)
+	}
+
+	if search != "" {
+		like := "%" + strings.ToLower(search) + "%"
+		query = query.Where("LOWER(u.name) LIKE ? OR LOWER(u.nidn_username) LIKE ? OR LOWER(fu.nama_fak_prod_unit) LIKE ?", like, like, like)
+	}
+
+	var results []domainuser.UserAbac
+	if err := query.Order("user_abac.id DESC").Find(&results).Error; err != nil {
+		return nil, err
+	}
+
+	if role != "" && role != "all" {
+		filtered := make([]domainuser.UserAbac, 0, len(results))
+		for _, item := range results {
+			rRole := strings.ToLower(item.ComputedRole)
+			if rRole == "" {
+				rRole = strings.ToLower(item.Role)
+			}
+			if rRole == role {
+				filtered = append(filtered, item)
+			}
+		}
+		results = filtered
+	}
+
+	return results, nil
+}
+
+func (r *UserRepository) GetUserAbacByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.UserAbac, error) {
+	var abac domainuser.UserAbac
+	if err := r.db.WithContext(ctx).Table("user_abac").Where("uuid = ?", uid).First(&abac).Error; err != nil {
+		return nil, err
+	}
+	return &abac, nil
+}
+
+func (r *UserRepository) CreateUserAbac(ctx context.Context, abac *domainuser.UserAbac) error {
+	return r.db.WithContext(ctx).Table("user_abac").Create(abac).Error
+}
+
+func (r *UserRepository) UpdateUserAbac(ctx context.Context, id uint, updates map[string]interface{}) error {
+	return r.db.WithContext(ctx).Table("user_abac").Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *UserRepository) DeleteUserAbac(ctx context.Context, uid uuid.UUID) error {
+	res := r.db.WithContext(ctx).Table("user_abac").Where("uuid = ?", uid).Delete(&domainuser.UserAbac{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID uint) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Table("user_abac").
+		Where("id_user = ? AND tahun = ? AND id_fakultas_unit = ?", userID, tahun, fuID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func (r *UserRepository) GetFakultasUnitInfo(ctx context.Context, id *uint, uidStr string) (idRes uint, typeRes string, namaRes string, err error) {
+	type FuRow struct {
+		ID   uint   `gorm:"column:id"`
+		Type string `gorm:"column:type"`
+		Nama string `gorm:"column:nama_fak_prod_unit"`
+	}
+	var row FuRow
+	q := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id, type, nama_fak_prod_unit")
+	if id != nil && *id > 0 {
+		q = q.Where("id = ?", *id)
+	} else if strings.TrimSpace(uidStr) != "" {
+		q = q.Where("uuid = ?", strings.TrimSpace(uidStr))
+	} else {
+		return 0, "", "", gorm.ErrRecordNotFound
+	}
+	if err := q.First(&row).Error; err != nil {
+		return 0, "", "", err
+	}
+	return row.ID, row.Type, row.Nama, nil
+}

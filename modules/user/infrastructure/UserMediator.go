@@ -12,6 +12,11 @@ import (
 	update "UnpakSiamida/modules/user/application/UpdateUser"
 	domainuser "UnpakSiamida/modules/user/domain"
 
+	createAbac "UnpakSiamida/modules/user/application/CreateUserAbac"
+	deleteAbac "UnpakSiamida/modules/user/application/DeleteUserAbac"
+	getAllAbac "UnpakSiamida/modules/user/application/GetAllUserAbac"
+	updateAbac "UnpakSiamida/modules/user/application/UpdateUserAbac"
+
 	"github.com/mehdihadeli/go-mediatr"
 
 	// "gorm.io/driver/mysql"
@@ -99,6 +104,35 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		merge.MergeUserCommand,
 		string,
 	](&merge.MergeUserCommandHandler{
+		Repo: repoUser,
+	})
+
+	// User ABAC Handlers
+	mediatr.RegisterRequestHandler[
+		getAllAbac.GetAllUserAbacQuery,
+		[]domainuser.UserAbac,
+	](&getAllAbac.GetAllUserAbacQueryHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		createAbac.CreateUserAbacCommand,
+		*createAbac.CreateUserAbacResult,
+	](&createAbac.CreateUserAbacCommandHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		updateAbac.UpdateUserAbacCommand,
+		string,
+	](&updateAbac.UpdateUserAbacCommandHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		deleteAbac.DeleteUserAbacCommand,
+		string,
+	](&deleteAbac.DeleteUserAbacCommandHandler{
 		Repo: repoUser,
 	})
 

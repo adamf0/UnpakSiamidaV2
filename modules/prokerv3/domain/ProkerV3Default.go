@@ -115,3 +115,92 @@ type AktivitasV2Default struct {
 	Timelines             []ProkerTimelineDefault     `json:"Timelines"`
 	DokumenReferensiFiles []ProkerTimelineFileDefault `json:"DokumenReferensiFiles,omitempty"`
 }
+
+type ProkerUnitOption struct {
+	ID           int    `json:"id"`
+	UUID         string `json:"uuid"`
+	Nama         string `json:"nama"`
+	Type         string `json:"type"`
+	Fakultas     string `json:"fakultas"`
+	Jenjang      string `json:"jenjang"`
+	KodeFakultas string `json:"kode_fakultas"`
+}
+
+type ProkerTahunOption struct {
+	ID    int    `json:"id"`
+	UUID  string `json:"uuid"`
+	Tahun string `json:"tahun"`
+}
+
+type ProkerStandarOption struct {
+	ID   int    `json:"id"`
+	UUID string `json:"uuid"`
+	Nama string `json:"nama"`
+}
+
+type ProkerIndikatorOption struct {
+	ID              int    `json:"id"`
+	UUID            string `json:"uuid"`
+	IdMasterStandar int    `json:"id_master_standar"`
+	Indikator       string `json:"indikator"`
+	Tahun           int    `json:"tahun"`
+}
+
+type ProkerOptionsResult struct {
+	Units      []ProkerUnitOption      `json:"units"`
+	Tahuns     []ProkerTahunOption     `json:"tahuns"`
+	Standars   []ProkerStandarOption   `json:"standars"`
+	Indikators []ProkerIndikatorOption `json:"indikators"`
+}
+
+type TargetUnpakResult struct {
+	Found       bool   `json:"found"`
+	Target      string `json:"target"`
+	TargetMin   string `json:"target_min"`
+	TargetMax   string `json:"target_max"`
+	Satuan      string `json:"satuan"`
+	TargetUnpak string `json:"target_unpak"`
+}
+
+type AktivitasByMatrixResult struct {
+	Proker *ProkerV3Default     `json:"proker"`
+	Data   []AktivitasV2Default `json:"data"`
+	Total  int                  `json:"total"`
+}
+
+type AktivitasDetailResult struct {
+	Aktivitas *AktivitasV2Default     `json:"aktivitas"`
+	Proker    *ProkerV3Default        `json:"proker"`
+	Timelines []ProkerTimelineDefault `json:"timelines"`
+	Data      []ProkerTimelineDefault `json:"data"`
+}
+
+type ProkerDokumenResult struct {
+	Proker     *ProkerV3Default      `json:"proker"`
+	Activities []AktivitasV2Default  `json:"activities"`
+	Data       []MatrixProkerDokumen `json:"data"`
+}
+
+type ReorderTimelineItem struct {
+	UUID        string `json:"uuid" form:"uuid"`
+	NoAktivitas int64  `json:"no_aktivitas" form:"no_aktivitas"`
+}
+
+type UpdateStatusRequest struct {
+	UUID             string
+	Status           string
+	Role             string
+	CatatanPenolakan string
+	Level            string
+	UserFU           string
+	UserID           *int
+	UserName         string
+}
+
+type UpdateStatusResult struct {
+	Message          string `json:"message"`
+	Status           string `json:"status"`
+	CatatanPenolakan string `json:"catatan_penolakan"`
+	UUID             string `json:"uuid"`
+}
+

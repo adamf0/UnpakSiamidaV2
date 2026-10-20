@@ -307,3 +307,54 @@ func FuzzValidateUUIDv4(f *testing.F) {
 		_ = helper.ValidateUUIDv4(s)
 	})
 }
+
+func TestParseOptionalInt(t *testing.T) {
+	if res := helper.ParseOptionalInt(""); res != nil {
+		t.Fatalf("expected nil for empty string, got %v", *res)
+	}
+	if res := helper.ParseOptionalInt("   "); res != nil {
+		t.Fatalf("expected nil for whitespace string, got %v", *res)
+	}
+	if res := helper.ParseOptionalInt("abc"); res != nil {
+		t.Fatalf("expected nil for invalid number, got %v", *res)
+	}
+	if res := helper.ParseOptionalInt("123"); res == nil || *res != 123 {
+		t.Fatalf("expected 123, got %v", res)
+	}
+	if res := helper.ParseOptionalInt("  456  "); res == nil || *res != 456 {
+		t.Fatalf("expected 456, got %v", res)
+	}
+}
+
+func TestMatchUnit(t *testing.T) {
+	uuidStr := "550e8400-e29b-41d4-a716-446655440000"
+	unitID := 42
+
+	// Test userFU empty
+	if helper.MatchUnit(&unitID, uuidStr, "") {
+		t.Fatalf("expected false for empty userFU")
+	}
+
+	// Test UUID string match
+	if !helper.MatchUnit(&unitID, uuidStr, uuidStr) {
+		t.Fatalf("expected true for matching string UUID")
+	}
+	if !helper.MatchUnit(&unitID, uuidStr, strings.ToUpper(uuidStr)) {
+		t.Fatalf("expected true for case-insensitive UUID match")
+	}
+
+	// Test UUID *string match
+	if !helper.MatchUnit(&unitID, &uuidStr, uuidStr) {
+		t.Fatalf("expected true for matching *string UUID")
+	}
+
+	// Test Unit ID match
+	if !helper.MatchUnit(&unitID, nil, "42") {
+		t.Fatalf("expected true for matching Unit ID")
+	}
+
+	// Test No match
+	if helper.MatchUnit(&unitID, uuidStr, "999") {
+		t.Fatalf("expected false for mismatching userFU")
+	}
+}

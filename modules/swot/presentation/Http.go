@@ -2,7 +2,6 @@ package presentation
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,6 +9,7 @@ import (
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	CreateSwot "UnpakSiamida/modules/swot/application/CreateSwot"
@@ -20,155 +20,46 @@ import (
 	domainSwot "UnpakSiamida/modules/swot/domain"
 )
 
-func parseOptionalFloat(val string) *float64 {
-	val = strings.TrimSpace(val)
-	if val == "" {
-		return nil
-	}
-	if f, err := strconv.ParseFloat(val, 64); err == nil {
-		return &f
-	}
-	return nil
-}
-
-func parseOptionalInt(val string) *int {
-	val = strings.TrimSpace(val)
-	if val == "" {
-		return nil
-	}
-	if i, err := strconv.Atoi(val); err == nil {
-		return &i
-	}
-	return nil
-}
-
-func getUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
-	if lvl, ok := c.Locals("level").(string); ok && lvl != "" {
-		level = strings.ToLower(strings.TrimSpace(lvl))
-	}
-	if fu, ok := c.Locals("fakultas_unit").(string); ok && fu != "" {
-		fakultasUnit = strings.TrimSpace(fu)
-	}
-
-	if level == "" {
-		level = strings.ToLower(strings.TrimSpace(c.FormValue("level")))
-		if level == "" {
-			level = strings.ToLower(strings.TrimSpace(c.Query("level")))
-		}
-	}
-
-	if fakultasUnit == "" {
-		fakultasUnit = strings.TrimSpace(c.FormValue("fakultas_unit"))
-		if fakultasUnit == "" {
-			fakultasUnit = strings.TrimSpace(c.FormValue("target"))
-		}
-		if fakultasUnit == "" {
-			fakultasUnit = strings.TrimSpace(c.Query("filter_fakultas_unit"))
-		}
-		if fakultasUnit == "" {
-			fakultasUnit = strings.TrimSpace(c.Query("fakultas_unit"))
-		}
-		if fakultasUnit == "" {
-			fakultasUnit = strings.TrimSpace(c.Query("target"))
-		}
-	}
-
-	return level, fakultasUnit
-}
-
-func matchUnit(itemUnitID *int, itemUnitUUID *string, userFU string) bool {
-	if userFU == "" {
-		return false
-	}
-	if itemUnitUUID != nil && strings.EqualFold(strings.TrimSpace(*itemUnitUUID), strings.TrimSpace(userFU)) {
-		return true
-	}
-	if itemUnitID != nil && strconv.Itoa(*itemUnitID) == strings.TrimSpace(userFU) {
-		return true
-	}
-	return false
-}
 
 // =======================================================
 // POST /swot
 // =======================================================
 func CreateSwotHandlerfunc(c *fiber.Ctx) error {
-	level, userFU := getUserInfo(c)
+	level, userFU := commonpresentation.GetUserInfo(c)
 
-	var req struct {
-		FakultasUuid   string   `json:"fakultas_unit"`
-		IdFakultasUnit *int     `json:"id_fakultas_unit"`
-		TahunUuid      string   `json:"tahun_uuid"`
-		IdMasterTahun  *int     `json:"id_master_tahun"`
-		Tahun          string   `json:"tahun"`
-		Kategori       string   `json:"kategori"`
-		Faktor         string   `json:"faktor"`
-		Deskripsi      string   `json:"deskripsi"`
-		Strategi       string   `json:"strategi"`
-		Bobot          *float64 `json:"bobot"`
-		Rating         *int     `json:"rating"`
-		Skor           *float64 `json:"skor"`
-	}
+	var cmd CreateSwot.CreateSwotCommand
 
-	_ = c.BodyParser(&req)
+	cmd.Kategori = strings.TrimSpace(c.FormValue("kategori"))
+	cmd.Faktor = strings.TrimSpace(c.FormValue("faktor"))
+	cmd.Deskripsi = strings.TrimSpace(c.FormValue("deskripsi"))
+	cmd.Strategi = strings.TrimSpace(c.FormValue("strategi"))
+	cmd.TahunUuid = strings.TrimSpace(c.FormValue("tahun_uuid"))
+	if cmd.TahunUuid == "" {
+		cmd.TahunUuid = strings.TrimSpace(c.FormValue("id_master_tahun"))
+	}
+	cmd.IdMasterTahun = helper.ParseOptionalInt(c.FormValue("id_master_tahun"))
+	cmd.Tahun = strings.TrimSpace(c.FormValue("tahun"))
 
-	if req.Kategori == "" {
-		req.Kategori = c.FormValue("kategori")
+	if val := c.FormValue("bobot"); val != "" {
+		cmd.Bobot = helper.ParseOptionalFloat(val)
 	}
-	if req.Faktor == "" {
-		req.Faktor = c.FormValue("faktor")
+	if val := c.FormValue("rating"); val != "" {
+		cmd.Rating = helper.ParseOptionalInt(val)
 	}
-	if req.Deskripsi == "" {
-		req.Deskripsi = c.FormValue("deskripsi")
-	}
-	if req.Strategi == "" {
-		req.Strategi = c.FormValue("strategi")
-	}
-	if req.TahunUuid == "" {
-		req.TahunUuid = c.FormValue("tahun_uuid")
-		if req.TahunUuid == "" {
-			req.TahunUuid = c.FormValue("id_master_tahun")
-		}
-	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.Bobot == nil && c.FormValue("bobot") != "" {
-		req.Bobot = parseOptionalFloat(c.FormValue("bobot"))
-	}
-	if req.Rating == nil && c.FormValue("rating") != "" {
-		req.Rating = parseOptionalInt(c.FormValue("rating"))
-	}
-	if req.Skor == nil && c.FormValue("skor") != "" {
-		req.Skor = parseOptionalFloat(c.FormValue("skor"))
+	if val := c.FormValue("skor"); val != "" {
+		cmd.Skor = helper.ParseOptionalFloat(val)
 	}
 
 	// Scoping: Non-admin (auditee) dipaksa ke unit miliknya sendiri
 	if level != "admin" {
-		req.FakultasUuid = userFU
-		req.IdFakultasUnit = nil
+		cmd.FakultasUuid = userFU
+		cmd.IdFakultasUnit = nil
 	} else {
-		if req.FakultasUuid == "" {
-			req.FakultasUuid = c.FormValue("fakultas_unit")
-			if req.FakultasUuid == "" {
-				req.FakultasUuid = c.FormValue("id_fakultas_unit")
-			}
+		cmd.FakultasUuid = strings.TrimSpace(c.FormValue("fakultas_unit"))
+		if cmd.FakultasUuid == "" {
+			cmd.FakultasUuid = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
 		}
-	}
-
-	cmd := CreateSwot.CreateSwotCommand{
-		FakultasUuid:   req.FakultasUuid,
-		IdFakultasUnit: req.IdFakultasUnit,
-		TahunUuid:      req.TahunUuid,
-		IdMasterTahun:  req.IdMasterTahun,
-		Tahun:          req.Tahun,
-		Kategori:       req.Kategori,
-		Faktor:         req.Faktor,
-		Deskripsi:      req.Deskripsi,
-		Strategi:       req.Strategi,
-		Bobot:          req.Bobot,
-		Rating:         req.Rating,
-		Skor:           req.Skor,
+		cmd.IdFakultasUnit = helper.ParseOptionalInt(c.FormValue("id_fakultas_unit"))
 	}
 
 	createdUUID, err := mediatr.Send[CreateSwot.CreateSwotCommand, string](context.Background(), cmd)
@@ -189,7 +80,7 @@ func UpdateSwotHandlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
 	}
 
-	level, userFU := getUserInfo(c)
+	level, userFU := commonpresentation.GetUserInfo(c)
 
 	// Scoping: non-admin harus memiliki item ini
 	if level != "admin" {
@@ -203,85 +94,43 @@ func UpdateSwotHandlerfunc(c *fiber.Ctx) error {
 		if existing == nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "SWOT not found"})
 		}
-		if !matchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
+		if !helper.MatchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 	}
 
-	var req struct {
-		FakultasUuid   string   `json:"fakultas_unit"`
-		IdFakultasUnit *int     `json:"id_fakultas_unit"`
-		TahunUuid      string   `json:"tahun_uuid"`
-		IdMasterTahun  *int     `json:"id_master_tahun"`
-		Tahun          string   `json:"tahun"`
-		Kategori       string   `json:"kategori"`
-		Faktor         string   `json:"faktor"`
-		Deskripsi      string   `json:"deskripsi"`
-		Strategi       string   `json:"strategi"`
-		Bobot          *float64 `json:"bobot"`
-		Rating         *int     `json:"rating"`
-		Skor           *float64 `json:"skor"`
+	var cmd UpdateSwot.UpdateSwotCommand
+	cmd.UUID = rawUuid
+	cmd.Kategori = strings.TrimSpace(c.FormValue("kategori"))
+	cmd.Faktor = strings.TrimSpace(c.FormValue("faktor"))
+	cmd.Deskripsi = strings.TrimSpace(c.FormValue("deskripsi"))
+	cmd.Strategi = strings.TrimSpace(c.FormValue("strategi"))
+	cmd.TahunUuid = strings.TrimSpace(c.FormValue("tahun_uuid"))
+	if cmd.TahunUuid == "" {
+		cmd.TahunUuid = strings.TrimSpace(c.FormValue("id_master_tahun"))
 	}
+	cmd.IdMasterTahun = helper.ParseOptionalInt(c.FormValue("id_master_tahun"))
+	cmd.Tahun = strings.TrimSpace(c.FormValue("tahun"))
 
-	_ = c.BodyParser(&req)
-
-	if req.Kategori == "" {
-		req.Kategori = c.FormValue("kategori")
+	if val := c.FormValue("bobot"); val != "" {
+		cmd.Bobot = helper.ParseOptionalFloat(val)
 	}
-	if req.Faktor == "" {
-		req.Faktor = c.FormValue("faktor")
+	if val := c.FormValue("rating"); val != "" {
+		cmd.Rating = helper.ParseOptionalInt(val)
 	}
-	if req.Deskripsi == "" {
-		req.Deskripsi = c.FormValue("deskripsi")
-	}
-	if req.Strategi == "" {
-		req.Strategi = c.FormValue("strategi")
-	}
-	if req.TahunUuid == "" {
-		req.TahunUuid = c.FormValue("tahun_uuid")
-		if req.TahunUuid == "" {
-			req.TahunUuid = c.FormValue("id_master_tahun")
-		}
-	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.Bobot == nil && c.FormValue("bobot") != "" {
-		req.Bobot = parseOptionalFloat(c.FormValue("bobot"))
-	}
-	if req.Rating == nil && c.FormValue("rating") != "" {
-		req.Rating = parseOptionalInt(c.FormValue("rating"))
-	}
-	if req.Skor == nil && c.FormValue("skor") != "" {
-		req.Skor = parseOptionalFloat(c.FormValue("skor"))
+	if val := c.FormValue("skor"); val != "" {
+		cmd.Skor = helper.ParseOptionalFloat(val)
 	}
 
 	if level != "admin" {
-		req.FakultasUuid = userFU
-		req.IdFakultasUnit = nil
+		cmd.FakultasUuid = userFU
+		cmd.IdFakultasUnit = nil
 	} else {
-		if req.FakultasUuid == "" {
-			req.FakultasUuid = c.FormValue("fakultas_unit")
-			if req.FakultasUuid == "" {
-				req.FakultasUuid = c.FormValue("id_fakultas_unit")
-			}
+		cmd.FakultasUuid = strings.TrimSpace(c.FormValue("fakultas_unit"))
+		if cmd.FakultasUuid == "" {
+			cmd.FakultasUuid = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
 		}
-	}
-
-	cmd := UpdateSwot.UpdateSwotCommand{
-		UUID:           rawUuid,
-		FakultasUuid:   req.FakultasUuid,
-		IdFakultasUnit: req.IdFakultasUnit,
-		TahunUuid:      req.TahunUuid,
-		IdMasterTahun:  req.IdMasterTahun,
-		Tahun:          req.Tahun,
-		Kategori:       req.Kategori,
-		Faktor:         req.Faktor,
-		Deskripsi:      req.Deskripsi,
-		Strategi:       req.Strategi,
-		Bobot:          req.Bobot,
-		Rating:         req.Rating,
-		Skor:           req.Skor,
+		cmd.IdFakultasUnit = helper.ParseOptionalInt(c.FormValue("id_fakultas_unit"))
 	}
 
 	updatedUUID, err := mediatr.Send[UpdateSwot.UpdateSwotCommand, string](context.Background(), cmd)
@@ -302,7 +151,7 @@ func DeleteSwotHandlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
 	}
 
-	level, userFU := getUserInfo(c)
+	level, userFU := commonpresentation.GetUserInfo(c)
 
 	if level != "admin" {
 		existing, err := mediatr.Send[GetSwot.GetSwotByUuidQuery, *domainSwot.SwotDefault](
@@ -315,7 +164,7 @@ func DeleteSwotHandlerfunc(c *fiber.Ctx) error {
 		if existing == nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "SWOT not found"})
 		}
-		if !matchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
+		if !helper.MatchUnit(existing.IdFakultasUnit, existing.UuidFakultasUnit, userFU) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 	}
@@ -350,9 +199,9 @@ func GetSwotHandlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "SWOT not found"})
 	}
 
-	level, userFU := getUserInfo(c)
+	level, userFU := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
-		if !matchUnit(item.IdFakultasUnit, item.UuidFakultasUnit, userFU) {
+		if !helper.MatchUnit(item.IdFakultasUnit, item.UuidFakultasUnit, userFU) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 	}
@@ -397,7 +246,7 @@ func GetAllSwotsHandlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
-	level, userFU := getUserInfo(c)
+	level, userFU := commonpresentation.GetUserInfo(c)
 
 	var targetFU string
 	if level != "admin" {

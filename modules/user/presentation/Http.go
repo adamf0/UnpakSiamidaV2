@@ -2,6 +2,8 @@ package presentation
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,16 +31,6 @@ import (
 // POST /user
 // =======================================================
 
-type UserPayload struct {
-	Name             string `json:"name" form:"name"`
-	Username         string `json:"username" form:"username"`
-	Password         string `json:"password" form:"password"`
-	Email            string `json:"email" form:"email"`
-	Level            string `json:"level" form:"level"`
-	FakultasUnit     string `json:"FakultasUnit" form:"FakultasUnit"`
-	UuidFakultasUnit string `json:"uuid_fakultas_unit" form:"uuid_fakultas_unit"`
-}
-
 // CreateUserHandler godoc
 // @Summary Create new User
 // @Tags User
@@ -56,39 +48,15 @@ type UserPayload struct {
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /user [post]
 func CreateUserHandler(c *fiber.Ctx) error {
-	var p UserPayload
-	_ = c.BodyParser(&p)
+	name := strings.TrimSpace(c.FormValue("name"))
+	username := strings.TrimSpace(c.FormValue("username"))
+	password := strings.TrimSpace(c.FormValue("password"))
+	email := strings.TrimSpace(c.FormValue("email"))
+	level := strings.TrimSpace(c.FormValue("level"))
 
-	name := p.Name
-	if name == "" {
-		name = c.FormValue("name")
-	}
-	username := p.Username
-	if username == "" {
-		username = c.FormValue("username")
-	}
-	password := p.Password
-	if password == "" {
-		password = c.FormValue("password")
-	}
-	email := p.Email
-	if email == "" {
-		email = c.FormValue("email")
-	}
-	level := p.Level
-	if level == "" {
-		level = c.FormValue("level")
-	}
-
-	fu := p.FakultasUnit
+	fu := strings.TrimSpace(c.FormValue("FakultasUnit"))
 	if fu == "" {
-		fu = p.UuidFakultasUnit
-	}
-	if fu == "" {
-		fu = c.FormValue("FakultasUnit")
-	}
-	if fu == "" {
-		fu = c.FormValue("uuid_fakultas_unit")
+		fu = strings.TrimSpace(c.FormValue("uuid_fakultas_unit"))
 	}
 
 	cmd := CreateUser.CreateUserCommand{
@@ -134,39 +102,15 @@ func CreateUserHandler(c *fiber.Ctx) error {
 // @Failure 500 {object} commoninfra.ResponseError
 // @Router /user/{uuid} [put]
 func UpdateUserHandler(c *fiber.Ctx) error {
-	var p UserPayload
-	_ = c.BodyParser(&p)
+	name := strings.TrimSpace(c.FormValue("name"))
+	username := strings.TrimSpace(c.FormValue("username"))
+	password := strings.TrimSpace(c.FormValue("password"))
+	email := strings.TrimSpace(c.FormValue("email"))
+	level := strings.TrimSpace(c.FormValue("level"))
 
-	name := p.Name
-	if name == "" {
-		name = c.FormValue("name")
-	}
-	username := p.Username
-	if username == "" {
-		username = c.FormValue("username")
-	}
-	password := p.Password
-	if password == "" {
-		password = c.FormValue("password")
-	}
-	email := p.Email
-	if email == "" {
-		email = c.FormValue("email")
-	}
-	level := p.Level
-	if level == "" {
-		level = c.FormValue("level")
-	}
-
-	fu := p.FakultasUnit
+	fu := strings.TrimSpace(c.FormValue("FakultasUnit"))
 	if fu == "" {
-		fu = p.UuidFakultasUnit
-	}
-	if fu == "" {
-		fu = c.FormValue("FakultasUnit")
-	}
-	if fu == "" {
-		fu = c.FormValue("uuid_fakultas_unit")
+		fu = strings.TrimSpace(c.FormValue("uuid_fakultas_unit"))
 	}
 
 	var passwordPtr *string
@@ -388,31 +332,44 @@ func SetupUuidUsersHandlerfunc(c *fiber.Ctx) error {
 // POST /users/merge
 // =======================================================
 
-type MergeUserPayload struct {
-	PrimaryUUID    string   `json:"primary_uuid"`
-	SecondaryUUIDs []string `json:"secondary_uuids"`
-	PrimaryID      *uint    `json:"primary_id"`
-	SecondaryIDs   []uint   `json:"secondary_ids"`
-}
-
 // MergeUserHandler godoc
 // @Summary Merge multiple secondary users into a primary user
 // @Tags User
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
 // @Success 200 {object} map[string]string "message"
 // @Router /users/merge [post]
 func MergeUserHandler(c *fiber.Ctx) error {
-	var p MergeUserPayload
-	if err := c.BodyParser(&p); err != nil {
-		return commoninfra.HandleError(c, err)
+	primaryUUID := strings.TrimSpace(c.FormValue("primary_uuid"))
+	var primaryID *uint
+	if val := c.FormValue("primary_id"); val != "" {
+		if id, err := strconv.ParseUint(val, 10, 32); err == nil {
+			uid := uint(id)
+			primaryID = &uid
+		}
+	}
+
+	var secondaryUUIDs []string
+	if val := c.FormValue("secondary_uuids"); val != "" {
+		if err := json.Unmarshal([]byte(val), &secondaryUUIDs); err != nil {
+			for _, s := range strings.Split(val, ",") {
+				if trimmed := strings.TrimSpace(s); trimmed != "" {
+					secondaryUUIDs = append(secondaryUUIDs, trimmed)
+				}
+			}
+		}
+	}
+
+	var secondaryIDs []uint
+	if val := c.FormValue("secondary_ids"); val != "" {
+		_ = json.Unmarshal([]byte(val), &secondaryIDs)
 	}
 
 	cmd := MergeUser.MergeUserCommand{
-		PrimaryUUID:    p.PrimaryUUID,
-		SecondaryUUIDs: p.SecondaryUUIDs,
-		PrimaryID:      p.PrimaryID,
-		SecondaryIDs:   p.SecondaryIDs,
+		PrimaryUUID:    primaryUUID,
+		SecondaryUUIDs: secondaryUUIDs,
+		PrimaryID:      primaryID,
+		SecondaryIDs:   secondaryIDs,
 	}
 
 	message, err := mediatr.Send[MergeUser.MergeUserCommand, string](c.Context(), cmd)
@@ -442,13 +399,5 @@ func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 	app.Post("/users/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 
-	if len(dbs) > 0 && dbs[0] != nil {
-		db := dbs[0]
-		_ = db.Exec("ALTER TABLE `users` MODIFY COLUMN `level` VARCHAR(100) NOT NULL DEFAULT 'user'")
-		app.Get("/user-abac", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllUserAbacHandler(db))
-		app.Post("/user-abac", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateUserAbacHandler(db))
-		app.Put("/user-abac/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateUserAbacHandler(db))
-		app.Delete("/user-abac/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteUserAbacHandler(db))
-	}
+	ModuleUserAbac(app)
 }
-

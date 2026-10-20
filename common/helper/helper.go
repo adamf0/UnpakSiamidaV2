@@ -340,3 +340,58 @@ func CheckFilesExist(paths ...string) error {
 	}
 	return nil
 }
+
+// ParseOptionalInt parses a string into an *int. Returns nil if string is empty or invalid.
+func ParseOptionalInt(val string) *int {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return nil
+	}
+	if i, err := strconv.Atoi(val); err == nil {
+		return &i
+	}
+	return nil
+}
+
+// ParseOptionalFloat parses a string into an *float64. Returns nil if string is empty or invalid.
+func ParseOptionalFloat(val string) *float64 {
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return nil
+	}
+	if f, err := strconv.ParseFloat(val, 64); err == nil {
+		return &f
+	}
+	return nil
+}
+
+// MatchUnit checks whether a user's unit (userFU) matches an item's unit ID or UUID.
+// itemUnitUUID can be string, *string, or nil.
+func MatchUnit(itemUnitID *int, itemUnitUUID any, userFU string) bool {
+	userFU = strings.TrimSpace(userFU)
+	if userFU == "" {
+		return false
+	}
+
+	var uuidStr string
+	switch u := itemUnitUUID.(type) {
+	case string:
+		uuidStr = strings.TrimSpace(u)
+	case *string:
+		if u != nil {
+			uuidStr = strings.TrimSpace(*u)
+		}
+	}
+
+	if uuidStr != "" && strings.EqualFold(uuidStr, userFU) {
+		return true
+	}
+
+	if itemUnitID != nil {
+		idStr := strconv.Itoa(*itemUnitID)
+		if idStr == userFU {
+			return true
+		}
+	}
+	return false
+}
