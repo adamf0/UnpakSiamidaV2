@@ -23,6 +23,7 @@ type IProkerV3Repository interface {
 	GetAktivitasByMatrikId(ctx context.Context, matrikID uint) ([]AktivitasV2Default, error)
 	GetAktivitasByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2Default, error)
 	GetAktivitasEntityByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2, error)
+	GetAktivitasEntityById(ctx context.Context, id uint) (*AktivitasV2, error)
 	CreateAktivitas(ctx context.Context, data *AktivitasV2, timelines []ProkerTimelineV3) error
 	UpdateAktivitas(ctx context.Context, data *AktivitasV2) error
 	DeleteAktivitas(ctx context.Context, uid uuid.UUID) error
@@ -38,6 +39,7 @@ type IProkerV3Repository interface {
 	UpdateTimeline(ctx context.Context, tl *ProkerTimelineV3) error
 	DeleteTimeline(ctx context.Context, uid uuid.UUID) error
 	ReorderTimeline(ctx context.Context, items []ReorderTimelineItem) error
+	CountTimelineByAktivitasId(ctx context.Context, aktivitasId uint) (int64, error)
 	AddTimelineFiles(ctx context.Context, files []ProkerTimelineFileV3) error
 	DeleteTimelineFile(ctx context.Context, fileUid uuid.UUID) error
 	GetTimelineFileByUuid(ctx context.Context, fileUid uuid.UUID) (*ProkerTimelineFileV3, error)

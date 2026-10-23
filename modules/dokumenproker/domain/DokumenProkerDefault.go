@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -26,4 +28,11 @@ type DokumenProkerDefault struct {
 	File         string  `json:"File"`
 	Status       string  `json:"Status"`
 	Catatan      *string `json:"Catatan"`
+
+	NamaFile  *string    `json:"NamaFile,omitempty"`
+	FileURL   *string    `json:"FileURL,omitempty"`
+	FileSize  *int64     `json:"FileSize,omitempty"`
+	FileType  *string    `json:"FileType,omitempty"`
+	CreatedAt *time.Time `json:"CreatedAt,omitempty"`
 }
+

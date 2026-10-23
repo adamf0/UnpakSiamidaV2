@@ -84,6 +84,13 @@ func (r *TahunProkerRepository) GetAll(
 	page, limit *int,
 ) ([]domainTahunProker.TahunProker, int64, error) {
 
+	// Pastikan tahun 2027 tersedia di master_tahun untuk V3
+	var count2027 int64
+	_ = r.db.WithContext(ctx).Table("master_tahun").Where("tahun = ?", "2027").Count(&count2027).Error
+	if count2027 == 0 {
+		_ = r.db.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, '2027', 'aktif')", uuid.New().String()).Error
+	}
+
 	var TahunProkers = make([]domainTahunProker.TahunProker, 0)
 	var total int64
 

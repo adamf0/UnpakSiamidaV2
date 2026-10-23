@@ -21,6 +21,12 @@ type ProkerV3Repository struct {
 }
 
 func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
+	// Pastikan kolom anggaran ada di tabel aktivitasv2_timeline
+	var colCount int64
+	_ = db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aktivitasv2_timeline' AND COLUMN_NAME = 'anggaran'").Scan(&colCount).Error
+	if colCount == 0 {
+		_ = db.Exec("ALTER TABLE aktivitasv2_timeline ADD COLUMN anggaran DOUBLE DEFAULT 0").Error
+	}
 	return &ProkerV3Repository{db: db}
 }
 
@@ -559,6 +565,7 @@ func (r *ProkerV3Repository) GetAktivitasByMatrikId(ctx context.Context, matrikI
 				NamaAktivitas:    tl.NamaAktivitas,
 				PIC:              tl.PIC,
 				TitikKontrol:     tl.TitikKontrol,
+				Anggaran:         tl.Anggaran,
 				JadwalRk:         jRk,
 				JadwalR:          jR,
 				Capaian:          tl.Capaian,
@@ -705,6 +712,7 @@ func (r *ProkerV3Repository) GetAktivitasByUuid(ctx context.Context, uid uuid.UU
 			NamaAktivitas:    tl.NamaAktivitas,
 			PIC:              tl.PIC,
 			TitikKontrol:     tl.TitikKontrol,
+			Anggaran:         tl.Anggaran,
 			JadwalRk:         jRk,
 			JadwalR:          jR,
 			Capaian:          tl.Capaian,
@@ -807,6 +815,18 @@ func (r *ProkerV3Repository) GetTimelineFileByUuid(ctx context.Context, fileUid 
 func (r *ProkerV3Repository) GetAktivitasEntityByUuid(ctx context.Context, uid uuid.UUID) (*domain.AktivitasV2, error) {
 	var a domain.AktivitasV2
 	err := r.db.WithContext(ctx).Where("uuid = ?", uid).First(&a).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (r *ProkerV3Repository) GetAktivitasEntityById(ctx context.Context, id uint) (*domain.AktivitasV2, error) {
+	var a domain.AktivitasV2
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&a).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -994,6 +1014,12 @@ func (r *ProkerV3Repository) GetTargetUnpak(ctx context.Context, tahun, indikato
 // ------------------------
 // TIMELINE CRUD
 // ------------------------
+
+func (r *ProkerV3Repository) CountTimelineByAktivitasId(ctx context.Context, aktivitasId uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Table("aktivitasv2_timeline").Where("id_aktivitasv2 = ?", aktivitasId).Count(&count).Error
+	return count, err
+}
 
 func (r *ProkerV3Repository) CreateTimeline(ctx context.Context, tl *domain.ProkerTimelineV3) error {
 	if tl.UUID == uuid.Nil {

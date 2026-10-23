@@ -3,17 +3,14 @@ package CreateTimelineV3
 import (
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type CreateTimelineV3CommandHandler struct {
 	Repo domain.IProkerV3Repository
-	DB   *gorm.DB
 }
 
 func parseDateFlexible(val string) *time.Time {
@@ -33,7 +30,7 @@ func parseDateFlexible(val string) *time.Time {
 func (h *CreateTimelineV3CommandHandler) Handle(ctx context.Context, cmd CreateTimelineV3Command) (*domain.ProkerTimelineV3, error) {
 	actUUID, err := uuid.Parse(cmd.AktivitasUUID)
 	if err != nil {
-		return nil, errors.New("Invalid aktivitas UUID")
+		return nil, domain.InvalidAktivitasUuid()
 	}
 
 	act, err := h.Repo.GetAktivitasEntityByUuid(ctx, actUUID)
@@ -41,7 +38,7 @@ func (h *CreateTimelineV3CommandHandler) Handle(ctx context.Context, cmd CreateT
 		return nil, err
 	}
 	if act == nil {
-		return nil, errors.New("Aktivitas tidak ditemukan")
+		return nil, domain.AktivitasNotFound()
 	}
 
 	rkAwal := parseDateFlexible(cmd.TanggalRkAwal)
@@ -57,30 +54,9 @@ func (h *CreateTimelineV3CommandHandler) Handle(ctx context.Context, cmd CreateT
 	}
 
 	noAktivitas := cmd.NoAktivitas
-	if noAktivitas <= 0 && h.DB != nil {
-		var count int64
-		_ = h.DB.WithContext(ctx).Table("aktivitasv2_timeline").Where("id_aktivitasv2 = ?", act.ID).Count(&count)
+	if noAktivitas <= 0 && h.Repo != nil {
+		count, _ := h.Repo.CountTimelineByAktivitasId(ctx, act.ID)
 		noAktivitas = int(count + 1)
-	}
-
-	titikKontrol := strings.TrimSpace(cmd.TitikKontrol)
-	if titikKontrol == "" {
-		titikKontrol = "RK"
-	}
-
-	status := strings.TrimSpace(cmd.Status)
-	if status == "" {
-		status = "Belum Terlaksana"
-	}
-
-	namaAkt := strings.TrimSpace(cmd.NamaAktivitas)
-	if namaAkt == "" {
-		namaAkt = act.Aktivitas
-	}
-
-	pic := strings.TrimSpace(cmd.PIC)
-	if pic == "" {
-		pic = act.PIC
 	}
 
 	tlUUID := uuid.New()
@@ -90,28 +66,34 @@ func (h *CreateTimelineV3CommandHandler) Handle(ctx context.Context, cmd CreateT
 		}
 	}
 
-	newTL := domain.ProkerTimelineV3{
-		UUID:             tlUUID,
-		IdAktivitasV2:    act.ID,
-		NoAktivitas:      noAktivitas,
-		NamaAktivitas:    namaAkt,
-		PIC:              pic,
-		TitikKontrol:     titikKontrol,
-		TanggalRkAwal:    *rkAwal,
-		TanggalRkAkhir:   *rkAkhir,
-		TanggalRAwal:     parseDateFlexible(cmd.TanggalRAwal),
-		TanggalRAkhir:    parseDateFlexible(cmd.TanggalRAkhir),
-		JadwalRk:         strings.TrimSpace(cmd.JadwalRk),
-		JadwalR:          strings.TrimSpace(cmd.JadwalR),
-		Capaian:          strings.TrimSpace(cmd.Capaian),
-		Masalah:          strings.TrimSpace(cmd.Masalah),
-		PemecahanMasalah: strings.TrimSpace(cmd.PemecahanMasalah),
-		Status:           status,
+	result := domain.NewProkerTimelineV3(
+		act,
+		tlUUID,
+		noAktivitas,
+		cmd.NamaAktivitas,
+		cmd.PIC,
+		cmd.TitikKontrol,
+		cmd.Anggaran,
+		*rkAwal,
+		*rkAkhir,
+		parseDateFlexible(cmd.TanggalRAwal),
+		parseDateFlexible(cmd.TanggalRAkhir),
+		cmd.JadwalRk,
+		cmd.JadwalR,
+		cmd.Capaian,
+		cmd.Masalah,
+		cmd.PemecahanMasalah,
+		cmd.Status,
+	)
+
+	if !result.IsSuccess {
+		return nil, result.Error
 	}
 
-	if err := h.Repo.CreateTimeline(ctx, &newTL); err != nil {
+	newTL := result.Value
+	if err := h.Repo.CreateTimeline(ctx, newTL); err != nil {
 		return nil, err
 	}
 
-	return &newTL, nil
+	return newTL, nil
 }

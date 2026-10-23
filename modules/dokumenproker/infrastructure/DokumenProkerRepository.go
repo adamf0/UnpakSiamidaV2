@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -125,6 +126,183 @@ func (r *DokumenProkerRepository) GetAll(
 	var rows = make([]domaindokumenproker.DokumenProkerDefault, 0)
 	var total int64
 
+	// Cek apakah filter tahun mengarah ke tahun >= 2027 (V3)
+	var filterTahunVal string
+	for _, f := range searchFilters {
+		fieldLower := strings.ToLower(strings.TrimSpace(f.Field))
+		if fieldLower == "tahun" || fieldLower == "tahunuuid" || fieldLower == "tahunid" || fieldLower == "filter_tahun" {
+			if f.Value != nil {
+				filterTahunVal = strings.TrimSpace(*f.Value)
+				break
+			}
+		}
+	}
+
+	isV3 := false
+	if filterTahunVal != "" {
+		var mtCheck struct {
+			Tahun string
+		}
+		if _, err := uuid.Parse(filterTahunVal); err == nil {
+			_ = r.db.WithContext(ctx).Table("master_tahun").Select("tahun").Where("uuid = ?", filterTahunVal).Take(&mtCheck).Error
+		} else {
+			_ = r.db.WithContext(ctx).Table("master_tahun").Select("tahun").Where("tahun = ?", filterTahunVal).Take(&mtCheck).Error
+		}
+		tNum, _ := strconv.Atoi(strings.TrimSpace(mtCheck.Tahun))
+		if tNum >= 2027 {
+			isV3 = true
+		}
+	}
+
+	if isV3 {
+		// V3: Mengambil data dokumen dari matrix_proker_dokumen
+		db := r.db.WithContext(ctx).
+			Table("matrix_proker_dokumen mpd").
+			Select(`
+				mpd.id as Id,
+				mpd.uuid as UUID,
+				COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit, 0) as FakultasUnitId,
+				vfu.uuid as FakultasUnitUuid,
+				vfu.nama_fak_prod_unit as FakultasUnit,
+				vfu.jenjang as Jenjang,
+				vfu.type as Type,
+				vfu.fakultas as Fakultas,
+				COALESCE(mp.id, 0) as MataProgramId,
+				mp.uuid as MataProgramUUID,
+				COALESCE(mp.mata_program, '') as MataProgram,
+				COALESCE(mt.id, 0) as TahunId,
+				mt.uuid as TahunUUID,
+				COALESCE(mt.tahun, '') as Tahun,
+				mpd.jenis_dokumen as JenisDokumen,
+				COALESCE(mpd.file_url, mpd.file, '') as File,
+				mpd.status_verifikasi as Status,
+				mpd.catatan as Catatan,
+				mpd.nama_file as NamaFile,
+				mpd.file_url as FileURL,
+				mpd.file_size as FileSize,
+				mpd.file_type as FileType,
+				mpd.created_at as CreatedAt
+			`).
+			Joins("JOIN matrix_proker mpr ON mpd.id_matrik_proker = mpr.id").
+			Joins("LEFT JOIN mata_program mp ON mpr.id_mata_program = mp.id").
+			Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+			Joins("LEFT JOIN v_fakultas_unit vfu ON COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit) = vfu.id").
+			Where("mpd.deleted_at IS NULL")
+
+		allowedSearchColumnsV3 := map[string]string{
+			"target":            "vfu.nama_fak_prod_unit",
+			"fakultasunit":      "vfu.nama_fak_prod_unit",
+			"fakultasunituuid":  "vfu.uuid",
+			"id_fakultas_unit":  "mpr.id_fakultas_unit",
+			"fakultasunitid":    "mpr.id_fakultas_unit",
+			"mataprogram":       "mp.mata_program",
+			"mataprogramuuid":   "mp.uuid",
+			"id_mata_program":   "mpr.id_mata_program",
+			"tahun":             "mt.tahun",
+			"tahunuuid":         "mt.uuid",
+			"tahunid":           "mp.id_master_tahun",
+			"jenis_dokumen":     "mpd.jenis_dokumen",
+			"jenisdokumen":      "mpd.jenis_dokumen",
+			"status":            "mpd.status_verifikasi",
+			"status_verifikasi": "mpd.status_verifikasi",
+			"catatan":           "mpd.catatan",
+			"file":              "mpd.file",
+			"nama_file":         "mpd.nama_file",
+		}
+
+		for _, f := range searchFilters {
+			fieldLower := strings.ToLower(strings.TrimSpace(f.Field))
+			val := ""
+			if f.Value != nil {
+				val = strings.TrimSpace(*f.Value)
+			}
+			if val == "" {
+				continue
+			}
+
+			if fieldLower == "sid" {
+				var userRow struct {
+					Level        string `gorm:"column:level"`
+					FakultasUnit *uint  `gorm:"column:fakultas_unit"`
+				}
+				if err := r.db.WithContext(ctx).
+					Table("users").
+					Select("level, fakultas_unit").
+					Where("uuid = ?", val).
+					Take(&userRow).Error; err == nil {
+					if strings.ToLower(strings.TrimSpace(userRow.Level)) != "admin" {
+						if userRow.FakultasUnit != nil && *userRow.FakultasUnit > 0 {
+							db = db.Where("mpr.id_fakultas_unit = ?", *userRow.FakultasUnit)
+						} else {
+							db = db.Where("1 = 0")
+						}
+					}
+				}
+				continue
+			}
+
+			if (fieldLower == "status_verifikasi" || fieldLower == "status") && strings.ToLower(val) == "belum_terverifikasi" {
+				db = db.Where("(mpd.status_verifikasi = 'belum_terverifikasi' OR mpd.status_verifikasi IS NULL OR mpd.status_verifikasi = '')")
+				continue
+			}
+
+			col, ok := allowedSearchColumnsV3[fieldLower]
+			if !ok {
+				continue
+			}
+
+			switch strings.ToLower(f.Operator) {
+			case "eq":
+				db = db.Where(clause.Eq{Column: col, Value: val})
+			case "neq":
+				db = db.Where(clause.Neq{Column: col, Value: val})
+			case "like":
+				db = db.Where(clause.Like{Column: col, Value: "%" + val + "%"})
+			case "in":
+				rawVals := strings.Split(val, ",")
+				vals := make([]interface{}, 0, len(rawVals))
+				for _, v := range rawVals {
+					v = strings.TrimSpace(v)
+					if v != "" {
+						vals = append(vals, v)
+					}
+				}
+				if len(vals) > 0 {
+					db = db.Where(clause.IN{Column: col, Values: vals})
+				}
+			}
+		}
+
+		if strings.TrimSpace(search) != "" {
+			like := "%" + search + "%"
+			var conditions []clause.Expression
+			for _, col := range allowedSearchColumnsV3 {
+				conditions = append(conditions, clause.Like{Column: col, Value: like})
+			}
+			if len(conditions) > 0 {
+				db = db.Where(clause.Or(conditions...))
+			}
+		}
+
+		if err := db.Count(&total).Error; err != nil {
+			return nil, 0, err
+		}
+
+		db = db.Order("mpd.id DESC")
+
+		if page != nil && limit != nil && *limit > 0 {
+			offset := (*page - 1) * (*limit)
+			db = db.Offset(offset).Limit(*limit)
+		}
+
+		if err := db.Find(&rows).Error; err != nil {
+			return nil, 0, err
+		}
+
+		return rows, total, nil
+	}
+
+	// Default V2: dokumen_realisasi_proker
 	db := r.db.WithContext(ctx).
 		Table("dokumen_realisasi_proker drp").
 		Select(`

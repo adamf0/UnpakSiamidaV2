@@ -139,7 +139,6 @@ func RegisterModuleProkerV3(db *gorm.DB) error {
 		*domain.ProkerTimelineV3,
 	](&createTimeline.CreateTimelineV3CommandHandler{
 		Repo: repoProker,
-		DB:   db,
 	})
 
 	mediatr.RegisterRequestHandler[

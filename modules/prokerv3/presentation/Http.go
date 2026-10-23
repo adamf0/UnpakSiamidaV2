@@ -779,6 +779,15 @@ func CreateTimelineHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("titik_kontrol"); val != "" {
 		cmd.TitikKontrol = val
 	}
+	valAnggaran := strings.TrimSpace(c.FormValue("anggaran"))
+	if valAnggaran == "" {
+		valAnggaran = strings.TrimSpace(c.FormValue("nominal"))
+	}
+	if valAnggaran != "" {
+		if ang, err := strconv.ParseFloat(valAnggaran, 64); err == nil {
+			cmd.Anggaran = ang
+		}
+	}
 	if val := c.FormValue("no_aktivitas"); val != "" {
 		if n, err := strconv.Atoi(val); err == nil {
 			cmd.NoAktivitas = n
@@ -844,6 +853,15 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 	}
 	if val := c.FormValue("titik_kontrol"); val != "" {
 		cmd.TitikKontrol = val
+	}
+	valUpdateAnggaran := strings.TrimSpace(c.FormValue("anggaran"))
+	if valUpdateAnggaran == "" {
+		valUpdateAnggaran = strings.TrimSpace(c.FormValue("nominal"))
+	}
+	if valUpdateAnggaran != "" {
+		if ang, err := strconv.ParseFloat(valUpdateAnggaran, 64); err == nil {
+			cmd.Anggaran = &ang
+		}
 	}
 	if val := c.FormValue("no_aktivitas"); val != "" {
 		if n, err := strconv.Atoi(val); err == nil {

@@ -33,6 +33,7 @@ type ProkerTimelineDefault struct {
 	NamaAktivitas    string                      `json:"NamaAktivitas"`
 	PIC              string                      `json:"PIC"`
 	TitikKontrol     string                      `json:"TitikKontrol"`
+	Anggaran         float64                     `json:"Anggaran"`
 	JadwalRk         string                      `json:"JadwalRk"`
 	JadwalR          string                      `json:"JadwalR"`
 	Capaian          string                      `json:"Capaian"`

@@ -9,8 +9,9 @@ type UpdateTimelineV3Command struct {
 	NoAktivitas      int    `json:"no_aktivitas" form:"no_aktivitas"`
 	NamaAktivitas    string `json:"nama_aktivitas" form:"nama_aktivitas"`
 	PIC              string `json:"pic" form:"pic"`
-	TitikKontrol     string `json:"titik_kontrol" form:"titik_kontrol"`
-	JadwalRk         string `json:"jadwal_rk" form:"jadwal_rk"`
+	TitikKontrol     string   `json:"titik_kontrol" form:"titik_kontrol"`
+	Anggaran         *float64 `json:"anggaran" form:"anggaran"`
+	JadwalRk         string   `json:"jadwal_rk" form:"jadwal_rk"`
 	JadwalR          string `json:"jadwal_r" form:"jadwal_r"`
 	Capaian          string `json:"capaian" form:"capaian"`
 	Masalah          string `json:"masalah" form:"masalah"`
