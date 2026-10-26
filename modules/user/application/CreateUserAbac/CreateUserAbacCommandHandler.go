@@ -75,6 +75,9 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 				}
 			}
 		} else {
+			if role != "upms" && role != "upmf" && role != "upml" {
+				return nil, errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
+			}
 			if isFakultas && role == "upms" {
 				return nil, errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
 			}
@@ -82,6 +85,10 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 				return nil, errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
 			}
 		}
+	}
+
+	if role != "upms" && role != "upmf" && role != "upml" {
+		return nil, errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
 	}
 
 	status := strings.ToLower(strings.TrimSpace(cmd.Status))

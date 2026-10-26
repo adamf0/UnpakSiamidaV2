@@ -97,33 +97,5 @@ func (h *CreateUserCommandHandler) Handle(
 	// 🧹 CLEAR AFTER COMMIT
 	createUser.ClearDomainEvents()
 
-	if createUser.FakultasUnit != nil && *createUser.FakultasUnit > 0 {
-		fuUint := uint(*createUser.FakultasUnit)
-		roleName := strings.ToLower(strings.TrimSpace(createUser.Level))
-		if roleName == "" {
-			roleName = "user"
-		}
-		for _, yr := range []string{"2026", "2027"} {
-			exists, _ := h.Repo.CheckUserAbacExists(ctx, createUser.ID, yr, &fuUint)
-			if !exists {
-				now := time.Now()
-				_ = h.Repo.CreateUserAbac(ctx, &domainuser.UserAbac{
-					UUID:           uuid.New(),
-					IdUser:         createUser.ID,
-					Tahun:          yr,
-					IdFakultasUnit: &fuUint,
-					Role:           roleName,
-					Status:         "active",
-					CreatedAt:      now,
-					UpdatedAt:      now,
-				})
-			}
-		}
-	}
-
-	// if err := h.Repo.Create(ctx, createUser); err != nil {
-	// 	return "", err
-	// }
-
 	return result.Value.UUID.String(), nil
 }

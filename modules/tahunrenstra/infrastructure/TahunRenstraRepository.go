@@ -182,7 +182,7 @@ func (r *TahunRenstraRepository) GetAll(
 	var abacYears []string
 	_ = r.db.WithContext(ctx).Table("user_abac").
 		Distinct("tahun").
-		Where("tahun IS NOT NULL AND tahun != ''").
+		Where("tahun IS NOT NULL AND tahun != '' AND LOWER(role) IN ('upms', 'upmf', 'upml')").
 		Pluck("tahun", &abacYears).Error
 
 	existingYearMap := make(map[string]bool)

@@ -57,6 +57,9 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 	if cmd.Role != "" {
 		reqRole := strings.ToLower(strings.TrimSpace(cmd.Role))
 		if reqRole != "auto" {
+			if reqRole != "upms" && reqRole != "upmf" && reqRole != "upml" {
+				return "", errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
+			}
 			if targetFuID != nil && *targetFuID > 0 {
 				_, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, targetFuID, "")
 				if err == nil {

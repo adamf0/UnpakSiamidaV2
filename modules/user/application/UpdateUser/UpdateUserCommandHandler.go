@@ -138,36 +138,5 @@ func (h *UpdateUserCommandHandler) Handle(
 	// 🧹 CLEAR AFTER COMMIT
 	updatedUser.ClearDomainEvents()
 
-	if updatedUser.FakultasUnit != nil && *updatedUser.FakultasUnit > 0 {
-		fuUint := uint(*updatedUser.FakultasUnit)
-		roleName := strings.ToLower(strings.TrimSpace(updatedUser.Level))
-		if roleName == "" {
-			roleName = "user"
-		}
-		for _, yr := range []string{"2026", "2027"} {
-			exists, _ := h.Repo.CheckUserAbacExists(ctx, updatedUser.ID, yr, &fuUint)
-			if !exists {
-				now := time.Now()
-				_ = h.Repo.CreateUserAbac(ctx, &domainuser.UserAbac{
-					UUID:           uuid.New(),
-					IdUser:         updatedUser.ID,
-					Tahun:          yr,
-					IdFakultasUnit: &fuUint,
-					Role:           roleName,
-					Status:         "active",
-					CreatedAt:      now,
-					UpdatedAt:      now,
-				})
-			}
-		}
-	}
-
-	// -------------------------
-	// SAVE TO REPOSITORY
-	// -------------------------
-	// if err := h.Repo.Update(ctx, updatedUser); err != nil {
-	// 	return "", err
-	// }
-
 	return updatedUser.UUID.String(), nil
 }

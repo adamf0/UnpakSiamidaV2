@@ -284,7 +284,7 @@ func (r *UserRepository) GetAll(
 				END AS computed_role
 			`).
 			Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-			Where("user_abac.id_user IN ?", userIds).
+			Where("user_abac.id_user IN ? AND LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')", userIds).
 			Order("user_abac.tahun DESC, user_abac.id DESC").
 			Find(&abacRows).Error
 
@@ -536,7 +536,8 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 			END AS computed_role
 		`).
 		Joins("LEFT JOIN users u ON user_abac.id_user = u.id").
-		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id")
+		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
+		Where("LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')")
 
 	if tahun != "" && tahun != "all" {
 		query = query.Where("user_abac.tahun = ?", tahun)
