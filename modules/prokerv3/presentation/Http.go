@@ -418,11 +418,14 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 		filterTab = strings.TrimSpace(c.Query("tab"))
 	}
 	if filterTab != "" && filterTab != "all" && filterTab != "semua" {
-		roleForTab := level
-		if roleForTab == "keuangan" {
-			roleForTab = "anggaran"
+		tabVal := filterTab
+		if !strings.Contains(filterTab, ":") {
+			roleForTab := level
+			if roleForTab == "keuangan" {
+				roleForTab = "anggaran"
+			}
+			tabVal = fmt.Sprintf("%s:%s", roleForTab, filterTab)
 		}
-		tabVal := fmt.Sprintf("%s:%s", roleForTab, filterTab)
 		filters = append(filters, commondomain.SearchFilter{
 			Field:    "filter_tab",
 			Operator: "eq",
@@ -502,7 +505,7 @@ func GetAktivitasByMatrixHandler(c *fiber.Ctx) error {
 	}
 
 	level, _ := commonpresentation.GetUserInfo(c)
-	isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin"
+	isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin" || level == "evaluator" || level == "anggaran" || level == "keuangan"
 	if !isVerifier && !canAccessProkerUnit(c, result.Proker.IdFakultasUnit, result.Proker.UuidFakultasUnit, result.Proker.NamaFakultasUnit) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 	}
@@ -545,6 +548,37 @@ func GetAktivitasDetailHandler(c *fiber.Ctx) error {
 // =======================================================
 func CreateAktivitasHandler(c *fiber.Ctx) error {
 	rawUuid := c.Params("uuid")
+
+	activeRole := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role")))
+	if activeRole == "" {
+		activeRole = strings.ToLower(strings.TrimSpace(c.Get("X-Level")))
+	}
+	level, _ := commonpresentation.GetUserInfo(c)
+	if activeRole == "" {
+		activeRole = strings.ToLower(level)
+	}
+
+	if activeRole != "user" && level != "admin" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Akses ditolak: Hanya level user yang dapat menambah aktivitas",
+		})
+	}
+
+	if level != "admin" {
+		parsedUuid, err := uuid.Parse(rawUuid)
+		if err == nil {
+			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
+			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+			if err == nil && existing != nil {
+				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
+					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+						"error": "Akses ditolak: Program kerja bukan milik unit yang ditugaskan",
+					})
+				}
+			}
+		}
+	}
+
 	var cmd createAktivitas.CreateAktivitasV3Command
 
 	if val := c.FormValue("aktivitas"); val != "" {
@@ -590,6 +624,43 @@ func CreateAktivitasHandler(c *fiber.Ctx) error {
 func UpdateAktivitasHandler(c *fiber.Ctx) error {
 	rawUuid := c.Params("aktivitas_uuid")
 	var cmd updateAktivitas.UpdateAktivitasV3Command
+
+	var reqBody struct {
+		Aktivitas        string   `json:"aktivitas"`
+		PIC              string   `json:"pic"`
+		Anggaran         *float64 `json:"anggaran"`
+		Realisasi        *float64 `json:"realisasi"`
+		Status           string   `json:"status"`
+		Capaian          string   `json:"capaian"`
+		Masalah          string   `json:"masalah"`
+		PemecahanMasalah string   `json:"pemecahan_masalah"`
+	}
+	if err := c.BodyParser(&reqBody); err == nil {
+		if reqBody.Aktivitas != "" {
+			cmd.Aktivitas = strings.TrimSpace(reqBody.Aktivitas)
+		}
+		if reqBody.PIC != "" {
+			cmd.PIC = strings.TrimSpace(reqBody.PIC)
+		}
+		if reqBody.Anggaran != nil && *reqBody.Anggaran > 0 {
+			cmd.Anggaran = *reqBody.Anggaran
+		}
+		if reqBody.Realisasi != nil {
+			cmd.Realisasi = reqBody.Realisasi
+		}
+		if reqBody.Status != "" {
+			cmd.Status = strings.TrimSpace(reqBody.Status)
+		}
+		if reqBody.Capaian != "" {
+			cmd.Capaian = strings.TrimSpace(reqBody.Capaian)
+		}
+		if reqBody.Masalah != "" {
+			cmd.Masalah = strings.TrimSpace(reqBody.Masalah)
+		}
+		if reqBody.PemecahanMasalah != "" {
+			cmd.PemecahanMasalah = strings.TrimSpace(reqBody.PemecahanMasalah)
+		}
+	}
 
 	if val := c.FormValue("aktivitas"); val != "" {
 		cmd.Aktivitas = strings.TrimSpace(val)
@@ -1753,7 +1824,7 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
 	repoProker = infra.NewProkerV3Repository(db)
 	dbInstance = db
 
-	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "anggaran", "keuangan", "evaluator"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "user", "upml", "upmf", "upms", "anggaran", "keuangan", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// 1. Options & Target Unpak

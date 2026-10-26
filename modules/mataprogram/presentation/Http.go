@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,9 +48,37 @@ func CreateMataProgramHandlerfunc(c *fiber.Ctx) error {
 		mataprogram = c.FormValue("mata_program")
 	}
 
+	target := c.FormValue("id_fakultas_unit")
+	if target == "" {
+		target = c.FormValue("fakultas_unit")
+	}
+	if target == "" {
+		target = c.FormValue("target")
+	}
+	if target == "" {
+		target = c.FormValue("fakultasunit")
+	}
+	if target == "" {
+		if fu, ok := c.Locals("fakultas_unit").(string); ok && fu != "" {
+			target = fu
+		}
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+
+	var fuID uint = 0
+	if target != "" {
+		if id, err := strconv.Atoi(target); err == nil && id > 0 {
+			fuID = uint(id)
+		}
+	}
+
 	cmd := CreateMataProgram.CreateMataProgramCommand{
-		TahunUuid:   tahun,
-		MataProgram: mataprogram,
+		TahunUuid:        tahun,
+		MataProgram:      mataprogram,
+		FakultasUnitUuid: target,
+		IdFakultasUnit:   fuID,
 	}
 
 	uuid, err := mediatr.Send[CreateMataProgram.CreateMataProgramCommand, string](context.Background(), cmd)
@@ -90,10 +119,38 @@ func UpdateMataProgramHandlerfunc(c *fiber.Ctx) error {
 		mataprogram = c.FormValue("mata_program")
 	}
 
+	target := c.FormValue("id_fakultas_unit")
+	if target == "" {
+		target = c.FormValue("fakultas_unit")
+	}
+	if target == "" {
+		target = c.FormValue("target")
+	}
+	if target == "" {
+		target = c.FormValue("fakultasunit")
+	}
+	if target == "" {
+		if fu, ok := c.Locals("fakultas_unit").(string); ok && fu != "" {
+			target = fu
+		}
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+
+	var fuID uint = 0
+	if target != "" {
+		if id, err := strconv.Atoi(target); err == nil && id > 0 {
+			fuID = uint(id)
+		}
+	}
+
 	cmd := UpdateMataProgram.UpdateMataProgramCommand{
-		Uuid:        uuid,
-		TahunUuid:   tahun,
-		MataProgram: mataprogram,
+		Uuid:             uuid,
+		TahunUuid:        tahun,
+		MataProgram:      mataprogram,
+		FakultasUnitUuid: target,
+		IdFakultasUnit:   fuID,
 	}
 
 	updatedID, err := mediatr.Send[UpdateMataProgram.UpdateMataProgramCommand, string](context.Background(), cmd)
@@ -221,6 +278,89 @@ func GetAllMataProgramsHandlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
+	target := strings.TrimSpace(c.Params("target"))
+	if target == "" {
+		target = strings.TrimSpace(c.Query("target"))
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if target == "" {
+		filterFakultasUnit := strings.TrimSpace(c.Query("filter_fakultas_unit"))
+		if filterFakultasUnit == "" {
+			filterFakultasUnit = strings.TrimSpace(c.Query("fakultas_unit"))
+		}
+		if filterFakultasUnit != "" && filterFakultasUnit != "all" && filterFakultasUnit != "semua" {
+			target = filterFakultasUnit
+		}
+	}
+	if target == "" {
+		target = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+
+	currentRole := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role")))
+	if currentRole == "" {
+		currentRole = strings.ToLower(strings.TrimSpace(c.Get("X-Level")))
+	}
+	if currentRole == "" {
+		if lvl, ok := c.Locals("level").(string); ok {
+			currentRole = strings.ToLower(strings.TrimSpace(lvl))
+		}
+	}
+	if currentRole == "" {
+		currentRole = strings.ToLower(strings.TrimSpace(c.FormValue("level")))
+	}
+
+	fakultasUnit := strings.TrimSpace(c.FormValue("fakultas_unit"))
+	if fakultasUnit == "" {
+		fakultasUnit = strings.TrimSpace(c.FormValue("target"))
+	}
+	if fakultasUnit == "" {
+		if fu, ok := c.Locals("fakultas_unit").(string); ok {
+			fakultasUnit = fu
+		}
+	}
+	if fakultasUnit == "" {
+		fakultasUnit = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+
+	// For non-admin, non-anggaran, non-evaluator, restrict to their own fakultas_unit forwarded from whoami or header
+	isUnrestricted := currentRole == "admin" || currentRole == "anggaran" || currentRole == "keuangan" || currentRole == "evaluator"
+	if !isUnrestricted && fakultasUnit != "" && fakultasUnit != "0" {
+		target = fakultasUnit
+	}
+
+	if target != "" && target != "all" && target != "semua" {
+		field := "id_fakultas_unit"
+		if strings.Contains(target, "-") {
+			field = "fakultasunituuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &target,
+		})
+	}
+
+	filterTahun := strings.TrimSpace(c.Query("filter_tahun"))
+	if filterTahun == "" {
+		filterTahun = strings.TrimSpace(c.Query("tahun"))
+	}
+	if filterTahun == "" {
+		filterTahun = strings.TrimSpace(c.Get("X-Active-Year"))
+	}
+	if filterTahun != "" && filterTahun != "all" && filterTahun != "semua" {
+		field := "tahun"
+		if strings.Contains(filterTahun, "-") {
+			field = "tahunuuid"
+		}
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    field,
+			Operator: "eq",
+			Value:    &filterTahun,
+		})
+	}
+
 	query := GetAllMataPrograms.GetAllMataProgramsQuery{
 		Search:        search,
 		SearchFilters: filters,
@@ -264,16 +404,17 @@ func SetupUuidMataProgramsHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleMataProgram(app *fiber.App) {
-	admin := []string{"admin"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "user", "upml", "upmf", "upms"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/mataprogram/setupuuid", SetupUuidMataProgramsHandlerfunc)
 
-	app.Post("/mataprogram", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateMataProgramHandlerfunc)
-	app.Put("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateMataProgramHandlerfunc)
-	app.Delete("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteMataProgramHandlerfunc)
+	app.Post("/mataprogram", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateMataProgramHandlerfunc)
+	app.Put("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateMataProgramHandlerfunc)
+	app.Delete("/mataprogram/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), DeleteMataProgramHandlerfunc)
 	app.Get("/mataprogram/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
 	app.Get("/mataprograms", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
+	app.Get("/mataprograms/target/:target", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
 	app.Get("/MataProgram/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetMataProgramHandlerfunc)
 	app.Get("/MataPrograms", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllMataProgramsHandlerfunc)
 }

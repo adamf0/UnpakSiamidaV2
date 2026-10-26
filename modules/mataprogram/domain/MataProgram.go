@@ -12,10 +12,11 @@ import (
 type MataProgram struct {
 	common.Entity
 
-	ID          uint      `gorm:"primaryKey;autoIncrement"`
-	UUID        uuid.UUID `gorm:"type:char(36);uniqueIndex"`
-	TahunID     uint      `gorm:"column:id_master_tahun"`
-	MataProgram string    `gorm:"column:mata_program"`
+	ID             uint      `gorm:"primaryKey;autoIncrement"`
+	UUID           uuid.UUID `gorm:"type:char(36);uniqueIndex"`
+	TahunID        uint      `gorm:"column:id_master_tahun"`
+	MataProgram    string    `gorm:"column:mata_program"`
+	FakultasUnitId uint      `gorm:"column:id_fakultas_unit"`
 }
 
 func (MataProgram) TableName() string {
@@ -23,15 +24,16 @@ func (MataProgram) TableName() string {
 }
 
 // === CREATE ===
-func NewMataProgram(tahun uint, mataprogram string) common.ResultValue[*MataProgram] {
+func NewMataProgram(tahun uint, mataprogram string, fakultasUnitId uint) common.ResultValue[*MataProgram] {
 	if tahun <= 0 {
 		return common.FailureValue[*MataProgram](InvalidTahun())
 	}
 
 	data := &MataProgram{
-		UUID:        uuid.New(),
-		TahunID:     tahun,
-		MataProgram: mataprogram,
+		UUID:           uuid.New(),
+		TahunID:        tahun,
+		MataProgram:    mataprogram,
+		FakultasUnitId: fakultasUnitId,
 	}
 
 	data.Raise(event.MataProgramCreatedEvent{
@@ -49,6 +51,7 @@ func UpdateMataProgram(
 	uid uuid.UUID,
 	tahun uint,
 	mataprogram string,
+	fakultasUnitId uint,
 ) common.ResultValue[*MataProgram] {
 
 	if prev == nil {
@@ -65,6 +68,9 @@ func UpdateMataProgram(
 
 	prev.TahunID = tahun
 	prev.MataProgram = mataprogram
+	if fakultasUnitId > 0 {
+		prev.FakultasUnitId = fakultasUnitId
+	}
 
 	prev.Raise(event.MataProgramUpdatedEvent{
 		EventID:         uuid.New(),

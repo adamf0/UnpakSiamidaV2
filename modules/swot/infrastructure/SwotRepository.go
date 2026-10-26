@@ -43,7 +43,11 @@ func (r *SwotRepository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID) (*
 			s.id as Id,
 			s.uuid as UUID,
 			s.id_fakultas_unit as IdFakultasUnit,
-			fu.nama_fak_prod_unit as NamaFakultasUnit,
+			CASE 
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as NamaFakultasUnit,
 			fu.uuid as UuidFakultasUnit,
 			s.id_master_tahun as IdMasterTahun,
 			COALESCE(mt.tahun, s.tahun) as Tahun,
@@ -81,7 +85,7 @@ var allowedSearchColumns = map[string]string{
 	"deskripsi":        "s.deskripsi",
 	"strategi":         "s.strategi",
 	"id_fakultas_unit": "s.id_fakultas_unit",
-	"fakultas_unit":    "fu.nama_fak_prod_unit",
+	"fakultas_unit":    "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"fakultasunituuid": "fu.uuid",
 }
 
@@ -104,7 +108,11 @@ func (r *SwotRepository) GetAll(
 			s.id as Id,
 			s.uuid as UUID,
 			s.id_fakultas_unit as IdFakultasUnit,
-			fu.nama_fak_prod_unit as NamaFakultasUnit,
+			CASE 
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as NamaFakultasUnit,
 			fu.uuid as UuidFakultasUnit,
 			s.id_master_tahun as IdMasterTahun,
 			COALESCE(mt.tahun, s.tahun) as Tahun,

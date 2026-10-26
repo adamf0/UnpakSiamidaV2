@@ -80,7 +80,11 @@ func (r *RenstraRepository) GetDefaultByUuid(
 
 		r.fakultas_unit as FakultasUnitId,
 		vfu.uuid as FakultasUnitUuid,
-		vfu.nama_fak_prod_unit as FakultasUnit,
+		CASE 
+			WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+			THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+			ELSE vfu.nama_fak_prod_unit 
+		END as FakultasUnit,
 
 		r.periode_upload_mulai as PeriodeUploadMulai,
 		r.periode_upload_akhir as PeriodeUploadAkhir,
@@ -356,6 +360,11 @@ var allowedSearchColumns = map[string]string{
 	"uuid_auditor2":   "a2.uuid",
 	"kodeakses":       "r.kodeAkses",
 	"kode_akses":      "r.kodeAkses",
+	"fakultasunitid":   "r.fakultas_unit",
+	"fakultas_unit_id": "r.fakultas_unit",
+	"uuidfakultasunit": "vfu.uuid",
+	"fakultasunituuid": "vfu.uuid",
+	"uuid":             "r.uuid",
 }
 
 var globalSearchColumns = []string{
@@ -392,7 +401,11 @@ func (r *RenstraRepository) GetAll(
 
 			r.fakultas_unit as FakultasUnitId,
 			vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
+			CASE 
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+				ELSE vfu.nama_fak_prod_unit 
+			END as FakultasUnit,
 
 			r.periode_upload_mulai as PeriodeUploadMulai,
 			r.periode_upload_akhir as PeriodeUploadAkhir,

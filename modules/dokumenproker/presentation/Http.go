@@ -280,7 +280,19 @@ func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
-	level := strings.TrimSpace(c.FormValue("level"))
+	currentRole := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role")))
+	if currentRole == "" {
+		currentRole = strings.ToLower(strings.TrimSpace(c.Get("X-Level")))
+	}
+	if currentRole == "" {
+		if lvl, ok := c.Locals("level").(string); ok {
+			currentRole = strings.ToLower(strings.TrimSpace(lvl))
+		}
+	}
+	if currentRole == "" {
+		currentRole = strings.ToLower(strings.TrimSpace(c.FormValue("level")))
+	}
+
 	fakultasUnit := strings.TrimSpace(c.FormValue("fakultas_unit"))
 	if fakultasUnit == "" {
 		fakultasUnit = strings.TrimSpace(c.FormValue("target"))
@@ -291,8 +303,8 @@ func GetAllDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
-	// For non-admin, restrict to their own fakultas_unit forwarded from whoami
-	if level != "admin" && fakultasUnit != "" && fakultasUnit != "0" {
+	// For non-admin (e.g. auditee), restrict to their own fakultas_unit forwarded from whoami or header
+	if (currentRole == "auditee" || (currentRole != "admin" && currentRole != "")) && fakultasUnit != "" && fakultasUnit != "0" {
 		target = fakultasUnit
 	}
 

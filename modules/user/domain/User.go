@@ -21,6 +21,8 @@ type User struct {
 	Level            string    `gorm:"size:255;" json:"Level"`
 	FakultasUnit     *int      `gorm:"column:fakultas_unit;" json:"FakultasUnit"`
 	NamaFakultasUnit *string   `gorm:"column:nama_fak_prod_unit;->" json:"NamaFakultasUnit,omitempty"`
+	Jenjang          *string   `gorm:"column:jenjang;->" json:"Jenjang,omitempty"`
+	Type             *string   `gorm:"column:type;->" json:"Type,omitempty"`
 	UuidFakultasUnit *string   `gorm:"column:uuid_fakultas_unit;->" json:"UuidFakultasUnit,omitempty"`
 	IdUserMerge      *uint             `gorm:"column:id_user_merge;" json:"IdUserMerge"`
 	NamaUserMerge    *string           `gorm:"column:nama_user_merge;->" json:"NamaUserMerge,omitempty"`
@@ -32,7 +34,7 @@ type UserAbacSummary struct {
 	UUID             string `json:"UUID"`
 	IdUser           uint   `json:"IdUser"`
 	Tahun            string `json:"Tahun"`
-	IdFakultasUnit   uint   `json:"IdFakultasUnit"`
+	IdFakultasUnit   *uint  `json:"IdFakultasUnit"`
 	NamaFakultasUnit string `json:"NamaFakultasUnit"`
 	Role             string `json:"Role"`
 	ComputedRole     string `json:"ComputedRole"`

@@ -7,9 +7,10 @@ type Account struct {
 	Password     string       `json:"-"`
 	Level        string       `json:"Level"`
 	Name         string       `json:"Name"`
-	Email        string       `json:"Email"`
-	FakultasUnit string       `json:"FakultasUnit"`
-	ExtraRole    []ExtraRole  `gorm:"-" json:"ExtraRole,omitempty"`
+	Email            string       `json:"Email"`
+	FakultasUnit     string       `json:"FakultasUnit"`
+	NamaFakultasUnit string       `gorm:"column:nama_fakultas_unit" json:"NamaFakultasUnit,omitempty"`
+	ExtraRole        []ExtraRole  `gorm:"-" json:"ExtraRole,omitempty"`
 }
 
 func (Account) TableName() string {

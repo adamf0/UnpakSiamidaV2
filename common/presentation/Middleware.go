@@ -82,14 +82,15 @@ var (
 )
 
 type Account struct {
-	UUID         string      `json:"UUID"`
-	NidnUsername string      `json:"Username"`
-	Password     string      `json:"Password"`
-	Level        string      `json:"Level"`
-	Name         string      `json:"Name"`
-	Email        string      `json:"Email"`
-	FakultasUnit string      `json:"FakultasUnit"`
-	ExtraRole    []ExtraRole `gorm:"-" json:"ExtraRole,omitempty"`
+	UUID             string      `json:"UUID"`
+	NidnUsername     string      `json:"Username"`
+	Password         string      `json:"Password"`
+	Level            string      `json:"Level"`
+	Name             string      `json:"Name"`
+	Email            string      `json:"Email"`
+	FakultasUnit     string      `json:"FakultasUnit"`
+	NamaFakultasUnit string      `json:"NamaFakultasUnit,omitempty"`
+	ExtraRole        []ExtraRole `gorm:"-" json:"ExtraRole,omitempty"`
 }
 type ExtraRole struct {
 	Tahun            string `json:"tahun"`
@@ -101,15 +102,16 @@ type ExtraRole struct {
 func (a *Account) UnmarshalJSON(data []byte) error {
 	type Alias Account
 	aux := &struct {
-		UuidLower         *string     `json:"uuid"`
-		NidnUsernameLower *string     `json:"nidn_username"`
-		PasswordLower     *string     `json:"password"`
-		LevelLower        *string     `json:"level"`
-		NameLower         *string     `json:"name"`
-		EmailLower        *string     `json:"email"`
-		FakultasUnitLower *string     `json:"fakultas_unit"`
-		ExtraRoleLower    []ExtraRole `json:"extrarole,omitempty"`
-		ExtraRoleSnake    []ExtraRole `json:"extra_role,omitempty"`
+		UuidLower             *string     `json:"uuid"`
+		NidnUsernameLower     *string     `json:"nidn_username"`
+		PasswordLower         *string     `json:"password"`
+		LevelLower            *string     `json:"level"`
+		NameLower             *string     `json:"name"`
+		EmailLower            *string     `json:"email"`
+		FakultasUnitLower     *string     `json:"fakultas_unit"`
+		NamaFakultasUnitLower *string     `json:"nama_fakultas_unit"`
+		ExtraRoleLower        []ExtraRole `json:"extrarole,omitempty"`
+		ExtraRoleSnake        []ExtraRole `json:"extra_role,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(a),
@@ -134,6 +136,9 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 	}
 	if a.FakultasUnit == "" && aux.FakultasUnitLower != nil {
 		a.FakultasUnit = *aux.FakultasUnitLower
+	}
+	if a.NamaFakultasUnit == "" && aux.NamaFakultasUnitLower != nil {
+		a.NamaFakultasUnit = *aux.NamaFakultasUnitLower
 	}
 	if len(a.ExtraRole) == 0 && len(aux.ExtraRoleLower) > 0 {
 		a.ExtraRole = aux.ExtraRoleLower
@@ -476,21 +481,33 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 			return err
 		}
 
-		if !isAdmin(user) {
-			c.Request().PostArgs().Set("fakultas_unit", user.FakultasUnit)
-			c.Request().PostArgs().Set("target", user.FakultasUnit)
-		} else {
-			if len(c.Request().PostArgs().Peek("fakultas_unit")) == 0 && user.FakultasUnit != "" {
+		path := strings.ToLower(c.Path())
+		isUserRoute := strings.HasPrefix(path, "/user") || strings.HasPrefix(path, "/users")
+		if !isUserRoute {
+			if !isAdmin(user) {
 				c.Request().PostArgs().Set("fakultas_unit", user.FakultasUnit)
-			}
-			if len(c.Request().PostArgs().Peek("target")) == 0 && user.FakultasUnit != "" {
 				c.Request().PostArgs().Set("target", user.FakultasUnit)
+			} else {
+				if len(c.Request().PostArgs().Peek("fakultas_unit")) == 0 && user.FakultasUnit != "" {
+					c.Request().PostArgs().Set("fakultas_unit", user.FakultasUnit)
+				}
+				if len(c.Request().PostArgs().Peek("target")) == 0 && user.FakultasUnit != "" {
+					c.Request().PostArgs().Set("target", user.FakultasUnit)
+				}
+			}
+			if len(c.Request().PostArgs().Peek("level")) == 0 {
+				c.Request().PostArgs().Set("level", user.Level)
+			}
+			if len(c.Request().PostArgs().Peek("username")) == 0 {
+				c.Request().PostArgs().Set("username", user.NidnUsername)
+			}
+			if len(c.Request().PostArgs().Peek("name")) == 0 {
+				c.Request().PostArgs().Set("name", user.Name)
+			}
+			if len(c.Request().PostArgs().Peek("user_uuid")) == 0 {
+				c.Request().PostArgs().Set("user_uuid", user.UUID)
 			}
 		}
-		c.Request().PostArgs().Set("level", user.Level)
-		c.Request().PostArgs().Set("username", user.NidnUsername)
-		c.Request().PostArgs().Set("name", user.Name)
-		c.Request().PostArgs().Set("user_uuid", user.UUID)
 
 		c.Locals("user", user)
 		c.Locals("fakultas_unit", user.FakultasUnit)

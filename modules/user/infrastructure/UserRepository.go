@@ -40,7 +40,13 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 			users.fakultas_unit,
 			users.id_user_merge,
 			mu.name as nama_user_merge,
-			fu.nama_fak_prod_unit,
+			CASE 
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fak_prod_unit,
+			fu.jenjang,
+			fu.type,
 			fu.uuid as uuid_fakultas_unit
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
@@ -62,11 +68,17 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 			user_abac.id_fakultas_unit,
 			user_abac.role,
 			user_abac.status,
-			fu.nama_fak_prod_unit,
+			CASE 
+				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fak_prod_unit,
 			CASE
 				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
 				WHEN fu.type = 'unit' THEN 'upml'
 				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
 				ELSE 'upmf'
 			END AS computed_role
 		`).
@@ -81,12 +93,13 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"name":          "users.name",
-	"username":      "users.nidn_username",
-	"email":         "users.email",
-	"level":         "users.level",
-	"fakultas_unit": "fu.nama_fak_prod_unit",
-	"id_user_merge": "users.id_user_merge",
+	"name":             "users.name",
+	"username":         "users.nidn_username",
+	"email":            "users.email",
+	"level":            "users.level",
+	"fakultas_unit":    "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
+	"namafakultasunit": "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
+	"id_user_merge":    "users.id_user_merge",
 }
 
 func (r *UserRepository) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
@@ -125,7 +138,13 @@ func (r *UserRepository) GetAll(
 			users.fakultas_unit,
 			users.id_user_merge,
 			mu.name as nama_user_merge,
-			fu.nama_fak_prod_unit,
+			CASE 
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fak_prod_unit,
+			fu.jenjang,
+			fu.type,
 			fu.uuid as uuid_fakultas_unit
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
@@ -233,7 +252,7 @@ func (r *UserRepository) GetAll(
 			UUID             string `gorm:"column:uuid"`
 			IdUser           uint   `gorm:"column:id_user"`
 			Tahun            string `gorm:"column:tahun"`
-			IdFakultasUnit   uint   `gorm:"column:id_fakultas_unit"`
+			IdFakultasUnit   *uint  `gorm:"column:id_fakultas_unit"`
 			Role             string `gorm:"column:role"`
 			Status           string `gorm:"column:status"`
 			NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
@@ -250,11 +269,17 @@ func (r *UserRepository) GetAll(
 				user_abac.id_fakultas_unit,
 				user_abac.role,
 				user_abac.status,
-				fu.nama_fak_prod_unit,
+				CASE 
+					WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+					WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+					THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+					ELSE fu.nama_fak_prod_unit 
+				END as nama_fak_prod_unit,
 				CASE
 					WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
 					WHEN fu.type = 'unit' THEN 'upml'
 					WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+					WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
 					ELSE 'upmf'
 				END AS computed_role
 			`).
@@ -492,8 +517,13 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 			u.nidn_username as user_username,
 			u.email as user_email,
 			u.uuid as user_uuid,
-			u.level as user_level,
-			fu.nama_fak_prod_unit as nama_fakultas_unit,
+			CASE 
+				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fakultas_unit,
+			fu.jenjang as jenjang_fakultas_unit,
 			fu.uuid as uuid_fakultas_unit,
 			fu.type as type_fakultas_unit,
 			fu.fakultas as fakultas_unit_parent,
@@ -501,6 +531,7 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
 				WHEN fu.type = 'unit' THEN 'upml'
 				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
 				ELSE 'upmf'
 			END AS computed_role
 		`).
@@ -577,11 +608,16 @@ func (r *UserRepository) DeleteUserAbac(ctx context.Context, uid uuid.UUID) erro
 	return nil
 }
 
-func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID uint) (bool, error) {
+func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Table("user_abac").
-		Where("id_user = ? AND tahun = ? AND id_fakultas_unit = ?", userID, tahun, fuID).
-		Count(&count).Error
+	q := r.db.WithContext(ctx).Table("user_abac").
+		Where("id_user = ? AND tahun = ?", userID, tahun)
+	if fuID != nil && *fuID > 0 {
+		q = q.Where("id_fakultas_unit = ?", *fuID)
+	} else {
+		q = q.Where("id_fakultas_unit IS NULL OR id_fakultas_unit = 0")
+	}
+	err := q.Count(&count).Error
 	return count > 0, err
 }
 

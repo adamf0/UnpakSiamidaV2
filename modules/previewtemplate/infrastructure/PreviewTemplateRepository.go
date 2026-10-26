@@ -33,7 +33,7 @@ func (r *PreviewTemplateRepository) GetByTahunFakultasUnit(
 			tr.pertanyaan AS IsPertanyaan,
 			i.parent as ParentIndikatorId,
 			tr.fakultas_unit AS FakultasUnitId,
-			fu.nama_fak_prod_unit AS FakultasUnit,
+			CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END AS FakultasUnit,
 			fu.type AS FakultasUnitType,
 			fu.fakultas AS Fakultas,
 			tr.klasifikasi AS Klasifikasi,

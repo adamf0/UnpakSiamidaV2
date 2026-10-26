@@ -44,6 +44,7 @@ func RegisterModuleMataProgram(db *gorm.DB) error {
 	](&create.CreateMataProgramCommandHandler{
 		Repo:            repoMataProgram,
 		RepoTahunProker: repoTahunProker,
+		DB:              db,
 	})
 
 	mediatr.RegisterRequestHandler[
@@ -52,6 +53,7 @@ func RegisterModuleMataProgram(db *gorm.DB) error {
 	](&update.UpdateMataProgramCommandHandler{
 		Repo:            repoMataProgram,
 		RepoTahunProker: repoTahunProker,
+		DB:              db,
 	})
 
 	mediatr.RegisterRequestHandler[

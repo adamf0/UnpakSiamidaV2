@@ -44,7 +44,11 @@ func (r *RiskAssessmentRepository) GetDefaultByUuid(ctx context.Context, uid uui
 			r.id as Id,
 			r.uuid as UUID,
 			r.id_fakultas_unit as IdFakultasUnit,
-			fu.nama_fak_prod_unit as NamaFakultasUnit,
+			CASE 
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as NamaFakultasUnit,
 			fu.uuid as UuidFakultasUnit,
 			r.id_master_tahun as IdMasterTahun,
 			CONVERT(COALESCE(mt.tahun, r.tahun) USING utf8mb4) as Tahun,
@@ -122,7 +126,7 @@ var allowedSearchColumns = map[string]string{
 	"kenyataan_residu":       "r.kenyataan_residu",
 	"rencana_tindak_lanjut":  "r.rencana_tindak_lanjut",
 	"id_fakultas_unit":       "r.id_fakultas_unit",
-	"fakultas_unit":          "fu.nama_fak_prod_unit",
+	"fakultas_unit":          "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"fakultasunituuid":       "fu.uuid",
 	"kode_risiko":            "r.kode_risiko",
 	"kategori":               "r.kategori",
@@ -148,7 +152,7 @@ func (r *RiskAssessmentRepository) GetAll(
 			r.id as Id,
 			r.uuid as UUID,
 			r.id_fakultas_unit as IdFakultasUnit,
-			fu.nama_fak_prod_unit as NamaFakultasUnit,
+			CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END as NamaFakultasUnit,
 			fu.uuid as UuidFakultasUnit,
 			r.id_master_tahun as IdMasterTahun,
 			CONVERT(COALESCE(mt.tahun, r.tahun) USING utf8mb4) as Tahun,

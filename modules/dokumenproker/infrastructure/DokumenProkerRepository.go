@@ -61,7 +61,11 @@ func (r *DokumenProkerRepository) GetDefaultByUuid(
 		drp.uuid as UUID,
 		drp.id_fakultas_unit as FakultasUnitId,
 		vfu.uuid as FakultasUnitUuid,
-		vfu.nama_fak_prod_unit as FakultasUnit,
+		CASE 
+			WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+			THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+			ELSE vfu.nama_fak_prod_unit 
+		END as FakultasUnit,
 		vfu.jenjang as Jenjang,
 		vfu.type as Type,
 		vfu.fakultas as Fakultas,
@@ -163,7 +167,11 @@ func (r *DokumenProkerRepository) GetAll(
 				mpd.uuid as UUID,
 				COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit, 0) as FakultasUnitId,
 				vfu.uuid as FakultasUnitUuid,
-				vfu.nama_fak_prod_unit as FakultasUnit,
+				CASE 
+					WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+					THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+					ELSE vfu.nama_fak_prod_unit 
+				END as FakultasUnit,
 				vfu.jenjang as Jenjang,
 				vfu.type as Type,
 				vfu.fakultas as Fakultas,
@@ -310,7 +318,11 @@ func (r *DokumenProkerRepository) GetAll(
 			drp.uuid as UUID,
 			drp.id_fakultas_unit as FakultasUnitId,
 			vfu.uuid as FakultasUnitUuid,
-			vfu.nama_fak_prod_unit as FakultasUnit,
+			CASE 
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+				ELSE vfu.nama_fak_prod_unit 
+			END as FakultasUnit,
 			vfu.jenjang as Jenjang,
 			vfu.type as Type,
 			vfu.fakultas as Fakultas,

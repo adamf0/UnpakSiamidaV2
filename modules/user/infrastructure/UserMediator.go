@@ -43,6 +43,7 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 
 	if db != nil {
 		_ = db.Exec("ALTER TABLE `users` MODIFY COLUMN `level` VARCHAR(100) NOT NULL DEFAULT 'user'")
+		_ = db.Exec("ALTER TABLE `user_abac` MODIFY COLUMN `id_fakultas_unit` int(10) UNSIGNED NULL DEFAULT NULL")
 	}
 
 	// Pipeline behavior

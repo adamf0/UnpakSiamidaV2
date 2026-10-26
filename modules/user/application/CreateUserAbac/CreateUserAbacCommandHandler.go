@@ -39,33 +39,48 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 		return nil, errors.New("Pengguna wajib dipilih")
 	}
 
-	// Resolve Fakultas Unit
-	fuID, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, cmd.IdFakultasUnit, cmd.UuidFakultasUnit)
-	if err != nil {
-		return nil, errors.New("Fakultas/Unit yang dipilih tidak ditemukan")
-	}
-
-	// Rule: "kalau yg saya pilih fakultas maka hanya bisa pilih upml dan upmf, kalau bukan fakultas maka bisa pilih upml upms"
-	isFakultas := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
-
+	// Resolve Fakultas Unit & Role
+	var fuID *uint
 	role := strings.ToLower(strings.TrimSpace(cmd.Role))
-	if role == "" || role == "auto" {
-		if isFakultas {
-			role = "upmf"
+
+	hasTarget := (cmd.IdFakultasUnit != nil && *cmd.IdFakultasUnit > 0) || strings.TrimSpace(cmd.UuidFakultasUnit) != ""
+	if !hasTarget {
+		if role == "upms" {
+			// UPMS does not require a target unit (applies university-wide / school-wide)
+			fuID = nil
+		} else if role == "upmf" {
+			return nil, errors.New("Target Fakultas wajib dipilih untuk role UPMF")
 		} else {
-			lowNama := strings.ToLower(fuNama)
-			if strings.Contains(lowNama, "pascasarjana") || strings.Contains(lowNama, "vokasi") || strings.Contains(lowNama, "sekolah") {
-				role = "upms"
-			} else {
-				role = "upml"
-			}
+			return nil, errors.New("Fakultas/Unit wajib dipilih untuk role ini")
 		}
 	} else {
-		if isFakultas && role == "upms" {
-			return nil, errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
+		resolvedID, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, cmd.IdFakultasUnit, cmd.UuidFakultasUnit)
+		if err != nil {
+			return nil, errors.New("Fakultas/Unit yang dipilih tidak ditemukan")
 		}
-		if !isFakultas && role == "upmf" {
-			return nil, errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
+		fuID = &resolvedID
+
+		// Rule: "kalau yg saya pilih fakultas maka hanya bisa pilih upml dan upmf, kalau bukan fakultas maka bisa pilih upml upms"
+		isFakultas := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
+
+		if role == "" || role == "auto" {
+			if isFakultas {
+				role = "upmf"
+			} else {
+				lowNama := strings.ToLower(fuNama)
+				if strings.Contains(lowNama, "pascasarjana") || strings.Contains(lowNama, "vokasi") || strings.Contains(lowNama, "sekolah") {
+					role = "upms"
+				} else {
+					role = "upml"
+				}
+			}
+		} else {
+			if isFakultas && role == "upms" {
+				return nil, errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
+			}
+			if !isFakultas && role == "upmf" {
+				return nil, errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
+			}
 		}
 	}
 

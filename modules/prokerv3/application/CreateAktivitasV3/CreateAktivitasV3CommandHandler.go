@@ -64,7 +64,12 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 		IdMatrikProker:   &matrikIDUint64,
 		IdFakultasUnit:   fuIDUint64,
 		Aktivitas:        namaAktivitas,
-		PIC:              strings.TrimSpace(cmd.PIC),
+		PIC: func() string {
+			if p := strings.TrimSpace(cmd.PIC); p != "" {
+				return p
+			}
+			return strings.TrimSpace(proker.PIC)
+		}(),
 		Capaian:          strings.TrimSpace(cmd.Capaian),
 		Masalah:          strings.TrimSpace(cmd.Masalah),
 		PemecahanMasalah: strings.TrimSpace(cmd.PemecahanMasalah),

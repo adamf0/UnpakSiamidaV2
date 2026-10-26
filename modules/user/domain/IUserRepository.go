@@ -30,6 +30,6 @@ type IUserRepository interface {
 	CreateUserAbac(ctx context.Context, abac *UserAbac) error
 	UpdateUserAbac(ctx context.Context, id uint, updates map[string]interface{}) error
 	DeleteUserAbac(ctx context.Context, uid uuid.UUID) error
-	CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID uint) (bool, error)
+	CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint) (bool, error)
 	GetFakultasUnitInfo(ctx context.Context, id *uint, uidStr string) (idRes uint, typeRes string, namaRes string, err error)
 }

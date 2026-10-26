@@ -41,10 +41,10 @@ func IsValidUnpakEmail(email string) bool {
 		return false
 	}
 
-	// 1. Base pattern (unpak.ac.id or standard valid email)
+	// 1. Base pattern (unpak.ac.id)
 	reg := regexp.MustCompile(reUnpakEmail.String())
 
-	if !reg.MatchString(email) && !reStandardEmail.MatchString(email) {
+	if !reg.MatchString(email) {
 		return false
 	}
 
@@ -127,6 +127,10 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 	if !ok {
 		return fmt.Errorf("level invalid type")
 	}
+	levelStr = strings.ToLower(strings.TrimSpace(levelStr))
+	if levelStr == "users" {
+		levelStr = "user"
+	}
 
 	var s string
 	switch v := value.(type) {
@@ -145,7 +149,7 @@ func ValidateFakultasUnit(value interface{}, level interface{}) error {
 	if levelStr == "fakultas" && s == "" {
 		return fmt.Errorf("FakultasUnit cannot be blank")
 	}
-	if (levelStr == "admin" || levelStr == "user") && s != "" {
+	if levelStr == "admin" && s != "" {
 		return fmt.Errorf("FakultasUnit required to be blank")
 	}
 
@@ -188,9 +192,15 @@ func ValidateLevel(value interface{}) error {
 		return fmt.Errorf("level invalid type")
 	}
 
+	val = strings.ToLower(strings.TrimSpace(val))
+	if val == "users" {
+		val = "user"
+	}
+
 	validLevels := map[string]struct{}{
 		"admin":     {},
 		"user":      {},
+		"users":     {},
 		"fakultas":  {},
 		"auditee":   {},
 		"auditor1":  {},

@@ -27,6 +27,20 @@ func (r *FakultasUnitRepository) GetDefaultByUuid(ctx context.Context, uid uuid.
 	var fakultasunit domainfakultasunit.FakultasUnit
 
 	err := r.db.WithContext(ctx).
+		Select(`
+			id,
+			uuid,
+			CASE 
+				WHEN type = 'prodi' AND jenjang IS NOT NULL AND jenjang != '' 
+				THEN CONCAT(nama_fak_prod_unit, ' (', UPPER(jenjang), ')') 
+				ELSE nama_fak_prod_unit 
+			END AS nama_fak_prod_unit,
+			kode_jenjang,
+			jenjang,
+			type,
+			fakultas,
+			kode_fakultas
+		`).
 		Where("uuid = ?", uid).
 		First(&fakultasunit).Error
 
@@ -154,7 +168,20 @@ func (r *FakultasUnitRepository) GetAll(
 	// -------------------------------
 	// EXECUTE QUERY
 	// -------------------------------
-	if err := db.Find(&fakultasunits).Error; err != nil {
+	if err := db.Select(`
+		id,
+		uuid,
+		CASE 
+			WHEN type = 'prodi' AND jenjang IS NOT NULL AND jenjang != '' 
+			THEN CONCAT(nama_fak_prod_unit, ' (', UPPER(jenjang), ')') 
+			ELSE nama_fak_prod_unit 
+		END AS nama_fak_prod_unit,
+		kode_jenjang,
+		jenjang,
+		type,
+		fakultas,
+		kode_fakultas
+	`).Find(&fakultasunits).Error; err != nil {
 		return nil, 0, err
 	}
 

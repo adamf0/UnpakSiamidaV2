@@ -3,10 +3,12 @@ package application
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
+	"time"
 
 	domainmataprogram "UnpakSiamida/modules/mataprogram/domain"
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
@@ -16,6 +18,7 @@ import (
 type UpdateMataProgramCommandHandler struct {
 	Repo            domainmataprogram.IMataProgramRepository
 	RepoTahunProker domaintahunproker.ITahunProkerRepository
+	DB              *gorm.DB
 }
 
 func (h *UpdateMataProgramCommandHandler) Handle(
@@ -74,6 +77,24 @@ func (h *UpdateMataProgramCommandHandler) Handle(
 		return "", err
 	}
 
+	var fuID uint = cmd.IdFakultasUnit
+	if fuID == 0 && strings.TrimSpace(cmd.FakultasUnitUuid) != "" {
+		trimmed := strings.TrimSpace(cmd.FakultasUnitUuid)
+		if parsed, err := uuid.Parse(trimmed); err == nil && h.DB != nil {
+			var fu struct {
+				ID uint
+			}
+			if err := h.DB.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", parsed).Take(&fu).Error; err == nil {
+				fuID = fu.ID
+			}
+		} else if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
+			fuID = uint(id)
+		}
+	}
+	if fuID == 0 && existingMataProgram != nil {
+		fuID = existingMataProgram.FakultasUnitId
+	}
+
 	// -------------------------
 	// AGGREGATE ROOT LOGIC
 	// -------------------------
@@ -82,6 +103,7 @@ func (h *UpdateMataProgramCommandHandler) Handle(
 		mataprogramUUID,
 		tahunprokerId,
 		cmd.MataProgram,
+		fuID,
 	)
 
 	if !result.IsSuccess {

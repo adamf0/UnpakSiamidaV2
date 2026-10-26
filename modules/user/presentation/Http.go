@@ -52,7 +52,10 @@ func CreateUserHandler(c *fiber.Ctx) error {
 	username := strings.TrimSpace(c.FormValue("username"))
 	password := strings.TrimSpace(c.FormValue("password"))
 	email := strings.TrimSpace(c.FormValue("email"))
-	level := strings.TrimSpace(c.FormValue("level"))
+	level := strings.ToLower(strings.TrimSpace(c.FormValue("level")))
+	if level == "users" {
+		level = "user"
+	}
 
 	fu := strings.TrimSpace(c.FormValue("FakultasUnit"))
 	if fu == "" {
@@ -106,7 +109,10 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 	username := strings.TrimSpace(c.FormValue("username"))
 	password := strings.TrimSpace(c.FormValue("password"))
 	email := strings.TrimSpace(c.FormValue("email"))
-	level := strings.TrimSpace(c.FormValue("level"))
+	level := strings.ToLower(strings.TrimSpace(c.FormValue("level")))
+	if level == "users" {
+		level = "user"
+	}
 
 	fu := strings.TrimSpace(c.FormValue("FakultasUnit"))
 	if fu == "" {

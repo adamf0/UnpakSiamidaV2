@@ -60,9 +60,20 @@ func (r *MataProgramRepository) GetDefaultByUuid(
 			mt.uuid as TahunUUID,
 			mt.tahun as Tahun,
 			mt.status as Status,
-			mp.mata_program as MataProgram
+			mp.mata_program as MataProgram,
+			mp.id_fakultas_unit as FakultasUnitId,
+			vfu.uuid as FakultasUnitUuid,
+			CASE 
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+				ELSE vfu.nama_fak_prod_unit 
+			END as FakultasUnit,
+			vfu.jenjang as Jenjang,
+			vfu.type as Type,
+			vfu.fakultas as Fakultas
 		`).
 		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
 		Where("mp.uuid = ?", id).
 		Take(&rowData).Error
 
@@ -78,11 +89,17 @@ func (r *MataProgramRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"tahun":        "mt.tahun",
-	"tahunuuid":    "mt.uuid",
-	"status":       "mt.status",
-	"mataprogram":  "mp.mata_program",
-	"mata_program": "mp.mata_program",
+	"tahun":            "mt.tahun",
+	"tahunuuid":        "mt.uuid",
+	"status":           "mt.status",
+	"mataprogram":      "mp.mata_program",
+	"mata_program":     "mp.mata_program",
+	"target":           "vfu.nama_fak_prod_unit",
+	"fakultasunit":     "vfu.nama_fak_prod_unit",
+	"fakultas_unit":    "vfu.nama_fak_prod_unit",
+	"fakultasunituuid": "vfu.uuid",
+	"id_fakultas_unit": "mp.id_fakultas_unit",
+	"fakultasunitid":   "mp.id_fakultas_unit",
 }
 
 // ------------------------
@@ -107,9 +124,20 @@ func (r *MataProgramRepository) GetAll(
 			mt.uuid as TahunUUID,
 			mt.tahun as Tahun,
 			mt.status as Status,
-			mp.mata_program as MataProgram
+			mp.mata_program as MataProgram,
+			mp.id_fakultas_unit as FakultasUnitId,
+			vfu.uuid as FakultasUnitUuid,
+			CASE 
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+				ELSE vfu.nama_fak_prod_unit 
+			END as FakultasUnit,
+			vfu.jenjang as Jenjang,
+			vfu.type as Type,
+			vfu.fakultas as Fakultas
 		`).
-		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id")
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -164,8 +192,13 @@ func (r *MataProgramRepository) GetAll(
 		like := "%" + search + "%"
 		var orParts []string
 		var params []interface{}
+		seen := make(map[string]bool)
 
 		for _, col := range allowedSearchColumns {
+			if seen[col] {
+				continue
+			}
+			seen[col] = true
 			orParts = append(orParts, fmt.Sprintf("%s LIKE ?", col))
 			params = append(params, like)
 		}

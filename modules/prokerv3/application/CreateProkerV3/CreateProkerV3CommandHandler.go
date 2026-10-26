@@ -59,37 +59,37 @@ func (h *CreateProkerV3CommandHandler) Handle(
 	if mpID == nil || *mpID <= 0 {
 		namaProg := strings.TrimSpace(cmd.NamaProgram)
 		if namaProg != "" {
+			// Find id_master_tahun
+			tahunStr := strings.TrimSpace(cmd.Tahun)
+			if tahunStr == "" {
+				tahunStr = "2026"
+			}
+			var mt struct {
+				ID int
+			}
+			_ = h.DB.WithContext(ctx).Table("master_tahun").
+				Select("id").
+				Where("tahun = ?", tahunStr).
+				Take(&mt).Error
+			if mt.ID == 0 {
+				mt.ID = 1
+			}
+
 			var existingMp struct {
 				ID int
 			}
 			err := h.DB.WithContext(ctx).Table("mata_program").
 				Select("id").
-				Where("mata_program = ?", namaProg).
+				Where("mata_program = ? AND id_master_tahun = ?", namaProg, mt.ID).
 				Take(&existingMp).Error
 
 			if err == nil && existingMp.ID > 0 {
 				mpID = &existingMp.ID
 			} else {
-				// Find id_master_tahun
-				tahunStr := strings.TrimSpace(cmd.Tahun)
-				if tahunStr == "" {
-					tahunStr = "2026"
-				}
-				var mt struct {
-					ID int
-				}
-				_ = h.DB.WithContext(ctx).Table("master_tahun").
-					Select("id").
-					Where("tahun = ?", tahunStr).
-					Take(&mt).Error
-				if mt.ID == 0 {
-					mt.ID = 1
-				}
-
 				newMpUUID := uuid.New()
 				res := h.DB.WithContext(ctx).Exec(
-					"INSERT INTO mata_program (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
-					newMpUUID, mt.ID, namaProg,
+					"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
+					newMpUUID, mt.ID, fuID, namaProg,
 				)
 				if res.Error == nil {
 					var createdMp struct {
@@ -135,6 +135,7 @@ func (h *CreateProkerV3CommandHandler) Handle(
 		TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
 		Output:           strings.TrimSpace(cmd.Output),
 		Outcome:          strings.TrimSpace(cmd.Outcome),
+		PIC:              strings.TrimSpace(cmd.PIC),
 	}
 
 	if err := h.Repo.Create(ctx, matrixProker); err != nil {

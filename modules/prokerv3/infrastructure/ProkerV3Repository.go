@@ -27,6 +27,13 @@ func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
 	if colCount == 0 {
 		_ = db.Exec("ALTER TABLE aktivitasv2_timeline ADD COLUMN anggaran DOUBLE DEFAULT 0").Error
 	}
+
+	// Pastikan kolom pic ada di tabel matrix_proker
+	var colPicCount int64
+	_ = db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'matrix_proker' AND COLUMN_NAME = 'pic'").Scan(&colPicCount).Error
+	if colPicCount == 0 {
+		_ = db.Exec("ALTER TABLE matrix_proker ADD COLUMN pic TEXT NULL").Error
+	}
 	return &ProkerV3Repository{db: db}
 }
 
@@ -79,7 +86,7 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mp_t.target_unit, '') as TargetUnit,
 			COALESCE(mp_t.output, '') as Output,
 			COALESCE(mp_t.outcome, '') as Outcome,
-			COALESCE((SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
+			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
 			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
@@ -119,6 +126,7 @@ var allowedSearchColumns = map[string]string{
 	"nama_program":         "prog.mata_program",
 	"mataprogram":          "prog.mata_program",
 	"program_kerja":        "prog.mata_program",
+	"pic":                  "mp_t.pic",
 	"standar_sub_standar":  "msr.nama",
 	"standar":              "msr.nama",
 	"indikator_kinerja":    "mir.indikator",
@@ -126,12 +134,20 @@ var allowedSearchColumns = map[string]string{
 	"output":               "mp_t.output",
 	"outcome":              "mp_t.outcome",
 	"id_fakultas_unit":     "mp_t.id_fakultas_unit",
-	"fakultas_unit":        "fu.uuid",
+	"fakultas_unit":        "fu.nama_fak_prod_unit",
+	"nama_fakultas_unit":   "fu.nama_fak_prod_unit",
+	"namafakultasunit":     "fu.nama_fak_prod_unit",
+	"target_unit":          "fu.nama_fak_prod_unit",
+	"target":               "fu.nama_fak_prod_unit",
 	"fakultasunituuid":     "fu.uuid",
 	"filter_fakultas_unit": "mp_t.id_fakultas_unit",
 	"filter_prodi":         "fu.id",
 	"id_prodi":             "fu.id",
 	"prodi":                "fu.nama_fak_prod_unit",
+	"target_unpak":         "mp_t.target_unpak",
+	"target_capaian":       "mp_t.target_unpak",
+	"capaian_unit_lalu":    "mp_t.capaian_terdahulu",
+	"capaian_terdahulu":    "mp_t.capaian_terdahulu",
 	"filter_tab":           "filter_tab",
 	"tab":                  "tab",
 }
@@ -174,7 +190,7 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(mp_t.target_unit, '') as TargetUnit,
 			COALESCE(mp_t.output, '') as Output,
 			COALESCE(mp_t.outcome, '') as Outcome,
-			COALESCE((SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
+			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
 			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
@@ -206,18 +222,35 @@ func (r *ProkerV3Repository) GetAll(
 			}
 
 			if col, ok := allowedSearchColumns[field]; ok {
+				if field == "nama_program" || field == "program_kerja" || field == "mataprogram" {
+					likeVal := "%" + strings.ToLower(val) + "%"
+					db = db.Where("(LOWER(prog.mata_program) LIKE ? OR LOWER(COALESCE(mp_t.pic, '')) LIKE ?)", likeVal, likeVal)
+					continue
+				}
+
+				if field == "pic" {
+					db = db.Where("LOWER(COALESCE(mp_t.pic, '')) LIKE ?", "%"+strings.ToLower(val)+"%")
+					continue
+				}
+
+				if field == "target_capaian" || field == "target_unpak" || field == "capaian_unit_lalu" || field == "capaian_terdahulu" {
+					likeVal := "%" + strings.ToLower(val) + "%"
+					db = db.Where("(LOWER(COALESCE(mp_t.target_unpak, '')) LIKE ? OR LOWER(COALESCE(mp_t.target_unit, '')) LIKE ? OR LOWER(COALESCE(mp_t.capaian_terdahulu, '')) LIKE ?)", likeVal, likeVal, likeVal)
+					continue
+				}
+
 				if field == "filter_prodi" || field == "id_prodi" || field == "prodi" {
 					if _, err := uuid.Parse(val); err == nil {
 						db = db.Where("fu.uuid = ?", val)
 					} else if valInt, err := strconv.Atoi(val); err == nil {
 						db = db.Where("mp_t.id_fakultas_unit = ?", valInt)
 					} else {
-						db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.nama_fak_prod_unit LIKE ?)", val, "%"+val+"%")
+						db = db.Where("(mp_t.id_fakultas_unit = ? OR LOWER(fu.nama_fak_prod_unit) LIKE ?)", val, "%"+strings.ToLower(val)+"%")
 					}
 					continue
 				}
 
-				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" {
+				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" || field == "nama_fakultas_unit" || field == "namafakultasunit" || field == "target_unit" || field == "target" {
 					if strings.Contains(val, ",") {
 						parts := strings.Split(val, ",")
 						var ids []int
@@ -227,16 +260,25 @@ func (r *ProkerV3Repository) GetAll(
 							}
 						}
 						if len(ids) > 0 {
-							db = db.Where("mp_t.id_fakultas_unit IN (?)", ids)
+							db = db.Where("(mp_t.id_fakultas_unit IN (?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) IN (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id IN (?))))", ids, ids)
 							continue
 						}
 					}
 					if _, err := uuid.Parse(val); err == nil {
-						db = db.Where("(fu.uuid = ? OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND fu.fakultas = (SELECT nama_fak_prod_unit FROM v_fakultas_unit WHERE uuid = ? AND type = 'fakultas' LIMIT 1)))", val, val)
+						db = db.Where("(fu.uuid = ? OR mp_t.id_fakultas_unit IN (SELECT id FROM v_fakultas_unit WHERE uuid = ?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE uuid = ? LIMIT 1)))", val, val, val)
 					} else if valInt, err := strconv.Atoi(val); err == nil {
-						db = db.Where("(mp_t.id_fakultas_unit = ? OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND fu.fakultas = (SELECT nama_fak_prod_unit FROM v_fakultas_unit WHERE id = ? AND type = 'fakultas' LIMIT 1)))", valInt, valInt)
+						if valInt == -1 {
+							db = db.Where("1 = 0")
+						} else {
+							db = db.Where("(mp_t.id_fakultas_unit = ? OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id = ? LIMIT 1)))", valInt, valInt)
+						}
 					} else {
-						db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR fu.nama_fak_prod_unit LIKE ? OR fu.fakultas LIKE ?)", val, val, "%"+val+"%", "%"+val+"%")
+						if val == "none" || val == "-1" {
+							db = db.Where("1 = 0")
+						} else {
+							likeVal := "%" + strings.ToLower(val) + "%"
+							db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR LOWER(fu.nama_fak_prod_unit) LIKE ? OR LOWER(COALESCE(fu.fakultas, '')) LIKE ?)", val, val, likeVal, likeVal)
+						}
 					}
 					continue
 				}
@@ -258,9 +300,9 @@ func (r *ProkerV3Repository) GetAll(
 				if field == "filter_tab" || field == "tab" {
 					parts := strings.Split(val, ":")
 					var role, tab string
-					if len(parts) == 2 {
+					if len(parts) >= 2 {
 						role = strings.ToLower(strings.TrimSpace(parts[0]))
-						tab = strings.ToLower(strings.TrimSpace(parts[1]))
+						tab = strings.ToLower(strings.TrimSpace(parts[len(parts)-1]))
 					} else {
 						tab = strings.ToLower(strings.TrimSpace(val))
 					}
@@ -268,11 +310,11 @@ func (r *ProkerV3Repository) GetAll(
 					if role == "anggaran" || role == "keuangan" {
 						switch tab {
 						case "terima":
-							db = db.Where("(mp_t.status_anggaran IN ('terima_anggaran', 'disetujui') OR mp_t.status IN ('terima_anggaran', 'terima anggaran'))")
+							db = db.Where("(mp_t.status_anggaran = 'terima_anggaran' OR LOWER(mp_t.status) IN ('terima_anggaran', 'terima anggaran'))")
 						case "tolak":
-							db = db.Where("(mp_t.status_anggaran = 'ditolak' OR (mp_t.status LIKE '%ditolak%' AND (mp_t.status_anggaran = 'ditolak' OR (mp_t.catatan_anggaran IS NOT NULL AND mp_t.catatan_anggaran != ''))))")
+							db = db.Where("mp_t.status_anggaran = 'ditolak'")
 						case "menunggu":
-							db = db.Where("COALESCE(mp_t.status_anggaran, '') NOT IN ('terima_anggaran', 'disetujui', 'ditolak') AND COALESCE(mp_t.status, '') NOT IN ('terima_anggaran', 'terima anggaran')")
+							db = db.Where("COALESCE(mp_t.status, '') NOT IN ('draft', 'draf') AND COALESCE(mp_t.status_anggaran, '') != 'terima_anggaran' AND LOWER(COALESCE(mp_t.status, '')) NOT IN ('terima_anggaran', 'terima anggaran') AND COALESCE(mp_t.status_anggaran, '') != 'ditolak' AND COALESCE(mp_t.status_verifikator, '') != 'ditolak' AND COALESCE(mp_t.status_anggaran, '') != 'dibatalkan'")
 						}
 					} else {
 						// Verifikator (upml, upmf, upms, evaluator, admin)
@@ -282,7 +324,7 @@ func (r *ProkerV3Repository) GetAll(
 						case "tolak":
 							db = db.Where("(mp_t.status_verifikator = 'ditolak' OR (mp_t.status LIKE '%ditolak%' AND (mp_t.status_verifikator = 'ditolak' OR (mp_t.catatan_verifikator IS NOT NULL AND mp_t.catatan_verifikator != '') OR (mp_t.catatan_penolakan IS NOT NULL AND mp_t.catatan_penolakan != ''))))")
 						case "menunggu":
-							db = db.Where("COALESCE(mp_t.status_verifikator, '') NOT IN ('terima_verifikator', 'disetujui', 'ditolak') AND COALESCE(mp_t.status, '') NOT IN ('disetujui', 'terima_anggaran', 'terima anggaran') AND COALESCE(mp_t.status_verifikator, '') NOT LIKE '%diverifikasi%' AND COALESCE(mp_t.status, '') NOT LIKE '%diverifikasi%'")
+							db = db.Where("(mp_t.status = 'diajukan' OR mp_t.status_verifikator = 'diajukan' OR mp_t.status_verifikator = 'menunggu') AND COALESCE(mp_t.status_verifikator, '') NOT IN ('terima_verifikator', 'disetujui', 'ditolak') AND COALESCE(mp_t.status, '') NOT IN ('disetujui', 'terima_anggaran', 'terima anggaran', 'draft') AND COALESCE(mp_t.status_verifikator, '') NOT LIKE '%diverifikasi%' AND COALESCE(mp_t.status, '') NOT LIKE '%diverifikasi%'")
 						}
 					}
 					continue
@@ -1380,7 +1422,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 					strings.Contains(mp.Status, "diverifikasi") ||
 					mp.Status == "disetujui" ||
 					mp.Status == "terima_anggaran"
-				if !verifOk {
+				if !verifOk && newStatus != "draft" && newStatus != "draf" {
 					return nil, errors.New("Program kerja belum diverifikasi oleh verifikator (UPM)")
 				}
 			}
@@ -1395,8 +1437,26 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			var fromStateHistory string
 
 			if (level == "anggaran" || level == "keuangan") && !isVerifier {
-				fromStateHistory = "terima verifikator"
-				if strings.Contains(newStatus, "tolak") {
+				if newStatus == "draft" || newStatus == "draf" {
+					fromStateHistory = mp.Status
+					if fromStateHistory == "" {
+						fromStateHistory = "terima anggaran"
+					}
+					updatesMp["status_anggaran"] = "menunggu_verifikator"
+					updatesMp["status_verifikator"] = "draft"
+					updatesMp["status"] = "draft"
+					if catatanPenolakan != "" {
+						updatesMp["catatan_anggaran"] = catatanPenolakan
+					}
+
+					updatesAct["status_anggaran"] = "menunggu_verifikator"
+					updatesAct["status_verifikator"] = "draft"
+					updatesAct["status"] = "draft"
+					if catatanPenolakan != "" {
+						updatesAct["catatan_anggaran"] = catatanPenolakan
+					}
+					toStateHistory = "draf"
+				} else if strings.Contains(newStatus, "tolak") {
 					updatesMp["status_anggaran"] = "ditolak"
 					updatesMp["catatan_anggaran"] = catatanPenolakan
 					updatesMp["status"] = "ditolak"
@@ -1418,8 +1478,26 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 					toStateHistory = "terima anggaran"
 				}
 			} else if isVerifier && (level == "upml" || level == "upmf" || level == "upms" || level == "evaluator") {
-				fromStateHistory = "diajukan"
-				if strings.Contains(newStatus, "tolak") {
+				if newStatus == "draft" || newStatus == "draf" {
+					fromStateHistory = mp.Status
+					if fromStateHistory == "" {
+						fromStateHistory = "terima verifikator"
+					}
+					updatesMp["status_verifikator"] = "draft"
+					updatesMp["status_anggaran"] = "menunggu_verifikator"
+					updatesMp["status"] = "draft"
+					if catatanPenolakan != "" {
+						updatesMp["catatan_verifikator"] = catatanPenolakan
+					}
+
+					updatesAct["status_verifikator"] = "draft"
+					updatesAct["status_anggaran"] = "menunggu_verifikator"
+					updatesAct["status"] = "draft"
+					if catatanPenolakan != "" {
+						updatesAct["catatan_verifikator"] = catatanPenolakan
+					}
+					toStateHistory = "draf"
+				} else if strings.Contains(newStatus, "tolak") {
 					updatesMp["status_verifikator"] = "ditolak"
 					updatesMp["catatan_verifikator"] = catatanPenolakan
 					updatesMp["status_anggaran"] = "dibatalkan"
@@ -1497,6 +1575,9 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			if err := r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", mp.ID).Updates(updatesMp).Error; err != nil {
 				return nil, err
 			}
+			if len(updatesAct) > 1 {
+				_ = r.db.WithContext(ctx).Model(&domain.AktivitasV2{}).Where("id_matrik_proker = ?", mp.ID).Updates(updatesAct).Error
+			}
 
 			mpIDInt := int(mp.ID)
 			_ = r.RecordHistoryState(ctx, &domain.HistoryState{
@@ -1568,7 +1649,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		if errMp := r.db.WithContext(ctx).Where("id = ?", *act.IdMatrikProker).First(&parentMp).Error; errMp == nil {
 			isParentApproved := (parentMp.StatusAnggaran == "terima_anggaran" || parentMp.Status == "terima_anggaran" || parentMp.Status == "disetujui") &&
 				(parentMp.StatusVerifikator == "terima_verifikator" || parentMp.StatusVerifikator == "disetujui" || strings.Contains(parentMp.StatusVerifikator, "diverifikasi") || parentMp.Status == "terima_anggaran")
-			if !isParentApproved {
+			if !isParentApproved && newStatus != "draft" && newStatus != "draf" {
 				return nil, errors.New("Aktivitas belum dapat diverifikasi: Program kerja harus disetujui oleh verifikator dan anggaran terlebih dahulu")
 			}
 		}
@@ -1587,7 +1668,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			strings.Contains(act.Status, "diverifikasi") ||
 			act.Status == "disetujui" ||
 			act.Status == "terima_anggaran"
-		if !verifOk {
+		if !verifOk && newStatus != "draft" && newStatus != "draf" {
 			return nil, errors.New("Aktivitas belum diverifikasi oleh verifikator (UPM)")
 		}
 	}
@@ -1627,7 +1708,15 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 
 	if (level == "anggaran" || level == "keuangan") && !isVerifier {
 		fromStateHistoryAct = "terima verifikator"
-		if strings.Contains(newStatus, "tolak") {
+		if newStatus == "draft" || newStatus == "draf" {
+			actUpdates["status_anggaran"] = "menunggu_verifikator"
+			actUpdates["status_verifikator"] = "draft"
+			actUpdates["status"] = "draft"
+			if catatanPenolakan != "" {
+				actUpdates["catatan_anggaran"] = catatanPenolakan
+			}
+			toStateHistoryAct = "draf"
+		} else if strings.Contains(newStatus, "tolak") {
 			actUpdates["status_anggaran"] = "ditolak"
 			actUpdates["catatan_anggaran"] = catatanPenolakan
 			actUpdates["status"] = "ditolak"
@@ -1644,7 +1733,19 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			return nil, fmt.Errorf("Role %s tidak memiliki akses untuk verifikasi tahap %s", strings.ToUpper(level), strings.ToUpper(targetRole))
 		}
 
-		if targetRole == "upml" {
+		if newStatus == "draft" || newStatus == "draf" {
+			fromStateHistoryAct = act.Status
+			actUpdates["status_upml"] = "draft"
+			actUpdates["status_upmf"] = "draft"
+			actUpdates["status_upms"] = "draft"
+			actUpdates["status_verifikator"] = "draft"
+			actUpdates["status_anggaran"] = "menunggu_verifikator"
+			actUpdates["status"] = "draft"
+			if catatanPenolakan != "" {
+				actUpdates["catatan_penolakan"] = catatanPenolakan
+			}
+			toStateHistoryAct = "draf"
+		} else if targetRole == "upml" {
 			fromStateHistoryAct = act.StatusUpml
 			if fromStateHistoryAct == "" {
 				fromStateHistoryAct = "menunggu"

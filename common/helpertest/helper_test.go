@@ -56,6 +56,8 @@ func TestValidateFakultasUnit(t *testing.T) {
 		{"fakultas_valid", validUUID, "fakultas", true},
 		{"admin_must_blank", validUUID, "admin", false},
 		{"user_blank_ok", "", "user", true},
+		{"user_valid", validUUID, "user", true},
+		{"users_valid", validUUID, "users", true},
 		{"nil_ok", nil, "user", true},
 	}
 

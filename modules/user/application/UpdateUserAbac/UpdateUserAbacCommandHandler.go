@@ -42,14 +42,14 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 		updates["tahun"] = strings.TrimSpace(cmd.Tahun)
 	}
 
-	targetFuID := existing.IdFakultasUnit
+	var targetFuID *uint = existing.IdFakultasUnit
 	if cmd.IdFakultasUnit != nil && *cmd.IdFakultasUnit > 0 {
-		targetFuID = *cmd.IdFakultasUnit
+		targetFuID = cmd.IdFakultasUnit
 		updates["id_fakultas_unit"] = *cmd.IdFakultasUnit
 	} else if strings.TrimSpace(cmd.UuidFakultasUnit) != "" {
 		fuID, _, _, err := h.Repo.GetFakultasUnitInfo(ctx, nil, cmd.UuidFakultasUnit)
 		if err == nil {
-			targetFuID = fuID
+			targetFuID = &fuID
 			updates["id_fakultas_unit"] = fuID
 		}
 	}
@@ -57,17 +57,21 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 	if cmd.Role != "" {
 		reqRole := strings.ToLower(strings.TrimSpace(cmd.Role))
 		if reqRole != "auto" {
-			_, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, &targetFuID, "")
-			if err == nil {
-				isFak := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
-				if isFak && reqRole == "upms" {
-					return "", errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
+			if targetFuID != nil && *targetFuID > 0 {
+				_, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, targetFuID, "")
+				if err == nil {
+					isFak := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
+					if isFak && reqRole == "upms" {
+						return "", errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
+					}
+					if !isFak && reqRole == "upmf" {
+						return "", errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
+					}
 				}
-				if !isFak && reqRole == "upmf" {
-					return "", errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
-				}
-				updates["role"] = reqRole
+			} else if reqRole == "upmf" {
+				return "", errors.New("Target Fakultas wajib dipilih untuk role UPMF")
 			}
+			updates["role"] = reqRole
 		}
 	}
 

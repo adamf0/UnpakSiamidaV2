@@ -46,7 +46,7 @@ var allowedSearchColumns = map[string]string{
 	"tahun":                "tr.tahun",
 	"indikator":            "i.indikator",
 	"indikatorrenstrauuid": "i.uuid",
-	"fakultasunit":         "fu.nama_fak_prod_unit",
+	"fakultasunit":         "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"kategori":             "tr.kategori",
 	"klasifikasi":          "tr.klasifikasi",
 	"tugas":                "tr.tugas",
@@ -220,7 +220,7 @@ func (r *TemplateRenstraRepository) GetAll(
 
 			tr.pertanyaan             AS IsPertanyaan,
 			tr.fakultas_unit          AS FakultasUnitID,
-			fu.nama_fak_prod_unit     AS FakultasUnit,
+			CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END AS FakultasUnit,
 			tr.kategori               AS Kategori,
 			tr.klasifikasi            AS Klasifikasi,
 			tr.satuan                 AS Satuan,
@@ -291,7 +291,7 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 
 		tr.pertanyaan AS IsPertanyaan,
 		tr.fakultas_unit AS FakultasUnitID,
-		fu.nama_fak_prod_unit AS FakultasUnit,
+		CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END AS FakultasUnit,
 		tr.kategori AS Kategori,
 		tr.klasifikasi AS Klasifikasi,
 		tr.satuan AS Satuan,
