@@ -109,7 +109,14 @@ func CreateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	level, userFU := commonpresentation.GetUserInfo(c)
 
 	var cmd createProker.CreateProkerV3Command
+	_ = c.BodyParser(&cmd)
 
+	if val := c.FormValue("tahun"); val != "" {
+		cmd.Tahun = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("fakultas_unit"); val != "" {
+		cmd.FakultasUuid = strings.TrimSpace(val)
+	}
 	if val := c.FormValue("nama_program"); val != "" {
 		cmd.NamaProgram = strings.TrimSpace(val)
 	}
@@ -127,6 +134,17 @@ func CreateProkerV3Handlerfunc(c *fiber.Ctx) error {
 		if id, err := strconv.Atoi(val); err == nil {
 			cmd.IdFakultasUnit = &id
 		}
+	}
+	if val := c.FormValue("no_proker"); val != "" {
+		if np, err := strconv.ParseInt(val, 10, 64); err == nil {
+			cmd.NoProker = &np
+		}
+	}
+	if val := c.FormValue("standar_sub_standar"); val != "" {
+		cmd.StandarSubStandar = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("indikator_kinerja"); val != "" {
+		cmd.IndikatorKinerja = strings.TrimSpace(val)
 	}
 	if val := c.FormValue("target_unpak"); val != "" {
 		cmd.TargetUnpak = strings.TrimSpace(val)
@@ -193,7 +211,14 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 
 	var cmd updateProker.UpdateProkerV3Command
+	_ = c.BodyParser(&cmd)
 
+	if val := c.FormValue("tahun"); val != "" {
+		cmd.Tahun = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("fakultas_unit"); val != "" {
+		cmd.FakultasUuid = strings.TrimSpace(val)
+	}
 	if val := c.FormValue("nama_program"); val != "" {
 		cmd.NamaProgram = strings.TrimSpace(val)
 	}
@@ -211,6 +236,17 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 		if id, err := strconv.Atoi(val); err == nil {
 			cmd.IdFakultasUnit = &id
 		}
+	}
+	if val := c.FormValue("no_proker"); val != "" {
+		if np, err := strconv.ParseInt(val, 10, 64); err == nil {
+			cmd.NoProker = &np
+		}
+	}
+	if val := c.FormValue("standar_sub_standar"); val != "" {
+		cmd.StandarSubStandar = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("indikator_kinerja"); val != "" {
+		cmd.IndikatorKinerja = strings.TrimSpace(val)
 	}
 	if val := c.FormValue("target_unpak"); val != "" {
 		cmd.TargetUnpak = strings.TrimSpace(val)

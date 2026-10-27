@@ -56,25 +56,29 @@ func (h *CreateProkerV3CommandHandler) Handle(
 
 	// 2. Resolve or Create Mata Program
 	var mpID *int = cmd.IdMataProgram
+	tahunStr := strings.TrimSpace(cmd.Tahun)
+	if tahunStr == "" {
+		tahunStr = "2026"
+	}
+	var mt struct {
+		ID int
+	}
+	_ = h.DB.WithContext(ctx).Table("master_tahun").
+		Select("id").
+		Where("tahun = ?", tahunStr).
+		Take(&mt).Error
+	if mt.ID == 0 {
+		newUUID := uuid.New().String()
+		_ = h.DB.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error
+		_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
+	}
+	if mt.ID == 0 {
+		mt.ID = 1
+	}
+
 	if mpID == nil || *mpID <= 0 {
 		namaProg := strings.TrimSpace(cmd.NamaProgram)
 		if namaProg != "" {
-			// Find id_master_tahun
-			tahunStr := strings.TrimSpace(cmd.Tahun)
-			if tahunStr == "" {
-				tahunStr = "2026"
-			}
-			var mt struct {
-				ID int
-			}
-			_ = h.DB.WithContext(ctx).Table("master_tahun").
-				Select("id").
-				Where("tahun = ?", tahunStr).
-				Take(&mt).Error
-			if mt.ID == 0 {
-				mt.ID = 1
-			}
-
 			var existingMp struct {
 				ID int
 			}
@@ -102,6 +106,8 @@ func (h *CreateProkerV3CommandHandler) Handle(
 				}
 			}
 		}
+	} else if mpID != nil && *mpID > 0 && strings.TrimSpace(cmd.Tahun) != "" {
+		_ = h.DB.WithContext(ctx).Table("mata_program").Where("id = ?", *mpID).Update("id_master_tahun", mt.ID).Error
 	}
 
 	// 3. Resolve Indikator ID

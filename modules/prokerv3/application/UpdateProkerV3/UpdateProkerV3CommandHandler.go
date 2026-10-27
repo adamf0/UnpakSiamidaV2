@@ -76,62 +76,72 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 			Take(&currentMp).Error
 
 		if errMp == nil && currentMp.ID > 0 {
-			if namaProg != "" && currentMp.MataProgram != namaProg {
-				// Name changed. Check if other prokers share this mata_program
-				var otherUsageCount int64
-				h.DB.WithContext(ctx).Table("matrix_proker").
-					Where("id_mata_program = ? AND id != ?", currentMp.ID, existing.ID).
-					Count(&otherUsageCount)
+			var mt struct {
+				ID int
+			}
+			tahunStr := strings.TrimSpace(cmd.Tahun)
+			if tahunStr != "" {
+				_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
+				if mt.ID == 0 {
+					newUUID := uuid.New().String()
+					_ = h.DB.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error
+					_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
+				}
+			}
 
-				if otherUsageCount == 0 {
-					// Only this proker uses it, update in-place
-					updateFields := map[string]interface{}{
-						"mata_program": namaProg,
-					}
-					if fuID != nil && *fuID > 0 {
-						updateFields["id_fakultas_unit"] = *fuID
-					}
+			// Check if other prokers share this mata_program
+			var otherUsageCount int64
+			h.DB.WithContext(ctx).Table("matrix_proker").
+				Where("id_mata_program = ? AND id != ?", currentMp.ID, existing.ID).
+				Count(&otherUsageCount)
+
+			if otherUsageCount == 0 {
+				// Only this proker uses it, update in-place
+				updateFields := map[string]interface{}{}
+				if namaProg != "" {
+					updateFields["mata_program"] = namaProg
+				}
+				if fuID != nil && *fuID > 0 {
+					updateFields["id_fakultas_unit"] = *fuID
+				}
+				if mt.ID > 0 {
+					updateFields["id_master_tahun"] = mt.ID
+				}
+				if len(updateFields) > 0 {
 					_ = h.DB.WithContext(ctx).Table("mata_program").
 						Where("id = ?", currentMp.ID).
 						Updates(updateFields).Error
+				}
+			} else if (namaProg != "" && currentMp.MataProgram != namaProg) || (mt.ID > 0) {
+				if mt.ID == 0 {
+					mt.ID = 1
+				}
+				targetNamaProg := currentMp.MataProgram
+				if namaProg != "" {
+					targetNamaProg = namaProg
+				}
+				var existingWithNewName struct {
+					ID int
+				}
+				errFind := h.DB.WithContext(ctx).Table("mata_program").
+					Select("id").
+					Where("mata_program = ? AND id_master_tahun = ?", targetNamaProg, mt.ID).
+					Take(&existingWithNewName).Error
+
+				if errFind == nil && existingWithNewName.ID > 0 {
+					existing.IdMataProgram = &existingWithNewName.ID
 				} else {
-					// Other prokers share this record, find or create another mata_program with new name
-					tahunStr := strings.TrimSpace(cmd.Tahun)
-					if tahunStr == "" {
-						tahunStr = "2026"
-					}
-					var mt struct {
+					newMpUUID := uuid.New()
+					_ = h.DB.WithContext(ctx).Exec(
+						"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
+						newMpUUID, mt.ID, fuID, targetNamaProg,
+					).Error
+					var createdMp struct {
 						ID int
 					}
-					_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
-					if mt.ID == 0 {
-						mt.ID = 1
-					}
-
-					var existingWithNewName struct {
-						ID int
-					}
-					errFind := h.DB.WithContext(ctx).Table("mata_program").
-						Select("id").
-						Where("mata_program = ? AND id_master_tahun = ?", namaProg, mt.ID).
-						Take(&existingWithNewName).Error
-
-					if errFind == nil && existingWithNewName.ID > 0 {
-						existing.IdMataProgram = &existingWithNewName.ID
-					} else {
-
-						newMpUUID := uuid.New()
-						_ = h.DB.WithContext(ctx).Exec(
-							"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-							newMpUUID, mt.ID, fuID, namaProg,
-						).Error
-						var createdMp struct {
-							ID int
-						}
-						_ = h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", newMpUUID).Take(&createdMp).Error
-						if createdMp.ID > 0 {
-							existing.IdMataProgram = &createdMp.ID
-						}
+					_ = h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", newMpUUID).Take(&createdMp).Error
+					if createdMp.ID > 0 {
+						existing.IdMataProgram = &createdMp.ID
 					}
 				}
 			} else if fuID != nil && *fuID > 0 {

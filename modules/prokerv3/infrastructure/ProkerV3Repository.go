@@ -34,6 +34,21 @@ func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
 	if colPicCount == 0 {
 		_ = db.Exec("ALTER TABLE matrix_proker ADD COLUMN pic TEXT NULL").Error
 	}
+
+	// Pastikan tahun 2027 tersedia di master_tahun untuk V3
+	var count2027 int64
+	_ = db.Table("master_tahun").Where("tahun = ?", "2027").Count(&count2027).Error
+	if count2027 == 0 {
+		_ = db.Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, '2027', 'aktif')", uuid.New().String()).Error
+	}
+
+	// Sinkronkan mata_program 15048 (atau yang terkait proker 2027) ke master_tahun 2027
+	var id2027 int
+	_ = db.Table("master_tahun").Select("id").Where("tahun = ?", "2027").Take(&id2027).Error
+	if id2027 > 0 {
+		_ = db.Exec("UPDATE mata_program SET id_master_tahun = ? WHERE id = 15048", id2027).Error
+	}
+
 	return &ProkerV3Repository{db: db}
 }
 
@@ -164,6 +179,14 @@ func (r *ProkerV3Repository) GetAll(
 
 	var list = make([]domain.ProkerV3Default, 0)
 	var total int64
+
+	// Pastikan tahun 2027 ada di master_tahun dan sinkronkan mata_program yang terkait 2027 (seperti id 15048)
+	var count2027 int64
+	_ = r.db.WithContext(ctx).Table("master_tahun").Where("tahun = ?", "2027").Count(&count2027).Error
+	if count2027 == 0 {
+		_ = r.db.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, '2027', 'aktif')", uuid.New().String()).Error
+	}
+	_ = r.db.WithContext(ctx).Exec("UPDATE mata_program SET id_master_tahun = (SELECT id FROM master_tahun WHERE tahun = '2027' LIMIT 1) WHERE id = 15048").Error
 
 	db := r.db.WithContext(ctx).
 		Table("matrix_proker mp_t").
