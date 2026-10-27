@@ -205,7 +205,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 		END AS nama_fakultas_unit
 	`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-		Where("(user_abac.id_user IN (?) OR user_abac.id_user IN (SELECT id FROM users WHERE uuid = ?)) AND (LOWER(user_abac.status) IN ('active', 'aktif') OR user_abac.status IS NULL OR user_abac.status = '') AND LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')", userIDs, idStr).
+		Where("user_abac.id_user IN (?) AND (LOWER(user_abac.status) IN ('active', 'aktif') OR user_abac.status IS NULL OR user_abac.status = '') AND LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')", userIDs).
 		Group("user_abac.tahun, role, user_abac.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
 		Scan(&abacRoles).Error
 

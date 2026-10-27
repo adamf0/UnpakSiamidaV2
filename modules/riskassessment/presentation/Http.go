@@ -517,8 +517,21 @@ func GetRiskStatusesHandler(c *fiber.Ctx) error {
 }
 
 func GetRiskProgramsHandler(c *fiber.Ctx) error {
+	level, userFU := commonpresentation.GetUserInfo(c)
+
+	fuParam := strings.TrimSpace(c.Query("fakultas_unit"))
+	if fuParam == "" {
+		fuParam = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if fuParam == "" {
+		fuParam = strings.TrimSpace(c.Query("target"))
+	}
+	if fuParam == "" && level != "admin" && userFU != "" {
+		fuParam = userFU
+	}
+
 	items, err := mediatr.Send[getOptions.GetRiskProgramsQuery, []domainRisk.RiskMataProgramItem](c.Context(), getOptions.GetRiskProgramsQuery{
-		FakultasUnit: c.Query("fakultas_unit"),
+		FakultasUnit: fuParam,
 		Tahun:        c.Query("tahun"),
 		Search:       c.Query("search"),
 	})
@@ -529,8 +542,21 @@ func GetRiskProgramsHandler(c *fiber.Ctx) error {
 }
 
 func GetRiskOptionsHandler(c *fiber.Ctx) error {
+	level, userFU := commonpresentation.GetUserInfo(c)
+
+	fuParam := strings.TrimSpace(c.Query("fakultas_unit"))
+	if fuParam == "" {
+		fuParam = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if fuParam == "" {
+		fuParam = strings.TrimSpace(c.Query("target"))
+	}
+	if fuParam == "" && level != "admin" && userFU != "" {
+		fuParam = userFU
+	}
+
 	res, err := mediatr.Send[getOptions.GetRiskOptionsQuery, *domainRisk.RiskOptionsResult](c.Context(), getOptions.GetRiskOptionsQuery{
-		FakultasUnit: c.Query("fakultas_unit"),
+		FakultasUnit: fuParam,
 		Tahun:        c.Query("tahun"),
 	})
 	if err != nil {

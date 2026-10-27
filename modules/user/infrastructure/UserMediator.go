@@ -41,12 +41,6 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 	repoUser := NewUserRepository(db)
 	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
 
-	if db != nil {
-		_ = db.Exec("ALTER TABLE `users` MODIFY COLUMN `level` VARCHAR(100) NOT NULL DEFAULT 'user'")
-		_ = db.Exec("ALTER TABLE `user_abac` MODIFY COLUMN `id_fakultas_unit` int(10) UNSIGNED NULL DEFAULT NULL")
-		_ = db.Exec("DELETE FROM `user_abac` WHERE LOWER(role) NOT IN ('upms', 'upmf', 'upml')")
-	}
-
 	// Pipeline behavior
 	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorUser())
 

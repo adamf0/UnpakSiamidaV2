@@ -454,6 +454,9 @@ func getTahun(c *fiber.Ctx) string {
 }
 
 func hasAnyRoleInWhitelist(user *Account, whitelist []string) bool {
+	if user == nil {
+		return false
+	}
 	if roleInWhitelist(user.Level, whitelist) {
 		return true
 	}
@@ -479,6 +482,9 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		user, err := fetchWhoAmI(token, whoamiURL, c)
 		if err != nil {
 			return err
+		}
+		if user == nil {
+			return nil
 		}
 
 		path := strings.ToLower(c.Path())
@@ -603,7 +609,7 @@ func fetchWhoAmI(token, whoamiURL string, c *fiber.Ctx) (*Account, error) {
 
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[RBAC] Failed to call whoami: %v", err)
@@ -616,7 +622,7 @@ func fetchWhoAmI(token, whoamiURL string, c *fiber.Ctx) (*Account, error) {
 	log.Printf("[RBAC] Whoami response status: %d, body: %s", resp.StatusCode, string(body))
 
 	if resp.StatusCode != 200 {
-		return nil, handleWhoAmIError(body, c)
+		return nil, handleWhoAmIError(body, c, resp.StatusCode)
 	}
 
 	var user Account
@@ -630,20 +636,24 @@ func fetchWhoAmI(token, whoamiURL string, c *fiber.Ctx) (*Account, error) {
 	return &user, nil
 }
 
-func handleWhoAmIError(body []byte, c *fiber.Ctx) error {
+func handleWhoAmIError(body []byte, c *fiber.Ctx, statusCode int) error {
 	var errResp struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	}
 
+	if statusCode <= 0 {
+		statusCode = fiber.StatusUnauthorized
+	}
+
 	if err := json.Unmarshal(body, &errResp); err == nil && errResp.Message != "" {
 		log.Printf("[RBAC] Whoami error code: %s, message: %s", errResp.Code, errResp.Message)
-		return c.Status(400).
+		return c.Status(statusCode).
 			JSON(commoninfra.NewResponseError(errResp.Code, errResp.Message))
 	}
 
 	log.Println("[RBAC] Whoami response not JSON or invalid format")
-	return c.Status(401).
+	return c.Status(statusCode).
 		JSON(commoninfra.NewResponseError(logCommonRbac, "Invalid format response"))
 }
 
@@ -654,6 +664,9 @@ func handleWhoAmIError(body []byte, c *fiber.Ctx) error {
 //
 
 func isAdmin(user *Account) bool {
+	if user == nil {
+		return false
+	}
 	return user.Level == "admin"
 }
 
@@ -682,7 +695,9 @@ func validateTahun(c *fiber.Ctx) (string, error) {
 //
 
 func checkRoleAccess(user *Account, tahun string, whitelist []string) (bool, []string) {
-
+	if user == nil {
+		return false, nil
+	}
 	grantedAccess := []string{}
 
 	for _, r := range user.ExtraRole {

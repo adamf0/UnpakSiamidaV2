@@ -21,34 +21,6 @@ type ProkerV3Repository struct {
 }
 
 func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
-	// Pastikan kolom anggaran ada di tabel aktivitasv2_timeline
-	var colCount int64
-	_ = db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aktivitasv2_timeline' AND COLUMN_NAME = 'anggaran'").Scan(&colCount).Error
-	if colCount == 0 {
-		_ = db.Exec("ALTER TABLE aktivitasv2_timeline ADD COLUMN anggaran DOUBLE DEFAULT 0").Error
-	}
-
-	// Pastikan kolom pic ada di tabel matrix_proker
-	var colPicCount int64
-	_ = db.Raw("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'matrix_proker' AND COLUMN_NAME = 'pic'").Scan(&colPicCount).Error
-	if colPicCount == 0 {
-		_ = db.Exec("ALTER TABLE matrix_proker ADD COLUMN pic TEXT NULL").Error
-	}
-
-	// Pastikan tahun 2027 tersedia di master_tahun untuk V3
-	var count2027 int64
-	_ = db.Table("master_tahun").Where("tahun = ?", "2027").Count(&count2027).Error
-	if count2027 == 0 {
-		_ = db.Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, '2027', 'aktif')", uuid.New().String()).Error
-	}
-
-	// Sinkronkan mata_program 15048 (atau yang terkait proker 2027) ke master_tahun 2027
-	var id2027 int
-	_ = db.Table("master_tahun").Select("id").Where("tahun = ?", "2027").Take(&id2027).Error
-	if id2027 > 0 {
-		_ = db.Exec("UPDATE mata_program SET id_master_tahun = ? WHERE id = 15048", id2027).Error
-	}
-
 	return &ProkerV3Repository{db: db}
 }
 
@@ -1941,4 +1913,3 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		UUID:             req.UUID,
 	}, nil
 }
-

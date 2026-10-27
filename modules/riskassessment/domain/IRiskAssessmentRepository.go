@@ -61,12 +61,14 @@ type RiskStatusItem struct {
 }
 
 type RiskMataProgramItem struct {
-	ID             int     `json:"id" gorm:"column:id"`
-	UUID           string  `json:"uuid" gorm:"column:uuid"`
-	MataProgram    string  `json:"mata_program" gorm:"column:mata_program"`
-	IdFakultasUnit *int    `json:"id_fakultas_unit" gorm:"column:id_fakultas_unit"`
-	IdMasterTahun  *int    `json:"id_master_tahun" gorm:"column:id_master_tahun"`
-	Tahun          *string `json:"tahun" gorm:"column:tahun"`
+	ID               int     `json:"id" gorm:"column:id"`
+	UUID             string  `json:"uuid" gorm:"column:uuid"`
+	MataProgram      string  `json:"mata_program" gorm:"column:mata_program"`
+	IdFakultasUnit   *int    `json:"id_fakultas_unit" gorm:"column:id_fakultas_unit"`
+	UuidFakultasUnit *string `json:"uuid_fakultas_unit" gorm:"column:uuid_fakultas_unit"`
+	NamaFakultasUnit *string `json:"nama_fakultas_unit" gorm:"column:nama_fakultas_unit"`
+	IdMasterTahun    *int    `json:"id_master_tahun" gorm:"column:id_master_tahun"`
+	Tahun            *string `json:"tahun" gorm:"column:tahun"`
 }
 
 type RiskOptionsResult struct {

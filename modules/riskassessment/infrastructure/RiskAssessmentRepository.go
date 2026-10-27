@@ -329,20 +329,29 @@ func (r *RiskAssessmentRepository) GetStatuses(ctx context.Context) ([]domainRis
 func (r *RiskAssessmentRepository) GetPrograms(ctx context.Context, fu, thn, search string) ([]domainRisk.RiskMataProgramItem, error) {
 	var programs []domainRisk.RiskMataProgramItem
 	q := r.db.WithContext(ctx).Table("mata_program mp").
-		Select("mp.id, mp.uuid, mp.mata_program, mp.id_fakultas_unit, mp.id_master_tahun, mt.tahun").
+		Select(`
+			mp.id,
+			mp.uuid,
+			mp.mata_program,
+			mp.id_fakultas_unit,
+			vfu.uuid as uuid_fakultas_unit,
+			vfu.nama_fak_prod_unit as nama_fakultas_unit,
+			mp.id_master_tahun,
+			mt.tahun
+		`).
 		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
 		Order("mp.mata_program ASC")
 
 	if fu != "" {
-		if id, err := strconv.Atoi(fu); err == nil {
+		if id, err := strconv.Atoi(fu); err == nil && id > 0 {
 			q = q.Where("mp.id_fakultas_unit = ?", id)
 		} else {
-			q = q.Joins("LEFT JOIN sijamu_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
-				Where("fu.uuid = ?", fu)
+			q = q.Where("vfu.uuid = ?", fu)
 		}
 	}
 	if thn != "" {
-		if id, err := strconv.Atoi(thn); err == nil {
+		if id, err := strconv.Atoi(thn); err == nil && id > 0 {
 			q = q.Where("mp.id_master_tahun = ? OR mt.tahun = ?", id, thn)
 		} else {
 			q = q.Where("mt.uuid = ? OR mt.tahun = ?", thn, thn)

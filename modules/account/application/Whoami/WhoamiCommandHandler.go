@@ -19,7 +19,7 @@ func (h *WhoamiCommandHandler) Handle(
 	ctx context.Context,
 	cmd WhoamiCommand,
 ) (*domainaccount.Account, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	_, err := uuid.Parse(cmd.SID)
