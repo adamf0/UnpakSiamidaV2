@@ -32,6 +32,8 @@ type AktivitasV2 struct {
 	CatatanTolakUpmf string    `gorm:"column:catatan_tolak_upmf;type:text" json:"CatatanTolakUpmf"`
 	StatusUpms       string    `gorm:"column:status_upms;size:50;default:'menunggu'" json:"StatusUpms"`
 	CatatanTolakUpms string    `gorm:"column:catatan_tolak_upms;type:text" json:"CatatanTolakUpms"`
+	StatusLpm        string    `gorm:"column:status_lpm;size:50;default:'menunggu'" json:"StatusLpm"`
+	CatatanTolakLpm  string    `gorm:"column:catatan_tolak_lpm;type:text" json:"CatatanTolakLpm"`
 	CreatedAt        time.Time `gorm:"column:created_at;autoCreateTime" json:"CreatedAt"`
 	UpdatedAt        time.Time `gorm:"column:updated_at;autoUpdateTime" json:"UpdatedAt"`
 }

@@ -24,6 +24,18 @@ func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
 	return &ProkerV3Repository{db: db}
 }
 
+func formatTanggalIndo(t time.Time) string {
+	bulan := []string{
+		"", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+		"Juli", "Agustus", "September", "Oktober", "November", "Desember",
+	}
+	m := int(t.Month())
+	if m >= 1 && m <= 12 {
+		return fmt.Sprintf("%02d %s %d", t.Day(), bulan[m], t.Year())
+	}
+	return t.Format("02-01-2006")
+}
+
 // ------------------------
 // GET BY UUID (matrix_proker)
 // ------------------------
@@ -531,6 +543,8 @@ func (r *ProkerV3Repository) GetAktivitasByMatrikId(ctx context.Context, matrikI
 			CatatanTolakUpmf:   a.CatatanTolakUpmf,
 			StatusUpms:         a.StatusUpms,
 			CatatanTolakUpms:   a.CatatanTolakUpms,
+			StatusLpm:          a.StatusLpm,
+			CatatanTolakLpm:    a.CatatanTolakLpm,
 			CreatedAt:          a.CreatedAt,
 			UpdatedAt:          a.UpdatedAt,
 		}
@@ -680,6 +694,8 @@ func (r *ProkerV3Repository) GetAktivitasByUuid(ctx context.Context, uid uuid.UU
 		CatatanTolakUpmf:   a.CatatanTolakUpmf,
 		StatusUpms:         a.StatusUpms,
 		CatatanTolakUpms:   a.CatatanTolakUpms,
+		StatusLpm:          a.StatusLpm,
+		CatatanTolakLpm:    a.CatatanTolakLpm,
 		CreatedAt:          a.CreatedAt,
 		UpdatedAt:          a.UpdatedAt,
 	}
@@ -1391,6 +1407,9 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 
 	catatanPenolakan := strings.TrimSpace(req.CatatanPenolakan)
 	level := strings.ToLower(strings.TrimSpace(req.Level))
+	if level == "fakultas" {
+		level = "upmf"
+	}
 	isVerifier := level == "upml" || level == "upmf" || level == "upms" || level == "admin" || level == "evaluator"
 	isAnggaran := level == "anggaran" || level == "keuangan" || level == "admin"
 
@@ -1409,6 +1428,38 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			if !isVerifier && !isAnggaran && level != "admin" {
 				if newStatus != "draft" && newStatus != "diajukan" {
 					return nil, errors.New("Sebagai auditee, status hanya boleh Draf atau Diajukan")
+				}
+			}
+
+			// Validasi Jadwal Proker V3 ketika mengajukan program kerja
+			if newStatus == "diajukan" && level != "admin" {
+				var prokerYear string
+				if mp.IdMataProgram != nil {
+					var mt struct {
+						Tahun string `gorm:"column:tahun"`
+					}
+					_ = r.db.WithContext(ctx).Table("mata_program prog").
+						Select("COALESCE(mt.tahun, '') as tahun").
+						Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+						Where("prog.id = ?", *mp.IdMataProgram).
+						First(&mt).Error
+					prokerYear = mt.Tahun
+				}
+
+				if prokerYear != "" {
+					var jw domain.JadwalProkerV3
+					if errJw := r.db.WithContext(ctx).Where("tahun = ?", prokerYear).Order("id DESC").First(&jw).Error; errJw == nil {
+						now := time.Now()
+						startOfDay := time.Date(jw.TanggalMulai.Year(), jw.TanggalMulai.Month(), jw.TanggalMulai.Day(), 0, 0, 0, 0, jw.TanggalMulai.Location())
+						endOfDay := time.Date(jw.TanggalAkhir.Year(), jw.TanggalAkhir.Month(), jw.TanggalAkhir.Day(), 23, 59, 59, 999999999, jw.TanggalAkhir.Location())
+
+						if now.Before(startOfDay) {
+							return nil, fmt.Errorf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", prokerYear, formatTanggalIndo(jw.TanggalMulai), formatTanggalIndo(jw.TanggalAkhir))
+						}
+						if now.After(endOfDay) {
+							return nil, fmt.Errorf("Pengajuan program kerja tahun %s telah ditutup pada %s", prokerYear, formatTanggalIndo(jw.TanggalAkhir))
+						}
+					}
 				}
 			}
 
@@ -1658,6 +1709,40 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		}
 	}
 
+	// Validasi Jadwal Proker V3 ketika mengajukan aktivitas
+	if newStatus == "diajukan" && level != "admin" {
+		var actYear string
+		if act.IdMatrikProker != nil {
+			var pMp domain.ProkerV3
+			if errMp := r.db.WithContext(ctx).Select("id_mata_program").Where("id = ?", *act.IdMatrikProker).First(&pMp).Error; errMp == nil && pMp.IdMataProgram != nil {
+				var mt struct {
+					Tahun string `gorm:"column:tahun"`
+				}
+				_ = r.db.WithContext(ctx).Table("mata_program prog").
+					Select("COALESCE(mt.tahun, '') as tahun").
+					Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+					Where("prog.id = ?", *pMp.IdMataProgram).
+					First(&mt).Error
+				actYear = mt.Tahun
+			}
+		}
+		if actYear != "" {
+			var jw domain.JadwalProkerV3
+			if errJw := r.db.WithContext(ctx).Where("tahun = ?", actYear).Order("id DESC").First(&jw).Error; errJw == nil {
+				now := time.Now()
+				startOfDay := time.Date(jw.TanggalMulai.Year(), jw.TanggalMulai.Month(), jw.TanggalMulai.Day(), 0, 0, 0, 0, jw.TanggalMulai.Location())
+				endOfDay := time.Date(jw.TanggalAkhir.Year(), jw.TanggalAkhir.Month(), jw.TanggalAkhir.Day(), 23, 59, 59, 999999999, jw.TanggalAkhir.Location())
+
+				if now.Before(startOfDay) {
+					return nil, fmt.Errorf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", actYear, formatTanggalIndo(jw.TanggalMulai), formatTanggalIndo(jw.TanggalAkhir))
+				}
+				if now.After(endOfDay) {
+					return nil, fmt.Errorf("Pengajuan program kerja tahun %s telah ditutup pada %s", actYear, formatTanggalIndo(jw.TanggalAkhir))
+				}
+			}
+		}
+	}
+
 	if isAnggaran && !isVerifier && level != "admin" {
 		verifOk := act.StatusVerifikator == "terima_verifikator" ||
 			act.StatusVerifikator == "disetujui" ||
@@ -1684,16 +1769,27 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 	if targetRole == "" {
 		targetRole = level
 	}
+	if targetRole == "fakultas" {
+		targetRole = "upmf"
+	}
 	if targetRole == "evaluator" {
-		targetRole = "upms"
+		targetRole = "lpm"
 	}
 	if level == "admin" && (targetRole == "admin" || targetRole == "") {
-		if act.StatusUpml != "disetujui" {
-			targetRole = "upml"
-		} else if isProdi && act.StatusUpmf != "disetujui" {
-			targetRole = "upmf"
+		if !isProdi {
+			if act.StatusUpml != "disetujui" {
+				targetRole = "upml"
+			} else {
+				targetRole = "lpm"
+			}
 		} else {
-			targetRole = "upms"
+			if act.StatusUpms != "disetujui" {
+				targetRole = "upms"
+			} else if act.StatusUpmf != "disetujui" {
+				targetRole = "upmf"
+			} else {
+				targetRole = "lpm"
+			}
 		}
 	}
 
@@ -1725,8 +1821,8 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			actUpdates["status"] = "terima_anggaran"
 			toStateHistoryAct = "terima anggaran"
 		}
-	} else if isVerifier && (targetRole == "upml" || targetRole == "upmf" || targetRole == "upms") {
-		if level != "admin" && level != targetRole && !(level == "evaluator" && targetRole == "upms") {
+	} else if isVerifier && (targetRole == "upml" || targetRole == "upmf" || targetRole == "upms" || targetRole == "lpm" || targetRole == "admin") {
+		if level != "admin" && level != targetRole && !(level == "evaluator" && (targetRole == "upms" || targetRole == "lpm")) {
 			return nil, fmt.Errorf("Role %s tidak memiliki akses untuk verifikasi tahap %s", strings.ToUpper(level), strings.ToUpper(targetRole))
 		}
 
@@ -1735,6 +1831,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			actUpdates["status_upml"] = "draft"
 			actUpdates["status_upmf"] = "draft"
 			actUpdates["status_upms"] = "draft"
+			actUpdates["status_lpm"] = "draft"
 			actUpdates["status_verifikator"] = "draft"
 			actUpdates["status_anggaran"] = "menunggu_verifikator"
 			actUpdates["status"] = "draft"
@@ -1742,68 +1839,9 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 				actUpdates["catatan_penolakan"] = catatanPenolakan
 			}
 			toStateHistoryAct = "draf"
-		} else if targetRole == "upml" {
-			fromStateHistoryAct = act.StatusUpml
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_upml"] = "ditolak"
-				actUpdates["catatan_tolak_upml"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak UPML"
-			} else {
-				actUpdates["status_upml"] = "disetujui"
-				actUpdates["catatan_tolak_upml"] = ""
-				if isProdi {
-					actUpdates["status"] = "menunggu_upmf"
-					if act.StatusUpmf != "disetujui" {
-						actUpdates["status_upmf"] = "menunggu"
-					}
-				} else {
-					actUpdates["status"] = "menunggu_upms"
-					actUpdates["status_upmf"] = "-"
-					if act.StatusUpms != "disetujui" {
-						actUpdates["status_upms"] = "menunggu"
-					}
-				}
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui UPML"
-			}
-		} else if targetRole == "upmf" {
-			if !isProdi {
-				return nil, errors.New("Aktivitas berasal dari Unit non-Prodi, verifikasi UPMF tidak berlaku (hanya UPML dan UPMS)")
-			}
-			if act.StatusUpml != "disetujui" {
-				return nil, errors.New("Aktivitas belum disetujui oleh UPML. Verifikasi harus berurutan (UPML -> UPMF -> UPMS)")
-			}
-			fromStateHistoryAct = act.StatusUpmf
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_upmf"] = "ditolak"
-				actUpdates["catatan_tolak_upmf"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak UPMF"
-			} else {
-				actUpdates["status_upmf"] = "disetujui"
-				actUpdates["catatan_tolak_upmf"] = ""
-				actUpdates["status"] = "menunggu_upms"
-				if act.StatusUpms != "disetujui" {
-					actUpdates["status_upms"] = "menunggu"
-				}
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui UPMF"
-			}
 		} else if targetRole == "upms" {
-			if act.StatusUpml != "disetujui" {
-				return nil, errors.New("Aktivitas belum disetujui oleh UPML. Verifikasi harus berurutan")
-			}
-			if isProdi && act.StatusUpmf != "disetujui" {
-				return nil, errors.New("Aktivitas prodi belum disetujui oleh UPMF. Verifikasi harus berurutan (UPML -> UPMF -> UPMS)")
+			if !isProdi {
+				return nil, errors.New("Aktivitas berasal dari Unit non-Prodi, verifikasi UPMS tidak berlaku (hanya UPML lalu Admin/LPM)")
 			}
 			fromStateHistoryAct = act.StatusUpms
 			if fromStateHistoryAct == "" {
@@ -1818,10 +1856,96 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			} else {
 				actUpdates["status_upms"] = "disetujui"
 				actUpdates["catatan_tolak_upms"] = ""
-				actUpdates["status"] = "disetujui"
-				actUpdates["status_verifikator"] = "terima_verifikator"
+				actUpdates["status"] = "menunggu_upmf"
+				if act.StatusUpmf != "disetujui" {
+					actUpdates["status_upmf"] = "menunggu"
+				}
 				actUpdates["catatan_penolakan"] = ""
 				toStateHistoryAct = "disetujui UPMS"
+			}
+		} else if targetRole == "upmf" {
+			if !isProdi {
+				return nil, errors.New("Aktivitas berasal dari Unit non-Prodi, verifikasi UPMF tidak berlaku (hanya UPML lalu Admin/LPM)")
+			}
+			if act.StatusUpms != "disetujui" {
+				return nil, errors.New("Aktivitas prodi belum disetujui oleh UPMS. Verifikasi harus berurutan (UPMS -> Fakultas -> Admin/LPM)")
+			}
+			fromStateHistoryAct = act.StatusUpmf
+			if fromStateHistoryAct == "" {
+				fromStateHistoryAct = "menunggu"
+			}
+			if strings.Contains(newStatus, "tolak") {
+				actUpdates["status_upmf"] = "ditolak"
+				actUpdates["catatan_tolak_upmf"] = catatanPenolakan
+				actUpdates["status"] = "ditolak"
+				actUpdates["catatan_penolakan"] = catatanPenolakan
+				toStateHistoryAct = "ditolak UPMF"
+			} else {
+				actUpdates["status_upmf"] = "disetujui"
+				actUpdates["catatan_tolak_upmf"] = ""
+				actUpdates["status"] = "menunggu_lpm"
+				if act.StatusLpm != "disetujui" {
+					actUpdates["status_lpm"] = "menunggu"
+				}
+				actUpdates["catatan_penolakan"] = ""
+				toStateHistoryAct = "disetujui UPMF"
+			}
+		} else if targetRole == "upml" {
+			if isProdi {
+				return nil, errors.New("Aktivitas prodi diverifikasi oleh UPMS (bukan UPML)")
+			}
+			fromStateHistoryAct = act.StatusUpml
+			if fromStateHistoryAct == "" {
+				fromStateHistoryAct = "menunggu"
+			}
+			if strings.Contains(newStatus, "tolak") {
+				actUpdates["status_upml"] = "ditolak"
+				actUpdates["catatan_tolak_upml"] = catatanPenolakan
+				actUpdates["status"] = "ditolak"
+				actUpdates["catatan_penolakan"] = catatanPenolakan
+				toStateHistoryAct = "ditolak UPML"
+			} else {
+				actUpdates["status_upml"] = "disetujui"
+				actUpdates["catatan_tolak_upml"] = ""
+				actUpdates["status_upmf"] = "-"
+				actUpdates["status"] = "menunggu_lpm"
+				if act.StatusLpm != "disetujui" {
+					actUpdates["status_lpm"] = "menunggu"
+				}
+				actUpdates["catatan_penolakan"] = ""
+				toStateHistoryAct = "disetujui UPML"
+			}
+		} else if targetRole == "lpm" || targetRole == "admin" {
+			if isProdi {
+				if act.StatusUpms != "disetujui" {
+					return nil, errors.New("Aktivitas prodi belum disetujui oleh UPMS")
+				}
+				if act.StatusUpmf != "disetujui" {
+					return nil, errors.New("Aktivitas prodi belum disetujui oleh Fakultas (UPMF)")
+				}
+			} else {
+				if act.StatusUpml != "disetujui" {
+					return nil, errors.New("Aktivitas belum disetujui oleh UPML")
+				}
+			}
+			fromStateHistoryAct = act.StatusLpm
+			if fromStateHistoryAct == "" {
+				fromStateHistoryAct = "menunggu"
+			}
+			if strings.Contains(newStatus, "tolak") {
+				actUpdates["status_lpm"] = "ditolak"
+				actUpdates["catatan_tolak_lpm"] = catatanPenolakan
+				actUpdates["status"] = "ditolak"
+				actUpdates["catatan_penolakan"] = catatanPenolakan
+				toStateHistoryAct = "ditolak LPM"
+			} else {
+				actUpdates["status_lpm"] = "disetujui"
+				actUpdates["catatan_tolak_lpm"] = ""
+				actUpdates["status"] = "disetujui"
+				actUpdates["status_verifikator"] = "terima_verifikator"
+				actUpdates["status_anggaran"] = "menunggu_anggaran"
+				actUpdates["catatan_penolakan"] = ""
+				toStateHistoryAct = "disetujui LPM"
 			}
 		}
 	} else {
@@ -1829,16 +1953,20 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			actUpdates["status_verifikator"] = "diajukan"
 			actUpdates["status_anggaran"] = "menunggu_verifikator"
 			actUpdates["status"] = "diajukan"
-			actUpdates["status_upml"] = "menunggu"
-			actUpdates["catatan_tolak_upml"] = ""
 			if isProdi {
+				actUpdates["status_upms"] = "menunggu"
 				actUpdates["status_upmf"] = "menunggu"
+				actUpdates["status_upml"] = "-"
 			} else {
+				actUpdates["status_upml"] = "menunggu"
 				actUpdates["status_upmf"] = "-"
+				actUpdates["status_upms"] = "-"
 			}
+			actUpdates["status_lpm"] = "menunggu"
+			actUpdates["catatan_tolak_upml"] = ""
 			actUpdates["catatan_tolak_upmf"] = ""
-			actUpdates["status_upms"] = "menunggu"
 			actUpdates["catatan_tolak_upms"] = ""
+			actUpdates["catatan_tolak_lpm"] = ""
 			actUpdates["catatan_penolakan"] = ""
 			fromStateHistoryAct = act.Status
 			toStateHistoryAct = "diajukan"

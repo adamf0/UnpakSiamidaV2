@@ -200,7 +200,7 @@ func GetSwotHandlerfunc(c *fiber.Ctx) error {
 	}
 
 	level, userFU := commonpresentation.GetUserInfo(c)
-	if level != "admin" {
+	if level != "admin" && level != "evaluator" {
 		if !helper.MatchUnit(item.IdFakultasUnit, item.UuidFakultasUnit, userFU) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
@@ -249,7 +249,7 @@ func GetAllSwotsHandlerfunc(c *fiber.Ctx) error {
 	level, userFU := commonpresentation.GetUserInfo(c)
 
 	var targetFU string
-	if level != "admin" {
+	if level != "admin" && level != "evaluator" {
 		// Auditee: mutlak dibatasi hanya unit miliknya
 		if userFU != "" && userFU != "0" {
 			targetFU = userFU
@@ -257,7 +257,7 @@ func GetAllSwotsHandlerfunc(c *fiber.Ctx) error {
 			targetFU = "NONE"
 		}
 	} else {
-		// Admin: tampilkan semua atau filter pilihan admin
+		// Admin / Evaluator: tampilkan semua atau filter pilihan admin
 		targetFU = strings.TrimSpace(c.Params("target"))
 		if targetFU == "" {
 			targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
@@ -344,7 +344,7 @@ func GetAllSwotsHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleSwot(app *fiber.App) {
-	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Post("/swot", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateSwotHandlerfunc)

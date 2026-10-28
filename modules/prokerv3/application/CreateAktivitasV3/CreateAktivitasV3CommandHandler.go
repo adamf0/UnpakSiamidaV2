@@ -80,6 +80,7 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 		StatusUpml:       "menunggu",
 		StatusUpmf:       "menunggu",
 		StatusUpms:       "menunggu",
+		StatusLpm:        "menunggu",
 	}
 
 	timelines := make([]domain.ProkerTimelineV3, 0, len(cmd.Timelines))

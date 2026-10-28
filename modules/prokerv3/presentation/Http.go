@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -1876,6 +1877,15 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
 	app.Get("/proker_v3_options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetProkerV3OptionsHandler)
 	app.Get("/proker_v3/target_unpak", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTargetUnpakHandler)
 
+	// Jadwal Proker V3 CRUD & Status Check (Didaftarkan sebelum /proker_v3/:uuid agar tidak tertabrak route param :uuid)
+	adminRoles := []string{"admin"}
+	app.Get("/proker_v3/jadwal", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllJadwalProkerV3Handler)
+	app.Get("/proker_v3/jadwal_status", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), CheckJadwalProkerV3Handler)
+	app.Get("/proker_v3/jadwal/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetJadwalProkerV3Handler)
+	app.Post("/proker_v3/jadwal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), CreateJadwalProkerV3Handler)
+	app.Put("/proker_v3/jadwal/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), UpdateJadwalProkerV3Handler)
+	app.Delete("/proker_v3/jadwal/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), DeleteJadwalProkerV3Handler)
+
 	// 2. Program Kerja (matrix_proker) CRUD
 	app.Post("/proker_v3", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), CreateProkerV3Handlerfunc)
 	app.Get("/proker_v3/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetProkerV3Handlerfunc)
@@ -1933,4 +1943,339 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
 	app.Get("/proker_v3/:uuid/history", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler)
 	app.Get("/proker_v3/history/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler)
 	app.Get("/proker_v3/aktivitas/:aktivitas_uuid/history", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), GetHistoryStateHandler)
+}
+
+// =======================================================
+// 7. JADWAL PROKER V3 CRUD HANDLERS
+// =======================================================
+
+func GetAllJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	search := strings.TrimSpace(c.Query("search"))
+	tahun := strings.TrimSpace(c.Query("tahun"))
+
+	var list []domain.JadwalProkerV3
+	query := dbInstance.WithContext(c.Context())
+
+	if tahun != "" && tahun != "all" {
+		query = query.Where("tahun = ?", tahun)
+	}
+	if search != "" {
+		query = query.Where("tahun LIKE ?", "%"+search+"%")
+	}
+
+	if err := query.Order("tahun DESC, tanggal_mulai ASC").Find(&list).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	now := time.Now()
+	res := make([]domain.JadwalProkerV3DTO, 0, len(list))
+	for _, item := range list {
+		startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+		endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+		status := "berjalan"
+		statusLabel := "Sedang Dibuka"
+		if now.Before(startOfDay) {
+			status = "belum_dibuka"
+			statusLabel = "Belum Dibuka"
+		} else if now.After(endOfDay) {
+			status = "ditutup"
+			statusLabel = "Ditutup"
+		}
+
+		res = append(res, domain.JadwalProkerV3DTO{
+			ID:           item.ID,
+			UUID:         item.UUID.String(),
+			Tahun:        item.Tahun,
+			TanggalMulai: item.TanggalMulai.Format("2006-01-02"),
+			TanggalAkhir: item.TanggalAkhir.Format("2006-01-02"),
+			Status:       status,
+			StatusLabel:  statusLabel,
+			CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data":  res,
+		"total": len(res),
+	})
+}
+
+func GetJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	rawUuid := c.Params("uuid")
+	parsedUuid, err := uuid.Parse(rawUuid)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
+	var item domain.JadwalProkerV3
+	if err := dbInstance.WithContext(c.Context()).Where("uuid = ?", parsedUuid).First(&item).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal proker tidak ditemukan"})
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+	status := "berjalan"
+	statusLabel := "Sedang Dibuka"
+	if now.Before(startOfDay) {
+		status = "belum_dibuka"
+		statusLabel = "Belum Dibuka"
+	} else if now.After(endOfDay) {
+		status = "ditutup"
+		statusLabel = "Ditutup"
+	}
+
+	return c.JSON(domain.JadwalProkerV3DTO{
+		ID:           item.ID,
+		UUID:         item.UUID.String(),
+		Tahun:        item.Tahun,
+		TanggalMulai: item.TanggalMulai.Format("2006-01-02"),
+		TanggalAkhir: item.TanggalAkhir.Format("2006-01-02"),
+		Status:       status,
+		StatusLabel:  statusLabel,
+		CreatedAt:    item.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:    item.UpdatedAt.Format("2006-01-02 15:04:05"),
+	})
+}
+
+func CheckJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	tahun := strings.TrimSpace(c.Query("tahun"))
+	if tahun == "" {
+		tahun = "2027"
+	}
+
+	var item domain.JadwalProkerV3
+	err := dbInstance.WithContext(c.Context()).Where("tahun = ?", tahun).Order("id DESC").First(&item).Error
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"has_schedule": false,
+			"is_open":      true,
+			"status":       "tidak_ada_jadwal",
+			"status_label": "Tidak Ada Pembatasan Jadwal",
+			"tahun":        tahun,
+			"message":      fmt.Sprintf("Belum ada jadwal khusus pengajuan program kerja untuk tahun %s", tahun),
+		})
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+	formatTanggalIndo := func(t time.Time) string {
+		bulan := []string{
+			"", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+			"Juli", "Agustus", "September", "Oktober", "November", "Desember",
+		}
+		m := int(t.Month())
+		if m >= 1 && m <= 12 {
+			return fmt.Sprintf("%02d %s %d", t.Day(), bulan[m], t.Year())
+		}
+		return t.Format("02-01-2006")
+	}
+
+	isOpen := true
+	status := "berjalan"
+	statusLabel := "Sedang Dibuka"
+	message := fmt.Sprintf("Pengajuan program kerja tahun %s dibuka dari %s s/d %s", item.Tahun, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
+
+	if now.Before(startOfDay) {
+		isOpen = false
+		status = "belum_dibuka"
+		statusLabel = "Belum Dibuka"
+		message = fmt.Sprintf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", item.Tahun, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
+	} else if now.After(endOfDay) {
+		isOpen = false
+		status = "ditutup"
+		statusLabel = "Ditutup"
+		message = fmt.Sprintf("Pengajuan program kerja tahun %s telah ditutup pada %s", item.Tahun, formatTanggalIndo(item.TanggalAkhir))
+	}
+
+	return c.JSON(fiber.Map{
+		"has_schedule":  true,
+		"is_open":       isOpen,
+		"status":        status,
+		"status_label":  statusLabel,
+		"tahun":         item.Tahun,
+		"tanggal_mulai": item.TanggalMulai.Format("2006-01-02"),
+		"tanggal_akhir": item.TanggalAkhir.Format("2006-01-02"),
+		"message":       message,
+	})
+}
+
+func CreateJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	type FormInput struct {
+		Tahun        string `json:"tahun" form:"tahun"`
+		TanggalMulai string `json:"tanggal_mulai" form:"tanggal_mulai"`
+		TanggalAkhir string `json:"tanggal_akhir" form:"tanggal_akhir"`
+	}
+
+	var req FormInput
+	if strings.Contains(c.Get("Content-Type"), "application/json") {
+		_ = c.BodyParser(&req)
+	}
+	if req.Tahun == "" {
+		req.Tahun = c.FormValue("tahun")
+	}
+	if req.TanggalMulai == "" {
+		req.TanggalMulai = c.FormValue("tanggal_mulai")
+	}
+	if req.TanggalAkhir == "" {
+		req.TanggalAkhir = c.FormValue("tanggal_akhir")
+	}
+
+	req.Tahun = strings.TrimSpace(req.Tahun)
+	req.TanggalMulai = strings.TrimSpace(req.TanggalMulai)
+	req.TanggalAkhir = strings.TrimSpace(req.TanggalAkhir)
+
+	if req.Tahun == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tahun wajib diisi"})
+	}
+	if req.TanggalMulai == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal mulai wajib diisi"})
+	}
+	if req.TanggalAkhir == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir wajib diisi"})
+	}
+
+	tMulai, errM := time.Parse("2006-01-02", req.TanggalMulai)
+	if errM != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
+	}
+	tAkhir, errA := time.Parse("2006-01-02", req.TanggalAkhir)
+	if errA != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
+	}
+
+	if tAkhir.Before(tMulai) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir tidak boleh lebih awal dari tanggal mulai"})
+	}
+
+	newJadwal := domain.JadwalProkerV3{
+		UUID:         uuid.New(),
+		Tahun:        req.Tahun,
+		TanggalMulai: tMulai,
+		TanggalAkhir: tAkhir,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := dbInstance.WithContext(c.Context()).Create(&newJadwal).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Jadwal program kerja berhasil ditambahkan",
+		"uuid":    newJadwal.UUID.String(),
+		"data":    newJadwal,
+	})
+}
+
+func UpdateJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	rawUuid := c.Params("uuid")
+	parsedUuid, err := uuid.Parse(rawUuid)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
+	var item domain.JadwalProkerV3
+	if err := dbInstance.WithContext(c.Context()).Where("uuid = ?", parsedUuid).First(&item).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal proker tidak ditemukan"})
+	}
+
+	type FormInput struct {
+		Tahun        string `json:"tahun" form:"tahun"`
+		TanggalMulai string `json:"tanggal_mulai" form:"tanggal_mulai"`
+		TanggalAkhir string `json:"tanggal_akhir" form:"tanggal_akhir"`
+	}
+
+	var req FormInput
+	if strings.Contains(c.Get("Content-Type"), "application/json") {
+		_ = c.BodyParser(&req)
+	}
+	if req.Tahun == "" {
+		req.Tahun = c.FormValue("tahun")
+	}
+	if req.TanggalMulai == "" {
+		req.TanggalMulai = c.FormValue("tanggal_mulai")
+	}
+	if req.TanggalAkhir == "" {
+		req.TanggalAkhir = c.FormValue("tanggal_akhir")
+	}
+
+	if req.Tahun != "" {
+		item.Tahun = strings.TrimSpace(req.Tahun)
+	}
+	if req.TanggalMulai != "" {
+		tMulai, errM := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalMulai))
+		if errM != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
+		}
+		item.TanggalMulai = tMulai
+	}
+	if req.TanggalAkhir != "" {
+		tAkhir, errA := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalAkhir))
+		if errA != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
+		}
+		item.TanggalAkhir = tAkhir
+	}
+
+	if item.TanggalAkhir.Before(item.TanggalMulai) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir tidak boleh lebih awal dari tanggal mulai"})
+	}
+
+	item.UpdatedAt = time.Now()
+	if err := dbInstance.WithContext(c.Context()).Save(&item).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Jadwal program kerja berhasil diperbarui",
+		"uuid":    item.UUID.String(),
+		"data":    item,
+	})
+}
+
+func DeleteJadwalProkerV3Handler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	rawUuid := c.Params("uuid")
+	parsedUuid, err := uuid.Parse(rawUuid)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
+	}
+
+	if err := dbInstance.WithContext(c.Context()).Where("uuid = ?", parsedUuid).Delete(&domain.JadwalProkerV3{}).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Jadwal program kerja berhasil dihapus",
+		"uuid":    rawUuid,
+	})
 }

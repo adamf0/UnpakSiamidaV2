@@ -317,7 +317,7 @@ func GetRiskAssessmentHandlerfunc(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Risk assessment not found"})
 	}
 
-	if level != "admin" && !helper.MatchUnit(result.IdFakultasUnit, result.UuidFakultasUnit, userFU) {
+	if level != "admin" && level != "evaluator" && !helper.MatchUnit(result.IdFakultasUnit, result.UuidFakultasUnit, userFU) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: data milik unit lain"})
 	}
 
@@ -338,7 +338,7 @@ func GetAllRiskAssessmentsHandlerfunc(c *fiber.Ctx) error {
 	var filters []commondomain.SearchFilter
 
 	var targetFU string
-	if level != "admin" {
+	if level != "admin" && level != "evaluator" {
 		// Non-admin (auditee/BPSI/unit/fakultas): batasi mutlak ke unit miliknya
 		if userFU != "" && userFU != "0" {
 			targetFU = userFU
@@ -348,7 +348,7 @@ func GetAllRiskAssessmentsHandlerfunc(c *fiber.Ctx) error {
 			targetFU = "NONE"
 		}
 	} else {
-		// Admin: tampilkan semua atau filter pilihan admin
+		// Admin / Evaluator: tampilkan semua atau filter pilihan admin
 		targetFU = strings.TrimSpace(c.Params("target"))
 		if targetFU == "" {
 			targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
@@ -574,7 +574,7 @@ func GetRiskOptionsHandler(c *fiber.Ctx) error {
 }
 
 func ModuleRiskAssessment(app *fiber.App, dbs ...*gorm.DB) {
-	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// Dynamic Master Data Endpoints

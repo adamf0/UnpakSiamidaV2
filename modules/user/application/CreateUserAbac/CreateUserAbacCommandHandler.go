@@ -45,45 +45,41 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 
 	hasTarget := (cmd.IdFakultasUnit != nil && *cmd.IdFakultasUnit > 0) || strings.TrimSpace(cmd.UuidFakultasUnit) != ""
 	if !hasTarget {
-		if role == "upms" {
-			// UPMS does not require a target unit (applies university-wide / school-wide)
-			fuID = nil
-		} else if role == "upmf" {
-			return nil, errors.New("Target Fakultas wajib dipilih untuk role UPMF")
+		return nil, errors.New("Target Fakultas/Unit/Prodi wajib dipilih")
+	}
+
+	resolvedID, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, cmd.IdFakultasUnit, cmd.UuidFakultasUnit)
+	if err != nil {
+		return nil, errors.New("Fakultas/Unit/Prodi yang dipilih tidak ditemukan")
+	}
+	fuID = &resolvedID
+
+	lowType := strings.ToLower(strings.TrimSpace(fuType))
+	lowNama := strings.ToLower(strings.TrimSpace(fuNama))
+
+	isFakultas := lowType == "fakultas" || strings.Contains(lowNama, "(fakultas)") || strings.HasPrefix(lowNama, "fakultas")
+	isProdi := lowType == "prodi" || strings.Contains(lowNama, "(prodi)") || strings.HasPrefix(lowNama, "prodi") || strings.HasPrefix(lowNama, "program studi")
+
+	if role == "" || role == "auto" {
+		if isProdi {
+			role = "upms"
+		} else if isFakultas {
+			role = "upmf"
 		} else {
-			return nil, errors.New("Fakultas/Unit wajib dipilih untuk role ini")
+			role = "upml"
 		}
 	} else {
-		resolvedID, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, cmd.IdFakultasUnit, cmd.UuidFakultasUnit)
-		if err != nil {
-			return nil, errors.New("Fakultas/Unit yang dipilih tidak ditemukan")
+		if role != "upms" && role != "upmf" && role != "upml" {
+			return nil, errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
 		}
-		fuID = &resolvedID
-
-		// Rule: "kalau yg saya pilih fakultas maka hanya bisa pilih upml dan upmf, kalau bukan fakultas maka bisa pilih upml upms"
-		isFakultas := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
-
-		if role == "" || role == "auto" {
-			if isFakultas {
-				role = "upmf"
-			} else {
-				lowNama := strings.ToLower(fuNama)
-				if strings.Contains(lowNama, "pascasarjana") || strings.Contains(lowNama, "vokasi") || strings.Contains(lowNama, "sekolah") {
-					role = "upms"
-				} else {
-					role = "upml"
-				}
-			}
-		} else {
-			if role != "upms" && role != "upmf" && role != "upml" {
-				return nil, errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
-			}
-			if isFakultas && role == "upms" {
-				return nil, errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
-			}
-			if !isFakultas && role == "upmf" {
-				return nil, errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
-			}
+		if role == "upms" && !isProdi {
+			return nil, errors.New("Target untuk role UPMS harus berupa Program Studi (Prodi)")
+		}
+		if role == "upmf" && !isFakultas {
+			return nil, errors.New("Target untuk role UPMF harus berupa Fakultas")
+		}
+		if role == "upml" && isProdi {
+			return nil, errors.New("Target untuk role UPML harus berupa Fakultas atau Unit (bukan Program Studi)")
 		}
 	}
 

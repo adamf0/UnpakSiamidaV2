@@ -60,19 +60,25 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 			if reqRole != "upms" && reqRole != "upmf" && reqRole != "upml" {
 				return "", errors.New("Role penugasan tidak valid (hanya diperbolehkan UPMS, UPMF, atau UPML)")
 			}
-			if targetFuID != nil && *targetFuID > 0 {
-				_, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, targetFuID, "")
-				if err == nil {
-					isFak := fuType == "fakultas" || strings.Contains(strings.ToLower(fuNama), "(fakultas)") || strings.HasPrefix(strings.ToLower(fuNama), "fakultas")
-					if isFak && reqRole == "upms" {
-						return "", errors.New("Target Fakultas hanya dapat memilih role UPML atau UPMF")
-					}
-					if !isFak && reqRole == "upmf" {
-						return "", errors.New("Target non-Fakultas hanya dapat memilih role UPML atau UPMS")
-					}
+			if targetFuID == nil || *targetFuID == 0 {
+				return "", errors.New("Target Fakultas/Unit/Prodi wajib dipilih")
+			}
+			_, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, targetFuID, "")
+			if err == nil {
+				lowType := strings.ToLower(strings.TrimSpace(fuType))
+				lowNama := strings.ToLower(strings.TrimSpace(fuNama))
+				isFak := lowType == "fakultas" || strings.Contains(lowNama, "(fakultas)") || strings.HasPrefix(lowNama, "fakultas")
+				isProdi := lowType == "prodi" || strings.Contains(lowNama, "(prodi)") || strings.HasPrefix(lowNama, "prodi") || strings.HasPrefix(lowNama, "program studi")
+
+				if reqRole == "upms" && !isProdi {
+					return "", errors.New("Target untuk role UPMS harus berupa Program Studi (Prodi)")
 				}
-			} else if reqRole == "upmf" {
-				return "", errors.New("Target Fakultas wajib dipilih untuk role UPMF")
+				if reqRole == "upmf" && !isFak {
+					return "", errors.New("Target untuk role UPMF harus berupa Fakultas")
+				}
+				if reqRole == "upml" && isProdi {
+					return "", errors.New("Target untuk role UPML harus berupa Fakultas atau Unit (bukan Program Studi)")
+				}
 			}
 			updates["role"] = reqRole
 		}

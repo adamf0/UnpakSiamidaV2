@@ -111,6 +111,8 @@ type AktivitasV2Default struct {
 	CatatanTolakUpmf      string                      `json:"CatatanTolakUpmf"`
 	StatusUpms            string                      `json:"StatusUpms"`
 	CatatanTolakUpms      string                      `json:"CatatanTolakUpms"`
+	StatusLpm             string                      `json:"StatusLpm"`
+	CatatanTolakLpm       string                      `json:"CatatanTolakLpm"`
 	CreatedAt             time.Time                   `json:"CreatedAt"`
 	UpdatedAt             time.Time                   `json:"UpdatedAt"`
 	TimelinesCount        int                         `json:"TimelinesCount"`
