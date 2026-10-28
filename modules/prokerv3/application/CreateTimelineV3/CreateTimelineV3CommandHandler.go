@@ -84,6 +84,7 @@ func (h *CreateTimelineV3CommandHandler) Handle(ctx context.Context, cmd CreateT
 		cmd.Masalah,
 		cmd.PemecahanMasalah,
 		cmd.Status,
+		cmd.RAB,
 	)
 
 	if !result.IsSuccess {

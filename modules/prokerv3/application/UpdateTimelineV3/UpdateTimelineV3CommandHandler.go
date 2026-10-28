@@ -64,6 +64,7 @@ func (h *UpdateTimelineV3CommandHandler) Handle(ctx context.Context, cmd UpdateT
 		cmd.Masalah,
 		cmd.PemecahanMasalah,
 		cmd.Status,
+		cmd.RAB,
 	)
 
 	if !result.IsSuccess {

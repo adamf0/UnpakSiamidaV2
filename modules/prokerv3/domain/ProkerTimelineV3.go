@@ -22,6 +22,7 @@ type ProkerTimelineV3 struct {
 	PIC              string     `gorm:"column:pic;size:255" json:"PIC"`
 	TitikKontrol     string     `gorm:"column:titik_kontrol;type:text" json:"TitikKontrol"`
 	Anggaran         float64    `gorm:"column:anggaran;default:0" json:"Anggaran"`
+	RAB              string     `gorm:"column:rab;type:longtext" json:"RAB"`
 	JadwalRk         string     `gorm:"column:jadwal_rk;type:text" json:"JadwalRk"`
 	JadwalR          string     `gorm:"column:jadwal_r;type:text" json:"JadwalR"`
 	Capaian          string     `gorm:"column:capaian;type:text" json:"Capaian"`
@@ -55,6 +56,7 @@ func NewProkerTimelineV3(
 	masalah string,
 	pemecahanMasalah string,
 	status string,
+	rab string,
 ) common.ResultValue[*ProkerTimelineV3] {
 	if act == nil {
 		return common.FailureValue[*ProkerTimelineV3](AktivitasNotFound())
@@ -96,6 +98,7 @@ func NewProkerTimelineV3(
 		PIC:              strings.TrimSpace(pic),
 		TitikKontrol:     strings.TrimSpace(titikKontrol),
 		Anggaran:         anggaran,
+		RAB:              strings.TrimSpace(rab),
 		TanggalRkAwal:    tanggalRkAwal,
 		TanggalRkAkhir:   tanggalRkAkhir,
 		TanggalRAwal:     tanggalRAwal,
@@ -130,6 +133,7 @@ func UpdateProkerTimelineV3(
 	masalah string,
 	pemecahanMasalah string,
 	status string,
+	rab string,
 ) common.ResultValue[*ProkerTimelineV3] {
 	if prev == nil {
 		return common.FailureValue[*ProkerTimelineV3](TimelineNotFound())
@@ -151,6 +155,9 @@ func UpdateProkerTimelineV3(
 		prev.Anggaran = *anggaran
 	}
 
+	if strings.TrimSpace(rab) != "" {
+		prev.RAB = strings.TrimSpace(rab)
+	}
 	if strings.TrimSpace(namaAktivitas) != "" {
 		prev.NamaAktivitas = strings.TrimSpace(namaAktivitas)
 	}

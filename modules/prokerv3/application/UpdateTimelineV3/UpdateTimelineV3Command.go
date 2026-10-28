@@ -11,6 +11,7 @@ type UpdateTimelineV3Command struct {
 	PIC              string `json:"pic" form:"pic"`
 	TitikKontrol     string   `json:"titik_kontrol" form:"titik_kontrol"`
 	Anggaran         *float64 `json:"anggaran" form:"anggaran"`
+	RAB              string   `json:"rab" form:"rab"`
 	JadwalRk         string   `json:"jadwal_rk" form:"jadwal_rk"`
 	JadwalR          string `json:"jadwal_r" form:"jadwal_r"`
 	Capaian          string `json:"capaian" form:"capaian"`

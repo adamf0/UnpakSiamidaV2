@@ -31,6 +31,8 @@ import (
 )
 
 func RegisterModuleProkerV3(db *gorm.DB) error {
+	_ = db.AutoMigrate(&domain.ProkerTimelineV3{})
+	_ = db.Exec("ALTER TABLE aktivitasv2_timeline ADD COLUMN IF NOT EXISTS rab LONGTEXT").Error
 	repoProker := NewProkerV3Repository(db)
 
 	mediatr.RegisterRequestHandler[

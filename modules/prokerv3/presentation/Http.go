@@ -930,6 +930,9 @@ func CreateTimelineHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("tanggal_r_akhir"); val != "" {
 		cmd.TanggalRAkhir = val
 	}
+	if val := c.FormValue("rab"); val != "" {
+		cmd.RAB = val
+	}
 	cmd.AktivitasUUID = actUUIDStr
 
 	tl, err := mediatr.Send[createTimeline.CreateTimelineV3Command, *domain.ProkerTimelineV3](c.Context(), cmd)
@@ -951,6 +954,9 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 	tlUUIDStr := c.Params("timeline_uuid")
 
 	var cmd updateTimeline.UpdateTimelineV3Command
+	if strings.Contains(c.Get("Content-Type"), "application/json") {
+		_ = c.BodyParser(&cmd)
+	}
 
 	if val := c.FormValue("nama_aktivitas"); val != "" {
 		cmd.NamaAktivitas = val
@@ -1004,6 +1010,9 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 	}
 	if val := c.FormValue("tanggal_r_akhir"); val != "" {
 		cmd.TanggalRAkhir = val
+	}
+	if val := c.FormValue("rab"); val != "" {
+		cmd.RAB = val
 	}
 	cmd.UUID = tlUUIDStr
 
