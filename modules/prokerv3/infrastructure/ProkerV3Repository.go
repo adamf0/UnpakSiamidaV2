@@ -96,8 +96,8 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
 			COALESCE((SELECT SUM(a.anggaran) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAnggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL AND a.realisasi > 0 THEN a.realisasi ELSE a.anggaran END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND a.realisasi > 0), 0) > 0 as HasRealisasi,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE a.anggaran END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen
 		`).
 		Joins("LEFT JOIN mata_program prog ON mp_t.id_mata_program = prog.id").
@@ -208,8 +208,8 @@ func (r *ProkerV3Repository) GetAll(
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
 			COALESCE((SELECT SUM(a.anggaran) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAnggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL AND a.realisasi > 0 THEN a.realisasi ELSE a.anggaran END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND a.realisasi > 0), 0) > 0 as HasRealisasi,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE a.anggaran END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen
 		`).
 		Joins("LEFT JOIN mata_program prog ON mp_t.id_mata_program = prog.id").

@@ -12,9 +12,9 @@ import (
 	deleteTimeline "UnpakSiamida/modules/prokerv3/application/DeleteTimelineV3"
 	getAktivitasByMatrix "UnpakSiamida/modules/prokerv3/application/GetAktivitasByMatrix"
 	getAktivitasDetail "UnpakSiamida/modules/prokerv3/application/GetAktivitasDetail"
+	getAll "UnpakSiamida/modules/prokerv3/application/GetAllProkerV3"
 	getDokumen "UnpakSiamida/modules/prokerv3/application/GetDokumenV3"
 	getHistory "UnpakSiamida/modules/prokerv3/application/GetHistoryStateV3"
-	getAll "UnpakSiamida/modules/prokerv3/application/GetAllProkerV3"
 	get "UnpakSiamida/modules/prokerv3/application/GetProkerV3"
 	getOptions "UnpakSiamida/modules/prokerv3/application/GetProkerV3Options"
 	getTargetUnpak "UnpakSiamida/modules/prokerv3/application/GetTargetUnpak"
@@ -31,10 +31,6 @@ import (
 )
 
 func RegisterModuleProkerV3(db *gorm.DB) error {
-	_ = db.AutoMigrate(&domain.ProkerTimelineV3{}, &domain.JadwalProkerV3{})
-	_ = db.Exec("ALTER TABLE aktivitasv2_timeline ADD COLUMN IF NOT EXISTS rab LONGTEXT").Error
-	_ = db.Exec("ALTER TABLE aktivitasv2 ADD COLUMN IF NOT EXISTS status_lpm VARCHAR(50) DEFAULT 'menunggu', ADD COLUMN IF NOT EXISTS catatan_tolak_lpm TEXT").Error
-	_ = db.Exec("CREATE TABLE IF NOT EXISTS jadwal_proker_v3 (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, uuid CHAR(36) NOT NULL UNIQUE, tahun VARCHAR(10) NOT NULL, tanggal_mulai DATE NOT NULL, tanggal_akhir DATE NOT NULL, created_at DATETIME NULL, updated_at DATETIME NULL)").Error
 	repoProker := NewProkerV3Repository(db)
 
 	mediatr.RegisterRequestHandler[
