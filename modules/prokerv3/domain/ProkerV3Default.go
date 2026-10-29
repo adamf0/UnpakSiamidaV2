@@ -82,6 +82,8 @@ type ProkerV3Default struct {
 	TotalRealisasi    float64   `json:"TotalRealisasi"`
 	HasRealisasi      bool      `json:"HasRealisasi"`
 	TotalDokumen      int64     `json:"TotalDokumen"`
+	TotalRisiko       int64     `json:"TotalRisiko"`
+	TingkatRisiko     string    `json:"TingkatRisiko"`
 	CreatedAt         time.Time `json:"CreatedAt"`
 	UpdatedAt         time.Time `json:"UpdatedAt"`
 }

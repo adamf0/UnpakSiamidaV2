@@ -338,7 +338,7 @@ func GetAllRiskAssessmentsHandlerfunc(c *fiber.Ctx) error {
 	var filters []commondomain.SearchFilter
 
 	var targetFU string
-	if level != "admin" && level != "evaluator" {
+	if level != "admin" && level != "evaluator" && level != "anggaran" && level != "keuangan" {
 		// Non-admin (auditee/BPSI/unit/fakultas): batasi mutlak ke unit miliknya
 		if userFU != "" && userFU != "0" {
 			targetFU = userFU
@@ -574,7 +574,7 @@ func GetRiskOptionsHandler(c *fiber.Ctx) error {
 }
 
 func ModuleRiskAssessment(app *fiber.App, dbs ...*gorm.DB) {
-	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator"}
+	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator", "anggaran", "keuangan", "verifikator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// Dynamic Master Data Endpoints
