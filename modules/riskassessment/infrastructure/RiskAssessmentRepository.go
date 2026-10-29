@@ -246,7 +246,7 @@ func (r *RiskAssessmentRepository) GetAll(
 	}
 
 	// Sorting & Pagination
-	db = db.Order("r.id ASC")
+	db = db.Order("CONVERT(COALESCE(mt.tahun, r.tahun) USING utf8mb4) DESC, r.id DESC")
 	if page != nil && limit != nil && *limit > 0 {
 		offset := (*page - 1) * (*limit)
 		db = db.Offset(offset).Limit(*limit)
