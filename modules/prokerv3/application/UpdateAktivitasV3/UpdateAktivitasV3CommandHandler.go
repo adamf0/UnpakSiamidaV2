@@ -3,6 +3,7 @@ package UpdateAktivitasV3
 import (
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -33,11 +34,31 @@ func (h *UpdateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Update
 	if cmd.PIC != "" {
 		act.PIC = strings.TrimSpace(cmd.PIC)
 	}
-	if cmd.Anggaran > 0 {
+	if cmd.Anggaran >= 0 {
 		act.Anggaran = cmd.Anggaran
+	}
+	if cmd.RAB != "" {
+		act.RAB = cmd.RAB
+		act.RabItems = nil
+	} else if cmd.Anggaran > 0 && len(act.RabItems) == 0 {
+		b, _ := json.Marshal([]map[string]interface{}{
+			{
+				"kategori":   "Umum",
+				"rincian":    "Alokasi Anggaran Kegiatan",
+				"keterangan": "Alokasi Anggaran Kegiatan",
+				"qty_satuan": 1,
+				"qty_paket":  1,
+				"sbu":        cmd.Anggaran,
+				"total":      cmd.Anggaran,
+			},
+		})
+		act.RAB = string(b)
 	}
 	if cmd.Realisasi != nil {
 		act.Realisasi = cmd.Realisasi
+	}
+	if cmd.Pencairan != nil {
+		act.Pencairan = cmd.Pencairan
 	}
 	if cmd.Status != "" {
 		act.Status = strings.TrimSpace(cmd.Status)

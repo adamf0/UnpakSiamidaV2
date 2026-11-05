@@ -77,6 +77,9 @@ type ProkerV3Default struct {
 	TypeFakultasUnit  string    `json:"TypeFakultasUnit"`
 	ParentFakultas    string    `json:"ParentFakultas"`
 	PIC               string    `json:"PIC"`
+	BebanYayasan      bool      `json:"BebanYayasan"`
+	IsBatal           bool      `json:"IsBatal"`
+	CatatanBatal      string    `json:"CatatanBatal"`
 	TotalAktivitas    int64     `json:"TotalAktivitas"`
 	TotalAnggaran     float64   `json:"TotalAnggaran"`
 	TotalRealisasi    float64   `json:"TotalRealisasi"`
@@ -84,8 +87,14 @@ type ProkerV3Default struct {
 	TotalDokumen      int64     `json:"TotalDokumen"`
 	TotalRisiko       int64     `json:"TotalRisiko"`
 	TingkatRisiko     string    `json:"TingkatRisiko"`
-	CreatedAt         time.Time `json:"CreatedAt"`
-	UpdatedAt         time.Time `json:"UpdatedAt"`
+	IkuList           string    `json:"IkuList"`
+	PaguUnit          float64   `json:"PaguUnit"`
+	HasPagu           bool      `json:"HasPagu"`
+	IsMelebihiPagu    bool      `json:"IsMelebihiPagu"`
+	TotalAnggaranUnit float64              `json:"TotalAnggaranUnit"`
+	Scopes            []ProkerScopeDefault `gorm:"-" json:"Scopes"`
+	CreatedAt         time.Time            `json:"CreatedAt"`
+	UpdatedAt         time.Time            `json:"UpdatedAt"`
 }
 
 // AktivitasV2Default maps to aktivitasv2 with timelines and files
@@ -100,7 +109,10 @@ type AktivitasV2Default struct {
 	Capaian               string                      `json:"Capaian"`
 	Masalah               string                      `json:"Masalah"`
 	Anggaran              float64                     `json:"Anggaran"`
+	RAB                   string                      `json:"RAB"`
+	RabItems              []AktivitasV2Rab            `json:"RabItems,omitempty"`
 	Realisasi             *float64                    `json:"Realisasi"`
+	Pencairan             *float64                    `json:"Pencairan"`
 	Status                string                      `json:"Status"`
 	CatatanPenolakan      string                      `json:"CatatanPenolakan"`
 	StatusVerifikator     string                      `json:"StatusVerifikator"`
@@ -115,6 +127,8 @@ type AktivitasV2Default struct {
 	CatatanTolakUpms      string                      `json:"CatatanTolakUpms"`
 	StatusLpm             string                      `json:"StatusLpm"`
 	CatatanTolakLpm       string                      `json:"CatatanTolakLpm"`
+	IsBatal               bool                        `json:"IsBatal"`
+	CatatanBatal          string                      `json:"CatatanBatal"`
 	CreatedAt             time.Time                   `json:"CreatedAt"`
 	UpdatedAt             time.Time                   `json:"UpdatedAt"`
 	TimelinesCount        int                         `json:"TimelinesCount"`

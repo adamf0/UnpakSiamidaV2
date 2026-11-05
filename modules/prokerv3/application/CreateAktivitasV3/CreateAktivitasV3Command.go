@@ -7,6 +7,7 @@ type CreateAktivitasV3Command struct {
 	Aktivitas        string                           `json:"aktivitas" form:"aktivitas"`
 	PIC              string                           `json:"pic" form:"pic"`
 	Anggaran         float64                          `json:"anggaran" form:"anggaran"`
+	RAB              string                           `json:"rab" form:"rab"`
 	LuaranProduk     string                           `json:"luaran_produk" form:"luaran_produk"`
 	DokumenReferensi string                           `json:"dokumen_referensi" form:"dokumen_referensi"`
 	Status           string                           `json:"status" form:"status"`

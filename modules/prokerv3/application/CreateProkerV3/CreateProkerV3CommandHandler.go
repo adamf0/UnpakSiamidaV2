@@ -142,10 +142,93 @@ func (h *CreateProkerV3CommandHandler) Handle(
 		Output:           strings.TrimSpace(cmd.Output),
 		Outcome:          strings.TrimSpace(cmd.Outcome),
 		PIC:              strings.TrimSpace(cmd.PIC),
+		BebanYayasan:     cmd.BebanYayasan,
+	}
+
+	if len(cmd.Scopes) > 0 {
+		firstScope := cmd.Scopes[0]
+		if firstScope.IdIndikator != nil && *firstScope.IdIndikator > 0 {
+			matrixProker.IdIndikator = firstScope.IdIndikator
+		}
+		if firstScope.TargetUnpak != "" {
+			matrixProker.TargetUnpak = strings.TrimSpace(firstScope.TargetUnpak)
+		}
+		if firstScope.CapaianUnitLalu != "" {
+			matrixProker.CapaianTerdahulu = strings.TrimSpace(firstScope.CapaianUnitLalu)
+		}
+		if firstScope.TargetUnit != "" {
+			matrixProker.TargetUnit = strings.TrimSpace(firstScope.TargetUnit)
+		}
+		if firstScope.Output != "" {
+			matrixProker.Output = strings.TrimSpace(firstScope.Output)
+		}
+		if firstScope.Outcome != "" {
+			matrixProker.Outcome = strings.TrimSpace(firstScope.Outcome)
+		}
 	}
 
 	if err := h.Repo.Create(ctx, matrixProker); err != nil {
 		return "", err
+	}
+
+	// 5. Save dynamic scopes into matrix_proker_scope
+	if len(cmd.Scopes) > 0 {
+		for _, sc := range cmd.Scopes {
+			var scIndID *int = sc.IdIndikator
+			if scIndID == nil || *scIndID <= 0 {
+				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
+				if scIndKinerja != "" {
+					var mir struct {
+						ID int
+					}
+					if _, err := uuid.Parse(scIndKinerja); err == nil {
+						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", scIndKinerja).Take(&mir).Error
+					} else {
+						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", scIndKinerja).Take(&mir).Error
+					}
+					if mir.ID > 0 {
+						scIndID = &mir.ID
+					}
+				}
+			}
+
+			scUUID := uuid.New()
+			if strings.TrimSpace(sc.UUID) != "" {
+				if parsed, err := uuid.Parse(strings.TrimSpace(sc.UUID)); err == nil {
+					scUUID = parsed
+				}
+			}
+
+			scopeRecord := domain.MatrixProkerScope{
+				UUID:             scUUID,
+				IdMatrixProker:   matrixProker.ID,
+				IdMataProgram:    mpID,
+				IdIndikator:      scIndID,
+				TargetUnpak:      strings.TrimSpace(sc.TargetUnpak),
+				CapaianTerdahulu: strings.TrimSpace(sc.CapaianUnitLalu),
+				TargetUnit:       strings.TrimSpace(sc.TargetUnit),
+				Output:           strings.TrimSpace(sc.Output),
+				Outcome:          strings.TrimSpace(sc.Outcome),
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
+			}
+			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+		}
+	} else {
+		scopeRecord := domain.MatrixProkerScope{
+			UUID:             uuid.New(),
+			IdMatrixProker:   matrixProker.ID,
+			IdMataProgram:    mpID,
+			IdIndikator:      indID,
+			TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
+			CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
+			TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
+			Output:           strings.TrimSpace(cmd.Output),
+			Outcome:          strings.TrimSpace(cmd.Outcome),
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
+		}
+		_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
 	}
 
 	return matrixProker.UUID.String(), nil

@@ -18,6 +18,18 @@ type TimelineItemInput struct {
 	Status           string `json:"status" form:"status"`
 }
 
+type ScopeItemInput struct {
+	UUID              string `json:"uuid" form:"uuid"`
+	IdIndikator       *int   `json:"id_indikator" form:"id_indikator"`
+	StandarSubStandar string `json:"standar_sub_standar" form:"standar_sub_standar"`
+	IndikatorKinerja  string `json:"indikator_kinerja" form:"indikator_kinerja"`
+	TargetUnpak       string `json:"target_unpak" form:"target_unpak"`
+	CapaianUnitLalu   string `json:"capaian_unit_lalu" form:"capaian_unit_lalu"`
+	TargetUnit        string `json:"target_unit" form:"target_unit"`
+	Output            string `json:"output" form:"output"`
+	Outcome           string `json:"outcome" form:"outcome"`
+}
+
 type CreateProkerV3Command struct {
 	IdFakultasUnit    *int                `json:"id_fakultas_unit" form:"id_fakultas_unit"`
 	FakultasUuid      string              `json:"fakultas_unit" form:"fakultas_unit"`
@@ -37,7 +49,10 @@ type CreateProkerV3Command struct {
 	DokumenReferensi  string              `json:"dokumen_referensi" form:"dokumen_referensi"`
 	LuaranProduk      string              `json:"luaran_produk" form:"luaran_produk"`
 	PIC               string              `json:"pic" form:"pic"`
+	BebanYayasan      bool                `json:"beban_yayasan" form:"beban_yayasan"`
 	Aktivitas         string              `json:"aktivitas" form:"aktivitas"`
 	Status            string              `json:"status" form:"status"`
 	Timelines         []TimelineItemInput `json:"timelines" form:"timelines"`
+	Scopes            []ScopeItemInput    `json:"scopes" form:"scopes"`
+	ScopesRaw         string              `json:"scopes_raw" form:"scopes_raw"`
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -226,6 +227,118 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 	_ = h.DB.WithContext(ctx).Table("aktivitasv2").
 		Where("id_matrik_proker = ?", existing.ID).
 		Update("PIC", strings.TrimSpace(cmd.PIC)).Error
+
+	if cmd.BebanYayasan != nil {
+		existing.BebanYayasan = *cmd.BebanYayasan
+	}
+
+	// 5. Save and sync dynamic scopes in matrix_proker_scope
+	if len(cmd.Scopes) > 0 {
+		firstScope := cmd.Scopes[0]
+		if firstScope.IdIndikator != nil && *firstScope.IdIndikator > 0 {
+			existing.IdIndikator = firstScope.IdIndikator
+		}
+		if firstScope.TargetUnpak != "" {
+			existing.TargetUnpak = strings.TrimSpace(firstScope.TargetUnpak)
+		}
+		if firstScope.CapaianUnitLalu != "" {
+			existing.CapaianTerdahulu = strings.TrimSpace(firstScope.CapaianUnitLalu)
+		}
+		if firstScope.TargetUnit != "" {
+			existing.TargetUnit = strings.TrimSpace(firstScope.TargetUnit)
+		}
+		if firstScope.Output != "" {
+			existing.Output = strings.TrimSpace(firstScope.Output)
+		}
+		if firstScope.Outcome != "" {
+			existing.Outcome = strings.TrimSpace(firstScope.Outcome)
+		}
+
+		_ = h.DB.WithContext(ctx).Where("id_matrix_proker = ?", existing.ID).Delete(&domain.MatrixProkerScope{}).Error
+
+		for _, sc := range cmd.Scopes {
+			var scIndID *int = sc.IdIndikator
+			if scIndID == nil || *scIndID <= 0 {
+				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
+				if scIndKinerja != "" {
+					var mir struct {
+						ID int
+					}
+					if _, err := uuid.Parse(scIndKinerja); err == nil {
+						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", scIndKinerja).Take(&mir).Error
+					} else {
+						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", scIndKinerja).Take(&mir).Error
+					}
+					if mir.ID > 0 {
+						scIndID = &mir.ID
+					}
+				}
+			}
+
+			scUUID := uuid.New()
+			if strings.TrimSpace(sc.UUID) != "" {
+				if parsed, err := uuid.Parse(strings.TrimSpace(sc.UUID)); err == nil {
+					scUUID = parsed
+				}
+			}
+
+			scopeRecord := domain.MatrixProkerScope{
+				UUID:             scUUID,
+				IdMatrixProker:   existing.ID,
+				IdMataProgram:    existing.IdMataProgram,
+				IdIndikator:      scIndID,
+				TargetUnpak:      strings.TrimSpace(sc.TargetUnpak),
+				CapaianTerdahulu: strings.TrimSpace(sc.CapaianUnitLalu),
+				TargetUnit:       strings.TrimSpace(sc.TargetUnit),
+				Output:           strings.TrimSpace(sc.Output),
+				Outcome:          strings.TrimSpace(sc.Outcome),
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
+			}
+			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+		}
+	} else {
+		// Update single scope if exists
+		var existingScope domain.MatrixProkerScope
+		if err := h.DB.WithContext(ctx).Where("id_matrix_proker = ?", existing.ID).First(&existingScope).Error; err == nil {
+			existingScope.IdMataProgram = existing.IdMataProgram
+			if existing.IdIndikator != nil {
+				existingScope.IdIndikator = existing.IdIndikator
+			}
+			if cmd.TargetUnpak != "" {
+				existingScope.TargetUnpak = strings.TrimSpace(cmd.TargetUnpak)
+			}
+			if cmd.CapaianUnitLalu != "" {
+				existingScope.CapaianTerdahulu = strings.TrimSpace(cmd.CapaianUnitLalu)
+			}
+			if cmd.TargetUnit != "" {
+				existingScope.TargetUnit = strings.TrimSpace(cmd.TargetUnit)
+			}
+			if cmd.Output != "" {
+				existingScope.Output = strings.TrimSpace(cmd.Output)
+			}
+			if cmd.Outcome != "" {
+				existingScope.Outcome = strings.TrimSpace(cmd.Outcome)
+			}
+			existingScope.UpdatedAt = time.Now()
+			_ = h.DB.WithContext(ctx).Save(&existingScope).Error
+		} else {
+			scopeRecord := domain.MatrixProkerScope{
+				UUID:             uuid.New(),
+				IdMatrixProker:   existing.ID,
+				IdMataProgram:    existing.IdMataProgram,
+				IdIndikator:      existing.IdIndikator,
+				TargetUnpak:      existing.TargetUnpak,
+				CapaianTerdahulu: existing.CapaianTerdahulu,
+				TargetUnit:       existing.TargetUnit,
+				Output:           existing.Output,
+				Outcome:          existing.Outcome,
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
+			}
+			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+		}
+	}
 
 	if err := h.Repo.Update(ctx, existing); err != nil {
 		return "", err

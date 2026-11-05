@@ -86,6 +86,7 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 			"i.tahun AS Tahun",
 			"i.tipe_target AS TipeTarget",
 			"i.operator AS Operator",
+			"(SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||') FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id) AS IkuList",
 		}).
 		Joins("LEFT JOIN master_standar_renstra AS ms ON i.id_master_standar = ms.id").
 		Joins("LEFT JOIN master_indikator_renstra AS p ON i.parent = p.id").
@@ -145,14 +146,56 @@ func (r *IndikatorRenstraRepository) GetAll(
 		field := strings.TrimSpace(strings.ToLower(f.Field))
 		operator := strings.TrimSpace(strings.ToLower(f.Operator))
 
-		col, ok := allowedSearchColumns[field] // harus sudah pakai alias tr./i./fu.
-		if !ok {
-			continue
-		}
-
 		value := ""
 		if f.Value != nil {
 			value = strings.TrimSpace(*f.Value)
+		}
+		if value == "" {
+			continue
+		}
+
+		if field == "iku" || field == "id_iku" || field == "iku_id" {
+			if operator == "in" {
+				values := strings.Split(value, ",")
+				cleanVals := make([]string, 0, len(values))
+				for _, v := range values {
+					tr := strings.TrimSpace(v)
+					if tr != "" {
+						cleanVals = append(cleanVals, tr)
+					}
+				}
+				if len(cleanVals) > 0 {
+					placeholders := strings.TrimRight(strings.Repeat("?,", len(cleanVals)), ",")
+					conditions = append(
+						conditions,
+						fmt.Sprintf("EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND (iri.id_iku IN (%s) OR m_iku.iku IN (%s)))", placeholders, placeholders),
+					)
+					for _, v := range cleanVals {
+						args = append(args, v)
+					}
+					for _, v := range cleanVals {
+						args = append(args, v)
+					}
+				}
+			} else if operator == "eq" {
+				conditions = append(
+					conditions,
+					"EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND (iri.id_iku = ? OR m_iku.iku = ?))",
+				)
+				args = append(args, value, value)
+			} else if operator == "like" {
+				conditions = append(
+					conditions,
+					"EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND m_iku.iku LIKE ?)",
+				)
+				args = append(args, "%"+value+"%")
+			}
+			continue
+		}
+
+		col, ok := allowedSearchColumns[field] // harus sudah pakai alias tr./i./fu.
+		if !ok {
+			continue
 		}
 
 		switch operator {
@@ -275,7 +318,13 @@ func (r *IndikatorRenstraRepository) GetAll(
             p.uuid AS UuidParent,
             i.tahun as Tahun,
             i.tipe_target as TipeTarget,
-            i.operator as Operator
+            i.operator as Operator,
+            (
+                SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+                FROM indikator_renstra_iku iri
+                JOIN master_iku m_iku ON m_iku.id = iri.id_iku
+                WHERE iri.id_indikator_renstra = i.id
+            ) as IkuList
 	` + baseFrom + whereClause + orderBy + pagination
 
 	if err := r.db.WithContext(ctx).

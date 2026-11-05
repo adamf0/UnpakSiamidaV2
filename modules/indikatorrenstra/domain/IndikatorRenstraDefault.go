@@ -16,4 +16,5 @@ type IndikatorRenstraDefault struct {
 		Tahun       string
 		TipeTarget  string
 		Operator    *string
+		IkuList     *string
 }

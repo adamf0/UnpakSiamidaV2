@@ -22,7 +22,10 @@ type UpdateProkerV3Command struct {
 	DokumenReferensi  string                             `json:"dokumen_referensi" form:"dokumen_referensi"`
 	LuaranProduk      string                             `json:"luaran_produk" form:"luaran_produk"`
 	PIC               string                             `json:"pic" form:"pic"`
+	BebanYayasan      *bool                              `json:"beban_yayasan" form:"beban_yayasan"`
 	Aktivitas         string                             `json:"aktivitas" form:"aktivitas"`
 	Status            string                             `json:"status" form:"status"`
 	Timelines         []CreateProkerV3.TimelineItemInput `json:"timelines" form:"timelines"`
+	Scopes            []CreateProkerV3.ScopeItemInput    `json:"scopes" form:"scopes"`
+	ScopesRaw         string                             `json:"scopes_raw" form:"scopes_raw"`
 }

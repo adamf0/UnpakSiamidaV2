@@ -3,6 +3,7 @@ package CreateAktivitasV3
 import (
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -74,8 +75,27 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 		Masalah:          strings.TrimSpace(cmd.Masalah),
 		PemecahanMasalah: strings.TrimSpace(cmd.PemecahanMasalah),
 		Anggaran:         cmd.Anggaran,
+		RAB: func() string {
+			if strings.TrimSpace(cmd.RAB) != "" && cmd.RAB != "[]" {
+				return strings.TrimSpace(cmd.RAB)
+			}
+			if cmd.Anggaran > 0 {
+				b, _ := json.Marshal([]map[string]interface{}{
+					{
+						"kategori":   "Umum",
+						"rincian":    "Alokasi Anggaran Kegiatan",
+						"keterangan": "Alokasi Anggaran Kegiatan",
+						"qty_satuan": 1,
+						"qty_paket":  1,
+						"sbu":        cmd.Anggaran,
+						"total":      cmd.Anggaran,
+					},
+				})
+				return string(b)
+			}
+			return ""
+		}(),
 		Status:           statusStr,
-		StatusVerifikator: "draft",
 		StatusAnggaran:    "menunggu_verifikator",
 		StatusUpml:       "menunggu",
 		StatusUpmf:       "menunggu",

@@ -348,7 +348,7 @@ func main() {
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app, db)
 	standarrenstraPresentation.ModuleStandarRenstra(app)
-	indikatorrenstraPresentation.ModuleIndikatorRenstra(app)
+	indikatorrenstraPresentation.ModuleIndikatorRenstra(app, db)
 	tahunrenstraPresentation.ModuleTahunRenstra(app)
 	templaterenstraPresentation.ModuleTemplateRenstra(app)
 	templatedokumentambahanPresentation.ModuleTemplateDokumenTambahan(app)

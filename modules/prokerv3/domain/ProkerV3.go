@@ -26,8 +26,12 @@ type ProkerV3 struct {
 	StatusAnggaran    string    `gorm:"column:status_anggaran;type:varchar(50);default:'menunggu_verifikator'" json:"StatusAnggaran"`
 	CatatanAnggaran   string    `gorm:"column:catatan_anggaran;type:text" json:"CatatanAnggaran"`
 	PIC               string    `gorm:"column:pic;type:text" json:"PIC"`
-	CreatedAt         time.Time `gorm:"column:created_at" json:"CreatedAt"`
-	UpdatedAt        time.Time `gorm:"column:updated_at" json:"UpdatedAt"`
+	BebanYayasan      bool      `gorm:"column:beban_yayasan;default:0" json:"BebanYayasan"`
+	IsBatal           bool                `gorm:"column:is_batal;default:0" json:"IsBatal"`
+	CatatanBatal      string              `gorm:"column:catatan_batal;type:text" json:"CatatanBatal"`
+	CreatedAt         time.Time           `gorm:"column:created_at" json:"CreatedAt"`
+	UpdatedAt        time.Time           `gorm:"column:updated_at" json:"UpdatedAt"`
+	Scopes           []MatrixProkerScope `gorm:"foreignKey:IdMatrixProker" json:"Scopes,omitempty"`
 }
 
 func (ProkerV3) TableName() string {
