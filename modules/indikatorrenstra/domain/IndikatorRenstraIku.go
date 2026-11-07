@@ -31,5 +31,6 @@ type MasterIku struct {
 }
 
 func (MasterIku) TableName() string {
-	return "master_iku"
+	return "master_indikator"
 }
+

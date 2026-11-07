@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
 	"encoding/json"
@@ -17,11 +18,16 @@ import (
 )
 
 type ProkerV3Repository struct {
-	db *gorm.DB
+	db    *gorm.DB
+	dbIku *gorm.DB
 }
 
-func NewProkerV3Repository(db *gorm.DB) domain.IProkerV3Repository {
-	return &ProkerV3Repository{db: db}
+func NewProkerV3Repository(db *gorm.DB, dbs ...*gorm.DB) domain.IProkerV3Repository {
+	repo := &ProkerV3Repository{db: db}
+	if len(dbs) > 0 {
+		repo.dbIku = dbs[0]
+	}
+	return repo
 }
 
 func formatTanggalIndo(t time.Time) string {
@@ -83,20 +89,22 @@ func (r *ProkerV3Repository) populatePaguInfo(ctx context.Context, item *domain.
 		item.HasPagu = true
 		item.PaguUnit = nomPagu
 
-		// Hitung total anggaran akumulatif unit pada tahun tersebut
+		// Hitung total anggaran akumulatif unit pada tahun tersebut (hanya non-yayasan dan tidak batal)
 		var totalUnitAnggaran float64
 		_ = r.db.WithContext(ctx).Table("aktivitasv2_rab r").
 			Joins("JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2").
 			Joins("JOIN matrix_proker mp ON mp.id = a.id_matrik_proker").
 			Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
 			Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-			Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND (mp.is_batal = 0 OR mp.id = ?)", fuId, fuName, tahun, item.ID).
+			Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(mp.is_batal, 0) = 0 AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(mp.beban_yayasan, 0) = 0", fuId, fuName, tahun).
 			Select("COALESCE(SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)), 0)").
 			Scan(&totalUnitAnggaran).Error
 
 		item.TotalAnggaranUnit = totalUnitAnggaran
-		if totalUnitAnggaran > nomPagu {
+		if totalUnitAnggaran > nomPagu && !item.BebanYayasan && !item.IsBatal {
 			item.IsMelebihiPagu = true
+		} else {
+			item.IsMelebihiPagu = false
 		}
 	} else {
 		item.HasPagu = false
@@ -148,17 +156,16 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mp_t.catatan_batal, '') as CatatanBatal,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
-			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAnggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL), 0) > 0 as HasRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
+			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen,
 			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program), 0) as TotalRisiko,
 			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
 			COALESCE((
-				SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 				FROM indikator_renstra_iku iri
-				JOIN master_iku m_iku ON m_iku.id = iri.id_iku
 				WHERE iri.id_indikator_renstra = mp_t.id_indikator
 			), '') as IkuList
 		`).
@@ -198,9 +205,8 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mps.output, '') as output,
 			COALESCE(mps.outcome, '') as outcome,
 			COALESCE((
-				SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 				FROM indikator_renstra_iku iri
-				JOIN master_iku m_iku ON m_iku.id = iri.id_iku
 				WHERE iri.id_indikator_renstra = mps.id_indikator
 			), '') as iku_list
 		`).
@@ -212,6 +218,12 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 
 	if scopes == nil {
 		scopes = []domain.ProkerScopeDefault{}
+	}
+
+	ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
+	row.IkuList = commoninfra.FormatIkuList(row.IkuList, ikuMap)
+	for i := range scopes {
+		scopes[i].IkuList = commoninfra.FormatIkuList(scopes[i].IkuList, ikuMap)
 	}
 	row.Scopes = scopes
 
@@ -309,17 +321,16 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(mp_t.catatan_batal, '') as CatatanBatal,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAktivitas,
-			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id), 0) as TotalAnggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id), 0) as TotalRealisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL), 0) > 0 as HasRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
+			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen,
 			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program), 0) as TotalRisiko,
 			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
 			COALESCE((
-				SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 				FROM indikator_renstra_iku iri
-				JOIN master_iku m_iku ON m_iku.id = iri.id_iku
 				WHERE iri.id_indikator_renstra = mp_t.id_indikator
 			), '') as IkuList
 		`).
@@ -522,9 +533,8 @@ func (r *ProkerV3Repository) GetAll(
 				COALESCE(mps.output, '') as output,
 				COALESCE(mps.outcome, '') as outcome,
 				COALESCE((
-					SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+					SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 					FROM indikator_renstra_iku iri
-					JOIN master_iku m_iku ON m_iku.id = iri.id_iku
 					WHERE iri.id_indikator_renstra = mps.id_indikator
 				), '') as iku_list
 			`).
@@ -539,9 +549,14 @@ func (r *ProkerV3Repository) GetAll(
 			scopeMap[sc.IdMatrixProker] = append(scopeMap[sc.IdMatrixProker], sc)
 		}
 
+		ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
 		for i := range list {
 			list[i].NoProker = int64(i + 1)
+			list[i].IkuList = commoninfra.FormatIkuList(list[i].IkuList, ikuMap)
 			if scs, ok := scopeMap[list[i].ID]; ok {
+				for j := range scs {
+					scs[j].IkuList = commoninfra.FormatIkuList(scs[j].IkuList, ikuMap)
+				}
 				list[i].Scopes = scs
 			} else {
 				list[i].Scopes = []domain.ProkerScopeDefault{}

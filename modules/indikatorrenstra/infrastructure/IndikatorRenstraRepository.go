@@ -2,10 +2,12 @@ package infrastructure
 
 import (
 	commondomainindikatorrenstra "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	domainindikatorrenstra "UnpakSiamida/modules/indikatorrenstra/domain"
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -13,11 +15,16 @@ import (
 )
 
 type IndikatorRenstraRepository struct {
-	db *gorm.DB
+	db    *gorm.DB
+	dbIku *gorm.DB
 }
 
-func NewIndikatorRenstraRepository(db *gorm.DB) domainindikatorrenstra.IIndikatorRenstraRepository {
-	return &IndikatorRenstraRepository{db: db}
+func NewIndikatorRenstraRepository(db *gorm.DB, dbs ...*gorm.DB) domainindikatorrenstra.IIndikatorRenstraRepository {
+	repo := &IndikatorRenstraRepository{db: db}
+	if len(dbs) > 0 {
+		repo.dbIku = dbs[0]
+	}
+	return repo
 }
 
 func (r *IndikatorRenstraRepository) IsUniqueIndikator(
@@ -86,7 +93,7 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 			"i.tahun AS Tahun",
 			"i.tipe_target AS TipeTarget",
 			"i.operator AS Operator",
-			"(SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||') FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id) AS IkuList",
+			"(SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',') FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id) AS IkuList",
 		}).
 		Joins("LEFT JOIN master_standar_renstra AS ms ON i.id_master_standar = ms.id").
 		Joins("LEFT JOIN master_indikator_renstra AS p ON i.parent = p.id").
@@ -99,6 +106,9 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 		}
 		return nil, err
 	}
+
+	ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
+	rowData.IkuList = commoninfra.FormatIkuListPtr(rowData.IkuList, ikuMap)
 
 	return &rowData, nil
 }
@@ -155,40 +165,75 @@ func (r *IndikatorRenstraRepository) GetAll(
 		}
 
 		if field == "iku" || field == "id_iku" || field == "iku_id" {
+			ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
 			if operator == "in" {
 				values := strings.Split(value, ",")
-				cleanVals := make([]string, 0, len(values))
+				var matchIds []uint64
 				for _, v := range values {
 					tr := strings.TrimSpace(v)
-					if tr != "" {
-						cleanVals = append(cleanVals, tr)
+					if id, err := strconv.ParseUint(tr, 10, 64); err == nil && id > 0 {
+						matchIds = append(matchIds, id)
+					} else if tr != "" {
+						for ikuId, ikuItem := range ikuMap {
+							if strings.EqualFold(ikuItem.Iku, tr) {
+								matchIds = append(matchIds, ikuId)
+							}
+						}
 					}
 				}
-				if len(cleanVals) > 0 {
-					placeholders := strings.TrimRight(strings.Repeat("?,", len(cleanVals)), ",")
+				if len(matchIds) > 0 {
+					placeholders := strings.TrimRight(strings.Repeat("?,", len(matchIds)), ",")
 					conditions = append(
 						conditions,
-						fmt.Sprintf("EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND (iri.id_iku IN (%s) OR m_iku.iku IN (%s)))", placeholders, placeholders),
+						fmt.Sprintf("EXISTS (SELECT 1 FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id AND iri.id_iku IN (%s))", placeholders),
 					)
-					for _, v := range cleanVals {
+					for _, v := range matchIds {
 						args = append(args, v)
 					}
-					for _, v := range cleanVals {
-						args = append(args, v)
-					}
+				} else {
+					conditions = append(conditions, "1 = 0")
 				}
 			} else if operator == "eq" {
-				conditions = append(
-					conditions,
-					"EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND (iri.id_iku = ? OR m_iku.iku = ?))",
-				)
-				args = append(args, value, value)
+				var matchId uint64
+				if id, err := strconv.ParseUint(value, 10, 64); err == nil && id > 0 {
+					matchId = id
+				} else {
+					for ikuId, ikuItem := range ikuMap {
+						if strings.EqualFold(ikuItem.Iku, value) {
+							matchId = ikuId
+							break
+						}
+					}
+				}
+				if matchId > 0 {
+					conditions = append(
+						conditions,
+						"EXISTS (SELECT 1 FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id AND iri.id_iku = ?)",
+					)
+					args = append(args, matchId)
+				} else {
+					conditions = append(conditions, "1 = 0")
+				}
 			} else if operator == "like" {
-				conditions = append(
-					conditions,
-					"EXISTS (SELECT 1 FROM indikator_renstra_iku iri JOIN master_iku m_iku ON m_iku.id = iri.id_iku WHERE iri.id_indikator_renstra = i.id AND m_iku.iku LIKE ?)",
-				)
-				args = append(args, "%"+value+"%")
+				var matchIds []uint64
+				valLower := strings.ToLower(value)
+				for ikuId, ikuItem := range ikuMap {
+					if strings.Contains(strings.ToLower(ikuItem.Iku), valLower) {
+						matchIds = append(matchIds, ikuId)
+					}
+				}
+				if len(matchIds) > 0 {
+					placeholders := strings.TrimRight(strings.Repeat("?,", len(matchIds)), ",")
+					conditions = append(
+						conditions,
+						fmt.Sprintf("EXISTS (SELECT 1 FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id AND iri.id_iku IN (%s))", placeholders),
+					)
+					for _, v := range matchIds {
+						args = append(args, v)
+					}
+				} else {
+					conditions = append(conditions, "1 = 0")
+				}
 			}
 			continue
 		}
@@ -320,9 +365,8 @@ func (r *IndikatorRenstraRepository) GetAll(
             i.tipe_target as TipeTarget,
             i.operator as Operator,
             (
-                SELECT GROUP_CONCAT(CONCAT(m_iku.id, '::', m_iku.iku, '::', COALESCE(m_iku.jenis_iku, '')) ORDER BY m_iku.id SEPARATOR '||')
+                SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
                 FROM indikator_renstra_iku iri
-                JOIN master_iku m_iku ON m_iku.id = iri.id_iku
                 WHERE iri.id_indikator_renstra = i.id
             ) as IkuList
 	` + baseFrom + whereClause + orderBy + pagination
@@ -331,6 +375,11 @@ func (r *IndikatorRenstraRepository) GetAll(
 		Raw(selectQuery, args...).
 		Scan(&result).Error; err != nil {
 		return nil, 0, err
+	}
+
+	ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
+	for idx := range result {
+		result[idx].IkuList = commoninfra.FormatIkuListPtr(result[idx].IkuList, ikuMap)
 	}
 
 	return result, total, nil

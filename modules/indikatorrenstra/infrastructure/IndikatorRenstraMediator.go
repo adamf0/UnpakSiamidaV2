@@ -21,16 +21,12 @@ import (
 	// "fmt"
 )
 
-func RegisterModuleIndikatorRenstra(db *gorm.DB) error {
-	// dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
-
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	// if err != nil {
-	// 	return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
-	// 	// panic(err)
-	// }
-
-	repoIndikatorRenstra := NewIndikatorRenstraRepository(db)
+func RegisterModuleIndikatorRenstra(db *gorm.DB, dbs ...*gorm.DB) error {
+	var dbIku *gorm.DB
+	if len(dbs) > 0 {
+		dbIku = dbs[0]
+	}
+	repoIndikatorRenstra := NewIndikatorRenstraRepository(db, dbIku)
 	repoStandarRenstra := infraStandarRenstra.NewStandarRenstraRepository(db)
 	// if err := db.AutoMigrate(&domainindikatorrenstra.IndikatorRenstra{}); err != nil {
 	// 	panic(err)

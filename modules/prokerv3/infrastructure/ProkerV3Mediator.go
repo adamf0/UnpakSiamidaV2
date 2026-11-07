@@ -30,8 +30,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterModuleProkerV3(db *gorm.DB) error {
-	repoProker := NewProkerV3Repository(db)
+func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
+	var dbIku *gorm.DB
+	if len(dbs) > 0 {
+		dbIku = dbs[0]
+	}
+	repoProker := NewProkerV3Repository(db, dbIku)
 
 	mediatr.RegisterRequestHandler[
 		create.CreateProkerV3Command,

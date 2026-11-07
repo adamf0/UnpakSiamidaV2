@@ -341,7 +341,10 @@ func SetupUuidIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
-var dbInstance *gorm.DB
+var (
+	dbInstance    *gorm.DB
+	dbIkuInstance *gorm.DB
+)
 
 type SaveIndikatorIkuReq struct {
 	IkuIds []uint64 `json:"iku_ids" form:"iku_ids"`
@@ -353,12 +356,20 @@ type SaveIndikatorIkuReq struct {
 // @Produce json
 // @Router /master_iku [get]
 func GetAllMasterIkuHandler(c *fiber.Ctx) error {
-	if dbInstance == nil {
+	targetDB := dbIkuInstance
+	if targetDB == nil {
+		targetDB = dbInstance
+	}
+	if targetDB == nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Database not initialized"})
 	}
 
 	var ikus []indikatorrenstradomain.MasterIku
-	if err := dbInstance.Order("id asc").Find(&ikus).Error; err != nil {
+	err := targetDB.Table("master_indikator").Order("id asc").Find(&ikus).Error
+	if err != nil {
+		err = targetDB.Table("master_iku").Order("id asc").Find(&ikus).Error
+	}
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -619,8 +630,16 @@ func GetDashboardIkuAnggaranHandler(c *fiber.Ctx) error {
 	filterUnit := strings.TrimSpace(c.Query("unit"))
 
 	// 1. Ambil Master IKU
+	targetDB := dbIkuInstance
+	if targetDB == nil {
+		targetDB = dbInstance
+	}
 	var masterIkus []indikatorrenstradomain.MasterIku
-	if err := dbInstance.Order("id asc").Find(&masterIkus).Error; err != nil {
+	err := targetDB.Table("master_indikator").Order("id asc").Find(&masterIkus).Error
+	if err != nil {
+		err = targetDB.Table("master_iku").Order("id asc").Find(&masterIkus).Error
+	}
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -925,6 +944,9 @@ func GetDashboardIkuAnggaranHandler(c *fiber.Ctx) error {
 func ModuleIndikatorRenstra(app *fiber.App, dbs ...*gorm.DB) {
 	if len(dbs) > 0 {
 		dbInstance = dbs[0]
+	}
+	if len(dbs) > 1 {
+		dbIkuInstance = dbs[1]
 	}
 
 	admin := []string{"admin"}

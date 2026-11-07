@@ -198,10 +198,22 @@ func main() {
 	mediatr.RegisterRequestPipelineBehaviors(NewValidationBehavior())
 
 	var db *gorm.DB
+	var dbIku *gorm.DB
+	var dbSiakun *gorm.DB
 	var redis commondomain.IRedisStore
 	mustStart("Database", func() error {
 		var err error
 		db, err = NewMySQL()
+		return err
+	})
+	mustStart("IKU Database", func() error {
+		var err error
+		dbIku, err = NewMySQLIku()
+		return err
+	})
+	mustStart("Siakun Database", func() error {
+		var err error
+		dbSiakun, err = NewMySQLSiakun()
 		return err
 	})
 	mustStart("Redis", func() error {
@@ -241,7 +253,7 @@ func main() {
 	})
 
 	mustStart("Indikator Renstra Module", func() error {
-		return indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra(db)
+		return indikatorrenstraInfrastructure.RegisterModuleIndikatorRenstra(db, dbIku)
 	})
 
 	mustStart("Tahun Renstra Module", func() error {
@@ -325,7 +337,7 @@ func main() {
 	})
 
 	mustStart("Proker V3 Module", func() error {
-		return prokerv3Infrastructure.RegisterModuleProkerV3(db)
+		return prokerv3Infrastructure.RegisterModuleProkerV3(db, dbIku)
 	})
 
 	if len(startupErrors) > 0 {
@@ -350,7 +362,7 @@ func main() {
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app, db)
 	standarrenstraPresentation.ModuleStandarRenstra(app)
-	indikatorrenstraPresentation.ModuleIndikatorRenstra(app, db)
+	indikatorrenstraPresentation.ModuleIndikatorRenstra(app, db, dbIku)
 	tahunrenstraPresentation.ModuleTahunRenstra(app)
 	templaterenstraPresentation.ModuleTemplateRenstra(app)
 	templatedokumentambahanPresentation.ModuleTemplateDokumenTambahan(app)
@@ -371,7 +383,7 @@ func main() {
 	laporanPresentation.ModuleMonitoringProker(app)
 	swotPresentation.ModuleSwot(app)
 	riskassessmentPresentation.ModuleRiskAssessment(app, db)
-	prokerv3Presentation.ModuleProkerV3(app, db)
+	prokerv3Presentation.ModuleProkerV3(app, db, dbIku, dbSiakun)
 
 	app.Static("/upload", "./upload")
 	app.Get("/upload/*", func(c *fiber.Ctx) error {
@@ -477,6 +489,132 @@ func NewMySQL() (*gorm.DB, error) {
 	})
 
 	return db, err
+}
+
+var (
+	dbIkuConnection *gorm.DB
+	onceIku         sync.Once
+)
+
+func NewMySQLIku() (*gorm.DB, error) {
+	var err error
+
+	onceIku.Do(func() {
+		loadEnv(".env")
+		dsn := os.Getenv("MYSQL_IKU_DSN")
+		if dsn == "" {
+			dsn = os.Getenv("DB_IKU_DSN")
+		}
+		if dsn == "" && (os.Getenv("DB_IKU_HOST") != "" || os.Getenv("DB_IKU_DATABASE") != "" || os.Getenv("DB_IKU_NAME") != "") {
+			user := os.Getenv("DB_IKU_USER")
+			if user == "" {
+				user = "root"
+			}
+			pass := os.Getenv("DB_IKU_PASS")
+			if pass == "" {
+				pass = os.Getenv("DB_IKU_PASSWORD")
+			}
+			host := os.Getenv("DB_IKU_HOST")
+			if host == "" {
+				host = "127.0.0.1"
+			}
+			port := os.Getenv("DB_IKU_PORT")
+			if port == "" {
+				port = "3306"
+			}
+			name := os.Getenv("DB_IKU_DATABASE")
+			if name == "" {
+				name = os.Getenv("DB_IKU_NAME")
+			}
+			dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local", user, pass, host, port, name)
+		}
+		if dsn == "" {
+			mainDsn := os.Getenv("MYSQL_DSN")
+			if mainDsn != "" && strings.Contains(mainDsn, "/") {
+				parts := strings.Split(mainDsn, "/")
+				prefix := strings.Join(parts[:len(parts)-1], "/")
+				dsn = prefix + "/unpak_iku?charset=utf8mb4&parseTime=true&loc=Local"
+			} else {
+				dsn = "root:@tcp(127.0.0.1:3306)/unpak_iku?charset=utf8mb4&parseTime=true&loc=Local"
+			}
+		}
+
+		dbIkuConnection, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			return
+		}
+
+		sqlDB, _ := dbIkuConnection.DB()
+		sqlDB.SetMaxOpenConns(10)
+		sqlDB.SetMaxIdleConns(5)
+		sqlDB.SetConnMaxLifetime(10 * time.Minute)
+		sqlDB.SetConnMaxIdleTime(2 * time.Minute)
+	})
+
+	return dbIkuConnection, err
+}
+
+var (
+	dbSiakunConnection *gorm.DB
+	onceSiakun         sync.Once
+)
+
+func NewMySQLSiakun() (*gorm.DB, error) {
+	var err error
+
+	onceSiakun.Do(func() {
+		loadEnv(".env")
+		dsn := os.Getenv("MYSQL_SIAKUN_DSN")
+		if dsn == "" {
+			dsn = os.Getenv("DB_SIAKUN_DSN")
+		}
+		if dsn == "" && (os.Getenv("DB_SIAKUN_HOST") != "" || os.Getenv("DB_SIAKUN_DATABASE") != "" || os.Getenv("DB_SIAKUN_NAME") != "") {
+			user := os.Getenv("DB_SIAKUN_USER")
+			if user == "" {
+				user = "root"
+			}
+			pass := os.Getenv("DB_SIAKUN_PASS")
+			if pass == "" {
+				pass = os.Getenv("DB_SIAKUN_PASSWORD")
+			}
+			host := os.Getenv("DB_SIAKUN_HOST")
+			if host == "" {
+				host = "127.0.0.1"
+			}
+			port := os.Getenv("DB_SIAKUN_PORT")
+			if port == "" {
+				port = "3306"
+			}
+			name := os.Getenv("DB_SIAKUN_DATABASE")
+			if name == "" {
+				name = os.Getenv("DB_SIAKUN_NAME")
+			}
+			dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local", user, pass, host, port, name)
+		}
+		if dsn == "" {
+			mainDsn := os.Getenv("MYSQL_DSN")
+			if mainDsn != "" && strings.Contains(mainDsn, "/") {
+				parts := strings.Split(mainDsn, "/")
+				prefix := strings.Join(parts[:len(parts)-1], "/")
+				dsn = prefix + "/yps_siakun?charset=utf8mb4&parseTime=true&loc=Local"
+			} else {
+				dsn = "root:@tcp(127.0.0.1:3306)/yps_siakun?charset=utf8mb4&parseTime=true&loc=Local"
+			}
+		}
+
+		dbSiakunConnection, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			return
+		}
+
+		sqlDB, _ := dbSiakunConnection.DB()
+		sqlDB.SetMaxOpenConns(10)
+		sqlDB.SetMaxIdleConns(5)
+		sqlDB.SetConnMaxLifetime(10 * time.Minute)
+		sqlDB.SetConnMaxIdleTime(2 * time.Minute)
+	})
+
+	return dbSiakunConnection, err
 }
 
 func loadEnv(filename string) {

@@ -48,8 +48,9 @@ import (
 )
 
 var (
-	repoProker domain.IProkerV3Repository
-	dbInstance *gorm.DB
+	repoProker       domain.IProkerV3Repository
+	dbInstance       *gorm.DB
+	dbSiakunInstance *gorm.DB
 )
 
 func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string) bool {
@@ -907,7 +908,7 @@ func CreateAktivitasHandler(c *fiber.Ctx) error {
 	if proposedAnggaran > 0 && repoProker != nil {
 		if prokerUid, errU := uuid.Parse(rawUuid); errU == nil {
 			prokerDef, _ := repoProker.GetDefaultByUuid(c.Context(), prokerUid)
-			if prokerDef != nil && prokerDef.HasPagu && prokerDef.PaguUnit > 0 {
+			if prokerDef != nil && prokerDef.HasPagu && prokerDef.PaguUnit > 0 && !prokerDef.BebanYayasan {
 				if prokerDef.TotalAnggaranUnit+proposedAnggaran > prokerDef.PaguUnit {
 					sisa := prokerDef.PaguUnit - prokerDef.TotalAnggaranUnit
 					if sisa < 0 {
@@ -1014,7 +1015,7 @@ func UpdateAktivitasHandler(c *fiber.Ctx) error {
 				var proker domain.ProkerV3
 				if errP := dbInstance.WithContext(c.Context()).Where("id = ?", *currentAct.IdMatrikProker).First(&proker).Error; errP == nil {
 					prokerDef, _ := repoProker.GetDefaultByUuid(c.Context(), proker.UUID)
-					if prokerDef != nil && prokerDef.HasPagu && prokerDef.PaguUnit > 0 {
+					if prokerDef != nil && prokerDef.HasPagu && prokerDef.PaguUnit > 0 && !prokerDef.BebanYayasan {
 						oldActAnggaran := currentAct.Anggaran
 						delta := proposedAnggaran - oldActAnggaran
 						if delta > 0 && prokerDef.TotalAnggaranUnit+delta > prokerDef.PaguUnit {
@@ -1209,7 +1210,18 @@ func GetCoaHandler(c *fiber.Ctx) error {
 		search = strings.TrimSpace(c.Query("q"))
 	}
 
-	query := dbInstance.Table("yps_siakun.m_coa").
+	targetDB := dbSiakunInstance
+	if targetDB == nil {
+		targetDB = dbInstance
+	}
+	if targetDB == nil {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Database not initialized",
+		})
+	}
+
+	query := targetDB.Table("m_coa").
 		Select("DISTINCT TRIM(no_akun) as no_akun, TRIM(nama_akun_id) as nama_akun").
 		Where("LENGTH(TRIM(no_akun)) >= 6").
 		Where("nama_akun_id IS NOT NULL AND TRIM(nama_akun_id) != ''")
@@ -1225,7 +1237,20 @@ func GetCoaHandler(c *fiber.Ctx) error {
 	}
 
 	var items []CoaItem
-	if err := query.Order("no_akun ASC").Find(&items).Error; err != nil {
+	err := query.Order("no_akun ASC").Find(&items).Error
+	if err != nil && targetDB == dbInstance {
+		fallbackQuery := dbInstance.Table("yps_siakun.m_coa").
+			Select("DISTINCT TRIM(no_akun) as no_akun, TRIM(nama_akun_id) as nama_akun").
+			Where("LENGTH(TRIM(no_akun)) >= 6").
+			Where("nama_akun_id IS NOT NULL AND TRIM(nama_akun_id) != ''")
+		if search != "" {
+			s := "%" + strings.ToLower(search) + "%"
+			fallbackQuery = fallbackQuery.Where("(LOWER(no_akun) LIKE ? OR LOWER(nama_akun_id) LIKE ?)", s, s)
+		}
+		err = fallbackQuery.Order("no_akun ASC").Find(&items).Error
+	}
+
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Gagal mengambil data akun COA: " + err.Error(),
@@ -2260,8 +2285,15 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 // =======================================================
 // ModuleProkerV3 route initialization
 // =======================================================
-func ModuleProkerV3(app *fiber.App, db *gorm.DB) {
-	repoProker = infra.NewProkerV3Repository(db)
+func ModuleProkerV3(app *fiber.App, db *gorm.DB, dbs ...*gorm.DB) {
+	var dbIku *gorm.DB
+	if len(dbs) > 0 {
+		dbIku = dbs[0]
+	}
+	if len(dbs) > 1 {
+		dbSiakunInstance = dbs[1]
+	}
+	repoProker = infra.NewProkerV3Repository(db, dbIku)
 	dbInstance = db
 	_ = db.AutoMigrate(&domain.JadwalProkerV3{}, &domain.JadwalAktivitasV3{})
 
@@ -3517,13 +3549,13 @@ func GetUnitPaguSummaryHandler(c *fiber.Ctx) error {
 	_ = dbInstance.WithContext(c.Context()).Table("matrix_proker mp").
 		Select(`
 			mp.id,
-			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id), 0) as tot_anggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id), 0) as tot_realisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.realisasi IS NOT NULL), 0) as count_realisasi
+			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_anggaran,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_realisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) as count_realisasi
 		`).
 		Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
 		Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-		Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ?", fuId, fuName, tahun).
+		Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ? AND COALESCE(mp.beban_yayasan, 0) = 0 AND COALESCE(mp.is_batal, 0) = 0", fuId, fuName, tahun).
 		Scan(&prokers).Error
 
 	totalAnggaran := float64(0)
@@ -3967,10 +3999,14 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			} else {
 				statusPencairan = "cair_kelebihan"
 			}
-			prokerPencairanMap[a.IdMatrikProker] += pencairanVal
+			if a.IsBatal == 0 {
+				prokerPencairanMap[a.IdMatrikProker] += pencairanVal
+			}
 		}
 
-		prokerAnggaranMap[a.IdMatrikProker] += totRab
+		if a.IsBatal == 0 {
+			prokerAnggaranMap[a.IdMatrikProker] += totRab
+		}
 
 		aktItem := DashboardMonitoringAktivitas{
 			ID:              a.Id,
@@ -4044,8 +4080,10 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		prokerList = append(prokerList, prokerItem)
 		globalTotalProker++
 		globalTotalAktivitas += len(activities)
-		globalTotalAnggaran += totAnggaran
-		globalTotalPencairan += totPencairan
+		if p.IsBatal == 0 {
+			globalTotalAnggaran += totAnggaran
+			globalTotalPencairan += totPencairan
+		}
 	}
 
 	if prokerList == nil {
