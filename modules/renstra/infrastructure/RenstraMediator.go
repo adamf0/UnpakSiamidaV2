@@ -12,6 +12,7 @@ import (
 	setupUuid "UnpakSiamida/modules/renstra/application/SetupUuidRenstra"
 	update "UnpakSiamida/modules/renstra/application/UpdateRenstra"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
+	eventRenstra "UnpakSiamida/modules/renstra/event"
 	infraUser "UnpakSiamida/modules/user/infrastructure"
 
 	"github.com/mehdihadeli/go-mediatr"
@@ -21,24 +22,21 @@ import (
 	// "fmt"
 )
 
-func RegisterModuleRenstra(db *gorm.DB) error {
-	// dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
-
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	// if err != nil {
-	// 	return fmt.Errorf("Indikator Renstra DB connection failed: %w", err)
-	// 	// panic(err)
-	// }
+func RegisterModuleRenstra(db *gorm.DB, tgs ...commoninfra.TelegramSender) error {
+	var tg commoninfra.TelegramSender
+	if len(tgs) > 0 {
+		tg = tgs[0]
+	}
 
 	repoRenstra := NewRenstraRepository(db)
 	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
 	repoUser := infraUser.NewUserRepository(db)
-	// if err := db.AutoMigrate(&domainrenstra.Renstra{}); err != nil {
-	// 	panic(err)
-	// }
 
-	// Pipeline behavior
-	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorRenstra())
+	commoninfra.RegisterDomainEvent(&eventRenstra.RenstraSendEmailEvent{})
+
+	mediatr.RegisterNotificationHandler[
+		eventRenstra.RenstraSendEmailEvent,
+	](eventRenstra.NewRenstraSendEmailEventHandler(tg))
 
 	// Register request handler
 	mediatr.RegisterRequestHandler[

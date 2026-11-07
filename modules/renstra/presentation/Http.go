@@ -2,16 +2,21 @@ package presentation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
+	"gorm.io/gorm"
 
 	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	renstradomain "UnpakSiamida/modules/renstra/domain"
+	eventRenstra "UnpakSiamida/modules/renstra/event"
 
 	CreateRenstra "UnpakSiamida/modules/renstra/application/CreateRenstra"
 	DeleteRenstra "UnpakSiamida/modules/renstra/application/DeleteRenstra"
@@ -21,6 +26,9 @@ import (
 	SetupUuidRenstra "UnpakSiamida/modules/renstra/application/SetupUuidRenstra"
 	UpdateRenstra "UnpakSiamida/modules/renstra/application/UpdateRenstra"
 )
+
+var renstraDB *gorm.DB
+
 
 // =======================================================
 // POST /renstra
@@ -417,12 +425,235 @@ func SetupUuidRenstrasHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
-func ModuleRenstra(app *fiber.App) {
+func parseUUIDListFromRequest(c *fiber.Ctx) []string {
+	var list []string
+	if paramUUID := strings.TrimSpace(c.Params("uuid")); paramUUID != "" {
+		list = append(list, paramUUID)
+	}
+
+	if formUUIDs := strings.TrimSpace(c.FormValue("uuids")); formUUIDs != "" {
+		for _, part := range strings.Split(formUUIDs, ",") {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				list = append(list, trimmed)
+			}
+		}
+	}
+	if formUUID := strings.TrimSpace(c.FormValue("uuid")); formUUID != "" {
+		list = append(list, formUUID)
+	}
+
+	seen := make(map[string]bool)
+	var unique []string
+	for _, item := range list {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" || seen[trimmed] {
+			continue
+		}
+		seen[trimmed] = true
+		unique = append(unique, trimmed)
+	}
+	return unique
+}
+
+// POST /renstra/send-email and POST /renstra/:uuid/send-email
+// Enqueues RenstraSendEmailEvent into outbox_messages table (Outbox Pattern)
+func SendEmailRenstraHandlerfunc(c *fiber.Ctx) error {
+	if renstraDB == nil {
+		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": "Database not initialized"})
+	}
+
+	uuids := parseUUIDListFromRequest(c)
+	if len(uuids) == 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"Code":    " Renstra.EmptySelection",
+			"Message": "Pilih minimal 1 jadwal audit untuk dikirim email kode akses.",
+		})
+	}
+
+	type renstraEmailRow struct {
+		UUID         string  `gorm:"column:uuid"`
+		Tahun        string  `gorm:"column:tahun"`
+		KodeAkses    *string `gorm:"column:kodeAkses"`
+		TargetAudit  string  `gorm:"column:target_audit"`
+		AuditeeName  *string `gorm:"column:auditee_name"`
+		AuditeeEmail *string `gorm:"column:auditee_email"`
+		Auditor1Name *string `gorm:"column:auditor1_name"`
+		Auditor1Mail *string `gorm:"column:auditor1_email"`
+		Auditor2Name *string `gorm:"column:auditor2_name"`
+		Auditor2Mail *string `gorm:"column:auditor2_email"`
+	}
+
+	var rows []renstraEmailRow
+	err := renstraDB.Raw(`
+		SELECT 
+			r.uuid AS uuid,
+			r.tahun AS tahun,
+			r.kodeAkses AS kodeAkses,
+			COALESCE(fu.nama_fak_prod_unit, '-') AS target_audit,
+			u1.name AS auditee_name,
+			u1.email AS auditee_email,
+			u2.name AS auditor1_name,
+			u2.email AS auditor1_email,
+			u3.name AS auditor2_name,
+			u3.email AS auditor2_email
+		FROM renstra r
+		LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
+		LEFT JOIN users u1 ON r.auditee = u1.id
+		LEFT JOIN users u2 ON r.auditor1 = u2.id
+		LEFT JOIN users u3 ON r.auditor2 = u3.id
+		WHERE r.uuid IN ?
+	`, uuids).Scan(&rows).Error
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
+	}
+
+	if len(rows) == 0 {
+		return c.Status(404).JSON(fiber.Map{"Code": "Renstra.NotFound", "Message": "Jadwal audit tidak ditemukan."})
+	}
+
+	var queuedUUIDs []string
+	var outboxIDs []string
+	var skippedTargets []string
+
+	tx := renstraDB.Begin()
+	if tx.Error != nil {
+		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": tx.Error.Error()})
+	}
+
+	for _, row := range rows {
+		kode := ""
+		if row.KodeAkses != nil {
+			kode = strings.TrimSpace(*row.KodeAkses)
+		}
+		if kode == "" {
+			skippedTargets = append(skippedTargets, fmt.Sprintf("%s (%s)", row.TargetAudit, row.Tahun))
+			continue
+		}
+
+		var recipients []eventRenstra.RenstraEmailRecipient
+		addRec := func(role string, namePtr, emailPtr *string) {
+			name := ""
+			if namePtr != nil {
+				name = strings.TrimSpace(*namePtr)
+			}
+			email := ""
+			if emailPtr != nil {
+				email = strings.TrimSpace(*emailPtr)
+			}
+			if name == "" && email == "" {
+				return
+			}
+			recipients = append(recipients, eventRenstra.RenstraEmailRecipient{
+				Role:  role,
+				Name:  name,
+				Email: email,
+			})
+		}
+
+		addRec("Auditee", row.AuditeeName, row.AuditeeEmail)
+		addRec("Auditor 1", row.Auditor1Name, row.Auditor1Mail)
+		addRec("Auditor 2", row.Auditor2Name, row.Auditor2Mail)
+
+		parsedRenstraUUID, _ := uuid.Parse(row.UUID)
+		evt := eventRenstra.RenstraSendEmailEvent{
+			EventID:     uuid.New(),
+			RenstraUUID: parsedRenstraUUID,
+			Tahun:       row.Tahun,
+			TargetAudit: row.TargetAudit,
+			KodeAkses:   kode,
+			Recipients:  recipients,
+			OccurredOn:  time.Now().UTC(),
+		}
+
+		payload, err := json.Marshal(evt)
+		if err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
+		}
+
+		outbox := commoninfra.OutboxMessage{
+			ID:            evt.ID(),
+			Type:          commoninfra.CanonicalTypeName(evt),
+			Payload:       string(payload),
+			OccurredOnUTC: evt.OccurredOnUTC(),
+		}
+
+		if err := tx.Create(&outbox).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
+		}
+
+		queuedUUIDs = append(queuedUUIDs, row.UUID)
+		outboxIDs = append(outboxIDs, outbox.ID)
+	}
+
+	if len(queuedUUIDs) == 0 {
+		tx.Rollback()
+		return c.Status(400).JSON(fiber.Map{
+			"Code":           "Renstra.MissingKodeAkses",
+			"Message":        "Gagal mengirim email: tidak ada kode akses pada jadwal yang dipilih. Silakan atur kode akses terlebih dahulu.",
+			"skippedTargets": skippedTargets,
+		})
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":        fmt.Sprintf("Berhasil memasukkan %d pengiriman email ke antrean background job (Outbox).", len(queuedUUIDs)),
+		"queuedCount":    len(queuedUUIDs),
+		"queuedUuids":    queuedUUIDs,
+		"outboxIds":      outboxIDs,
+		"skippedCount":   len(skippedTargets),
+		"skippedTargets": skippedTargets,
+	})
+}
+
+// POST /renstra/bulk-delete
+func BulkDeleteRenstraHandlerfunc(c *fiber.Ctx) error {
+	uuids := parseUUIDListFromRequest(c)
+	if len(uuids) == 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"Code":    "Renstra.EmptySelection",
+			"Message": "Pilih minimal 1 jadwal audit untuk dihapus.",
+		})
+	}
+
+	var deletedUUIDs []string
+	for _, u := range uuids {
+		cmd := DeleteRenstra.DeleteRenstraCommand{Uuid: u}
+		deletedID, err := mediatr.Send[
+			DeleteRenstra.DeleteRenstraCommand,
+			string,
+		](context.Background(), cmd)
+		if err != nil {
+			return commoninfra.HandleError(c, err)
+		}
+		deletedUUIDs = append(deletedUUIDs, deletedID)
+	}
+
+	return c.JSON(fiber.Map{
+		"message":      fmt.Sprintf("Berhasil menghapus %d jadwal audit.", len(deletedUUIDs)),
+		"deletedCount": len(deletedUUIDs),
+		"deletedUuids": deletedUUIDs,
+	})
+}
+
+func ModuleRenstra(app *fiber.App, dbs ...*gorm.DB) {
+	if len(dbs) > 0 && dbs[0] != nil {
+		renstraDB = dbs[0]
+	}
+
 	admin := []string{"admin"}
 	audit := []string{"auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/renstra/setupuuid", SetupUuidRenstrasHandlerfunc)
+
+	app.Post("/renstra/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendEmailRenstraHandlerfunc)
+	app.Post("/renstra/:uuid/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendEmailRenstraHandlerfunc)
+	app.Post("/renstra/bulk-delete", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), BulkDeleteRenstraHandlerfunc)
 
 	app.Post("/renstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateRenstraHandlerfunc)
 	app.Put("/renstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateRenstraHandlerfunc)

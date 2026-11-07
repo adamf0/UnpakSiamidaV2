@@ -110,7 +110,6 @@ func CreateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	level, userFU := commonpresentation.GetUserInfo(c)
 
 	var cmd createProker.CreateProkerV3Command
-	_ = c.BodyParser(&cmd)
 
 	if val := c.FormValue("tahun"); val != "" {
 		cmd.Tahun = strings.TrimSpace(val)
@@ -227,7 +226,6 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 
 	var cmd updateProker.UpdateProkerV3Command
-	_ = c.BodyParser(&cmd)
 
 	if val := c.FormValue("tahun"); val != "" {
 		cmd.Tahun = strings.TrimSpace(val)
@@ -375,15 +373,8 @@ func UpdateBebanYayasanHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var reqBody struct {
-		BebanYayasan *bool `json:"beban_yayasan"`
-	}
-	_ = c.BodyParser(&reqBody)
-
 	var newBeban bool
-	if reqBody.BebanYayasan != nil {
-		newBeban = *reqBody.BebanYayasan
-	} else if val := c.FormValue("beban_yayasan"); val != "" {
+	if val := strings.TrimSpace(c.FormValue("beban_yayasan")); val != "" {
 		newBeban = val == "1" || strings.ToLower(val) == "true"
 	} else {
 		newBeban = !proker.BebanYayasan
@@ -434,25 +425,14 @@ func UpdateBatalProkerHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var reqBody struct {
-		IsBatal      *bool  `json:"is_batal"`
-		CatatanBatal string `json:"catatan_batal"`
-	}
-	_ = c.BodyParser(&reqBody)
-
 	var newBatal bool
-	if reqBody.IsBatal != nil {
-		newBatal = *reqBody.IsBatal
-	} else if val := c.FormValue("is_batal"); val != "" {
+	if val := strings.TrimSpace(c.FormValue("is_batal")); val != "" {
 		newBatal = val == "1" || strings.ToLower(val) == "true"
 	} else {
 		newBatal = !proker.IsBatal
 	}
 
-	catatanBatal := strings.TrimSpace(reqBody.CatatanBatal)
-	if catatanBatal == "" {
-		catatanBatal = strings.TrimSpace(c.FormValue("catatan_batal"))
-	}
+	catatanBatal := strings.TrimSpace(c.FormValue("catatan_batal"))
 
 	proker.IsBatal = newBatal
 	proker.CatatanBatal = catatanBatal
@@ -531,25 +511,14 @@ func UpdateBatalAktivitasHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var reqBody struct {
-		IsBatal      *bool  `json:"is_batal"`
-		CatatanBatal string `json:"catatan_batal"`
-	}
-	_ = c.BodyParser(&reqBody)
-
 	var newBatal bool
-	if reqBody.IsBatal != nil {
-		newBatal = *reqBody.IsBatal
-	} else if val := c.FormValue("is_batal"); val != "" {
+	if val := strings.TrimSpace(c.FormValue("is_batal")); val != "" {
 		newBatal = val == "1" || strings.ToLower(val) == "true"
 	} else {
 		newBatal = !act.IsBatal
 	}
 
-	catatanBatal := strings.TrimSpace(reqBody.CatatanBatal)
-	if catatanBatal == "" {
-		catatanBatal = strings.TrimSpace(c.FormValue("catatan_batal"))
-	}
+	catatanBatal := strings.TrimSpace(c.FormValue("catatan_batal"))
 
 	act.IsBatal = newBatal
 	act.CatatanBatal = catatanBatal
@@ -971,51 +940,6 @@ func UpdateAktivitasHandler(c *fiber.Ctx) error {
 	rawUuid := c.Params("aktivitas_uuid")
 	var cmd updateAktivitas.UpdateAktivitasV3Command
 
-	var reqBody struct {
-		Aktivitas        string   `json:"aktivitas"`
-		PIC              string   `json:"pic"`
-		Anggaran         *float64 `json:"anggaran"`
-		RAB              string   `json:"rab"`
-		Realisasi        *float64 `json:"realisasi"`
-		Pencairan        *float64 `json:"pencairan"`
-		Status           string   `json:"status"`
-		Capaian          string   `json:"capaian"`
-		Masalah          string   `json:"masalah"`
-		PemecahanMasalah string   `json:"pemecahan_masalah"`
-	}
-	if err := c.BodyParser(&reqBody); err == nil {
-		if reqBody.Aktivitas != "" {
-			cmd.Aktivitas = strings.TrimSpace(reqBody.Aktivitas)
-		}
-		if reqBody.PIC != "" {
-			cmd.PIC = strings.TrimSpace(reqBody.PIC)
-		}
-		if reqBody.Anggaran != nil && *reqBody.Anggaran >= 0 {
-			cmd.Anggaran = *reqBody.Anggaran
-		}
-		if reqBody.RAB != "" {
-			cmd.RAB = strings.TrimSpace(reqBody.RAB)
-		}
-		if reqBody.Realisasi != nil {
-			cmd.Realisasi = reqBody.Realisasi
-		}
-		if reqBody.Pencairan != nil {
-			cmd.Pencairan = reqBody.Pencairan
-		}
-		if reqBody.Status != "" {
-			cmd.Status = strings.TrimSpace(reqBody.Status)
-		}
-		if reqBody.Capaian != "" {
-			cmd.Capaian = strings.TrimSpace(reqBody.Capaian)
-		}
-		if reqBody.Masalah != "" {
-			cmd.Masalah = strings.TrimSpace(reqBody.Masalah)
-		}
-		if reqBody.PemecahanMasalah != "" {
-			cmd.PemecahanMasalah = strings.TrimSpace(reqBody.PemecahanMasalah)
-		}
-	}
-
 	if val := c.FormValue("aktivitas"); val != "" {
 		cmd.Aktivitas = strings.TrimSpace(val)
 	}
@@ -1428,9 +1352,6 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 	tlUUIDStr := c.Params("timeline_uuid")
 
 	var cmd updateTimeline.UpdateTimelineV3Command
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&cmd)
-	}
 
 	if val := c.FormValue("nama_aktivitas"); val != "" {
 		cmd.NamaAktivitas = val
@@ -2748,46 +2669,25 @@ func CreateJadwalProkerV3Handler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
 	}
 
-	type FormInput struct {
-		Tahun          string  `json:"tahun" form:"tahun"`
-		TanggalMulai   string  `json:"tanggal_mulai" form:"tanggal_mulai"`
-		TanggalAkhir   string  `json:"tanggal_akhir" form:"tanggal_akhir"`
-		IdFakultasUnit *string `json:"id_fakultas_unit" form:"id_fakultas_unit"`
-	}
+	tahun := strings.TrimSpace(c.FormValue("tahun"))
+	tanggalMulai := strings.TrimSpace(c.FormValue("tanggal_mulai"))
+	tanggalAkhir := strings.TrimSpace(c.FormValue("tanggal_akhir"))
 
-	var req FormInput
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&req)
-	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.TanggalMulai == "" {
-		req.TanggalMulai = c.FormValue("tanggal_mulai")
-	}
-	if req.TanggalAkhir == "" {
-		req.TanggalAkhir = c.FormValue("tanggal_akhir")
-	}
-
-	req.Tahun = strings.TrimSpace(req.Tahun)
-	req.TanggalMulai = strings.TrimSpace(req.TanggalMulai)
-	req.TanggalAkhir = strings.TrimSpace(req.TanggalAkhir)
-
-	if req.Tahun == "" {
+	if tahun == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tahun wajib diisi"})
 	}
-	if req.TanggalMulai == "" {
+	if tanggalMulai == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal mulai wajib diisi"})
 	}
-	if req.TanggalAkhir == "" {
+	if tanggalAkhir == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir wajib diisi"})
 	}
 
-	tMulai, errM := time.Parse("2006-01-02", req.TanggalMulai)
+	tMulai, errM := time.Parse("2006-01-02", tanggalMulai)
 	if errM != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
 	}
-	tAkhir, errA := time.Parse("2006-01-02", req.TanggalAkhir)
+	tAkhir, errA := time.Parse("2006-01-02", tanggalAkhir)
 	if errA != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
 	}
@@ -2797,13 +2697,7 @@ func CreateJadwalProkerV3Handler(c *fiber.Ctx) error {
 	}
 
 	var fuIdPtr *uint64
-	rawFu := ""
-	if req.IdFakultasUnit != nil {
-		rawFu = strings.TrimSpace(*req.IdFakultasUnit)
-	}
-	if rawFu == "" {
-		rawFu = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
-	}
+	rawFu := strings.TrimSpace(c.FormValue("id_fakultas_unit"))
 	if rawFu != "" && rawFu != "0" && rawFu != "all" && rawFu != "null" {
 		if val, err := strconv.ParseUint(rawFu, 10, 64); err == nil && val > 0 {
 			fuIdPtr = &val
@@ -2812,7 +2706,7 @@ func CreateJadwalProkerV3Handler(c *fiber.Ctx) error {
 
 	newJadwal := domain.JadwalProkerV3{
 		UUID:           uuid.New(),
-		Tahun:          req.Tahun,
+		Tahun:          tahun,
 		TanggalMulai:   tMulai,
 		TanggalAkhir:   tAkhir,
 		IdFakultasUnit: fuIdPtr,
@@ -2847,55 +2741,30 @@ func UpdateJadwalProkerV3Handler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal proker tidak ditemukan"})
 	}
 
-	type FormInput struct {
-		Tahun          string  `json:"tahun" form:"tahun"`
-		TanggalMulai   string  `json:"tanggal_mulai" form:"tanggal_mulai"`
-		TanggalAkhir   string  `json:"tanggal_akhir" form:"tanggal_akhir"`
-		IdFakultasUnit *string `json:"id_fakultas_unit" form:"id_fakultas_unit"`
-	}
+	tahun := strings.TrimSpace(c.FormValue("tahun"))
+	tanggalMulai := strings.TrimSpace(c.FormValue("tanggal_mulai"))
+	tanggalAkhir := strings.TrimSpace(c.FormValue("tanggal_akhir"))
 
-	var req FormInput
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&req)
+	if tahun != "" {
+		item.Tahun = tahun
 	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.TanggalMulai == "" {
-		req.TanggalMulai = c.FormValue("tanggal_mulai")
-	}
-	if req.TanggalAkhir == "" {
-		req.TanggalAkhir = c.FormValue("tanggal_akhir")
-	}
-
-	if req.Tahun != "" {
-		item.Tahun = strings.TrimSpace(req.Tahun)
-	}
-	if req.TanggalMulai != "" {
-		tMulai, errM := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalMulai))
+	if tanggalMulai != "" {
+		tMulai, errM := time.Parse("2006-01-02", tanggalMulai)
 		if errM != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
 		}
 		item.TanggalMulai = tMulai
 	}
-	if req.TanggalAkhir != "" {
-		tAkhir, errA := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalAkhir))
+	if tanggalAkhir != "" {
+		tAkhir, errA := time.Parse("2006-01-02", tanggalAkhir)
 		if errA != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
 		}
 		item.TanggalAkhir = tAkhir
 	}
 
-	rawFu := ""
-	hasFuUpdate := false
-	if req.IdFakultasUnit != nil {
-		rawFu = strings.TrimSpace(*req.IdFakultasUnit)
-		hasFuUpdate = true
-	} else if c.FormValue("id_fakultas_unit") != "" {
-		rawFu = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
-		hasFuUpdate = true
-	}
-	if hasFuUpdate {
+	if _, hasFuKey := c.Context().PostArgs().PeekBytes([]byte("id_fakultas_unit")), true; hasFuKey {
+		rawFu := strings.TrimSpace(c.FormValue("id_fakultas_unit"))
 		if rawFu == "" || rawFu == "0" || rawFu == "all" || rawFu == "null" {
 			item.IdFakultasUnit = nil
 		} else if val, err := strconv.ParseUint(rawFu, 10, 64); err == nil && val > 0 {
@@ -3258,22 +3127,9 @@ func CreateJadwalAktivitasV3Handler(c *fiber.Ctx) error {
 	}
 
 	var req FormInput
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&req)
-	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.TanggalMulai == "" {
-		req.TanggalMulai = c.FormValue("tanggal_mulai")
-	}
-	if req.TanggalAkhir == "" {
-		req.TanggalAkhir = c.FormValue("tanggal_akhir")
-	}
-
-	req.Tahun = strings.TrimSpace(req.Tahun)
-	req.TanggalMulai = strings.TrimSpace(req.TanggalMulai)
-	req.TanggalAkhir = strings.TrimSpace(req.TanggalAkhir)
+	req.Tahun = strings.TrimSpace(c.FormValue("tahun"))
+	req.TanggalMulai = strings.TrimSpace(c.FormValue("tanggal_mulai"))
+	req.TanggalAkhir = strings.TrimSpace(c.FormValue("tanggal_akhir"))
 
 	if req.Tahun == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tahun wajib diisi"})
@@ -3299,13 +3155,7 @@ func CreateJadwalAktivitasV3Handler(c *fiber.Ctx) error {
 	}
 
 	var fuIdPtr *uint64
-	rawFu := ""
-	if req.IdFakultasUnit != nil {
-		rawFu = strings.TrimSpace(*req.IdFakultasUnit)
-	}
-	if rawFu == "" {
-		rawFu = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
-	}
+	rawFu := strings.TrimSpace(c.FormValue("id_fakultas_unit"))
 	if rawFu != "" && rawFu != "0" && rawFu != "all" && rawFu != "null" {
 		if val, err := strconv.ParseUint(rawFu, 10, 64); err == nil && val > 0 {
 			fuIdPtr = &val
@@ -3357,18 +3207,9 @@ func UpdateJadwalAktivitasV3Handler(c *fiber.Ctx) error {
 	}
 
 	var req FormInput
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&req)
-	}
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.TanggalMulai == "" {
-		req.TanggalMulai = c.FormValue("tanggal_mulai")
-	}
-	if req.TanggalAkhir == "" {
-		req.TanggalAkhir = c.FormValue("tanggal_akhir")
-	}
+	req.Tahun = c.FormValue("tahun")
+	req.TanggalMulai = c.FormValue("tanggal_mulai")
+	req.TanggalAkhir = c.FormValue("tanggal_akhir")
 
 	if req.Tahun != "" {
 		item.Tahun = strings.TrimSpace(req.Tahun)
@@ -3486,16 +3327,8 @@ func SavePaguAnggaranHandler(c *fiber.Ctx) error {
 		Pagu           *float64 `json:"pagu"`
 	}
 
-	if strings.Contains(c.Get("Content-Type"), "application/json") {
-		_ = c.BodyParser(&req)
-	}
-
-	if req.Tahun == "" {
-		req.Tahun = c.FormValue("tahun")
-	}
-	if req.FakultasUnit == "" {
-		req.FakultasUnit = c.FormValue("fakultas_unit")
-	}
+	req.Tahun = c.FormValue("tahun")
+	req.FakultasUnit = c.FormValue("fakultas_unit")
 	if c.FormValue("id_fakultas_unit") != "" {
 		if id, err := strconv.Atoi(c.FormValue("id_fakultas_unit")); err == nil {
 			req.IdFakultasUnit = &id
@@ -4236,4 +4069,3 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		},
 	})
 }
-

@@ -3,6 +3,7 @@ package presentation
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -426,9 +427,14 @@ func SaveIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Identifier is required"})
 	}
 
-	var req SaveIndikatorIkuReq
-	if err := c.BodyParser(&req); err != nil {
-		req.IkuIds = []uint64{}
+	var ikuIds []uint64
+	if rawIkuIds := strings.TrimSpace(c.FormValue("iku_ids")); rawIkuIds != "" {
+		rawIkuIds = strings.Trim(rawIkuIds, "[]")
+		for _, part := range strings.Split(rawIkuIds, ",") {
+			if id, err := strconv.ParseUint(strings.TrimSpace(part), 10, 64); err == nil && id > 0 {
+				ikuIds = append(ikuIds, id)
+			}
+		}
 	}
 
 	var indikatorRow struct {
@@ -459,7 +465,7 @@ func SaveIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
 
 	// Insert new mappings if any
 	now := time.Now()
-	for _, ikuId := range req.IkuIds {
+	for _, ikuId := range ikuIds {
 		if ikuId == 0 {
 			continue
 		}
@@ -481,8 +487,8 @@ func SaveIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": "Data IKU berhasil disimpan",
-		"count":   len(req.IkuIds),
-		"iku_ids": req.IkuIds,
+		"count":   len(ikuIds),
+		"iku_ids": ikuIds,
 	})
 }
 

@@ -61,7 +61,18 @@ type RenstraDefault struct {
 	TotalKtsTolakAuditee         string `json:"TotalKtsTolakAuditee"`
 	TotalKtsMenungguPenyelesaian string `json:"TotalKtsMenungguPenyelesaian"`
 	TotalKtsTindakanPenyelesaian string `json:"TotalKtsTindakanPenyelesaian"`
-	TotalKtsTutup                string `json:"TotalKtsTutup"`
-	TotalKtsProses               string `json:"TotalKtsProses"`
-	TotalKts                     string `json:"TotalKts"`
+	TotalKtsTutup                string                  `json:"TotalKtsTutup"`
+	TotalKtsProses               string                  `json:"TotalKtsProses"`
+	TotalKts                     string                  `json:"TotalKts"`
+	RawStatus                    []string                `gorm:"-" json:"RawStatus"`
+	MismatchDetails              []RenstraMismatchDetail `gorm:"-" json:"MismatchDetails"`
 }
+
+type RenstraMismatchDetail struct {
+	Indikator  string `json:"indikator"`
+	Target     string `json:"target"`
+	Seharusnya string `json:"seharusnya"`
+	SaatIni    string `json:"saat_ini"`
+	Keterangan string `json:"keterangan"`
+}
+

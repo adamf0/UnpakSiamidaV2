@@ -335,6 +335,10 @@ func (r *RenstraRepository) GetDefaultByUuid(
 		return nil, err
 	}
 
+	slice := []domainrenstra.RenstraDefault{result}
+	r.populateInformasiTambahan(ctx, slice)
+	result = slice[0]
+
 	return &result, nil
 }
 
@@ -798,8 +802,260 @@ func (r *RenstraRepository) GetAll(
 		return nil, 0, err
 	}
 
+	r.populateInformasiTambahan(ctx, renstras)
+
 	return renstras, total, nil
 }
+
+type renstraNilaiCheckRow struct {
+	ID              uint    `gorm:"column:id"`
+	IdRenstra       uint    `gorm:"column:id_renstra"`
+	TemplateRenstra uint    `gorm:"column:template_renstra"`
+	Tugas           *string `gorm:"column:tugas"`
+}
+
+type templateRenstraCheckRow struct {
+	ID            uint    `gorm:"column:id"`
+	Tahun         string  `gorm:"column:tahun"`
+	Indikator     uint    `gorm:"column:indikator"`
+	NamaIndikator *string `gorm:"column:nama_indikator"`
+	Target        *string `gorm:"column:target"`
+	Satuan        *string `gorm:"column:satuan"`
+	FakultasUnit  uint    `gorm:"column:fakultas_unit"`
+	Tugas         *string `gorm:"column:tugas"`
+}
+
+func ucfirstStr(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "-"
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func formatTargetSatuan(target, satuan *string) string {
+	t := "-"
+	if target != nil && strings.TrimSpace(*target) != "" {
+		t = strings.TrimSpace(*target)
+	}
+	s := ""
+	if satuan != nil && strings.TrimSpace(*satuan) != "" {
+		s = strings.TrimSpace(*satuan)
+	}
+	return strings.TrimSpace(t + " " + s)
+}
+
+func (r *RenstraRepository) populateInformasiTambahan(ctx context.Context, items []domainrenstra.RenstraDefault) {
+	if len(items) == 0 {
+		return
+	}
+
+	renstraIDs := make([]uint, 0, len(items))
+	tahunSet := make(map[string]struct{})
+	fakUnitSet := make(map[uint]struct{})
+
+	for _, item := range items {
+		renstraIDs = append(renstraIDs, item.ID)
+		if item.Tahun != "" {
+			tahunSet[item.Tahun] = struct{}{}
+		}
+		if item.FakultasUnitId != 0 {
+			fakUnitSet[item.FakultasUnitId] = struct{}{}
+		}
+	}
+
+	var nilaiList []renstraNilaiCheckRow
+	_ = r.db.WithContext(ctx).
+		Table("renstra_nilai").
+		Select("id, id_renstra, template_renstra, tugas").
+		Where("id_renstra IN ?", renstraIDs).
+		Order("id ASC").
+		Scan(&nilaiList).Error
+
+	allNilaiByRenstra := make(map[uint][]renstraNilaiCheckRow)
+	referencedTplSet := make(map[uint]struct{})
+	for _, n := range nilaiList {
+		allNilaiByRenstra[n.IdRenstra] = append(allNilaiByRenstra[n.IdRenstra], n)
+		if n.TemplateRenstra != 0 {
+			referencedTplSet[n.TemplateRenstra] = struct{}{}
+		}
+	}
+
+	tahuns := make([]string, 0, len(tahunSet))
+	for t := range tahunSet {
+		tahuns = append(tahuns, t)
+	}
+	fakUnits := make([]uint, 0, len(fakUnitSet))
+	for fu := range fakUnitSet {
+		fakUnits = append(fakUnits, fu)
+	}
+	referencedTplIDs := make([]uint, 0, len(referencedTplSet))
+	for tplID := range referencedTplSet {
+		referencedTplIDs = append(referencedTplIDs, tplID)
+	}
+
+	var allTemplates []templateRenstraCheckRow
+	tplQuery := r.db.WithContext(ctx).
+		Table("template_renstra tr").
+		Select("tr.id, tr.tahun, tr.indikator, mir.indikator AS nama_indikator, tr.target, tr.satuan, tr.fakultas_unit, tr.tugas").
+		Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id")
+
+	if len(tahuns) > 0 && len(fakUnits) > 0 && len(referencedTplIDs) > 0 {
+		tplQuery = tplQuery.Where("(tr.tahun IN ? AND tr.fakultas_unit IN ?) OR tr.id IN ?", tahuns, fakUnits, referencedTplIDs)
+	} else if len(tahuns) > 0 && len(fakUnits) > 0 {
+		tplQuery = tplQuery.Where("tr.tahun IN ? AND tr.fakultas_unit IN ?", tahuns, fakUnits)
+	} else if len(referencedTplIDs) > 0 {
+		tplQuery = tplQuery.Where("tr.id IN ?", referencedTplIDs)
+	}
+
+	_ = tplQuery.Order("tr.id ASC").Scan(&allTemplates).Error
+
+	allTemplatesById := make(map[uint]templateRenstraCheckRow, len(allTemplates))
+	allTemplatesGrouped := make(map[string][]templateRenstraCheckRow)
+	for _, tpl := range allTemplates {
+		allTemplatesById[tpl.ID] = tpl
+		key := fmt.Sprintf("%s_%d", tpl.Tahun, tpl.FakultasUnit)
+		allTemplatesGrouped[key] = append(allTemplatesGrouped[key], tpl)
+	}
+
+	for i := range items {
+		item := &items[i]
+		key := fmt.Sprintf("%s_%d", item.Tahun, item.FakultasUnitId)
+		templatesForThis := allTemplatesGrouped[key]
+
+		tpl1 := make(map[uint]templateRenstraCheckRow)
+		if item.Auditor1Id != nil && *item.Auditor1Id != 0 {
+			for _, t := range templatesForThis {
+				if t.Tugas != nil && strings.TrimSpace(*t.Tugas) == "auditor1" {
+					tpl1[t.ID] = t
+				}
+			}
+		}
+
+		tpl2 := make(map[uint]templateRenstraCheckRow)
+		if item.Auditor2Id != nil && *item.Auditor2Id != 0 {
+			for _, t := range templatesForThis {
+				if t.Tugas != nil && strings.TrimSpace(*t.Tugas) == "auditor2" {
+					tpl2[t.ID] = t
+				}
+			}
+		}
+
+		allExpected := make(map[uint]templateRenstraCheckRow)
+		for k, v := range tpl1 {
+			allExpected[k] = v
+		}
+		for k, v := range tpl2 {
+			allExpected[k] = v
+		}
+
+		nilaiRows := allNilaiByRenstra[item.ID]
+		issues := make([]string, 0)
+		mismatchDetails := make([]domainrenstra.RenstraMismatchDetail, 0)
+
+		// 1. Belum generate
+		if len(allExpected) > 0 && len(nilaiRows) == 0 {
+			issues = append(issues, "Belum generate")
+		} else if len(allExpected) > 0 {
+			existingTplSet := make(map[uint]struct{}, len(nilaiRows))
+			for _, n := range nilaiRows {
+				existingTplSet[n.TemplateRenstra] = struct{}{}
+			}
+			missingExpected := false
+			for expectedTplID := range allExpected {
+				if _, ok := existingTplSet[expectedTplID]; !ok {
+					missingExpected = true
+					break
+				}
+			}
+			if missingExpected {
+				issues = append(issues, "Belum generate")
+			}
+		}
+
+		// 2. Duplikat data
+		tplCounts := make(map[uint]int)
+		hasDuplicate := false
+		for _, n := range nilaiRows {
+			tplCounts[n.TemplateRenstra]++
+			if tplCounts[n.TemplateRenstra] > 1 {
+				hasDuplicate = true
+			}
+		}
+		if hasDuplicate {
+			issues = append(issues, "Duplikat data")
+		}
+
+		// 3. Tidak sesuai kepemilikan tugas pada indikator
+		for _, n := range nilaiRows {
+			nTugas := ""
+			if n.Tugas != nil {
+				nTugas = strings.TrimSpace(*n.Tugas)
+			}
+			saatIni := ucfirstStr(nTugas)
+
+			if tpl, ok := tpl1[n.TemplateRenstra]; ok && nTugas != "auditor1" {
+				indName := fmt.Sprintf("Indikator #%d", tpl.Indikator)
+				if tpl.NamaIndikator != nil && strings.TrimSpace(*tpl.NamaIndikator) != "" {
+					indName = strings.TrimSpace(*tpl.NamaIndikator)
+				}
+				mismatchDetails = append(mismatchDetails, domainrenstra.RenstraMismatchDetail{
+					Indikator:  indName,
+					Target:     formatTargetSatuan(tpl.Target, tpl.Satuan),
+					Seharusnya: "Auditor 1",
+					SaatIni:    saatIni,
+					Keterangan: "Tugas di template adalah Auditor 1, namun di nilai tercatat " + saatIni,
+				})
+			} else if tpl, ok := tpl2[n.TemplateRenstra]; ok && nTugas != "auditor2" {
+				indName := fmt.Sprintf("Indikator #%d", tpl.Indikator)
+				if tpl.NamaIndikator != nil && strings.TrimSpace(*tpl.NamaIndikator) != "" {
+					indName = strings.TrimSpace(*tpl.NamaIndikator)
+				}
+				mismatchDetails = append(mismatchDetails, domainrenstra.RenstraMismatchDetail{
+					Indikator:  indName,
+					Target:     formatTargetSatuan(tpl.Target, tpl.Satuan),
+					Seharusnya: "Auditor 2",
+					SaatIni:    saatIni,
+					Keterangan: "Tugas di template adalah Auditor 2, namun di nilai tercatat " + saatIni,
+				})
+			} else if _, ok := allExpected[n.TemplateRenstra]; !ok {
+				tpl, found := allTemplatesById[n.TemplateRenstra]
+				indName := fmt.Sprintf("Template #%d", n.TemplateRenstra)
+				targetStr := "-"
+				if found {
+					if tpl.NamaIndikator != nil && strings.TrimSpace(*tpl.NamaIndikator) != "" {
+						indName = strings.TrimSpace(*tpl.NamaIndikator)
+					}
+					targetStr = formatTargetSatuan(tpl.Target, tpl.Satuan)
+				}
+				mismatchDetails = append(mismatchDetails, domainrenstra.RenstraMismatchDetail{
+					Indikator:  indName,
+					Target:     targetStr,
+					Seharusnya: "Tidak Terdaftar",
+					SaatIni:    saatIni,
+					Keterangan: "Template tidak terdaftar pada mapping unit/tahun ini",
+				})
+			}
+		}
+
+		if len(mismatchDetails) > 0 {
+			issues = append(issues, "Tidak sesuai kepemilikan tugas pada indikator")
+		}
+
+		rawStatus := make([]string, 0)
+		if len(issues) > 0 {
+			rawStatus = issues
+		} else if len(allExpected) > 0 {
+			rawStatus = []string{"Sesuai"}
+		} else {
+			rawStatus = []string{"Template belum ada"}
+		}
+
+		item.RawStatus = rawStatus
+		item.MismatchDetails = mismatchDetails
+	}
+}
+
 
 // ------------------------
 // CREATE

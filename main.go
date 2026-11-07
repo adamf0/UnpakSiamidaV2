@@ -133,6 +133,7 @@ import (
 
 	eventBeritaAcara "UnpakSiamida/modules/beritaacara/event"
 	eventKts "UnpakSiamida/modules/kts/event"
+	eventRenstra "UnpakSiamida/modules/renstra/event"
 	eventUser "UnpakSiamida/modules/user/event"
 
 	_ "UnpakSiamida/docs"
@@ -264,7 +265,7 @@ func main() {
 	})
 
 	mustStart("Renstra Module", func() error {
-		return renstraInfrastructure.RegisterModuleRenstra(db)
+		return renstraInfrastructure.RegisterModuleRenstra(db, tg)
 	})
 
 	mustStart("Generate Renstra Module", func() error {
@@ -344,6 +345,7 @@ func main() {
 	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventKts.KtsPdfRequestedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventRenstra.RenstraSendEmailEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app, db)
@@ -354,8 +356,8 @@ func main() {
 	templatedokumentambahanPresentation.ModuleTemplateDokumenTambahan(app)
 	fakultasunitPresentation.ModuleFakultasUnit(app)
 	jenisfilePresentation.ModuleJenisFile(app)
-	renstraPresentation.ModuleRenstra(app)
-	generaterenstraPresentation.ModuleGenerateRenstra(app)
+	renstraPresentation.ModuleRenstra(app, db)
+	generaterenstraPresentation.ModuleGenerateRenstra(app, db)
 	previewtemplatePresentation.ModulePreviewTemplate(app)
 	accountPresentation.ModuleAccount(app)
 	renstranilaiPresentation.ModuleRenstraNilai(app)
