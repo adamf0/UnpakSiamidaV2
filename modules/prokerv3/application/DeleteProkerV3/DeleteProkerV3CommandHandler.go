@@ -25,6 +25,20 @@ func (h *DeleteProkerV3CommandHandler) Handle(
 		return "", domain.ProkerNotFound()
 	}
 
+	if cmd.SoftDelete {
+		if err := h.Repo.SoftDelete(ctx, domain.SoftDeleteProkerParams{
+			UUID:          prokerUUID,
+			Catatan:       strings.TrimSpace(cmd.Catatan),
+			Role:          strings.TrimSpace(cmd.Role),
+			ActorID:       cmd.ActorID,
+			ActorName:     strings.TrimSpace(cmd.ActorName),
+			ActorUsername: strings.TrimSpace(cmd.ActorUsername),
+		}); err != nil {
+			return "", err
+		}
+		return cmd.UUID, nil
+	}
+
 	if err := h.Repo.Delete(ctx, prokerUUID); err != nil {
 		return "", err
 	}

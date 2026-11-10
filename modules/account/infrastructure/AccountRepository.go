@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -212,4 +214,43 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 	extraRoles = append(extraRoles, abacRoles...)
 
 	return extraRoles, nil
+}
+
+func (r *AccountRepository) IsUsernameTakenByOther(ctx context.Context, username string, excludeUserUUID string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Table("users").
+		Where("LOWER(TRIM(nidn_username)) = ? AND uuid <> ?", strings.ToLower(strings.TrimSpace(username)), excludeUserUUID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *AccountRepository) UpdateProfile(ctx context.Context, userUUID string, username string, name string, email *string, password *string) error {
+	updates := map[string]interface{}{
+		"nidn_username": username,
+		"name":          name,
+		"email":         nil,
+		"updated_at":    time.Now(),
+	}
+	if email != nil && strings.TrimSpace(*email) != "" {
+		updates["email"] = strings.TrimSpace(*email)
+	}
+	if password != nil && strings.TrimSpace(*password) != "" {
+		updates["password"] = strings.TrimSpace(*password)
+	}
+
+	res := r.db.WithContext(ctx).
+		Table("users").
+		Where("uuid = ?", userUUID).
+		Updates(updates)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

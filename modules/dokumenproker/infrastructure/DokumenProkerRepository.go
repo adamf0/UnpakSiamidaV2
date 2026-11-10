@@ -191,7 +191,7 @@ func (r *DokumenProkerRepository) GetAll(
 				mpd.file_type as FileType,
 				mpd.created_at as CreatedAt
 			`).
-			Joins("JOIN matrix_proker mpr ON mpd.id_matrik_proker = mpr.id").
+			Joins("JOIN matrix_proker mpr ON mpd.id_matrik_proker = mpr.id AND mpr.deleted_at IS NULL").
 			Joins("LEFT JOIN mata_program mp ON mpr.id_mata_program = mp.id").
 			Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 			Joins("LEFT JOIN v_fakultas_unit vfu ON COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit) = vfu.id").

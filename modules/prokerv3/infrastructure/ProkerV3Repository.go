@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -96,7 +98,7 @@ func (r *ProkerV3Repository) populatePaguInfo(ctx context.Context, item *domain.
 			Joins("JOIN matrix_proker mp ON mp.id = a.id_matrik_proker").
 			Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
 			Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-			Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(mp.is_batal, 0) = 0 AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(mp.beban_yayasan, 0) = 0", fuId, fuName, tahun).
+			Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(mp.is_batal, 0) = 0 AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(mp.beban_yayasan, 0) = 0", fuId, fuName, tahun).
 			Select("COALESCE(SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)), 0)").
 			Scan(&totalUnitAnggaran).Error
 
@@ -154,6 +156,10 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mp_t.beban_yayasan, 0) as BebanYayasan,
 			COALESCE(mp_t.is_batal, 0) as IsBatal,
 			COALESCE(mp_t.catatan_batal, '') as CatatanBatal,
+			mp_t.deleted_at as DeletedAt,
+			mp_t.deleted_by as DeletedBy,
+			COALESCE(mp_t.deleted_by_name, '') as DeletedByName,
+			COALESCE(mp_t.catatan_hapus, '') as CatatanHapus,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
@@ -275,6 +281,7 @@ func (r *ProkerV3Repository) GetAll(
 
 	var list = make([]domain.ProkerV3Default, 0)
 	var total int64
+	isBuangTab := false
 
 	// Pastikan tahun 2027 ada di master_tahun dan sinkronkan mata_program yang terkait 2027 (seperti id 15048)
 	var count2027 int64
@@ -319,6 +326,10 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(mp_t.beban_yayasan, 0) as BebanYayasan,
 			COALESCE(mp_t.is_batal, 0) as IsBatal,
 			COALESCE(mp_t.catatan_batal, '') as CatatanBatal,
+			mp_t.deleted_at as DeletedAt,
+			mp_t.deleted_by as DeletedBy,
+			COALESCE(mp_t.deleted_by_name, '') as DeletedByName,
+			COALESCE(mp_t.catatan_hapus, '') as CatatanHapus,
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
@@ -436,6 +447,11 @@ func (r *ProkerV3Repository) GetAll(
 						tab = strings.ToLower(strings.TrimSpace(val))
 					}
 
+					if tab == "buang" || tab == "trash" || tab == "deleted" {
+						isBuangTab = true
+						continue
+					}
+
 					if role == "anggaran" || role == "keuangan" {
 						switch tab {
 						case "terima":
@@ -488,13 +504,24 @@ func (r *ProkerV3Repository) GetAll(
 		)`, like, like, like, like, like, like)
 	}
 
+	// Soft delete scope
+	if isBuangTab {
+		db = db.Where("mp_t.deleted_at IS NOT NULL")
+	} else {
+		db = db.Where("mp_t.deleted_at IS NULL")
+	}
+
 	// Count Total
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Order by id DESC
-	db = db.Order("mp_t.id DESC")
+	// Order by deleted_at / id DESC
+	if isBuangTab {
+		db = db.Order("mp_t.deleted_at DESC, mp_t.id DESC")
+	} else {
+		db = db.Order("mp_t.id DESC")
+	}
 
 	// Pagination
 	if limit != nil && *limit > 0 {
@@ -563,9 +590,113 @@ func (r *ProkerV3Repository) GetAll(
 			}
 			r.populatePaguInfo(ctx, &list[i])
 		}
+		if !isBuangTab {
+			r.populateDeletedSimilarity(ctx, list)
+		}
 	}
 
 	return list, total, nil
+}
+
+func (r *ProkerV3Repository) populateDeletedSimilarity(ctx context.Context, list []domain.ProkerV3Default) {
+	if len(list) == 0 {
+		return
+	}
+
+	yearSet := make(map[string]struct{})
+	var years []string
+	for _, item := range list {
+		y := strings.TrimSpace(item.Tahun)
+		if y == "" {
+			y = "2026"
+		}
+		if _, ok := yearSet[y]; !ok {
+			yearSet[y] = struct{}{}
+			years = append(years, y)
+		}
+	}
+	if len(years) == 0 {
+		return
+	}
+
+	type deletedCandidate struct {
+		UUID           string     `gorm:"column:uuid"`
+		IdFakultasUnit *int       `gorm:"column:id_fakultas_unit"`
+		Tahun          string     `gorm:"column:tahun"`
+		NamaProgram    string     `gorm:"column:nama_program"`
+		CatatanHapus   string     `gorm:"column:catatan_hapus"`
+		DeletedByName  string     `gorm:"column:deleted_by_name"`
+		DeletedAt      *time.Time `gorm:"column:deleted_at"`
+	}
+
+	var candidates []deletedCandidate
+	if err := r.db.WithContext(ctx).
+		Table("matrix_proker mp_d").
+		Select(`
+			mp_d.uuid as uuid,
+			mp_d.id_fakultas_unit as id_fakultas_unit,
+			COALESCE(NULLIF(mt_d.tahun, ''), '2026') as tahun,
+			COALESCE(prog_d.mata_program, '') as nama_program,
+			COALESCE(mp_d.catatan_hapus, '') as catatan_hapus,
+			COALESCE(mp_d.deleted_by_name, '') as deleted_by_name,
+			mp_d.deleted_at as deleted_at
+		`).
+		Joins("LEFT JOIN mata_program prog_d ON mp_d.id_mata_program = prog_d.id").
+		Joins("LEFT JOIN master_tahun mt_d ON prog_d.id_master_tahun = mt_d.id").
+		Where("mp_d.deleted_at IS NOT NULL AND COALESCE(NULLIF(mt_d.tahun, ''), '2026') IN ?", years).
+		Order("mp_d.deleted_at DESC, mp_d.id DESC").
+		Scan(&candidates).Error; err != nil || len(candidates) == 0 {
+		return
+	}
+
+	byYear := make(map[string][]deletedCandidate, len(years))
+	for _, cand := range candidates {
+		if strings.TrimSpace(cand.NamaProgram) == "" {
+			continue
+		}
+		byYear[cand.Tahun] = append(byYear[cand.Tahun], cand)
+	}
+
+	for i := range list {
+		title := strings.TrimSpace(list[i].NamaProgram)
+		if title == "" {
+			continue
+		}
+		y := strings.TrimSpace(list[i].Tahun)
+		if y == "" {
+			y = "2026"
+		}
+		cands := byYear[y]
+		if len(cands) == 0 {
+			continue
+		}
+
+		var matches []domain.DuplicateDeletedProker
+		for _, cand := range cands {
+			if list[i].IdFakultasUnit != nil && cand.IdFakultasUnit != nil && *list[i].IdFakultasUnit != *cand.IdFakultasUnit {
+				continue
+			}
+			sim := ComputeTitleSimilarity(title, cand.NamaProgram)
+			if sim >= TitleSimilarityThreshold {
+				matches = append(matches, domain.DuplicateDeletedProker{
+					UUID:          cand.UUID,
+					NamaProgram:   cand.NamaProgram,
+					CatatanHapus:  cand.CatatanHapus,
+					DeletedByName: cand.DeletedByName,
+					DeletedAt:     cand.DeletedAt,
+					Similarity:    int(math.Round(sim * 100)),
+				})
+			}
+		}
+
+		if len(matches) > 0 {
+			sort.SliceStable(matches, func(a, b int) bool {
+				return matches[a].Similarity > matches[b].Similarity
+			})
+			list[i].DuplicateDeletedCount = int64(len(matches))
+			list[i].DuplicateDeletedTitles = matches
+		}
+	}
 }
 
 // ------------------------
@@ -590,18 +721,92 @@ func (r *ProkerV3Repository) Update(ctx context.Context, data *domain.ProkerV3) 
 }
 
 // ------------------------
+// SOFT DELETE (matrix_proker)
+// ------------------------
+func (r *ProkerV3Repository) SoftDelete(ctx context.Context, params domain.SoftDeleteProkerParams) error {
+	catatan := strings.TrimSpace(params.Catatan)
+	if catatan == "" {
+		return domain.DeleteReasonRequired()
+	}
+	role := strings.ToLower(strings.TrimSpace(params.Role))
+	if role == "" {
+		role = "user"
+	}
+	actorName := strings.TrimSpace(params.ActorName)
+	if actorName == "" {
+		actorName = strings.ToUpper(role)
+	}
+	actorUsername := strings.TrimSpace(params.ActorUsername)
+	if actorUsername == "" {
+		actorUsername = actorName
+	}
+
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var matrix domain.ProkerV3
+		if err := tx.Unscoped().Where("uuid = ?", params.UUID).First(&matrix).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ProkerNotFound()
+			}
+			return err
+		}
+		if matrix.DeletedAt.Valid {
+			return domain.AlreadyDeleted()
+		}
+
+		now := time.Now()
+		updates := map[string]interface{}{
+			"deleted_at":      now,
+			"deleted_by":      params.ActorID,
+			"deleted_by_name": actorName,
+			"catatan_hapus":   catatan,
+			"updated_at":      now,
+		}
+		if err := tx.Unscoped().Model(&domain.ProkerV3{}).Where("id = ?", matrix.ID).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		fromState := strings.TrimSpace(matrix.Status)
+		if fromState == "" || strings.EqualFold(fromState, "draft") {
+			fromState = "draf"
+		}
+		mpIDInt := int(matrix.ID)
+		historyEntry := domain.HistoryState{
+			UUID:           uuid.New(),
+			IdMatrikProker: &mpIDInt,
+			EntityType:     "proker",
+			EntityUUID:     matrix.UUID.String(),
+			FromState:      fromState,
+			ToState:        "dihapus",
+			Role:           role,
+			Action:         "dihapus",
+			ActorID:        params.ActorID,
+			ActorName:      actorName,
+			ActorUsername:  actorUsername,
+			UserID:         params.ActorID,
+			UserName:       actorName,
+			Catatan:        catatan,
+			CreatedAt:      now,
+		}
+		return tx.Create(&historyEntry).Error
+	})
+}
+
+// ------------------------
 // DELETE (matrix_proker)
 // ------------------------
 func (r *ProkerV3Repository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var matrix domain.ProkerV3
-		if err := tx.Where("uuid = ?", uid).First(&matrix).Error; err != nil {
+		if err := tx.Unscoped().Where("uuid = ?", uid).First(&matrix).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ProkerNotFound()
+			}
 			return err
 		}
 
 		// Find all child aktivitas
 		var acts []domain.AktivitasV2
-		if err := tx.Where("id_matrik_proker = ?", matrix.ID).Find(&acts).Error; err == nil {
+		if err := tx.Unscoped().Where("id_matrik_proker = ?", matrix.ID).Find(&acts).Error; err == nil {
 			for _, act := range acts {
 				// Delete timeline files
 				_ = tx.Unscoped().Where("id_aktivitasv2 = ?", act.ID).Delete(&domain.ProkerTimelineFileV3{}).Error
@@ -613,6 +818,9 @@ func (r *ProkerV3Repository) Delete(ctx context.Context, uid uuid.UUID) error {
 				_ = tx.Unscoped().Delete(&act).Error
 			}
 		}
+
+		// Delete matrix_proker_dokumen
+		_ = tx.Unscoped().Where("id_matrik_proker = ?", matrix.ID).Delete(&domain.MatrixProkerDokumen{}).Error
 
 		// Delete matrix_proker_scope
 		_ = tx.Unscoped().Where("id_matrix_proker = ?", matrix.ID).Delete(&domain.MatrixProkerScope{}).Error
@@ -880,7 +1088,8 @@ func (r *ProkerV3Repository) GetAktivitasByMatrikId(ctx context.Context, matrikI
 			Anggaran:           totalAnggaran,
 			RAB:                rabJson,
 			RabItems:           rabItems,
-			Realisasi:          a.Realisasi,
+			Realisasi:             a.Realisasi,
+			CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
 			Pencairan:          a.Pencairan,
 			Status:             a.Status,
 			CatatanPenolakan:   a.CatatanPenolakan,
@@ -1062,7 +1271,8 @@ func (r *ProkerV3Repository) GetAktivitasByUuid(ctx context.Context, uid uuid.UU
 		Anggaran:           totalAnggaran,
 		RAB:                rabJson,
 		RabItems:           rabItems,
-		Realisasi:          a.Realisasi,
+		Realisasi:             a.Realisasi,
+		CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
 		Pencairan:          a.Pencairan,
 		Status:             a.Status,
 		CatatanPenolakan:   a.CatatanPenolakan,
@@ -1616,7 +1826,7 @@ func (r *ProkerV3Repository) RecordHistoryState(ctx context.Context, h *domain.H
 
 func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string) ([]domain.HistoryState, error) {
 	var mp domain.ProkerV3
-	_ = r.db.WithContext(ctx).Where("uuid = ?", rawUuid).First(&mp).Error
+	_ = r.db.WithContext(ctx).Unscoped().Where("uuid = ?", rawUuid).First(&mp).Error
 	var act domain.AktivitasV2
 	if mp.ID == 0 {
 		_ = r.db.WithContext(ctx).Where("uuid = ?", rawUuid).First(&act).Error
@@ -1762,6 +1972,32 @@ func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string
 				UserName:      "Bagian Anggaran",
 				Catatan:       catatan,
 				CreatedAt:     createdAt.Add(3 * time.Hour),
+			})
+		}
+
+		if mp.ID > 0 && mp.DeletedAt.Valid {
+			delActor := strings.TrimSpace(mp.DeletedByName)
+			if delActor == "" {
+				delActor = "Unit Pengusul"
+			}
+			fromSt := strings.TrimSpace(currentStatus)
+			if fromSt == "" || strings.EqualFold(fromSt, "draft") {
+				fromSt = "draf"
+			}
+			history = append(history, domain.HistoryState{
+				UUID:          uuid.New(),
+				EntityUUID:    rawUuid,
+				FromState:     fromSt,
+				ToState:       "dihapus",
+				Role:          "user",
+				Action:        "dihapus",
+				ActorID:       mp.DeletedBy,
+				ActorName:     delActor,
+				ActorUsername: delActor,
+				UserID:        mp.DeletedBy,
+				UserName:      delActor,
+				Catatan:       mp.CatatanHapus,
+				CreatedAt:     mp.DeletedAt.Time,
 			})
 		}
 	} else {

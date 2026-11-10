@@ -93,9 +93,9 @@ func (r *LaporanRepository) GetMonitoringByTargetTahun(
 			`).
 			Joins("JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 			Joins("JOIN v_fakultas_unit vfu ON vfu.uuid = ?", uuidFakultasUnit.String()).
-			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id").
+			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id AND mpr.deleted_at IS NULL").
 			Joins("LEFT JOIN matrix_proker_dokumen mpd ON mpd.id_matrik_proker = mpr.id AND mpd.deleted_at IS NULL").
-			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id)))", uuidTahun.String()).
+			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id AND other_mpr.deleted_at IS NULL)))", uuidTahun.String()).
 			Group("vfu.id, mt.id, mp.id").
 			Order("mp.id ASC")
 
@@ -104,8 +104,8 @@ func (r *LaporanRepository) GetMonitoringByTargetTahun(
 			Select("mp.id").
 			Joins("JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 			Joins("JOIN v_fakultas_unit vfu ON vfu.uuid = ?", uuidFakultasUnit.String()).
-			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id").
-			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id)))", uuidTahun.String()).
+			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id AND mpr.deleted_at IS NULL").
+			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id AND other_mpr.deleted_at IS NULL)))", uuidTahun.String()).
 			Group("mp.id")
 
 		if err := r.db.WithContext(ctx).Table("(?) as sub", countSubQuery).Count(&total).Error; err != nil {

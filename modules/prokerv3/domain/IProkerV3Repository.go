@@ -7,6 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type SoftDeleteProkerParams struct {
+	UUID          uuid.UUID
+	Catatan       string
+	Role          string
+	ActorID       *int
+	ActorName     string
+	ActorUsername string
+}
+
 type IProkerV3Repository interface {
 	GetByUuid(ctx context.Context, uid uuid.UUID) (*ProkerV3, error)
 	GetDefaultByUuid(ctx context.Context, uid uuid.UUID) (*ProkerV3Default, error)
@@ -14,6 +23,7 @@ type IProkerV3Repository interface {
 	Create(ctx context.Context, data *ProkerV3) error
 	Update(ctx context.Context, data *ProkerV3) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	SoftDelete(ctx context.Context, params SoftDeleteProkerParams) error
 
 	// Options & Target
 	GetOptions(ctx context.Context) (*ProkerOptionsResult, error)

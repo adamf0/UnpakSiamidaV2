@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ProkerV3 struct {
@@ -29,6 +30,10 @@ type ProkerV3 struct {
 	BebanYayasan      bool      `gorm:"column:beban_yayasan;default:0" json:"BebanYayasan"`
 	IsBatal           bool                `gorm:"column:is_batal;default:0" json:"IsBatal"`
 	CatatanBatal      string              `gorm:"column:catatan_batal;type:text" json:"CatatanBatal"`
+	DeletedAt         gorm.DeletedAt      `gorm:"column:deleted_at;index" json:"DeletedAt,omitempty"`
+	DeletedBy         *int                `gorm:"column:deleted_by" json:"DeletedBy,omitempty"`
+	DeletedByName     string              `gorm:"column:deleted_by_name;type:varchar(255)" json:"DeletedByName,omitempty"`
+	CatatanHapus      string              `gorm:"column:catatan_hapus;type:text" json:"CatatanHapus,omitempty"`
 	CreatedAt         time.Time           `gorm:"column:created_at" json:"CreatedAt"`
 	UpdatedAt        time.Time           `gorm:"column:updated_at" json:"UpdatedAt"`
 	Scopes           []MatrixProkerScope `gorm:"foreignKey:IdMatrixProker" json:"Scopes,omitempty"`

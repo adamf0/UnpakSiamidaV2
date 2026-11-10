@@ -440,6 +440,7 @@ func validateClaims(token *jwt.Token) (jwt.MapClaims, error) {
 
 func injectRequestValues(c *fiber.Ctx, claims jwt.MapClaims, tokenStr string) {
 	if sid, ok := claims["sid"].(string); ok {
+		c.Locals("sid", sid)
 		c.Request().PostArgs().Set("sid", sid)
 	}
 

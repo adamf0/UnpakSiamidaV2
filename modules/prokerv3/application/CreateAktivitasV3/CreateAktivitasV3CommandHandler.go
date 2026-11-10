@@ -42,6 +42,9 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 	if proker == nil {
 		return nil, errors.New("Program kerja tidak ditemukan")
 	}
+	if proker.DeletedAt != nil {
+		return nil, errors.New("Program kerja sudah dihapus dan tidak dapat ditambah aktivitas")
+	}
 
 	namaAktivitas := strings.TrimSpace(cmd.Aktivitas)
 	if namaAktivitas == "" {

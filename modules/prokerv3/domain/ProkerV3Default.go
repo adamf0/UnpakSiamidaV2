@@ -46,55 +46,70 @@ type ProkerTimelineDefault struct {
 	Files            []ProkerTimelineFileDefault `json:"Files"`
 }
 
+type DuplicateDeletedProker struct {
+	UUID          string     `json:"UUID"`
+	NamaProgram   string     `json:"NamaProgram"`
+	CatatanHapus  string     `json:"CatatanHapus"`
+	DeletedByName string     `json:"DeletedByName"`
+	DeletedAt     *time.Time `json:"DeletedAt"`
+	Similarity    int        `json:"Similarity"`
+}
+
 // ProkerV3Default maps to matrix_proker with joined info
 type ProkerV3Default struct {
-	ID                uint      `json:"Id"`
-	UUID              uuid.UUID `json:"UUID"`
-	IdFakultasUnit    *int      `json:"IdFakultasUnit"`
-	NamaFakultasUnit  string    `json:"NamaFakultasUnit"`
-	UuidFakultasUnit  string    `json:"UuidFakultasUnit"`
-	IdMataProgram     *int      `json:"IdMataProgram"`
-	NamaProgram       string    `json:"NamaProgram"`
-	Tahun             string    `json:"Tahun"`
-	NoProker          int64     `json:"NoProker"`
-	IdIndikator       *int      `json:"IdIndikator"`
-	IndikatorKinerja  string    `json:"IndikatorKinerja"`
-	IndikatorUUID     string    `json:"IndikatorUUID"`
-	IdMasterStandar   *int      `json:"IdMasterStandar"`
-	StandarSubStandar string    `json:"StandarSubStandar"`
-	StandarUUID       string    `json:"StandarUUID"`
-	TargetUnpak       string    `json:"TargetUnpak"`
-	CapaianUnitLalu   string    `json:"CapaianUnitLalu"`
-	TargetUnit        string    `json:"TargetUnit"`
-	Output            string    `json:"Output"`
-	Outcome           string    `json:"Outcome"`
-	Status            string    `json:"Status"`
-	CatatanPenolakan  string    `json:"CatatanPenolakan"`
-	StatusVerifikator string    `json:"StatusVerifikator"`
-	CatatanVerifikator string   `json:"CatatanVerifikator"`
-	StatusAnggaran    string    `json:"StatusAnggaran"`
-	CatatanAnggaran   string    `json:"CatatanAnggaran"`
-	TypeFakultasUnit  string    `json:"TypeFakultasUnit"`
-	ParentFakultas    string    `json:"ParentFakultas"`
-	PIC               string    `json:"PIC"`
-	BebanYayasan      bool      `json:"BebanYayasan"`
-	IsBatal           bool      `json:"IsBatal"`
-	CatatanBatal      string    `json:"CatatanBatal"`
-	TotalAktivitas    int64     `json:"TotalAktivitas"`
-	TotalAnggaran     float64   `json:"TotalAnggaran"`
-	TotalRealisasi    float64   `json:"TotalRealisasi"`
-	HasRealisasi      bool      `json:"HasRealisasi"`
-	TotalDokumen      int64     `json:"TotalDokumen"`
-	TotalRisiko       int64     `json:"TotalRisiko"`
-	TingkatRisiko     string    `json:"TingkatRisiko"`
-	IkuList           string    `json:"IkuList"`
-	PaguUnit          float64   `json:"PaguUnit"`
-	HasPagu           bool      `json:"HasPagu"`
-	IsMelebihiPagu    bool      `json:"IsMelebihiPagu"`
-	TotalAnggaranUnit float64              `json:"TotalAnggaranUnit"`
-	Scopes            []ProkerScopeDefault `gorm:"-" json:"Scopes"`
-	CreatedAt         time.Time            `json:"CreatedAt"`
-	UpdatedAt         time.Time            `json:"UpdatedAt"`
+	ID                     uint                     `json:"Id"`
+	UUID                   uuid.UUID                `json:"UUID"`
+	IdFakultasUnit         *int                     `json:"IdFakultasUnit"`
+	NamaFakultasUnit       string                   `json:"NamaFakultasUnit"`
+	UuidFakultasUnit       string                   `json:"UuidFakultasUnit"`
+	IdMataProgram          *int                     `json:"IdMataProgram"`
+	NamaProgram            string                   `json:"NamaProgram"`
+	Tahun                  string                   `json:"Tahun"`
+	NoProker               int64                    `json:"NoProker"`
+	IdIndikator            *int                     `json:"IdIndikator"`
+	IndikatorKinerja       string                   `json:"IndikatorKinerja"`
+	IndikatorUUID          string                   `json:"IndikatorUUID"`
+	IdMasterStandar        *int                     `json:"IdMasterStandar"`
+	StandarSubStandar      string                   `json:"StandarSubStandar"`
+	StandarUUID            string                   `json:"StandarUUID"`
+	TargetUnpak            string                   `json:"TargetUnpak"`
+	CapaianUnitLalu        string                   `json:"CapaianUnitLalu"`
+	TargetUnit             string                   `json:"TargetUnit"`
+	Output                 string                   `json:"Output"`
+	Outcome                string                   `json:"Outcome"`
+	Status                 string                   `json:"Status"`
+	CatatanPenolakan       string                   `json:"CatatanPenolakan"`
+	StatusVerifikator      string                   `json:"StatusVerifikator"`
+	CatatanVerifikator     string                   `json:"CatatanVerifikator"`
+	StatusAnggaran         string                   `json:"StatusAnggaran"`
+	CatatanAnggaran        string                   `json:"CatatanAnggaran"`
+	TypeFakultasUnit       string                   `json:"TypeFakultasUnit"`
+	ParentFakultas         string                   `json:"ParentFakultas"`
+	PIC                    string                   `json:"PIC"`
+	BebanYayasan           bool                     `json:"BebanYayasan"`
+	IsBatal                bool                     `json:"IsBatal"`
+	CatatanBatal           string                   `json:"CatatanBatal"`
+	DeletedAt              *time.Time               `json:"DeletedAt"`
+	DeletedBy              *int                     `json:"DeletedBy"`
+	DeletedByName          string                   `json:"DeletedByName"`
+	CatatanHapus           string                   `json:"CatatanHapus"`
+	DuplicateDeletedCount  int64                    `gorm:"-" json:"DuplicateDeletedCount"`
+	DuplicateDeletedTitles []DuplicateDeletedProker `gorm:"-" json:"DuplicateDeletedTitles,omitempty"`
+	TotalAktivitas         int64                    `json:"TotalAktivitas"`
+	TotalAnggaran          float64                  `json:"TotalAnggaran"`
+	TotalRealisasi         float64                  `json:"TotalRealisasi"`
+	HasRealisasi           bool                     `json:"HasRealisasi"`
+	TotalDokumen           int64                    `json:"TotalDokumen"`
+	TotalRisiko            int64                    `json:"TotalRisiko"`
+	TingkatRisiko          string                   `json:"TingkatRisiko"`
+	IkuList                string                   `json:"IkuList"`
+	PaguUnit               float64                  `json:"PaguUnit"`
+	HasPagu                bool                     `json:"HasPagu"`
+	IsMelebihiPagu         bool                     `json:"IsMelebihiPagu"`
+	TotalAnggaranUnit      float64                  `json:"TotalAnggaranUnit"`
+	Scopes                 []ProkerScopeDefault     `gorm:"-" json:"Scopes"`
+	CreatedAt              time.Time                `json:"CreatedAt"`
+	UpdatedAt              time.Time                `json:"UpdatedAt"`
 }
 
 // AktivitasV2Default maps to aktivitasv2 with timelines and files
@@ -112,6 +127,7 @@ type AktivitasV2Default struct {
 	RAB                   string                      `json:"RAB"`
 	RabItems              []AktivitasV2Rab            `json:"RabItems,omitempty"`
 	Realisasi             *float64                    `json:"Realisasi"`
+	CatatanRevisiAnggaran string                      `json:"CatatanRevisiAnggaran"`
 	Pencairan             *float64                    `json:"Pencairan"`
 	Status                string                      `json:"Status"`
 	CatatanPenolakan      string                      `json:"CatatanPenolakan"`

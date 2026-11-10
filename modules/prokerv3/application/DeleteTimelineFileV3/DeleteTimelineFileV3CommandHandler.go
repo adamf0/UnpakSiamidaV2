@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -32,7 +33,13 @@ func (h *DeleteTimelineFileV3CommandHandler) Handle(ctx context.Context, cmd Del
 		return "", err
 	}
 
-	if fileObj.File != "" {
+	isLink := strings.EqualFold(strings.TrimSpace(fileObj.FileType), "link") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(fileObj.FileURL)), "http://") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(fileObj.FileURL)), "https://") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(fileObj.File)), "http://") ||
+		strings.HasPrefix(strings.ToLower(strings.TrimSpace(fileObj.File)), "https://")
+
+	if !isLink && fileObj.File != "" {
 		_ = os.Remove(fileObj.File)
 		if fileObj.FileURL != "" {
 			_ = os.Remove("." + fileObj.FileURL)

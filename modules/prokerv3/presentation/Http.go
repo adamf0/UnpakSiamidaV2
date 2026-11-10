@@ -326,6 +326,9 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
 			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 			if err == nil && existing != nil {
+				if existing.DeletedAt != nil {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah dihapus dan tidak dapat diubah"})
+				}
 				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
 					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 				}
@@ -424,6 +427,14 @@ func UpdateBatalProkerHandler(c *fiber.Ctx) error {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 			}
 		}
+
+		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now())
+		if errSetting != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memeriksa pengaturan Proker Batal"})
+		}
+		if !batalSetting.IsActive {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": batalSetting.Message})
+		}
 	}
 
 	var newBatal bool
@@ -510,6 +521,14 @@ func UpdateBatalAktivitasHandler(c *fiber.Ctx) error {
 		if !canAccessProkerUnit(c, fuID, "", "") {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
+
+		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now())
+		if errSetting != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memeriksa pengaturan Proker Batal"})
+		}
+		if !batalSetting.IsActive {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": batalSetting.Message})
+		}
 	}
 
 	var newBatal bool
@@ -542,29 +561,126 @@ func UpdateBatalAktivitasHandler(c *fiber.Ctx) error {
 }
 
 // =======================================================
-// DELETE /proker_v3/:uuid (Delete matrix_proker & children)
+// DELETE /proker_v3/:uuid (Soft Delete unit / Delete admin)
 // =======================================================
+func resolveActorForDelete(c *fiber.Ctx, level string) (role string, actorID *int, actorName string, actorUsername string) {
+	role = strings.ToLower(strings.TrimSpace(level))
+	if role == "" {
+		role = "user"
+	}
+
+	if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
+		actorUsername = strings.TrimSpace(u.NidnUsername)
+		actorName = strings.TrimSpace(u.Name)
+		if actorName == "" {
+			actorName = actorUsername
+		}
+		if dbInstance != nil {
+			var userRow struct {
+				ID   int    `gorm:"column:id"`
+				Name string `gorm:"column:name"`
+			}
+			q := dbInstance.WithContext(c.Context()).Table("users").Select("id, name")
+			if strings.TrimSpace(u.UUID) != "" {
+				q = q.Where("uuid = ?", strings.TrimSpace(u.UUID))
+			} else if actorUsername != "" {
+				q = q.Where("nidn_username = ?", actorUsername)
+			}
+			if err := q.First(&userRow).Error; err == nil && userRow.ID > 0 {
+				actorID = &userRow.ID
+				if actorName == "" && strings.TrimSpace(userRow.Name) != "" {
+					actorName = strings.TrimSpace(userRow.Name)
+				}
+			}
+		}
+	}
+	if actorName == "" {
+		actorName = strings.ToUpper(role)
+	}
+	return role, actorID, actorName, actorUsername
+}
+
 func DeleteProkerV3Handlerfunc(c *fiber.Ctx) error {
 	rawUuid := c.Params("uuid")
 	if rawUuid == "" {
 		rawUuid = c.Query("uuid")
 	}
 
+	parsedUuid, err := uuid.Parse(strings.TrimSpace(rawUuid))
+	if err != nil {
+		return commoninfra.HandleError(c, domain.ProkerNotFound())
+	}
+
+	query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
+	existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+	if existing == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
+	}
+
 	level, _ := commonpresentation.GetUserInfo(c)
-	if level != "admin" {
-		parsedUuid, err := uuid.Parse(rawUuid)
-		if err == nil {
-			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
-			if err == nil && existing != nil {
-				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
-					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
-				}
-			}
+	isAdmin := strings.EqualFold(strings.TrimSpace(level), "admin")
+
+	if !isAdmin {
+		if existing.DeletedAt != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah berada di tab Buang"})
+		}
+		if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 	}
 
-	cmd := deleteProker.DeleteProkerV3Command{UUID: rawUuid}
+	type deleteProkerBody struct {
+		Catatan      string `json:"catatan"`
+		Alasan       string `json:"alasan"`
+		CatatanHapus string `json:"catatan_hapus"`
+	}
+	var body deleteProkerBody
+	_ = c.BodyParser(&body)
+
+	catatan := strings.TrimSpace(body.Catatan)
+	if catatan == "" {
+		catatan = strings.TrimSpace(body.Alasan)
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(body.CatatanHapus)
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.FormValue("catatan"))
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.FormValue("alasan"))
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.FormValue("catatan_hapus"))
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.Query("catatan"))
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.Query("alasan"))
+	}
+	if catatan == "" {
+		catatan = strings.TrimSpace(c.Query("catatan_hapus"))
+	}
+
+	softDelete := !isAdmin || catatan != ""
+	if softDelete && existing.DeletedAt != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah berada di tab Buang"})
+	}
+
+	role, actorID, actorName, actorUsername := resolveActorForDelete(c, level)
+	cmd := deleteProker.DeleteProkerV3Command{
+		UUID:          parsedUuid.String(),
+		SoftDelete:    softDelete,
+		Catatan:       catatan,
+		Role:          role,
+		ActorID:       actorID,
+		ActorName:     actorName,
+		ActorUsername: actorUsername,
+	}
 	deletedUUID, err := mediatr.Send[deleteProker.DeleteProkerV3Command, string](c.Context(), cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
@@ -831,17 +947,19 @@ func CreateAktivitasHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	if level != "admin" {
-		parsedUuid, err := uuid.Parse(rawUuid)
-		if err == nil {
-			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
-			if err == nil && existing != nil {
-				if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
-					return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-						"error": "Akses ditolak: Program kerja bukan milik unit yang ditugaskan",
-					})
-				}
+	if parsedUuid, err := uuid.Parse(rawUuid); err == nil {
+		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
+		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+		if err == nil && existing != nil {
+			if existing.DeletedAt != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Program kerja sudah dihapus dan tidak dapat ditambah aktivitas",
+				})
+			}
+			if level != "admin" && !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit) {
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": "Akses ditolak: Program kerja bukan milik unit yang ditugaskan",
+				})
 			}
 		}
 	}
@@ -958,6 +1076,25 @@ func UpdateAktivitasHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("realisasi"); val != "" {
 		if r, err := strconv.ParseFloat(val, 64); err == nil {
 			cmd.Realisasi = &r
+		}
+	}
+	if mf, errMf := c.MultipartForm(); errMf == nil && mf != nil {
+		if vals, ok := mf.Value["catatan_revisi_anggaran"]; ok {
+			v := ""
+			if len(vals) > 0 {
+				v = strings.TrimSpace(vals[0])
+			}
+			cmd.CatatanRevisiAnggaran = &v
+		}
+	}
+	if cmd.CatatanRevisiAnggaran == nil && c.Context().PostArgs().Has("catatan_revisi_anggaran") {
+		v := strings.TrimSpace(string(c.Context().PostArgs().Peek("catatan_revisi_anggaran")))
+		cmd.CatatanRevisiAnggaran = &v
+	}
+	if cmd.CatatanRevisiAnggaran == nil {
+		if val := c.FormValue("catatan_revisi_anggaran"); val != "" {
+			v := strings.TrimSpace(val)
+			cmd.CatatanRevisiAnggaran = &v
 		}
 	}
 	if val := c.FormValue("pencairan"); val != "" {
@@ -1780,6 +1917,25 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 	})
 }
 
+type timelineLinkPayload struct {
+	URL        string `json:"url"`
+	LinkURL    string `json:"link_url"`
+	NamaFile   string `json:"nama_file"`
+	Title      string `json:"title"`
+	Judul      string `json:"judul"`
+	Keterangan string `json:"keterangan"`
+}
+
+type uploadTimelineLinksRequest struct {
+	URL        string                `json:"url"`
+	LinkURL    string                `json:"link_url"`
+	NamaFile   string                `json:"nama_file"`
+	Title      string                `json:"title"`
+	Judul      string                `json:"judul"`
+	Keterangan string                `json:"keterangan"`
+	Links      []timelineLinkPayload `json:"links"`
+}
+
 // =======================================================
 // POST /proker_v3/timeline/:timeline_uuid/files
 // =======================================================
@@ -1798,67 +1954,189 @@ func UploadTimelineFilesHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Timeline tidak ditemukan"})
 	}
 
-	form, err := c.MultipartForm()
-	if err != nil || form == nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Gagal membaca file upload: " + err.Error()})
+	contentType := strings.ToLower(strings.TrimSpace(c.Get("Content-Type")))
+	var fileHeaders []*multipart.FileHeader
+	var linkPayloads []timelineLinkPayload
+	var defaultKeterangan string
+
+	if strings.HasPrefix(contentType, "application/json") {
+		var req uploadTimelineLinksRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format JSON tautan bukti tidak valid"})
+		}
+		defaultKeterangan = strings.TrimSpace(req.Keterangan)
+		linkPayloads = append(linkPayloads, req.Links...)
+		if len(linkPayloads) == 0 && (strings.TrimSpace(req.URL) != "" || strings.TrimSpace(req.LinkURL) != "") {
+			linkPayloads = append(linkPayloads, timelineLinkPayload{
+				URL:        req.URL,
+				LinkURL:    req.LinkURL,
+				NamaFile:   req.NamaFile,
+				Title:      req.Title,
+				Judul:      req.Judul,
+				Keterangan: defaultKeterangan,
+			})
+		}
+	} else {
+		if strings.Contains(contentType, "multipart/form-data") {
+			form, err := c.MultipartForm()
+			if err != nil || form == nil {
+				errMsg := "request kosong"
+				if err != nil {
+					errMsg = err.Error()
+				}
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Gagal membaca file upload: " + errMsg})
+			}
+
+			fileHeaders = form.File["files"]
+			if len(fileHeaders) == 0 {
+				fileHeaders = form.File["file"]
+			}
+			if len(fileHeaders) == 0 {
+				fileHeaders = form.File["files[]"]
+			}
+		}
+
+		defaultKeterangan = strings.TrimSpace(c.FormValue("keterangan"))
+		if linksRaw := strings.TrimSpace(c.FormValue("links")); linksRaw != "" {
+			if err := json.Unmarshal([]byte(linksRaw), &linkPayloads); err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format daftar tautan bukti tidak valid"})
+			}
+		}
+
+		singleURL := strings.TrimSpace(c.FormValue("url"))
+		if singleURL == "" {
+			singleURL = strings.TrimSpace(c.FormValue("link_url"))
+		}
+		if singleURL != "" {
+			linkPayloads = append(linkPayloads, timelineLinkPayload{
+				URL:        singleURL,
+				NamaFile:   c.FormValue("nama_file"),
+				Title:      c.FormValue("title"),
+				Judul:      c.FormValue("judul"),
+				Keterangan: defaultKeterangan,
+			})
+		}
 	}
 
-	fileHeaders := form.File["files"]
-	if len(fileHeaders) == 0 {
-		fileHeaders = form.File["file"]
-	}
-	if len(fileHeaders) == 0 {
-		fileHeaders = form.File["files[]"]
-	}
-	if len(fileHeaders) == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tidak ada file yang dipilih untuk diupload"})
+	if len(fileHeaders) == 0 && len(linkPayloads) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Pilih minimal 1 berkas file atau masukkan 1 tautan link bukti"})
 	}
 
-	keterangan := c.FormValue("keterangan")
-	uploadDir := resolveTimelineUploadDir(c.Context(), timeline)
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
+	for _, fh := range fileHeaders {
+		if err := ValidateTimelineUploadFile(fh.Filename, fh.Size); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
+
+	type validatedLink struct {
+		normalizedURL string
+		namaFile      string
+		keterangan    string
+	}
+	validatedLinks := make([]validatedLink, 0, len(linkPayloads))
+	for _, lp := range linkPayloads {
+		rawURL := strings.TrimSpace(lp.URL)
+		if rawURL == "" {
+			rawURL = strings.TrimSpace(lp.LinkURL)
+		}
+		normalizedURL, fallbackName, err := ValidateTimelineLinkURL(rawURL)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		displayName := strings.TrimSpace(lp.NamaFile)
+		if displayName == "" {
+			displayName = strings.TrimSpace(lp.Judul)
+		}
+		if displayName == "" {
+			displayName = strings.TrimSpace(lp.Title)
+		}
+		if displayName == "" {
+			displayName = fallbackName
+		}
+		displayName = ClampRunes(displayName, MaxTimelineNamaFileRunes)
+
+		ket := strings.TrimSpace(lp.Keterangan)
+		if ket == "" {
+			ket = defaultKeterangan
+		}
+
+		validatedLinks = append(validatedLinks, validatedLink{
+			normalizedURL: normalizedURL,
+			namaFile:      displayName,
+			keterangan:    ket,
+		})
 	}
 
 	var filesToInsert []domain.ProkerTimelineFileV3
-	for _, fh := range fileHeaders {
-		ext := filepath.Ext(fh.Filename)
-		fileUUID := uuid.New()
-		savedName := fmt.Sprintf("proker-%s%s", fileUUID.String(), ext)
-		destPath := filepath.Join(uploadDir, savedName)
+	var savedDiskPaths []string
 
-		if err := c.SaveFile(fh, destPath); err != nil {
-			continue
+	if len(fileHeaders) > 0 {
+		uploadDir := resolveTimelineUploadDir(c.Context(), timeline)
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 		}
 
-		relURL := filepath.ToSlash(destPath)
-		if !strings.HasPrefix(relURL, "/") {
-			relURL = "/" + strings.TrimPrefix(relURL, "./")
-		}
+		for _, fh := range fileHeaders {
+			ext := filepath.Ext(fh.Filename)
+			fileUUID := uuid.New()
+			savedName := fmt.Sprintf("proker-%s%s", fileUUID.String(), ext)
+			destPath := filepath.Join(uploadDir, savedName)
 
+			if err := c.SaveFile(fh, destPath); err != nil {
+				for _, p := range savedDiskPaths {
+					_ = os.Remove(p)
+				}
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyimpan berkas bukti: " + err.Error()})
+			}
+			savedDiskPaths = append(savedDiskPaths, destPath)
+
+			relURL := filepath.ToSlash(destPath)
+			if !strings.HasPrefix(relURL, "/") {
+				relURL = "/" + strings.TrimPrefix(relURL, "./")
+			}
+
+			filesToInsert = append(filesToInsert, domain.ProkerTimelineFileV3{
+				UUID:                  fileUUID,
+				IdAktivitasV2Timeline: &timeline.ID,
+				IdAktivitasV2:         &timeline.IdAktivitasV2,
+				File:                  destPath,
+				NamaFile:              ClampRunes(fh.Filename, MaxTimelineNamaFileRunes),
+				FileURL:               relURL,
+				FileSize:              fh.Size,
+				FileType:              ClampRunes(fh.Header.Get("Content-Type"), 100),
+				Keterangan:            defaultKeterangan,
+			})
+		}
+	}
+
+	for _, vl := range validatedLinks {
 		filesToInsert = append(filesToInsert, domain.ProkerTimelineFileV3{
-			UUID:                  fileUUID,
+			UUID:                  uuid.New(),
 			IdAktivitasV2Timeline: &timeline.ID,
 			IdAktivitasV2:         &timeline.IdAktivitasV2,
-			File:                  destPath,
-			NamaFile:              fh.Filename,
-			FileURL:               relURL,
-			FileSize:              fh.Size,
-			FileType:              fh.Header.Get("Content-Type"),
-			Keterangan:            keterangan,
+			File:                  vl.normalizedURL,
+			NamaFile:              vl.namaFile,
+			FileURL:               vl.normalizedURL,
+			FileSize:              0,
+			FileType:              "link",
+			Keterangan:            vl.keterangan,
 		})
 	}
 
 	if len(filesToInsert) > 0 {
 		if err := repoProker.AddTimelineFiles(c.Context(), filesToInsert); err != nil {
+			for _, p := range savedDiskPaths {
+				_ = os.Remove(p)
+			}
 			return commoninfra.HandleError(c, err)
 		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "File berhasil diunggah",
+		"message": "Bukti dukung berhasil disimpan",
 		"count":   len(filesToInsert),
 		"files":   filesToInsert,
+		"data":    filesToInsert,
 	})
 }
 
@@ -1892,7 +2170,15 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 	chunkIndex, _ := strconv.Atoi(c.FormValue("chunk_index"))
 	totalChunks, _ := strconv.Atoi(c.FormValue("total_chunks"))
 	chunkOffset, _ := strconv.ParseInt(c.FormValue("chunk_offset"), 10, 64)
-	totalSize, _ := strconv.ParseInt(c.FormValue("total_size"), 10, 64)
+	totalSizeRaw := strings.TrimSpace(c.FormValue("total_size"))
+	var totalSize int64
+	if totalSizeRaw != "" {
+		parsedTotalSize, parseErr := strconv.ParseInt(totalSizeRaw, 10, 64)
+		if parseErr != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Ukuran total file tidak valid"})
+		}
+		totalSize = parsedTotalSize
+	}
 	fileName := strings.TrimSpace(c.FormValue("file_name"))
 	keterangan := strings.TrimSpace(c.FormValue("keterangan"))
 
@@ -1904,12 +2190,31 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tidak ada binary chunk yang dikirim"})
 	}
 
+	effectiveName := fileName
+	if effectiveName == "" {
+		effectiveName = fileHeader.Filename
+	}
+	expectedSize := totalSize
+	if expectedSize <= 0 {
+		expectedSize = fileHeader.Size
+	}
+
 	tmpDir := "./upload/tmp"
+	partPath := filepath.Join(tmpDir, fmt.Sprintf("%s.part", fileUUID.String()))
+
+	if err := ValidateTimelineUploadFile(effectiveName, expectedSize); err != nil {
+		_ = os.Remove(partPath)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	if chunkOffset < 0 || chunkOffset+fileHeader.Size > MaxTimelineUploadBytes {
+		_ = os.Remove(partPath)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Ukuran file melebihi batas maksimal 150 MB"})
+	}
+
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyiapkan direktori temporary: " + err.Error()})
 	}
 
-	partPath := filepath.Join(tmpDir, fmt.Sprintf("%s.part", fileUUID.String()))
 	flags := os.O_CREATE | os.O_WRONLY
 	if chunkIndex == 0 && chunkOffset == 0 {
 		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
@@ -1940,15 +2245,22 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 	partFile.Close()
 
 	if totalChunks > 0 && chunkIndex >= totalChunks-1 {
+		if stat, statErr := os.Stat(partPath); statErr == nil {
+			if stat.Size() > MaxTimelineUploadBytes {
+				_ = os.Remove(partPath)
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Ukuran file melebihi batas maksimal 150 MB"})
+			}
+			if totalSize <= 0 {
+				totalSize = stat.Size()
+			}
+		}
+
 		targetDir := resolveTimelineUploadDir(c.Context(), timeline)
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 		}
 
-		ext := filepath.Ext(fileName)
-		if ext == "" {
-			ext = filepath.Ext(fileHeader.Filename)
-		}
+		ext := filepath.Ext(effectiveName)
 		savedFileName := fmt.Sprintf("proker-%s%s", fileUUID.String(), ext)
 		destPath := filepath.Join(targetDir, savedFileName)
 
@@ -1969,10 +2281,10 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 			IdAktivitasV2Timeline: &timeline.ID,
 			IdAktivitasV2:         &timeline.IdAktivitasV2,
 			File:                  destPath,
-			NamaFile:              fileName,
+			NamaFile:              ClampRunes(effectiveName, MaxTimelineNamaFileRunes),
 			FileURL:               relURL,
 			FileSize:              totalSize,
-			FileType:              fileHeader.Header.Get("Content-Type"),
+			FileType:              ClampRunes(fileHeader.Header.Get("Content-Type"), 100),
 			Keterangan:            keterangan,
 		}
 
@@ -2001,10 +2313,11 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 // =======================================================
 func CancelTimelineFileChunkHandler(c *fiber.Ctx) error {
 	uploadIDStr := strings.TrimSpace(c.Params("upload_id"))
-	if uploadIDStr == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing upload_id"})
+	fileUUID, err := uuid.Parse(uploadIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid upload_id (must be UUID)"})
 	}
-	partPath := filepath.Join("./upload/tmp", fmt.Sprintf("%s.part", uploadIDStr))
+	partPath := filepath.Join("./upload/tmp", fmt.Sprintf("%s.part", fileUUID.String()))
 	_ = os.Remove(partPath)
 	return c.JSON(fiber.Map{"message": "Upload berkas bukti dibatalkan dan file temporary dihapus"})
 }
@@ -2025,6 +2338,9 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 	}
 	if proker == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
+	}
+	if proker.DeletedAt != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah dihapus dan tidak dapat mengunggah dokumen"})
 	}
 
 	uploadIDStr := strings.TrimSpace(c.FormValue("upload_id"))
@@ -2192,6 +2508,9 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 	if proker == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Program kerja tidak ditemukan"})
 	}
+	if proker.DeletedAt != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah dihapus dan tidak dapat mengunggah dokumen"})
+	}
 
 	form, err := c.MultipartForm()
 	if err != nil || form == nil {
@@ -2295,10 +2614,17 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB, dbs ...*gorm.DB) {
 	}
 	repoProker = infra.NewProkerV3Repository(db, dbIku)
 	dbInstance = db
-	_ = db.AutoMigrate(&domain.JadwalProkerV3{}, &domain.JadwalAktivitasV3{})
+	_ = db.AutoMigrate(&domain.JadwalProkerV3{})
+	_ = ensureAppSettingsTable(db)
 
 	roles := []string{"admin", "auditee", "fakultas", "unit", "user", "upml", "upmf", "upms", "anggaran", "keuangan", "evaluator"}
 	whoamiURL := "http://localhost:3000/whoami"
+
+	// App Settings (Proker Batal activation date)
+	adminRoles := []string{"admin"}
+	app.Get("/settings/proker-batal", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetProkerBatalSettingHandler)
+	app.Put("/settings/proker-batal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), UpdateProkerBatalSettingHandler)
+	app.Patch("/settings/proker-batal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), UpdateProkerBatalSettingHandler)
 
 	// 1. Options & Target Unpak & COA
 	app.Get("/proker_v3_options", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetProkerV3OptionsHandler)
@@ -2306,7 +2632,6 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB, dbs ...*gorm.DB) {
 	app.Get("/proker_v3/coa", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetCoaHandler)
 
 	// Jadwal Proker V3 CRUD & Status Check (Didaftarkan sebelum /proker_v3/:uuid agar tidak tertabrak route param :uuid)
-	adminRoles := []string{"admin"}
 	app.Get("/proker_v3/jadwal", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllJadwalProkerV3Handler)
 	app.Get("/proker_v3/jadwal_status", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), CheckJadwalProkerV3Handler)
 	app.Get("/proker_v3/jadwal/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetJadwalProkerV3Handler)
@@ -2314,13 +2639,6 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB, dbs ...*gorm.DB) {
 	app.Put("/proker_v3/jadwal/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), UpdateJadwalProkerV3Handler)
 	app.Delete("/proker_v3/jadwal/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), DeleteJadwalProkerV3Handler)
 
-	// Jadwal Aktivitas V3 CRUD & Status Check (Pengaturan Buka/Tutup Tambah Aktivitas Baru)
-	app.Get("/proker_v3/jadwal_aktivitas", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllJadwalAktivitasV3Handler)
-	app.Get("/proker_v3/jadwal_aktivitas_status", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), CheckJadwalAktivitasV3Handler)
-	app.Get("/proker_v3/jadwal_aktivitas/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetJadwalAktivitasV3Handler)
-	app.Post("/proker_v3/jadwal_aktivitas", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), CreateJadwalAktivitasV3Handler)
-	app.Put("/proker_v3/jadwal_aktivitas/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), UpdateJadwalAktivitasV3Handler)
-	app.Delete("/proker_v3/jadwal_aktivitas/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(adminRoles, whoamiURL), DeleteJadwalAktivitasV3Handler)
 
 	// Pagu Anggaran CRUD
 	app.Get("/pagu_anggaran", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllPaguAnggaranHandler)
@@ -2842,481 +3160,6 @@ func DeleteJadwalProkerV3Handler(c *fiber.Ctx) error {
 }
 
 // =======================================================
-// JADWAL AKTIVITAS V3 CRUD & STATUS CHECK
-// =======================================================
-
-type JadwalAktivitasV3Row struct {
-	domain.JadwalAktivitasV3
-	NamaFakultasUnit string `json:"nama_fakultas_unit"`
-	TypeFakultasUnit string `json:"type_fakultas_unit"`
-}
-
-func GetAllJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	search := strings.TrimSpace(c.Query("search"))
-	tahun := strings.TrimSpace(c.Query("tahun"))
-	filterUnit := strings.TrimSpace(c.Query("filter_unit"))
-
-	var list []JadwalAktivitasV3Row
-	query := dbInstance.WithContext(c.Context()).
-		Table("jadwal_aktivitas_v3 j").
-		Select("j.*, COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit, COALESCE(fu.type, '') as type_fakultas_unit").
-		Joins("LEFT JOIN v_fakultas_unit fu ON j.id_fakultas_unit = fu.id")
-
-	if tahun != "" && tahun != "all" {
-		query = query.Where("j.tahun = ?", tahun)
-	}
-	if filterUnit == "global" {
-		query = query.Where("j.id_fakultas_unit IS NULL OR j.id_fakultas_unit = 0")
-	} else if filterUnit == "specific" {
-		query = query.Where("j.id_fakultas_unit IS NOT NULL AND j.id_fakultas_unit > 0")
-	} else if filterUnit != "" && filterUnit != "all" {
-		query = query.Where("j.id_fakultas_unit = ?", filterUnit)
-	}
-	if search != "" {
-		likeSearch := "%" + search + "%"
-		query = query.Where("(j.tahun LIKE ? OR fu.nama_fak_prod_unit LIKE ?)", likeSearch, likeSearch)
-	}
-
-	if err := query.Order("j.tahun DESC, (j.id_fakultas_unit IS NULL) DESC, j.tanggal_mulai ASC").Find(&list).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	now := time.Now()
-	res := make([]domain.JadwalAktivitasV3DTO, 0, len(list))
-	for _, item := range list {
-		startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
-		endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
-
-		status := "berjalan"
-		statusLabel := "Sedang Dibuka"
-		if now.Before(startOfDay) {
-			status = "belum_dibuka"
-			statusLabel = "Belum Dibuka"
-		} else if now.After(endOfDay) {
-			status = "ditutup"
-			statusLabel = "Ditutup"
-		}
-
-		namaUnit := item.NamaFakultasUnit
-		typeUnit := item.TypeFakultasUnit
-		if item.IdFakultasUnit == nil || *item.IdFakultasUnit == 0 {
-			namaUnit = "Semua Unit / Fakultas (Global)"
-			typeUnit = "all"
-		}
-
-		res = append(res, domain.JadwalAktivitasV3DTO{
-			ID:               item.ID,
-			UUID:             item.UUID.String(),
-			Tahun:            item.Tahun,
-			TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
-			TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
-			IdFakultasUnit:   item.IdFakultasUnit,
-			NamaFakultasUnit: namaUnit,
-			TypeFakultasUnit: typeUnit,
-			Status:           status,
-			StatusLabel:      statusLabel,
-			CreatedAt:        item.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:        item.UpdatedAt.Format("2006-01-02 15:04:05"),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"data":  res,
-		"total": len(res),
-	})
-}
-
-func GetJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	rawUuid := c.Params("uuid")
-	parsedUuid, err := uuid.Parse(rawUuid)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
-	}
-
-	var item JadwalAktivitasV3Row
-	if err := dbInstance.WithContext(c.Context()).
-		Table("jadwal_aktivitas_v3 j").
-		Select("j.*, COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit, COALESCE(fu.type, '') as type_fakultas_unit").
-		Joins("LEFT JOIN v_fakultas_unit fu ON j.id_fakultas_unit = fu.id").
-		Where("j.uuid = ?", parsedUuid).First(&item).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal aktivitas tidak ditemukan"})
-	}
-
-	now := time.Now()
-	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
-	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
-
-	status := "berjalan"
-	statusLabel := "Sedang Dibuka"
-	if now.Before(startOfDay) {
-		status = "belum_dibuka"
-		statusLabel = "Belum Dibuka"
-	} else if now.After(endOfDay) {
-		status = "ditutup"
-		statusLabel = "Ditutup"
-	}
-
-	namaUnit := item.NamaFakultasUnit
-	typeUnit := item.TypeFakultasUnit
-	if item.IdFakultasUnit == nil || *item.IdFakultasUnit == 0 {
-		namaUnit = "Semua Unit / Fakultas (Global)"
-		typeUnit = "all"
-	}
-
-	return c.JSON(domain.JadwalAktivitasV3DTO{
-		ID:               item.ID,
-		UUID:             item.UUID.String(),
-		Tahun:            item.Tahun,
-		TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
-		TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
-		IdFakultasUnit:   item.IdFakultasUnit,
-		NamaFakultasUnit: namaUnit,
-		TypeFakultasUnit: typeUnit,
-		Status:           status,
-		StatusLabel:      statusLabel,
-		CreatedAt:        item.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:        item.UpdatedAt.Format("2006-01-02 15:04:05"),
-	})
-}
-
-func CheckJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	tahun := strings.TrimSpace(c.Query("tahun"))
-	if tahun == "" {
-		tahun = "2027"
-	}
-
-	unitParam := strings.TrimSpace(c.Query("id_fakultas_unit"))
-	if unitParam == "" {
-		unitParam = strings.TrimSpace(c.Query("fakultas_unit"))
-	}
-
-	var targetUnitID uint64
-	var targetUnitName string
-	var parentFakultasID uint64
-
-	if unitParam != "" && unitParam != "all" && unitParam != "0" {
-		var fu struct {
-			ID       uint64 `gorm:"column:id"`
-			Nama     string `gorm:"column:nama_fak_prod_unit"`
-			Type     string `gorm:"column:type"`
-			Fakultas string `gorm:"column:fakultas"`
-		}
-		var qFu *gorm.DB
-		if _, errU := uuid.Parse(unitParam); errU == nil {
-			qFu = dbInstance.WithContext(c.Context()).Table("v_fakultas_unit").Where("uuid = ?", unitParam)
-		} else {
-			qFu = dbInstance.WithContext(c.Context()).Table("v_fakultas_unit").Where("id = ?", unitParam)
-		}
-		if errTake := qFu.Take(&fu).Error; errTake == nil {
-			targetUnitID = fu.ID
-			targetUnitName = fu.Nama
-
-			if strings.EqualFold(fu.Type, "prodi") && fu.Fakultas != "" {
-				var parentFu struct {
-					ID uint64 `gorm:"column:id"`
-				}
-				if errP := dbInstance.WithContext(c.Context()).Table("v_fakultas_unit").
-					Select("id").
-					Where("LOWER(TRIM(nama_fak_prod_unit)) = ? AND LOWER(type) = 'fakultas'", strings.ToLower(strings.TrimSpace(fu.Fakultas))).
-					Take(&parentFu).Error; errP == nil {
-					parentFakultasID = parentFu.ID
-				}
-			}
-		}
-	}
-
-	if targetUnitName == "" && c.Query("nama_fakultas_unit") != "" {
-		targetUnitName = strings.TrimSpace(c.Query("nama_fakultas_unit"))
-	}
-
-	var item domain.JadwalAktivitasV3
-	found := false
-	isUnitSpecific := false
-
-	// 1. Check specific unit schedule
-	if targetUnitID > 0 {
-		if errFind := dbInstance.WithContext(c.Context()).
-			Where("tahun = ? AND id_fakultas_unit = ?", tahun, targetUnitID).
-			Order("id DESC").First(&item).Error; errFind == nil {
-			found = true
-			isUnitSpecific = true
-		}
-	}
-
-	// 2. If prodi and not found, check parent fakultas schedule
-	if !found && parentFakultasID > 0 {
-		if errFind := dbInstance.WithContext(c.Context()).
-			Where("tahun = ? AND id_fakultas_unit = ?", tahun, parentFakultasID).
-			Order("id DESC").First(&item).Error; errFind == nil {
-			found = true
-			isUnitSpecific = true
-		}
-	}
-
-	// 3. Fallback to global schedule (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)
-	if !found {
-		if errFind := dbInstance.WithContext(c.Context()).
-			Where("tahun = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", tahun).
-			Order("id DESC").First(&item).Error; errFind == nil {
-			found = true
-			isUnitSpecific = false
-		}
-	}
-
-	if !found {
-		unitSuffix := ""
-		if targetUnitName != "" {
-			unitSuffix = fmt.Sprintf(" (%s)", targetUnitName)
-		}
-		return c.JSON(fiber.Map{
-			"has_schedule":       false,
-			"is_open":            false,
-			"status":             "ditutup",
-			"status_label":       "Ditutup",
-			"tahun":              tahun,
-			"is_unit_specific":   false,
-			"nama_fakultas_unit": targetUnitName,
-			"message":            fmt.Sprintf("Jadwal pembuatan aktivitas kegiatan tahun %s%s belum dibuka atau belum diatur oleh admin", tahun, unitSuffix),
-		})
-	}
-
-	now := time.Now()
-	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
-	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
-
-	formatTanggalIndo := func(t time.Time) string {
-		bulan := []string{
-			"", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-			"Juli", "Agustus", "September", "Oktober", "November", "Desember",
-		}
-		m := int(t.Month())
-		if m >= 1 && m <= 12 {
-			return fmt.Sprintf("%02d %s %d", t.Day(), bulan[m], t.Year())
-		}
-		return t.Format("02-01-2006")
-	}
-
-	isOpen := true
-	status := "berjalan"
-	statusLabel := "Sedang Dibuka"
-
-	unitSuffix := ""
-	if targetUnitName != "" {
-		unitSuffix = fmt.Sprintf(" (%s)", targetUnitName)
-	}
-
-	message := fmt.Sprintf("Pembuatan aktivitas kegiatan tahun %s%s dibuka dari %s s/d %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
-
-	if now.Before(startOfDay) {
-		isOpen = false
-		status = "belum_dibuka"
-		statusLabel = "Belum Dibuka"
-		message = fmt.Sprintf("Pembuatan aktivitas kegiatan tahun %s%s belum dibuka. Jadwal: %s s/d %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
-	} else if now.After(endOfDay) {
-		isOpen = false
-		status = "ditutup"
-		statusLabel = "Ditutup"
-		message = fmt.Sprintf("Pembuatan aktivitas kegiatan tahun %s%s telah ditutup pada %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalAkhir))
-	}
-
-	return c.JSON(fiber.Map{
-		"has_schedule":       true,
-		"is_open":            isOpen,
-		"status":             status,
-		"status_label":       statusLabel,
-		"tahun":              item.Tahun,
-		"tanggal_mulai":      item.TanggalMulai.Format("2006-01-02"),
-		"tanggal_akhir":      item.TanggalAkhir.Format("2006-01-02"),
-		"id_fakultas_unit":   item.IdFakultasUnit,
-		"is_unit_specific":   isUnitSpecific,
-		"nama_fakultas_unit": targetUnitName,
-		"message":            message,
-	})
-}
-
-func CreateJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	type FormInput struct {
-		Tahun          string  `json:"tahun" form:"tahun"`
-		TanggalMulai   string  `json:"tanggal_mulai" form:"tanggal_mulai"`
-		TanggalAkhir   string  `json:"tanggal_akhir" form:"tanggal_akhir"`
-		IdFakultasUnit *string `json:"id_fakultas_unit" form:"id_fakultas_unit"`
-	}
-
-	var req FormInput
-	req.Tahun = strings.TrimSpace(c.FormValue("tahun"))
-	req.TanggalMulai = strings.TrimSpace(c.FormValue("tanggal_mulai"))
-	req.TanggalAkhir = strings.TrimSpace(c.FormValue("tanggal_akhir"))
-
-	if req.Tahun == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tahun wajib diisi"})
-	}
-	if req.TanggalMulai == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal mulai wajib diisi"})
-	}
-	if req.TanggalAkhir == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir wajib diisi"})
-	}
-
-	tMulai, errM := time.Parse("2006-01-02", req.TanggalMulai)
-	if errM != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
-	}
-	tAkhir, errA := time.Parse("2006-01-02", req.TanggalAkhir)
-	if errA != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
-	}
-
-	if tAkhir.Before(tMulai) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir tidak boleh lebih awal dari tanggal mulai"})
-	}
-
-	var fuIdPtr *uint64
-	rawFu := strings.TrimSpace(c.FormValue("id_fakultas_unit"))
-	if rawFu != "" && rawFu != "0" && rawFu != "all" && rawFu != "null" {
-		if val, err := strconv.ParseUint(rawFu, 10, 64); err == nil && val > 0 {
-			fuIdPtr = &val
-		}
-	}
-
-	newJadwal := domain.JadwalAktivitasV3{
-		UUID:           uuid.New(),
-		Tahun:          req.Tahun,
-		TanggalMulai:   tMulai,
-		TanggalAkhir:   tAkhir,
-		IdFakultasUnit: fuIdPtr,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-
-	if err := dbInstance.WithContext(c.Context()).Create(&newJadwal).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "Jadwal aktivitas berhasil ditambahkan",
-		"uuid":    newJadwal.UUID.String(),
-		"data":    newJadwal,
-	})
-}
-
-func UpdateJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	rawUuid := c.Params("uuid")
-	parsedUuid, err := uuid.Parse(rawUuid)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
-	}
-
-	var item domain.JadwalAktivitasV3
-	if err := dbInstance.WithContext(c.Context()).Where("uuid = ?", parsedUuid).First(&item).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal aktivitas tidak ditemukan"})
-	}
-
-	type FormInput struct {
-		Tahun          string  `json:"tahun" form:"tahun"`
-		TanggalMulai   string  `json:"tanggal_mulai" form:"tanggal_mulai"`
-		TanggalAkhir   string  `json:"tanggal_akhir" form:"tanggal_akhir"`
-		IdFakultasUnit *string `json:"id_fakultas_unit" form:"id_fakultas_unit"`
-	}
-
-	var req FormInput
-	req.Tahun = c.FormValue("tahun")
-	req.TanggalMulai = c.FormValue("tanggal_mulai")
-	req.TanggalAkhir = c.FormValue("tanggal_akhir")
-
-	if req.Tahun != "" {
-		item.Tahun = strings.TrimSpace(req.Tahun)
-	}
-	if req.TanggalMulai != "" {
-		tMulai, errM := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalMulai))
-		if errM != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal mulai harus YYYY-MM-DD"})
-		}
-		item.TanggalMulai = tMulai
-	}
-	if req.TanggalAkhir != "" {
-		tAkhir, errA := time.Parse("2006-01-02", strings.TrimSpace(req.TanggalAkhir))
-		if errA != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format tanggal akhir harus YYYY-MM-DD"})
-		}
-		item.TanggalAkhir = tAkhir
-	}
-
-	rawFu := ""
-	hasFuUpdate := false
-	if req.IdFakultasUnit != nil {
-		rawFu = strings.TrimSpace(*req.IdFakultasUnit)
-		hasFuUpdate = true
-	} else if c.FormValue("id_fakultas_unit") != "" {
-		rawFu = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
-		hasFuUpdate = true
-	}
-
-	if hasFuUpdate {
-		if rawFu == "" || rawFu == "0" || rawFu == "all" || rawFu == "null" {
-			item.IdFakultasUnit = nil
-		} else if val, err := strconv.ParseUint(rawFu, 10, 64); err == nil && val > 0 {
-			item.IdFakultasUnit = &val
-		}
-	}
-
-	if item.TanggalAkhir.Before(item.TanggalMulai) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tanggal akhir tidak boleh lebih awal dari tanggal mulai"})
-	}
-
-	item.UpdatedAt = time.Now()
-	if err := dbInstance.WithContext(c.Context()).Save(&item).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(fiber.Map{
-		"message": "Jadwal aktivitas berhasil diperbarui",
-		"uuid":    item.UUID.String(),
-		"data":    item,
-	})
-}
-
-func DeleteJadwalAktivitasV3Handler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
-	}
-
-	rawUuid := c.Params("uuid")
-	parsedUuid, err := uuid.Parse(rawUuid)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid UUID"})
-	}
-
-	if err := dbInstance.WithContext(c.Context()).Where("uuid = ?", parsedUuid).Delete(&domain.JadwalAktivitasV3{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(fiber.Map{
-		"message": "Jadwal aktivitas berhasil dihapus",
-		"uuid":    rawUuid,
-	})
-}
-
-// =======================================================
 // PAGU ANGGARAN HANDLERS
 // =======================================================
 
@@ -3555,7 +3398,7 @@ func GetUnitPaguSummaryHandler(c *fiber.Ctx) error {
 		`).
 		Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
 		Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-		Where("(mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ? AND COALESCE(mp.beban_yayasan, 0) = 0 AND COALESCE(mp.is_batal, 0) = 0", fuId, fuName, tahun).
+		Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ? AND COALESCE(mp.beban_yayasan, 0) = 0 AND COALESCE(mp.is_batal, 0) = 0", fuId, fuName, tahun).
 		Scan(&prokers).Error
 
 	totalAnggaran := float64(0)
@@ -3625,9 +3468,10 @@ type DashboardMonitoringAktivitas struct {
 	UUID            string                       `json:"uuid"`
 	Aktivitas       string                       `json:"aktivitas"`
 	PIC             string                       `json:"pic"`
-	Capaian         string                       `json:"capaian"`
-	Realisasi       *float64                     `json:"realisasi"`
-	Pencairan       *float64                     `json:"pencairan"`
+	Capaian               string                       `json:"capaian"`
+	Realisasi             *float64                     `json:"realisasi"`
+	CatatanRevisiAnggaran string                       `json:"catatan_revisi_anggaran"`
+	Pencairan             *float64                     `json:"pencairan"`
 	Status          string                       `json:"status"`
 	StatusAnggaran  string                       `json:"status_anggaran"`
 	StatusUpml      string                       `json:"status_upml"`
@@ -3843,7 +3687,7 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
 		Joins("LEFT JOIN master_indikator_renstra mir ON mp.id_indikator = mir.id").
 		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
-		Where("COALESCE(mt.tahun, '') = ?", tahun)
+		Where("mp.deleted_at IS NULL AND COALESCE(mt.tahun, '') = ?", tahun)
 
 	if selectedUnit != "" && selectedUnit != "all" {
 		query = query.Where("mp.id_fakultas_unit = ?", selectedUnit)
@@ -3895,9 +3739,10 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		IdMatrikProker uint     `gorm:"column:id_matrik_proker"`
 		Aktivitas      string   `gorm:"column:aktivitas"`
 		PIC            string   `gorm:"column:pic"`
-		Capaian        string   `gorm:"column:capaian"`
-		Realisasi      *float64 `gorm:"column:realisasi"`
-		Pencairan      *float64 `gorm:"column:pencairan"`
+		Capaian               string   `gorm:"column:capaian"`
+		Realisasi             *float64 `gorm:"column:realisasi"`
+		CatatanRevisiAnggaran string   `gorm:"column:catatan_revisi_anggaran"`
+		Pencairan             *float64 `gorm:"column:pencairan"`
 		Status         string   `gorm:"column:status"`
 		StatusAnggaran string   `gorm:"column:status_anggaran"`
 		StatusUpml     string   `gorm:"column:status_upml"`
@@ -3911,7 +3756,7 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 	var aktivitasIDs []uint
 	if len(prokerIDs) > 0 {
 		_ = dbInstance.WithContext(c.Context()).Table("aktivitasv2").
-			Select("id, uuid, id_matrik_proker, aktivitas, pic, capaian, realisasi, pencairan, status, status_anggaran, status_upml, status_upmf, status_upms, status_lpm, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, capaian, realisasi, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, pencairan, status, status_anggaran, status_upml, status_upmf, status_upms, status_lpm, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
 			Where("id_matrik_proker IN (?)", prokerIDs).
 			Order("id ASC").
 			Scan(&rawAktivitas).Error
@@ -4013,9 +3858,10 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			UUID:            a.UUID,
 			Aktivitas:       a.Aktivitas,
 			PIC:             a.PIC,
-			Capaian:         a.Capaian,
-			Realisasi:       a.Realisasi,
-			Pencairan:       a.Pencairan,
+			Capaian:               a.Capaian,
+			Realisasi:             a.Realisasi,
+			CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
+			Pencairan:             a.Pencairan,
 			Status:          a.Status,
 			StatusAnggaran:  a.StatusAnggaran,
 			StatusUpml:      a.StatusUpml,

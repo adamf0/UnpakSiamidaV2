@@ -6,8 +6,9 @@ type UpdateAktivitasV3Command struct {
 	PIC              string   `json:"pic" form:"pic"`
 	Anggaran         float64  `json:"anggaran" form:"anggaran"`
 	RAB              string   `json:"rab" form:"rab"`
-	Realisasi        *float64 `json:"realisasi" form:"realisasi"`
-	Pencairan        *float64 `json:"pencairan" form:"pencairan"`
+	Realisasi             *float64 `json:"realisasi" form:"realisasi"`
+	CatatanRevisiAnggaran *string  `json:"catatan_revisi_anggaran" form:"catatan_revisi_anggaran"`
+	Pencairan             *float64 `json:"pencairan" form:"pencairan"`
 	LuaranProduk     string   `json:"luaran_produk" form:"luaran_produk"`
 	DokumenReferensi string   `json:"dokumen_referensi" form:"dokumen_referensi"`
 	Status           string   `json:"status" form:"status"`

@@ -3,6 +3,7 @@ package infrastructure
 import (
 	commoninfra "UnpakSiamida/common/infrastructure"
 	login "UnpakSiamida/modules/account/application/Login"
+	updateprofile "UnpakSiamida/modules/account/application/UpdateProfile"
 	who "UnpakSiamida/modules/account/application/Whoami"
 	domain "UnpakSiamida/modules/account/domain"
 
@@ -27,7 +28,15 @@ func RegisterModuleAccount(db *gorm.DB) error {
 		Repo: repoAccount,
 	})
 
+	mediatr.RegisterRequestHandler[
+		updateprofile.UpdateProfileCommand,
+		*domain.Account,
+	](&updateprofile.UpdateProfileCommandHandler{
+		Repo: repoAccount,
+	})
+
 	commoninfra.RegisterValidation(login.LoginCommandValidation, "Login.Validation")
+	commoninfra.RegisterValidation(updateprofile.UpdateProfileCommandValidation, "Account.UpdateProfile.Validation")
 
 	return nil
 }

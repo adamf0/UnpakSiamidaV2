@@ -96,6 +96,35 @@ func ValidateUnpakEmail(value interface{}) error {
 	return nil
 }
 
+// ValidateOptionalEmail validates an email when non-empty, allowing blank/nil for accounts without an email.
+func ValidateOptionalEmail(value interface{}) error {
+	var email string
+	switch v := value.(type) {
+	case nil:
+		return nil
+	case string:
+		email = strings.TrimSpace(v)
+	case *string:
+		if v == nil {
+			return nil
+		}
+		email = strings.TrimSpace(*v)
+	default:
+		return fmt.Errorf("Email invalid type")
+	}
+
+	if email == "" {
+		return nil
+	}
+	if len(email) > 254 {
+		return fmt.Errorf("Email maksimal 254 karakter")
+	}
+	if reWhitespace.MatchString(email) || reDoubleSep.MatchString(email) || reNonASCII.MatchString(email) || !reStandardEmail.MatchString(email) {
+		return fmt.Errorf("Format email tidak valid")
+	}
+	return nil
+}
+
 func ValidateUUIDv4(value interface{}) error {
 	s, ok := value.(string)
 	if !ok {

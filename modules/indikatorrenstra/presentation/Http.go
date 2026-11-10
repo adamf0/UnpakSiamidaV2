@@ -676,7 +676,8 @@ func GetDashboardIkuAnggaranHandler(c *fiber.Ctx) error {
 	var prokerRows []ProkerDbRow
 	prokerQuery := dbInstance.Table("matrix_proker mp").
 		Select("mp.id, mp.id_indikator, mp.id_fakultas_unit, mp.target_unpak, mp.pic, COALESCE(sfu.nama, '') as unit_nama").
-		Joins("LEFT JOIN sijamu_fakultas_unit sfu ON sfu.id = mp.id_fakultas_unit")
+		Joins("LEFT JOIN sijamu_fakultas_unit sfu ON sfu.id = mp.id_fakultas_unit").
+		Where("mp.deleted_at IS NULL")
 	if filterUnit != "" && filterUnit != "all" {
 		prokerQuery = prokerQuery.Where("mp.id_fakultas_unit = ?", filterUnit)
 	}

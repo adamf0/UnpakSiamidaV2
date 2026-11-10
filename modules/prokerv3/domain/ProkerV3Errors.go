@@ -67,3 +67,17 @@ func InvalidAktivitasUuid() commondomain.Error {
 		"Invalid aktivitas UUID",
 	)
 }
+
+func DeleteReasonRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DeleteReasonRequired",
+		"Alasan penghapusan program kerja wajib diisi",
+	)
+}
+
+func AlreadyDeleted() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.AlreadyDeleted",
+		"Program kerja sudah berada di tab Buang",
+	)
+}

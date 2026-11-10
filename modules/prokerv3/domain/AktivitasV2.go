@@ -21,7 +21,8 @@ type AktivitasV2 struct {
 	Anggaran         float64          `gorm:"-" json:"Anggaran"`
 	RAB              string           `gorm:"-" json:"RAB"`
 	RabItems         []AktivitasV2Rab `gorm:"-" json:"RabItems,omitempty"`
-	Realisasi        *float64  `gorm:"column:realisasi" json:"Realisasi"`
+	Realisasi             *float64  `gorm:"column:realisasi" json:"Realisasi"`
+	CatatanRevisiAnggaran string    `gorm:"column:catatan_revisi_anggaran;type:text" json:"CatatanRevisiAnggaran"`
 	Pencairan        *float64  `gorm:"column:pencairan" json:"Pencairan"`
 	Status           string    `gorm:"column:status;size:50;default:'draft'" json:"Status"`
 	CatatanPenolakan string    `gorm:"column:catatan_penolakan;type:text" json:"CatatanPenolakan"`

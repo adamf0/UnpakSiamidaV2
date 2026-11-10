@@ -28,13 +28,18 @@ func (h *UpdateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Update
 		return nil, errors.New("Aktivitas tidak ditemukan")
 	}
 
+	rabModified := cmd.RAB != "" || (cmd.Anggaran > 0 && len(act.RabItems) == 0)
+	origAnggaran := act.Anggaran
+	origRAB := act.RAB
+	origRabItems := act.RabItems
+
 	if cmd.Aktivitas != "" {
 		act.Aktivitas = strings.TrimSpace(cmd.Aktivitas)
 	}
 	if cmd.PIC != "" {
 		act.PIC = strings.TrimSpace(cmd.PIC)
 	}
-	if cmd.Anggaran >= 0 {
+	if rabModified && cmd.Anggaran >= 0 {
 		act.Anggaran = cmd.Anggaran
 	}
 	if cmd.RAB != "" {
@@ -57,6 +62,9 @@ func (h *UpdateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Update
 	if cmd.Realisasi != nil {
 		act.Realisasi = cmd.Realisasi
 	}
+	if cmd.CatatanRevisiAnggaran != nil {
+		act.CatatanRevisiAnggaran = strings.TrimSpace(*cmd.CatatanRevisiAnggaran)
+	}
 	if cmd.Pencairan != nil {
 		act.Pencairan = cmd.Pencairan
 	}
@@ -73,8 +81,19 @@ func (h *UpdateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Update
 		act.PemecahanMasalah = strings.TrimSpace(cmd.PemecahanMasalah)
 	}
 
+	if !rabModified {
+		act.RAB = ""
+		act.RabItems = nil
+	}
+
 	if err := h.Repo.UpdateAktivitas(ctx, act); err != nil {
 		return nil, err
+	}
+
+	if !rabModified {
+		act.Anggaran = origAnggaran
+		act.RAB = origRAB
+		act.RabItems = origRabItems
 	}
 
 	return act, nil
