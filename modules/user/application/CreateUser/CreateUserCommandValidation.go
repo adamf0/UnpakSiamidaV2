@@ -24,7 +24,7 @@ func CreateUserCommandValidation(cmd CreateUserCommand) error {
 
 		validation.Field(&cmd.Email,
 			validation.Required.Error("Email cannot be blank"),
-			validation.By(helper.ValidateUnpakEmail),
+			// validation.By(helper.ValidateUnpakEmail),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
 
