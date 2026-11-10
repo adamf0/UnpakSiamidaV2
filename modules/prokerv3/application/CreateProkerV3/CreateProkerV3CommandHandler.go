@@ -132,38 +132,18 @@ func (h *CreateProkerV3CommandHandler) Handle(
 
 	// 4. Create matrix_proker record
 	matrixProker := &domain.ProkerV3{
-		UUID:             uuid.New(),
-		IdFakultasUnit:   fuID,
-		IdMataProgram:    mpID,
-		IdIndikator:      indID,
-		TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
-		CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
-		TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
-		Output:           strings.TrimSpace(cmd.Output),
-		Outcome:          strings.TrimSpace(cmd.Outcome),
-		PIC:              strings.TrimSpace(cmd.PIC),
-		BebanYayasan:     cmd.BebanYayasan,
+		UUID:           uuid.New(),
+		IdFakultasUnit: fuID,
+		IdMataProgram:  mpID,
+		IdIndikator:    indID,
+		PIC:            strings.TrimSpace(cmd.PIC),
+		BebanYayasan:   cmd.BebanYayasan,
 	}
 
 	if len(cmd.Scopes) > 0 {
 		firstScope := cmd.Scopes[0]
 		if firstScope.IdIndikator != nil && *firstScope.IdIndikator > 0 {
 			matrixProker.IdIndikator = firstScope.IdIndikator
-		}
-		if firstScope.TargetUnpak != "" {
-			matrixProker.TargetUnpak = strings.TrimSpace(firstScope.TargetUnpak)
-		}
-		if firstScope.CapaianUnitLalu != "" {
-			matrixProker.CapaianTerdahulu = strings.TrimSpace(firstScope.CapaianUnitLalu)
-		}
-		if firstScope.TargetUnit != "" {
-			matrixProker.TargetUnit = strings.TrimSpace(firstScope.TargetUnit)
-		}
-		if firstScope.Output != "" {
-			matrixProker.Output = strings.TrimSpace(firstScope.Output)
-		}
-		if firstScope.Outcome != "" {
-			matrixProker.Outcome = strings.TrimSpace(firstScope.Outcome)
 		}
 	}
 

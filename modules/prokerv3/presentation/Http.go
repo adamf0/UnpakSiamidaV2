@@ -428,7 +428,11 @@ func UpdateBatalProkerHandler(c *fiber.Ctx) error {
 			}
 		}
 
-		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now())
+		var targetUnitID *int
+		if existing != nil {
+			targetUnitID = existing.IdFakultasUnit
+		}
+		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now(), targetUnitID)
 		if errSetting != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memeriksa pengaturan Proker Batal"})
 		}
@@ -522,7 +526,7 @@ func UpdateBatalAktivitasHandler(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Akses ditolak: bukan unit anda"})
 		}
 
-		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now())
+		batalSetting, errSetting := getProkerBatalSettingStatus(c.Context(), dbInstance, time.Now(), fuID)
 		if errSetting != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memeriksa pengaturan Proker Batal"})
 		}
@@ -3671,10 +3675,10 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			COALESCE(prog.mata_program, '') as nama_program,
 			COALESCE(mt.tahun, '') as tahun,
 			COALESCE(mir.indikator, '') as indikator_kinerja,
-			COALESCE(mp.target_unpak, '') as target_unpak,
-			COALESCE(mp.target_unit, '') as target_unit,
-			COALESCE(mp.output, '') as output,
-			COALESCE(mp.outcome, '') as outcome,
+			COALESCE((SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unpak,
+			COALESCE((SELECT mps.target_unit FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unit,
+			COALESCE((SELECT mps.output FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as output,
+			COALESCE((SELECT mps.outcome FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as outcome,
 			COALESCE(NULLIF(mp.pic, ''), '') as pic,
 			COALESCE(NULLIF(mp.status, ''), 'draft') as status,
 			COALESCE(NULLIF(mp.status_verifikator, ''), 'draft') as status_verifikator,

@@ -206,22 +206,6 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 		}
 	}
 
-	if cmd.TargetUnpak != "" {
-		existing.TargetUnpak = strings.TrimSpace(cmd.TargetUnpak)
-	}
-	if cmd.CapaianUnitLalu != "" {
-		existing.CapaianTerdahulu = strings.TrimSpace(cmd.CapaianUnitLalu)
-	}
-	if cmd.TargetUnit != "" {
-		existing.TargetUnit = strings.TrimSpace(cmd.TargetUnit)
-	}
-	if cmd.Output != "" {
-		existing.Output = strings.TrimSpace(cmd.Output)
-	}
-	if cmd.Outcome != "" {
-		existing.Outcome = strings.TrimSpace(cmd.Outcome)
-	}
-
 	// 4. Update PIC in matrix_proker & sync to aktivitasv2
 	existing.PIC = strings.TrimSpace(cmd.PIC)
 	_ = h.DB.WithContext(ctx).Table("aktivitasv2").
@@ -237,21 +221,6 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 		firstScope := cmd.Scopes[0]
 		if firstScope.IdIndikator != nil && *firstScope.IdIndikator > 0 {
 			existing.IdIndikator = firstScope.IdIndikator
-		}
-		if firstScope.TargetUnpak != "" {
-			existing.TargetUnpak = strings.TrimSpace(firstScope.TargetUnpak)
-		}
-		if firstScope.CapaianUnitLalu != "" {
-			existing.CapaianTerdahulu = strings.TrimSpace(firstScope.CapaianUnitLalu)
-		}
-		if firstScope.TargetUnit != "" {
-			existing.TargetUnit = strings.TrimSpace(firstScope.TargetUnit)
-		}
-		if firstScope.Output != "" {
-			existing.Output = strings.TrimSpace(firstScope.Output)
-		}
-		if firstScope.Outcome != "" {
-			existing.Outcome = strings.TrimSpace(firstScope.Outcome)
 		}
 
 		_ = h.DB.WithContext(ctx).Where("id_matrix_proker = ?", existing.ID).Delete(&domain.MatrixProkerScope{}).Error
@@ -328,11 +297,11 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 				IdMatrixProker:   existing.ID,
 				IdMataProgram:    existing.IdMataProgram,
 				IdIndikator:      existing.IdIndikator,
-				TargetUnpak:      existing.TargetUnpak,
-				CapaianTerdahulu: existing.CapaianTerdahulu,
-				TargetUnit:       existing.TargetUnit,
-				Output:           existing.Output,
-				Outcome:          existing.Outcome,
+				TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
+				CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
+				TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
+				Output:           strings.TrimSpace(cmd.Output),
+				Outcome:          strings.TrimSpace(cmd.Outcome),
 				CreatedAt:        time.Now(),
 				UpdatedAt:        time.Now(),
 			}

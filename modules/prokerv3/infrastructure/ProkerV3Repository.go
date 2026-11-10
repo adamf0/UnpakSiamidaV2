@@ -141,11 +141,11 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(mir.id_master_standar, msr.id, 0) as IdMasterStandar,
 			COALESCE(msr.nama, '') as StandarSubStandar,
 			COALESCE(msr.uuid, '') as StandarUUID,
-			COALESCE(mp_t.target_unpak, '') as TargetUnpak,
-			COALESCE(mp_t.capaian_terdahulu, '') as CapaianUnitLalu,
-			COALESCE(mp_t.target_unit, '') as TargetUnit,
-			COALESCE(mp_t.output, '') as Output,
-			COALESCE(mp_t.outcome, '') as Outcome,
+			'' as TargetUnpak,
+			'' as CapaianUnitLalu,
+			'' as TargetUnit,
+			'' as Output,
+			'' as Outcome,
 			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
@@ -232,6 +232,13 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 		scopes[i].IkuList = commoninfra.FormatIkuList(scopes[i].IkuList, ikuMap)
 	}
 	row.Scopes = scopes
+	if len(scopes) > 0 {
+		row.TargetUnpak = scopes[0].TargetUnpak
+		row.CapaianUnitLalu = scopes[0].CapaianUnitLalu
+		row.TargetUnit = scopes[0].TargetUnit
+		row.Output = scopes[0].Output
+		row.Outcome = scopes[0].Outcome
+	}
 
 	return &row, nil
 }
@@ -248,8 +255,8 @@ var allowedSearchColumns = map[string]string{
 	"standar":              "msr.nama",
 	"indikator_kinerja":    "mir.indikator",
 	"indikator":            "mir.indikator",
-	"output":               "mp_t.output",
-	"outcome":              "mp_t.outcome",
+	"output":               "(SELECT mps.output FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"outcome":              "(SELECT mps.outcome FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
 	"id_fakultas_unit":     "mp_t.id_fakultas_unit",
 	"fakultas_unit":        "fu.nama_fak_prod_unit",
 	"nama_fakultas_unit":   "fu.nama_fak_prod_unit",
@@ -261,10 +268,10 @@ var allowedSearchColumns = map[string]string{
 	"filter_prodi":         "fu.id",
 	"id_prodi":             "fu.id",
 	"prodi":                "fu.nama_fak_prod_unit",
-	"target_unpak":         "mp_t.target_unpak",
-	"target_capaian":       "mp_t.target_unpak",
-	"capaian_unit_lalu":    "mp_t.capaian_terdahulu",
-	"capaian_terdahulu":    "mp_t.capaian_terdahulu",
+	"target_unpak":         "(SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"target_capaian":       "(SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"capaian_unit_lalu":    "(SELECT mps.capaian_terdahulu FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"capaian_terdahulu":    "(SELECT mps.capaian_terdahulu FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
 	"filter_tab":           "filter_tab",
 	"tab":                  "tab",
 }
@@ -311,11 +318,11 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(mir.id_master_standar, msr.id, 0) as IdMasterStandar,
 			COALESCE(msr.nama, '') as StandarSubStandar,
 			COALESCE(msr.uuid, '') as StandarUUID,
-			COALESCE(mp_t.target_unpak, '') as TargetUnpak,
-			COALESCE(mp_t.capaian_terdahulu, '') as CapaianUnitLalu,
-			COALESCE(mp_t.target_unit, '') as TargetUnit,
-			COALESCE(mp_t.output, '') as Output,
-			COALESCE(mp_t.outcome, '') as Outcome,
+			'' as TargetUnpak,
+			'' as CapaianUnitLalu,
+			'' as TargetUnit,
+			'' as Output,
+			'' as Outcome,
 			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
@@ -375,7 +382,13 @@ func (r *ProkerV3Repository) GetAll(
 
 				if field == "target_capaian" || field == "target_unpak" || field == "capaian_unit_lalu" || field == "capaian_terdahulu" {
 					likeVal := "%" + strings.ToLower(val) + "%"
-					db = db.Where("(LOWER(COALESCE(mp_t.target_unpak, '')) LIKE ? OR LOWER(COALESCE(mp_t.target_unit, '')) LIKE ? OR LOWER(COALESCE(mp_t.capaian_terdahulu, '')) LIKE ?)", likeVal, likeVal, likeVal)
+					db = db.Where("EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (LOWER(COALESCE(mps.target_unpak, '')) LIKE ? OR LOWER(COALESCE(mps.target_unit, '')) LIKE ? OR LOWER(COALESCE(mps.capaian_terdahulu, '')) LIKE ?))", likeVal, likeVal, likeVal)
+					continue
+				}
+
+				if field == "output" || field == "outcome" {
+					likeVal := "%" + strings.ToLower(val) + "%"
+					db = db.Where("EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (LOWER(COALESCE(mps.output, '')) LIKE ? OR LOWER(COALESCE(mps.outcome, '')) LIKE ?))", likeVal, likeVal)
 					continue
 				}
 
@@ -499,8 +512,7 @@ func (r *ProkerV3Repository) GetAll(
 			mir.indikator LIKE ? OR
 			msr.nama LIKE ? OR
 			fu.nama_fak_prod_unit LIKE ? OR
-			mp_t.output LIKE ? OR
-			mp_t.outcome LIKE ?
+			EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (mps.output LIKE ? OR mps.outcome LIKE ?))
 		)`, like, like, like, like, like, like)
 	}
 
@@ -585,6 +597,13 @@ func (r *ProkerV3Repository) GetAll(
 					scs[j].IkuList = commoninfra.FormatIkuList(scs[j].IkuList, ikuMap)
 				}
 				list[i].Scopes = scs
+				if len(scs) > 0 {
+					list[i].TargetUnpak = scs[0].TargetUnpak
+					list[i].CapaianUnitLalu = scs[0].CapaianUnitLalu
+					list[i].TargetUnit = scs[0].TargetUnit
+					list[i].Output = scs[0].Output
+					list[i].Outcome = scs[0].Outcome
+				}
 			} else {
 				list[i].Scopes = []domain.ProkerScopeDefault{}
 			}
