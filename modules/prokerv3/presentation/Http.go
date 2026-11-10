@@ -752,14 +752,14 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 			targetFU = userFU
 		}
 	} else {
-		if qFU := strings.TrimSpace(c.Query("filter_fakultas_unit")); qFU != "" && qFU != "all" && qFU != "semua" {
+		if qFU := strings.TrimSpace(c.Query("filter_fakultas_unit")); qFU != "" && qFU != "all" && qFU != "semua" && qFU != "-1" {
 			targetFU = qFU
-		} else if userFU != "" && userFU != "0" && userFU != "all" {
+		} else if userFU != "" && userFU != "0" && userFU != "all" && userFU != "-1" {
 			targetFU = userFU
 		}
 	}
 
-	if targetFU != "" && targetFU != "all" && targetFU != "semua" && targetFU != "0" {
+	if targetFU != "" && targetFU != "all" && targetFU != "semua" && targetFU != "0" && targetFU != "-1" {
 		field := "id_fakultas_unit"
 		operator := "eq"
 		if strings.Contains(targetFU, "-") {

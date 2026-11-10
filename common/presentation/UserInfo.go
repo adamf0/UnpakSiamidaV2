@@ -9,10 +9,13 @@ import (
 
 // GetUserInfo extracts the active user role/level and fakultas_unit from Fiber context, headers, locals, or request params.
 func GetUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
+	explicitRole := false
 	if hLevel := strings.ToLower(strings.TrimSpace(c.Get("X-Active-Role"))); hLevel != "" {
 		level = hLevel
+		explicitRole = true
 	} else if hLevel := strings.ToLower(strings.TrimSpace(c.Get("X-Level"))); hLevel != "" {
 		level = hLevel
+		explicitRole = true
 	}
 
 	if level == "" {
@@ -48,7 +51,7 @@ func GetUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
 	}
 
 	if u, ok := c.Locals("user").(*Account); ok && u != nil {
-		if level == "" || level == "user" {
+		if !explicitRole && (level == "" || level == "user") {
 			for _, r := range u.ExtraRole {
 				rRole := strings.ToLower(strings.TrimSpace(r.Role))
 				if rRole == "upml" || rRole == "upmf" || rRole == "upms" {
@@ -58,7 +61,7 @@ func GetUserInfo(c *fiber.Ctx) (level string, fakultasUnit string) {
 			}
 		}
 
-		if fakultasUnit == "" {
+		if fakultasUnit == "" || fakultasUnit == "-1" {
 			for _, r := range u.ExtraRole {
 				if level != "" && !strings.EqualFold(r.Role, level) && level != "user" {
 					continue
