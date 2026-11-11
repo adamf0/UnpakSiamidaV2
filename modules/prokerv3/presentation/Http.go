@@ -2652,6 +2652,10 @@ func ModuleProkerV3(app *fiber.App, db *gorm.DB, dbs ...*gorm.DB) {
 	// Dashboard Monitoring Proker, Aktivitas & RAB (Wakil Rektor 1-4 & Fakultas)
 	app.Get("/proker_v3/dashboard_monitoring", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetDashboardProkerMonitoringHandler)
 
+	// Diagram Alir Alokasi (Sankey) Data dari Database
+	app.Get("/dashboard/sankey", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetSankeyDataHandler)
+	app.Get("/proker_v3/sankey", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetSankeyDataHandler)
+
 	// Summary Pagu & Realisasi Unit
 	app.Get("/proker_v3/unit_pagu_summary", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetUnitPaguSummaryHandler)
 
@@ -3955,5 +3959,229 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			"total_anggaran":  globalTotalAnggaran,
 			"total_pencairan": globalTotalPencairan,
 		},
+	})
+}
+
+// GetSankeyDataHandler mengambil data riil database untuk Diagram Alir Alokasi (Sankey) 8-kolom
+func GetSankeyDataHandler(c *fiber.Ctx) error {
+	if dbInstance == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database tidak tersedia"})
+	}
+
+	tahun := strings.TrimSpace(c.Query("tahun"))
+	if tahun == "" {
+		_ = dbInstance.WithContext(c.Context()).Table("master_tahun").
+			Where("status = 'active'").
+			Order("tahun DESC").
+			Pluck("tahun", &tahun).Error
+		if tahun == "" {
+			tahun = "2027"
+		}
+	}
+
+	// 1. Ambil Master IKU
+	var masterIkus []struct {
+		ID       uint64  `gorm:"column:id" json:"id"`
+		Iku      string  `gorm:"column:iku" json:"iku"`
+		Kategori string  `gorm:"column:kategori" json:"kategori"`
+		IdSub    *uint64 `gorm:"column:id_sub" json:"id_sub"`
+		Target   string  `gorm:"column:target" json:"target"`
+	}
+	_ = dbInstance.WithContext(c.Context()).Table("master_iku").Order("id asc").Scan(&masterIkus).Error
+
+	// 2. Ambil v_fakultas_unit
+	var allUnits []struct {
+		ID              int    `gorm:"column:id" json:"id"`
+		UUID            string `gorm:"column:uuid" json:"uuid"`
+		NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit" json:"nama_fak_prod_unit"`
+		Type            string `gorm:"column:type" json:"type"`
+		Jenjang         string `gorm:"column:jenjang" json:"jenjang"`
+		KodeFakultas    string `gorm:"column:kode_fakultas" json:"kode_fakultas"`
+		Pimpinan        string `gorm:"column:pimpinan" json:"pimpinan"`
+	}
+	_ = dbInstance.WithContext(c.Context()).Table("v_fakultas_unit").
+		Order("FIELD(type, 'fakultas', 'prodi', 'unit'), nama_fak_prod_unit ASC").
+		Scan(&allUnits).Error
+
+	// 3. Ambil matrix_proker untuk tahun yang dipilih
+	var prokerRows []struct {
+		ID               uint   `gorm:"column:id"`
+		UUID             string `gorm:"column:uuid"`
+		IdFakultasUnit   *int   `gorm:"column:id_fakultas_unit"`
+		IdIndikator      *int   `gorm:"column:id_indikator"`
+		NamaFakultasUnit string `gorm:"column:nama_fakultas_unit"`
+		TypeFakultasUnit string `gorm:"column:type_fakultas_unit"`
+		Jenjang          string `gorm:"column:jenjang"`
+		NamaProgram      string `gorm:"column:nama_program"`
+		Tahun            string `gorm:"column:tahun"`
+		IndikatorKinerja string `gorm:"column:indikator_kinerja"`
+		PIC              string `gorm:"column:pic"`
+		Status           string `gorm:"column:status"`
+		IsBatal          int    `gorm:"column:is_batal"`
+	}
+
+	_ = dbInstance.WithContext(c.Context()).Table("matrix_proker mp").
+		Select(`
+			mp.id, mp.uuid, mp.id_fakultas_unit, mp.id_indikator,
+			COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+			COALESCE(fu.type, '') as type_fakultas_unit,
+			COALESCE(fu.jenjang, '') as jenjang,
+			COALESCE(prog.mata_program, '') as nama_program,
+			COALESCE(mt.tahun, '') as tahun,
+			COALESCE(mir.indikator, '') as indikator_kinerja,
+			COALESCE(NULLIF(mp.pic, ''), '') as pic,
+			COALESCE(NULLIF(mp.status, ''), 'draft') as status,
+			COALESCE(mp.is_batal, 0) as is_batal
+		`).
+		Joins("LEFT JOIN mata_program prog ON mp.id_mata_program = prog.id").
+		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+		Joins("LEFT JOIN master_indikator_renstra mir ON mp.id_indikator = mir.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
+		Where("mp.deleted_at IS NULL AND COALESCE(mt.tahun, '') = ?", tahun).
+		Order("mp.id DESC").
+		Scan(&prokerRows).Error
+
+	var prokerIDs []uint
+	for _, p := range prokerRows {
+		prokerIDs = append(prokerIDs, p.ID)
+	}
+
+	var rawAktivitas []struct {
+		ID                    uint     `gorm:"column:id"`
+		UUID                  string   `gorm:"column:uuid"`
+		IdMatrikProker        uint     `gorm:"column:id_matrik_proker"`
+		Aktivitas             string   `gorm:"column:aktivitas"`
+		PIC                   string   `gorm:"column:pic"`
+		Realisasi             *float64 `gorm:"column:realisasi"`
+		Pencairan             *float64 `gorm:"column:pencairan"`
+		CatatanRevisiAnggaran string   `gorm:"column:catatan_revisi_anggaran"`
+		Status                string   `gorm:"column:status"`
+		IsBatal               int      `gorm:"column:is_batal"`
+		CatatanBatal          string   `gorm:"column:catatan_batal"`
+	}
+	var aktivitasIDs []uint
+	if len(prokerIDs) > 0 {
+		_ = dbInstance.WithContext(c.Context()).Table("aktivitasv2").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, realisasi, pencairan, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, status, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Where("id_matrik_proker IN (?)", prokerIDs).
+			Order("id ASC").
+			Scan(&rawAktivitas).Error
+
+		for _, a := range rawAktivitas {
+			aktivitasIDs = append(aktivitasIDs, a.ID)
+		}
+	}
+
+	var rawRAB []struct {
+		ID            uint    `gorm:"column:id"`
+		UUID          string  `gorm:"column:uuid"`
+		IdAktivitasV2 uint    `gorm:"column:id_aktivitasv2"`
+		NoAkun        string  `gorm:"column:no_akun"`
+		NamaAkun      string  `gorm:"column:nama_akun"`
+		Rincian       string  `gorm:"column:rincian"`
+		QtySatuan     float64 `gorm:"column:qty_satuan"`
+		QtyPaket      float64 `gorm:"column:qty_paket"`
+		Sbu           float64 `gorm:"column:sbu"`
+		Total         float64 `gorm:"column:total"`
+	}
+	if len(aktivitasIDs) > 0 {
+		_ = dbInstance.WithContext(c.Context()).Table("aktivitasv2_rab").
+			Where("id_aktivitasv2 IN (?)", aktivitasIDs).
+			Order("id ASC").
+			Scan(&rawRAB).Error
+	}
+
+	rabMap := make(map[uint][]fiber.Map)
+	for _, r := range rawRAB {
+		tot := r.Total
+		if tot == 0 && r.QtySatuan > 0 && r.QtyPaket > 0 && r.Sbu > 0 {
+			tot = r.QtySatuan * r.QtyPaket * r.Sbu
+		}
+		rabMap[r.IdAktivitasV2] = append(rabMap[r.IdAktivitasV2], fiber.Map{
+			"id":         r.ID,
+			"uuid":       r.UUID,
+			"no_akun":    r.NoAkun,
+			"nama_akun":  r.NamaAkun,
+			"rincian":    r.Rincian,
+			"qty_satuan": r.QtySatuan,
+			"qty_paket":  r.QtyPaket,
+			"sbu":        r.Sbu,
+			"total":      tot,
+		})
+	}
+
+	aktMap := make(map[uint][]fiber.Map)
+	for _, a := range rawAktivitas {
+		rabs := rabMap[a.ID]
+		if rabs == nil {
+			rabs = []fiber.Map{}
+		}
+		var totRab float64
+		for _, r := range rabs {
+			if t, ok := r["total"].(float64); ok {
+				totRab += t
+			}
+		}
+		aktMap[a.IdMatrikProker] = append(aktMap[a.IdMatrikProker], fiber.Map{
+			"id":                      a.ID,
+			"uuid":                    a.UUID,
+			"aktivitas":               a.Aktivitas,
+			"pic":                     a.PIC,
+			"realisasi":               a.Realisasi,
+			"pencairan":               a.Pencairan,
+			"status":                  a.Status,
+			"catatan_revisi_anggaran": a.CatatanRevisiAnggaran,
+			"catatan_batal":           a.CatatanBatal,
+			"is_batal":                a.IsBatal == 1,
+			"total_rab":               totRab,
+			"rab":                     rabs,
+		})
+	}
+
+	var monitoringList []fiber.Map
+	for _, p := range prokerRows {
+		acts := aktMap[p.ID]
+		if acts == nil {
+			acts = []fiber.Map{}
+		}
+		var totAnggaran, totPencairan float64
+		for _, act := range acts {
+			if rabTot, ok := act["total_rab"].(float64); ok {
+				totAnggaran += rabTot
+			}
+			if pcr, ok := act["pencairan"].(*float64); ok && pcr != nil {
+				totPencairan += *pcr
+			} else if act["status"] == "terima_anggaran" || act["status"] == "terlaksana" {
+				if rabTot, ok := act["total_rab"].(float64); ok {
+					totPencairan += rabTot
+				}
+			}
+		}
+
+		monitoringList = append(monitoringList, fiber.Map{
+			"id":                 p.ID,
+			"uuid":               p.UUID,
+			"id_fakultas_unit":   p.IdFakultasUnit,
+			"id_indikator":       p.IdIndikator,
+			"nama_fakultas_unit": p.NamaFakultasUnit,
+			"type_fakultas_unit": p.TypeFakultasUnit,
+			"jenjang":            p.Jenjang,
+			"nama_program":       p.NamaProgram,
+			"tahun":              p.Tahun,
+			"indikator_kinerja":  p.IndikatorKinerja,
+			"pic":                p.PIC,
+			"status":             p.Status,
+			"is_batal":           p.IsBatal == 1,
+			"total_anggaran":     totAnggaran,
+			"total_pencairan":    totPencairan,
+			"aktivitas":          acts,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"tahun":         tahun,
+		"monitoring":    monitoringList,
+		"master_ikus":   masterIkus,
+		"fakultas_unit": allUnits,
 	})
 }
