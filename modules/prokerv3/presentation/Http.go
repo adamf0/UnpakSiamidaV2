@@ -3471,26 +3471,43 @@ type DashboardMonitoringRabItem struct {
 	Total      float64 `json:"total"`
 }
 
+type DashboardMonitoringTimelineItem struct {
+	ID               uint    `json:"id"`
+	UUID             string  `json:"uuid"`
+	IdAktivitasv2    uint    `json:"id_aktivitasv2"`
+	NoAktivitas      int     `json:"no_aktivitas"`
+	NamaAktivitas    string  `json:"nama_aktivitas"`
+	TanggalRkAwal    string  `json:"tanggal_rk_awal"`
+	TanggalRkAkhir   string  `json:"tanggal_rk_akhir"`
+	TanggalRAwal     *string `json:"tanggal_r_awal"`
+	TanggalRAkhir    *string `json:"tanggal_r_akhir"`
+	Capaian          string  `json:"capaian"`
+	Masalah          string  `json:"masalah"`
+	PemecahanMasalah string  `json:"pemecahan_masalah"`
+	Status           string  `json:"status"`
+}
+
 type DashboardMonitoringAktivitas struct {
-	ID              uint                         `json:"id"`
-	UUID            string                       `json:"uuid"`
-	Aktivitas       string                       `json:"aktivitas"`
-	PIC             string                       `json:"pic"`
-	Capaian               string                       `json:"capaian"`
-	Realisasi             *float64                     `json:"realisasi"`
-	CatatanRevisiAnggaran string                       `json:"catatan_revisi_anggaran"`
-	Pencairan             *float64                     `json:"pencairan"`
-	Status          string                       `json:"status"`
-	StatusAnggaran  string                       `json:"status_anggaran"`
-	StatusUpml      string                       `json:"status_upml"`
-	StatusUpmf      string                       `json:"status_upmf"`
-	StatusUpms      string                       `json:"status_upms"`
-	StatusLpm       string                       `json:"status_lpm"`
-	IsBatal         bool                         `json:"is_batal"`
-	CatatanBatal    string                       `json:"catatan_batal"`
-	TotalRab        float64                      `json:"total_rab"`
-	StatusPencairan string                       `json:"status_pencairan"`
-	Rab             []DashboardMonitoringRabItem `json:"rab"`
+	ID              uint                             `json:"id"`
+	UUID            string                           `json:"uuid"`
+	Aktivitas       string                           `json:"aktivitas"`
+	PIC             string                           `json:"pic"`
+	Capaian               string                           `json:"capaian"`
+	Realisasi             *float64                         `json:"realisasi"`
+	CatatanRevisiAnggaran string                           `json:"catatan_revisi_anggaran"`
+	Pencairan             *float64                         `json:"pencairan"`
+	Status          string                           `json:"status"`
+	StatusAnggaran  string                           `json:"status_anggaran"`
+	StatusUpml      string                           `json:"status_upml"`
+	StatusUpmf      string                           `json:"status_upmf"`
+	StatusUpms      string                           `json:"status_upms"`
+	StatusLpm       string                           `json:"status_lpm"`
+	IsBatal         bool                             `json:"is_batal"`
+	CatatanBatal    string                           `json:"catatan_batal"`
+	TotalRab        float64                          `json:"total_rab"`
+	StatusPencairan string                           `json:"status_pencairan"`
+	Rab             []DashboardMonitoringRabItem     `json:"rab"`
+	Timelines       []DashboardMonitoringTimelineItem `json:"timelines"`
 }
 
 type DashboardMonitoringProker struct {
@@ -3514,10 +3531,12 @@ type DashboardMonitoringProker struct {
 	BebanYayasan      bool                           `json:"beban_yayasan"`
 	IsBatal           bool                           `json:"is_batal"`
 	CatatanBatal      string                         `json:"catatan_batal"`
-	TotalAktivitas    int                            `json:"total_aktivitas"`
-	TotalAnggaran     float64                        `json:"total_anggaran"`
-	TotalPencairan    float64                        `json:"total_pencairan"`
-	Aktivitas         []DashboardMonitoringAktivitas `json:"aktivitas"`
+	TotalAktivitas         int                            `json:"total_aktivitas"`
+	TotalAnggaran          float64                        `json:"total_anggaran"`
+	TotalAnggaranPengajuan float64                        `json:"total_anggaran_pengajuan"`
+	IsAnggaranRevised      bool                           `json:"is_anggaran_revised"`
+	TotalPencairan         float64                        `json:"total_pencairan"`
+	Aktivitas              []DashboardMonitoringAktivitas `json:"aktivitas"`
 }
 
 func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
@@ -3797,6 +3816,67 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			Scan(&rawRAB).Error
 	}
 
+	// Fetch all Timeline items in batch
+	var rawTimeline []struct {
+		Id               uint       `gorm:"column:id"`
+		UUID             string     `gorm:"column:uuid"`
+		IdAktivitasv2    uint       `gorm:"column:id_aktivitasv2"`
+		NoAktivitas      int        `gorm:"column:no_aktivitas"`
+		NamaAktivitas    string     `gorm:"column:nama_aktivitas"`
+		TanggalRkAwal    *time.Time `gorm:"column:tanggal_rk_awal"`
+		TanggalRkAkhir   *time.Time `gorm:"column:tanggal_rk_akhir"`
+		TanggalRAwal     *time.Time `gorm:"column:tanggal_r_awal"`
+		TanggalRAkhir    *time.Time `gorm:"column:tanggal_r_akhir"`
+		Capaian          string     `gorm:"column:capaian"`
+		Masalah          string     `gorm:"column:masalah"`
+		PemecahanMasalah string     `gorm:"column:pemecahan_masalah"`
+		Status           string     `gorm:"column:status"`
+	}
+
+	if len(aktivitasIDs) > 0 {
+		_ = dbInstance.WithContext(c.Context()).Table("aktivitasv2_timeline").
+			Where("id_aktivitasv2 IN (?)", aktivitasIDs).
+			Order("no_aktivitas ASC, id ASC").
+			Scan(&rawTimeline).Error
+	}
+
+	timelineMap := make(map[uint][]DashboardMonitoringTimelineItem)
+	for _, t := range rawTimeline {
+		var rkAwalStr, rkAkhirStr string
+		if t.TanggalRkAwal != nil && !t.TanggalRkAwal.IsZero() {
+			rkAwalStr = t.TanggalRkAwal.Format("2006-01-02")
+		}
+		if t.TanggalRkAkhir != nil && !t.TanggalRkAkhir.IsZero() {
+			rkAkhirStr = t.TanggalRkAkhir.Format("2006-01-02")
+		}
+		var rAwalStr, rAkhirStr *string
+		if t.TanggalRAwal != nil && !t.TanggalRAwal.IsZero() {
+			s := t.TanggalRAwal.Format("2006-01-02")
+			rAwalStr = &s
+		}
+		if t.TanggalRAkhir != nil && !t.TanggalRAkhir.IsZero() {
+			s := t.TanggalRAkhir.Format("2006-01-02")
+			rAkhirStr = &s
+		}
+
+		item := DashboardMonitoringTimelineItem{
+			ID:               t.Id,
+			UUID:             t.UUID,
+			IdAktivitasv2:    t.IdAktivitasv2,
+			NoAktivitas:      t.NoAktivitas,
+			NamaAktivitas:    t.NamaAktivitas,
+			TanggalRkAwal:    rkAwalStr,
+			TanggalRkAkhir:   rkAkhirStr,
+			TanggalRAwal:     rAwalStr,
+			TanggalRAkhir:    rAkhirStr,
+			Capaian:          t.Capaian,
+			Masalah:          t.Masalah,
+			PemecahanMasalah: t.PemecahanMasalah,
+			Status:           t.Status,
+		}
+		timelineMap[t.IdAktivitasv2] = append(timelineMap[t.IdAktivitasv2], item)
+	}
+
 	// Map RAB to Aktivitas
 	rabMap := make(map[uint][]DashboardMonitoringRabItem)
 	rabTotalMap := make(map[uint]float64)
@@ -3825,6 +3905,8 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 	// Map Aktivitas to Proker
 	aktMap := make(map[uint][]DashboardMonitoringAktivitas)
 	prokerAnggaranMap := make(map[uint]float64)
+	prokerAnggaranPengajuanMap := make(map[uint]float64)
+	prokerIsRevisedMap := make(map[uint]bool)
 	prokerPencairanMap := make(map[uint]float64)
 
 	for _, a := range rawAktivitas {
@@ -3857,8 +3939,22 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			}
 		}
 
+		actApprovedBudget := totRab
+		if a.Realisasi != nil && *a.Realisasi >= 0 {
+			actApprovedBudget = *a.Realisasi
+		}
+
 		if a.IsBatal == 0 {
-			prokerAnggaranMap[a.IdMatrikProker] += totRab
+			prokerAnggaranMap[a.IdMatrikProker] += actApprovedBudget
+			prokerAnggaranPengajuanMap[a.IdMatrikProker] += totRab
+			if totRab != actApprovedBudget {
+				prokerIsRevisedMap[a.IdMatrikProker] = true
+			}
+		}
+
+		timelineItems := timelineMap[a.Id]
+		if timelineItems == nil {
+			timelineItems = []DashboardMonitoringTimelineItem{}
 		}
 
 		aktItem := DashboardMonitoringAktivitas{
@@ -3881,6 +3977,7 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			TotalRab:        totRab,
 			StatusPencairan: statusPencairan,
 			Rab:             rabItems,
+			Timelines:       timelineItems,
 		}
 		aktMap[a.IdMatrikProker] = append(aktMap[a.IdMatrikProker], aktItem)
 	}
@@ -3897,6 +3994,8 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 			activities = []DashboardMonitoringAktivitas{}
 		}
 		totAnggaran := prokerAnggaranMap[p.Id]
+		totPengajuan := prokerAnggaranPengajuanMap[p.Id]
+		isRevised := prokerIsRevisedMap[p.Id]
 		totPencairan := prokerPencairanMap[p.Id]
 
 		unitLabel := p.NamaFakultasUnit
@@ -3905,30 +4004,32 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		}
 
 		prokerItem := DashboardMonitoringProker{
-			ID:                p.Id,
-			UUID:              p.UUID,
-			IdFakultasUnit:    p.IdFakultasUnit,
-			NamaFakultasUnit:  unitLabel,
-			TypeFakultasUnit:  p.TypeFakultasUnit,
-			Jenjang:           p.Jenjang,
-			NamaProgram:       p.NamaProgram,
-			Tahun:             p.Tahun,
-			IndikatorKinerja:  p.IndikatorKinerja,
-			TargetUnpak:       p.TargetUnpak,
-			TargetUnit:        p.TargetUnit,
-			Output:            p.Output,
-			Outcome:           p.Outcome,
-			PIC:               p.PIC,
-			Status:            p.Status,
-			StatusVerifikator: p.StatusVerifikator,
-			StatusAnggaran:    p.StatusAnggaran,
-			BebanYayasan:      p.BebanYayasan == 1,
-			IsBatal:           p.IsBatal == 1,
-			CatatanBatal:      p.CatatanBatal,
-			TotalAktivitas:    len(activities),
-			TotalAnggaran:     totAnggaran,
-			TotalPencairan:    totPencairan,
-			Aktivitas:         activities,
+			ID:                     p.Id,
+			UUID:                   p.UUID,
+			IdFakultasUnit:         p.IdFakultasUnit,
+			NamaFakultasUnit:       unitLabel,
+			TypeFakultasUnit:       p.TypeFakultasUnit,
+			Jenjang:                p.Jenjang,
+			NamaProgram:            p.NamaProgram,
+			Tahun:                  p.Tahun,
+			IndikatorKinerja:       p.IndikatorKinerja,
+			TargetUnpak:            p.TargetUnpak,
+			TargetUnit:             p.TargetUnit,
+			Output:                 p.Output,
+			Outcome:                p.Outcome,
+			PIC:                    p.PIC,
+			Status:                 p.Status,
+			StatusVerifikator:      p.StatusVerifikator,
+			StatusAnggaran:         p.StatusAnggaran,
+			BebanYayasan:           p.BebanYayasan == 1,
+			IsBatal:                p.IsBatal == 1,
+			CatatanBatal:           p.CatatanBatal,
+			TotalAktivitas:         len(activities),
+			TotalAnggaran:          totAnggaran,
+			TotalAnggaranPengajuan: totPengajuan,
+			IsAnggaranRevised:      isRevised,
+			TotalPencairan:         totPencairan,
+			Aktivitas:              activities,
 		}
 
 		prokerList = append(prokerList, prokerItem)
