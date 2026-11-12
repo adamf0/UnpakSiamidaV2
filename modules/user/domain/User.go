@@ -42,7 +42,7 @@ type UserAbacSummary struct {
 }
 
 func (User) TableName() string {
-	return "users"
+	return "usersv3"
 }
 
 // === CREATE ===

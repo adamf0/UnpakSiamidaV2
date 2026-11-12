@@ -32,5 +32,5 @@ type UserAbac struct {
 }
 
 func (UserAbac) TableName() string {
-	return "user_abac"
+	return "userv3_abac"
 }

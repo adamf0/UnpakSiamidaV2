@@ -24,24 +24,24 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 	var user domain.Account
 
 	err := r.db.WithContext(ctx).
-		Table("users").
+		Table("usersv3").
 		Select(`
-			users.id,
-			users.uuid,
-			users.nidn_username,
-			users.password,
-			users.level,
-			users.name,
-			users.email,
-			users.fakultas_unit,
+			usersv3.id,
+			usersv3.uuid,
+			usersv3.nidn_username,
+			usersv3.password,
+			usersv3.level,
+			usersv3.name,
+			usersv3.email,
+			usersv3.fakultas_unit,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
 				ELSE fu.nama_fak_prod_unit 
 			END AS nama_fakultas_unit
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
-		Where("users.nidn_username = ? AND users.`password` = ?", username, password).
+		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
+		Where("usersv3.nidn_username = ? AND usersv3.`password` = ?", username, password).
 		Take(&user).Error
 
 	if err != nil {
@@ -65,24 +65,24 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 	var user domain.Account
 
 	err := r.db.WithContext(ctx).
-		Table("users").
+		Table("usersv3").
 		Select(`
-			users.id,
-			users.uuid,
-			users.nidn_username,
-			users.password,
-			users.level,
-			users.name,
-			users.email,
-			users.fakultas_unit,
+			usersv3.id,
+			usersv3.uuid,
+			usersv3.nidn_username,
+			usersv3.password,
+			usersv3.level,
+			usersv3.name,
+			usersv3.email,
+			usersv3.fakultas_unit,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
 				ELSE fu.nama_fak_prod_unit 
 			END AS nama_fakultas_unit
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
-		Where("users.uuid = ?", userUUID).
+		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
+		Where("usersv3.uuid = ?", userUUID).
 		Take(&user).Error
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 	}
 
 	var secondaryIDs []string
-	_ = r.db.WithContext(ctx).Table("users").Where("id_user_merge = ?", idStr).Pluck("id", &secondaryIDs).Error
+	_ = r.db.WithContext(ctx).Table("usersv3").Where("id_user_merge = ?", idStr).Pluck("id", &secondaryIDs).Error
 	for _, rid := range secondaryIDs {
 		if rid != "" && rid != "0" {
 			userIDsMap[rid] = true
@@ -117,11 +117,11 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 	}
 
 	var parentMerge *string
-	_ = r.db.WithContext(ctx).Table("users").Where("id = ? AND id_user_merge IS NOT NULL AND id_user_merge > 0", idStr).Pluck("id_user_merge", &parentMerge).Error
+	_ = r.db.WithContext(ctx).Table("usersv3").Where("id = ? AND id_user_merge IS NOT NULL AND id_user_merge > 0", idStr).Pluck("id_user_merge", &parentMerge).Error
 	if parentMerge != nil && *parentMerge != "" && *parentMerge != "0" {
 		userIDsMap[*parentMerge] = true
 		var siblingIDs []string
-		_ = r.db.WithContext(ctx).Table("users").Where("id_user_merge = ?", *parentMerge).Pluck("id", &siblingIDs).Error
+		_ = r.db.WithContext(ctx).Table("usersv3").Where("id_user_merge = ?", *parentMerge).Pluck("id", &siblingIDs).Error
 		for _, sid := range siblingIDs {
 			if sid != "" && sid != "0" {
 				userIDsMap[sid] = true
@@ -186,29 +186,29 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 	}
 	extraRoles = append(extraRoles, renstraRoles...)
 
-	// 2. Ambil role dari penugasan user_abac (UPML, UPMF, UPMS)
+	// 2. Ambil role dari penugasan userv3_abac (UPML, UPMF, UPMS)
 	var abacRoles []domain.ExtraRole
-	_ = r.db.WithContext(ctx).Table("user_abac").
+	_ = r.db.WithContext(ctx).Table("userv3_abac").
 		Select(`
-		user_abac.tahun,
+		userv3_abac.tahun,
 		CASE
-			WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+			WHEN userv3_abac.role IS NOT NULL AND userv3_abac.role != '' THEN LOWER(userv3_abac.role)
 			WHEN fu.type = 'unit' THEN 'upml'
 			WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
-			WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
+			WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'upms'
 			ELSE 'upmf'
 		END AS role,
-		COALESCE(user_abac.id_fakultas_unit, 0) as id_fakultas_unit,
+		COALESCE(userv3_abac.id_fakultas_unit, 0) as id_fakultas_unit,
 		CASE
-			WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+			WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
 			WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != ''
 			THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')')
 			ELSE fu.nama_fak_prod_unit
 		END AS nama_fakultas_unit
 	`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-		Where("user_abac.id_user IN (?) AND (LOWER(user_abac.status) IN ('active', 'aktif') OR user_abac.status IS NULL OR user_abac.status = '') AND LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')", userIDs).
-		Group("user_abac.tahun, role, user_abac.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
+		Where("userv3_abac.id_user IN (?) AND (LOWER(userv3_abac.status) IN ('active', 'aktif') OR userv3_abac.status IS NULL OR userv3_abac.status = '') AND LOWER(userv3_abac.role) IN ('upms', 'upmf', 'upml')", userIDs).
+		Group("userv3_abac.tahun, role, userv3_abac.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
 		Scan(&abacRoles).Error
 
 	extraRoles = append(extraRoles, abacRoles...)
@@ -219,7 +219,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 func (r *AccountRepository) IsUsernameTakenByOther(ctx context.Context, username string, excludeUserUUID string) (bool, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
-		Table("users").
+		Table("usersv3").
 		Where("LOWER(TRIM(nidn_username)) = ? AND uuid <> ?", strings.ToLower(strings.TrimSpace(username)), excludeUserUUID).
 		Count(&count).Error
 	if err != nil {
@@ -243,7 +243,7 @@ func (r *AccountRepository) UpdateProfile(ctx context.Context, userUUID string, 
 	}
 
 	res := r.db.WithContext(ctx).
-		Table("users").
+		Table("usersv3").
 		Where("uuid = ?", userUUID).
 		Updates(updates)
 	if res.Error != nil {

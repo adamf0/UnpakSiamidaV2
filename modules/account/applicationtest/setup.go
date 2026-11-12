@@ -220,6 +220,12 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
 			updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 		);
 
+		DROP TABLE IF EXISTS usersv3;
+		CREATE TABLE usersv3 LIKE users;
+
+		DROP TABLE IF EXISTS userv3_abac;
+		CREATE TABLE userv3_abac LIKE user_abac;
+
         INSERT INTO users (id, uuid, nidn_username, password, level, name, email, fakultas_unit, foto, email_verified_at, remember_token, reset_password, created_at, updated_at) VALUES
         (2, 'f524cbfd-b5aa-41d9-9a94-d9d5065918b4', 'admin', '123', 'admin', 'Admin', NULL, NULL, 'Tangkapan Layar 2025-10-17 pukul 09.48.28.png', NULL, '$2y$10$OKzK1M/XuKAuUCtfQ6FvBeZpyxjQYkMQnj8QcySVzY/cQ7Xk8s1hW', 0, '2023-05-18 18:45:52', '2025-10-22 06:02:49'),
         (40, '495fe283-3e42-4323-a172-c110036b0c60', 'Didik NotoSudjono', '$2y$10$uPFePuHtBrbp0FGwz82O/u.imhEDzr6C6ndQPHzSOfYyWo/e9d37u', 'auditor1', 'Prof. Dr. Ir. rer. pol. Didik NotoSudjono, M.Sc', 'didiknotosudjono@unpak.ac.id', NULL, NULL, NULL, NULL, NULL, '2023-10-02 02:45:45', '2024-11-30 08:45:29'),
@@ -399,6 +405,9 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
         (514, '061a3606-5ae9-4de1-ac75-8c306d1fe75e', 'May Mulyaningsih', '$2y$10$QsJBJO72hiuH1RSRh/xLn.93krIkX/e4tEEpZBauWH.5BfbTMr9dO', 'auditor2', 'May Mulyaningsih, S.E., M.Ak', 'dummy@gmail.com', NULL, NULL, NULL, NULL, 0, '2025-11-18 04:17:18', '2025-11-18 04:17:18'),
         (515, '0e340ca2-eb94-4880-a33b-0eac6fc86b37', 'Sata Yoshida Srie Rahayu', '$2y$10$BtXCae0raD2waLa987JayeYxCJRm6I0Lq95vARNaWiJhka/C/.9R2', 'auditor2', 'Prof. Dr. Sata Yoshida Srie Rahayu, M.Si', 'dummy@gmail.com', NULL, NULL, NULL, NULL, 0, '2025-11-18 04:18:12', '2025-11-18 04:18:12'),
         (516, 'f03ba8b3-918d-4fd2-867d-6943dc14a5ac', 'beta', '123', '', 'beta', 'a@unpak.ac.id', 6, NULL, NULL, NULL, 0, NULL, NULL);
+
+		INSERT INTO usersv3 SELECT * FROM users;
+		INSERT INTO userv3_abac SELECT * FROM user_abac;
     `).Error
 
 	if err != nil {

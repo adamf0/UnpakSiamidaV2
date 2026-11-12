@@ -584,7 +584,7 @@ func resolveActorForDelete(c *fiber.Ctx, level string) (role string, actorID *in
 				ID   int    `gorm:"column:id"`
 				Name string `gorm:"column:name"`
 			}
-			q := dbInstance.WithContext(c.Context()).Table("users").Select("id, name")
+			q := dbInstance.WithContext(c.Context()).Table("usersv3").Select("id, name")
 			if strings.TrimSpace(u.UUID) != "" {
 				q = q.Where("uuid = ?", strings.TrimSpace(u.UUID))
 			} else if actorUsername != "" {
@@ -3557,10 +3557,10 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 	}
 
 	if sid != "" {
-		_ = dbInstance.WithContext(c.Context()).Table("users").Where("uuid = ?", sid).First(&userRow).Error
+		_ = dbInstance.WithContext(c.Context()).Table("usersv3").Where("uuid = ?", sid).First(&userRow).Error
 	}
 	if userRow.ID == 0 && userFU != "" {
-		_ = dbInstance.WithContext(c.Context()).Table("users").Where("fakultas_unit = ? AND level = ?", userFU, level).First(&userRow).Error
+		_ = dbInstance.WithContext(c.Context()).Table("usersv3").Where("fakultas_unit = ? AND level = ?", userFU, level).First(&userRow).Error
 	}
 
 	userName := strings.TrimSpace(userRow.NidnUsername)

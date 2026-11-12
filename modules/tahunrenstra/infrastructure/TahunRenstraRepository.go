@@ -178,9 +178,9 @@ func (r *TahunRenstraRepository) GetAll(
 		total++
 	}
 
-	// Pastikan tahun-tahun dari user_abac juga muncul di list
+	// Pastikan tahun-tahun dari userv3_abac juga muncul di list
 	var abacYears []string
-	_ = r.db.WithContext(ctx).Table("user_abac").
+	_ = r.db.WithContext(ctx).Table("userv3_abac").
 		Distinct("tahun").
 		Where("tahun IS NOT NULL AND tahun != '' AND LOWER(role) IN ('upms', 'upmf', 'upml')").
 		Pluck("tahun", &abacYears).Error

@@ -174,9 +174,9 @@ func loadRenstraRecordByUUID(db *gorm.DB, renstraUUID string) (*RenstraRecord, e
 			u3.name AS auditor2_name
 		FROM renstra r
 		LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
-		LEFT JOIN users u1 ON r.auditee = u1.id
-		LEFT JOIN users u2 ON r.auditor1 = u2.id
-		LEFT JOIN users u3 ON r.auditor2 = u3.id
+		LEFT JOIN usersv3 u1 ON r.auditee = u1.id
+		LEFT JOIN usersv3 u2 ON r.auditor1 = u2.id
+		LEFT JOIN usersv3 u3 ON r.auditor2 = u3.id
 		WHERE r.uuid = ?
 		LIMIT 1
 	`, renstraUUID).Scan(&rec).Error

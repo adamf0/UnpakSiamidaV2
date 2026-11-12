@@ -28,17 +28,17 @@ func NewUserRepository(db *gorm.DB) domainuser.IUserRepository {
 func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.User, error) {
 	var user domainuser.User
 
-	err := r.db.WithContext(ctx).Table("users").
+	err := r.db.WithContext(ctx).Table("usersv3").
 		Select(`
-			users.id,
-			users.uuid,
-			users.nidn_username,
-			users.password,
-			users.name,
-			users.email,
-			users.level,
-			users.fakultas_unit,
-			users.id_user_merge,
+			usersv3.id,
+			usersv3.uuid,
+			usersv3.nidn_username,
+			usersv3.password,
+			usersv3.name,
+			usersv3.email,
+			usersv3.level,
+			usersv3.fakultas_unit,
+			usersv3.id_user_merge,
 			mu.name as nama_user_merge,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
@@ -49,9 +49,9 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 			fu.type,
 			fu.uuid as uuid_fakultas_unit
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
-		Joins("LEFT JOIN users mu ON users.id_user_merge = mu.id").
-		Where("users.uuid = ?", uid).
+		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
+		Joins("LEFT JOIN usersv3 mu ON usersv3.id_user_merge = mu.id").
+		Where("usersv3.uuid = ?", uid).
 		First(&user).Error
 
 	if err != nil {
@@ -59,32 +59,32 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 	}
 
 	var abacSummaries []domainuser.UserAbacSummary
-	_ = r.db.WithContext(ctx).Table("user_abac").
+	_ = r.db.WithContext(ctx).Table("userv3_abac").
 		Select(`
-			user_abac.id,
-			user_abac.uuid,
-			user_abac.id_user,
-			user_abac.tahun,
-			user_abac.id_fakultas_unit,
-			user_abac.role,
-			user_abac.status,
+			userv3_abac.id,
+			userv3_abac.uuid,
+			userv3_abac.id_user,
+			userv3_abac.tahun,
+			userv3_abac.id_fakultas_unit,
+			userv3_abac.role,
+			userv3_abac.status,
 			CASE 
-				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
 				ELSE fu.nama_fak_prod_unit 
 			END as nama_fak_prod_unit,
 			CASE
-				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+				WHEN userv3_abac.role IS NOT NULL AND userv3_abac.role != '' THEN LOWER(userv3_abac.role)
 				WHEN fu.type = 'unit' THEN 'upml'
 				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
-				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'upms'
 				ELSE 'upmf'
 			END AS computed_role
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-		Where("user_abac.id_user = ?", user.ID).
-		Order("user_abac.tahun DESC, user_abac.id DESC").
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
+		Where("userv3_abac.id_user = ?", user.ID).
+		Order("userv3_abac.tahun DESC, userv3_abac.id DESC").
 		Find(&abacSummaries).Error
 	user.UserAbac = abacSummaries
 
@@ -93,20 +93,20 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"name":             "users.name",
-	"username":         "users.nidn_username",
-	"email":            "users.email",
-	"level":            "users.level",
+	"name":             "usersv3.name",
+	"username":         "usersv3.nidn_username",
+	"email":            "usersv3.email",
+	"level":            "usersv3.level",
 	"fakultas_unit":    "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"namafakultasunit": "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
-	"id_user_merge":    "users.id_user_merge",
+	"id_user_merge":    "usersv3.id_user_merge",
 }
 
 func (r *UserRepository) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
 	var users = make([]domainuser.UserOptions, 0)
 
-	// Ambil semua data dari table "users"
-	if err := r.db.WithContext(ctx).Table("users").Where("level != ?", "admin").Find(&users).Error; err != nil {
+	// Ambil semua data dari table "usersv3"
+	if err := r.db.WithContext(ctx).Table("usersv3").Where("level != ?", "admin").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
@@ -126,17 +126,17 @@ func (r *UserRepository) GetAll(
 	var users = make([]domainuser.User, 0)
 	var total int64
 
-	db := r.db.WithContext(ctx).Table("users").
+	db := r.db.WithContext(ctx).Table("usersv3").
 		Select(`
-			users.id,
-			users.uuid,
-			users.nidn_username,
-			users.password,
-			users.name,
-			users.email,
-			users.level,
-			users.fakultas_unit,
-			users.id_user_merge,
+			usersv3.id,
+			usersv3.uuid,
+			usersv3.nidn_username,
+			usersv3.password,
+			usersv3.name,
+			usersv3.email,
+			usersv3.level,
+			usersv3.fakultas_unit,
+			usersv3.id_user_merge,
 			mu.name as nama_user_merge,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
@@ -147,8 +147,8 @@ func (r *UserRepository) GetAll(
 			fu.type,
 			fu.uuid as uuid_fakultas_unit
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON users.fakultas_unit = fu.id").
-		Joins("LEFT JOIN users mu ON users.id_user_merge = mu.id")
+		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
+		Joins("LEFT JOIN usersv3 mu ON usersv3.id_user_merge = mu.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -237,7 +237,7 @@ func (r *UserRepository) GetAll(
 	// -------------------------------
 	// EXECUTE QUERY
 	// -------------------------------
-	if err := db.Order("users.id DESC").Find(&users).Error; err != nil {
+	if err := db.Order("usersv3.id DESC").Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -260,32 +260,32 @@ func (r *UserRepository) GetAll(
 		}
 
 		var abacRows []AbacRow
-		err := r.db.WithContext(ctx).Table("user_abac").
+		err := r.db.WithContext(ctx).Table("userv3_abac").
 			Select(`
-				user_abac.id,
-				user_abac.uuid,
-				user_abac.id_user,
-				user_abac.tahun,
-				user_abac.id_fakultas_unit,
-				user_abac.role,
-				user_abac.status,
+				userv3_abac.id,
+				userv3_abac.uuid,
+				userv3_abac.id_user,
+				userv3_abac.tahun,
+				userv3_abac.id_fakultas_unit,
+				userv3_abac.role,
+				userv3_abac.status,
 				CASE 
-					WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+					WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
 					WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 					THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
 					ELSE fu.nama_fak_prod_unit 
 				END as nama_fak_prod_unit,
 				CASE
-					WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+					WHEN userv3_abac.role IS NOT NULL AND userv3_abac.role != '' THEN LOWER(userv3_abac.role)
 					WHEN fu.type = 'unit' THEN 'upml'
 					WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
-					WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
+					WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'upms'
 					ELSE 'upmf'
 				END AS computed_role
 			`).
-			Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-			Where("user_abac.id_user IN ? AND LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')", userIds).
-			Order("user_abac.tahun DESC, user_abac.id DESC").
+			Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
+			Where("userv3_abac.id_user IN ? AND LOWER(userv3_abac.role) IN ('upms', 'upmf', 'upml')", userIds).
+			Order("userv3_abac.tahun DESC, userv3_abac.id DESC").
 			Find(&abacRows).Error
 
 		if err == nil {
@@ -321,7 +321,7 @@ func (r *UserRepository) GetAll(
 // CREATE
 // ------------------------
 func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) error {
-	if err := r.db.WithContext(ctx).Table("users").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("usersv3").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
 		return err
 	}
 
@@ -332,7 +332,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domainuser.User) erro
 // UPDATE
 // ------------------------
 func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) error {
-	if err := r.db.WithContext(ctx).Table("users").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("usersv3").Omit("NamaFakultasUnit", "UuidFakultasUnit", "nama_fak_prod_unit", "uuid_fakultas_unit").Save(user).Error; err != nil {
 		return err
 	}
 
@@ -343,7 +343,7 @@ func (r *UserRepository) Update(ctx context.Context, user *domainuser.User) erro
 // DELETE (by UUID)
 // ------------------------
 func (r *UserRepository) Delete(ctx context.Context, uid uuid.UUID) error {
-	return r.db.WithContext(ctx).Table("users").
+	return r.db.WithContext(ctx).Table("usersv3").
 		Where("uuid = ?", uid).
 		Delete(&domainuser.User{}).Error
 }
@@ -355,13 +355,13 @@ func (r *UserRepository) MergeUser(ctx context.Context, primaryID uint, secondar
 	_ = r.ensureIdUserMergeColumn(ctx)
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. Akun primary tidak boleh merujuk ke merge lain
-		if err := tx.Exec("UPDATE `users` SET `id_user_merge` = NULL WHERE `id` = ?", primaryID).Error; err != nil {
+		if err := tx.Exec("UPDATE `usersv3` SET `id_user_merge` = NULL WHERE `id` = ?", primaryID).Error; err != nil {
 			return err
 		}
 
 		// 2. Akun secondary di-update id_user_merge = primaryID
 		if len(secondaryIDs) > 0 {
-			if err := tx.Table("users").Where("id IN (?)", secondaryIDs).Update("id_user_merge", primaryID).Error; err != nil {
+			if err := tx.Table("usersv3").Where("id IN (?)", secondaryIDs).Update("id_user_merge", primaryID).Error; err != nil {
 				return err
 			}
 		}
@@ -374,7 +374,7 @@ func (r *UserRepository) MergeUser(ctx context.Context, primaryID uint, secondar
 // UNMERGE USER
 // ------------------------
 func (r *UserRepository) UnmergeUser(ctx context.Context, userID uint) error {
-	return r.db.WithContext(ctx).Exec("UPDATE `users` SET `id_user_merge` = NULL WHERE `id` = ?", userID).Error
+	return r.db.WithContext(ctx).Exec("UPDATE `usersv3` SET `id_user_merge` = NULL WHERE `id` = ?", userID).Error
 }
 
 func (r *UserRepository) ensureIdUserMergeColumn(ctx context.Context) error {
@@ -383,7 +383,7 @@ func (r *UserRepository) ensureIdUserMergeColumn(ctx context.Context) error {
 		SELECT COUNT(*)
 		FROM INFORMATION_SCHEMA.COLUMNS
 		WHERE TABLE_SCHEMA = DATABASE()
-		  AND TABLE_NAME = 'users'
+		  AND TABLE_NAME = 'usersv3'
 		  AND COLUMN_NAME = 'id_user_merge'
 	`
 	if err := r.db.WithContext(ctx).Raw(checkSQL).Scan(&colCount).Error; err != nil {
@@ -391,7 +391,7 @@ func (r *UserRepository) ensureIdUserMergeColumn(ctx context.Context) error {
 	}
 
 	if colCount == 0 {
-		alterSQL := "ALTER TABLE `users` ADD COLUMN `id_user_merge` INT UNSIGNED NULL AFTER `fakultas_unit`"
+		alterSQL := "ALTER TABLE `usersv3` ADD COLUMN `id_user_merge` INT UNSIGNED NULL AFTER `fakultas_unit`"
 		if err := r.db.WithContext(ctx).Exec(alterSQL).Error; err != nil {
 			return err
 		}
@@ -425,7 +425,7 @@ func (r *UserRepository) ensureUuidColumn(ctx context.Context, tableName string)
 
 func (r *UserRepository) SetupUuid(ctx context.Context) error {
 	_ = r.ensureIdUserMergeColumn(ctx)
-	if err := r.ensureUuidColumn(ctx, "users"); err != nil {
+	if err := r.ensureUuidColumn(ctx, "usersv3"); err != nil {
 		return err
 	}
 
@@ -464,7 +464,7 @@ func (r *UserRepository) SetupUuid(ctx context.Context) error {
 		args = append(args, chunk)
 
 		query := fmt.Sprintf(
-			"UPDATE users SET uuid = %s WHERE id IN (?)",
+			"UPDATE usersv3 SET uuid = %s WHERE id IN (?)",
 			caseSQL,
 		)
 
@@ -502,23 +502,23 @@ func (r *UserRepository) InsertOutbox(
 // USER ABAC METHODS
 // ------------------------
 func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role, search, userUuid, fuUuid string) ([]domainuser.UserAbac, error) {
-	query := r.db.WithContext(ctx).Table("user_abac").
+	query := r.db.WithContext(ctx).Table("userv3_abac").
 		Select(`
-			user_abac.id,
-			user_abac.uuid,
-			user_abac.id_user,
-			user_abac.tahun,
-			user_abac.id_fakultas_unit,
-			user_abac.role,
-			user_abac.status,
-			user_abac.created_at,
-			user_abac.updated_at,
+			userv3_abac.id,
+			userv3_abac.uuid,
+			userv3_abac.id_user,
+			userv3_abac.tahun,
+			userv3_abac.id_fakultas_unit,
+			userv3_abac.role,
+			userv3_abac.status,
+			userv3_abac.created_at,
+			userv3_abac.updated_at,
 			u.name as user_name,
 			u.nidn_username as user_username,
 			u.email as user_email,
 			u.uuid as user_uuid,
 			CASE 
-				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
 				ELSE fu.nama_fak_prod_unit 
@@ -528,23 +528,23 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 			fu.type as type_fakultas_unit,
 			fu.fakultas as fakultas_unit_parent,
 			CASE
-				WHEN user_abac.role IS NOT NULL AND user_abac.role != '' THEN LOWER(user_abac.role)
+				WHEN userv3_abac.role IS NOT NULL AND userv3_abac.role != '' THEN LOWER(userv3_abac.role)
 				WHEN fu.type = 'unit' THEN 'upml'
 				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%vokasi%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
-				WHEN user_abac.id_fakultas_unit IS NULL OR user_abac.id_fakultas_unit = 0 THEN 'upms'
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'upms'
 				ELSE 'upmf'
 			END AS computed_role
 		`).
-		Joins("LEFT JOIN users u ON user_abac.id_user = u.id").
-		Joins("LEFT JOIN v_fakultas_unit fu ON user_abac.id_fakultas_unit = fu.id").
-		Where("LOWER(user_abac.role) IN ('upms', 'upmf', 'upml')")
+		Joins("LEFT JOIN usersv3 u ON userv3_abac.id_user = u.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
+		Where("LOWER(userv3_abac.role) IN ('upms', 'upmf', 'upml')")
 
 	if tahun != "" && tahun != "all" {
-		query = query.Where("user_abac.tahun = ?", tahun)
+		query = query.Where("userv3_abac.tahun = ?", tahun)
 	}
 
 	if status != "" && status != "all" {
-		query = query.Where("user_abac.status = ?", status)
+		query = query.Where("userv3_abac.status = ?", status)
 	}
 
 	if userUuid != "" {
@@ -561,7 +561,7 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 	}
 
 	var results []domainuser.UserAbac
-	if err := query.Order("user_abac.id DESC").Find(&results).Error; err != nil {
+	if err := query.Order("userv3_abac.id DESC").Find(&results).Error; err != nil {
 		return nil, err
 	}
 
@@ -584,22 +584,22 @@ func (r *UserRepository) GetAllUserAbac(ctx context.Context, tahun, status, role
 
 func (r *UserRepository) GetUserAbacByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.UserAbac, error) {
 	var abac domainuser.UserAbac
-	if err := r.db.WithContext(ctx).Table("user_abac").Where("uuid = ?", uid).First(&abac).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("userv3_abac").Where("uuid = ?", uid).First(&abac).Error; err != nil {
 		return nil, err
 	}
 	return &abac, nil
 }
 
 func (r *UserRepository) CreateUserAbac(ctx context.Context, abac *domainuser.UserAbac) error {
-	return r.db.WithContext(ctx).Table("user_abac").Create(abac).Error
+	return r.db.WithContext(ctx).Table("userv3_abac").Create(abac).Error
 }
 
 func (r *UserRepository) UpdateUserAbac(ctx context.Context, id uint, updates map[string]interface{}) error {
-	return r.db.WithContext(ctx).Table("user_abac").Where("id = ?", id).Updates(updates).Error
+	return r.db.WithContext(ctx).Table("userv3_abac").Where("id = ?", id).Updates(updates).Error
 }
 
 func (r *UserRepository) DeleteUserAbac(ctx context.Context, uid uuid.UUID) error {
-	res := r.db.WithContext(ctx).Table("user_abac").Where("uuid = ?", uid).Delete(&domainuser.UserAbac{})
+	res := r.db.WithContext(ctx).Table("userv3_abac").Where("uuid = ?", uid).Delete(&domainuser.UserAbac{})
 	if res.Error != nil {
 		return res.Error
 	}
@@ -611,7 +611,7 @@ func (r *UserRepository) DeleteUserAbac(ctx context.Context, uid uuid.UUID) erro
 
 func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint) (bool, error) {
 	var count int64
-	q := r.db.WithContext(ctx).Table("user_abac").
+	q := r.db.WithContext(ctx).Table("userv3_abac").
 		Where("id_user = ? AND tahun = ?", userID, tahun)
 	if fuID != nil && *fuID > 0 {
 		q = q.Where("id_fakultas_unit = ?", *fuID)

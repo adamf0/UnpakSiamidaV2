@@ -308,7 +308,7 @@ func UpdateProkerBatalSettingHandler(c *fiber.Ctx) error {
 	}
 	if strings.TrimSpace(actorSID) != "" {
 		var uid int
-		if err := dbInstance.WithContext(c.Context()).Table("users").Select("id").Where("uuid = ?", strings.TrimSpace(actorSID)).Take(&uid).Error; err == nil && uid > 0 {
+		if err := dbInstance.WithContext(c.Context()).Table("usersv3").Select("id").Where("uuid = ?", strings.TrimSpace(actorSID)).Take(&uid).Error; err == nil && uid > 0 {
 			updatedByPtr = &uid
 		}
 	}

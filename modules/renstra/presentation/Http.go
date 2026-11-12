@@ -498,9 +498,9 @@ func SendEmailRenstraHandlerfunc(c *fiber.Ctx) error {
 			u3.email AS auditor2_email
 		FROM renstra r
 		LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
-		LEFT JOIN users u1 ON r.auditee = u1.id
-		LEFT JOIN users u2 ON r.auditor1 = u2.id
-		LEFT JOIN users u3 ON r.auditor2 = u3.id
+		LEFT JOIN usersv3 u1 ON r.auditee = u1.id
+		LEFT JOIN usersv3 u2 ON r.auditor1 = u2.id
+		LEFT JOIN usersv3 u3 ON r.auditor2 = u3.id
 		WHERE r.uuid IN ?
 	`, uuids).Scan(&rows).Error
 	if err != nil {

@@ -75,9 +75,9 @@ func (r *BeritaAcaraRepository) GetDefaultByUuid(
 		u3.name as Auditor2
 	`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id").
-		Joins("LEFT JOIN users u1 ON ba.auditee = u1.id").
-		Joins("LEFT JOIN users u2 ON ba.auditor1 = u2.id").
-		Joins("LEFT JOIN users u3 ON ba.auditor2 = u3.id").
+		Joins("LEFT JOIN usersv3 u1 ON ba.auditee = u1.id").
+		Joins("LEFT JOIN usersv3 u2 ON ba.auditor1 = u2.id").
+		Joins("LEFT JOIN usersv3 u3 ON ba.auditor2 = u3.id").
 		Where("ba.uuid = ?", id).
 		Take(&rowData).Error
 
@@ -137,9 +137,9 @@ func (r *BeritaAcaraRepository) GetAll(
 			u3.name as Auditor2
 		`).
 		Joins(`LEFT JOIN v_fakultas_unit fu ON ba.fakultas_unit = fu.id`).
-		Joins(`LEFT JOIN users u1 ON ba.auditee = u1.id`).
-		Joins(`LEFT JOIN users u2 ON ba.auditor1 = u2.id`).
-		Joins(`LEFT JOIN users u3 ON ba.auditor2 = u3.id`)
+		Joins(`LEFT JOIN usersv3 u1 ON ba.auditee = u1.id`).
+		Joins(`LEFT JOIN usersv3 u2 ON ba.auditor1 = u2.id`).
+		Joins(`LEFT JOIN usersv3 u3 ON ba.auditor2 = u3.id`)
 
 	// ==========================================
 	// ADVANCED FILTERS

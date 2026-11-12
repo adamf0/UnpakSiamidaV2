@@ -322,9 +322,9 @@ func (r *RenstraRepository) GetDefaultByUuid(
 		) AS TotalKts
 	`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
-		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
-		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
-		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id").
+		Joins("LEFT JOIN usersv3 a0 ON r.auditee = a0.id").
+		Joins("LEFT JOIN usersv3 a1 ON r.auditor1 = a1.id").
+		Joins("LEFT JOIN usersv3 a2 ON r.auditor2 = a2.id").
 		Where("r.uuid = ?", id).
 		Take(&result).Error // Take = LIMIT 1
 
@@ -665,9 +665,9 @@ func (r *RenstraRepository) GetAll(
 			) AS TotalKts
 		`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
-		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
-		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
-		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id")
+		Joins("LEFT JOIN usersv3 a0 ON r.auditee = a0.id").
+		Joins("LEFT JOIN usersv3 a1 ON r.auditor1 = a1.id").
+		Joins("LEFT JOIN usersv3 a2 ON r.auditor2 = a2.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)

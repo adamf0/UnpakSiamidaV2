@@ -14,5 +14,5 @@ type Account struct {
 }
 
 func (Account) TableName() string {
-	return "users"
+	return "usersv3"
 }

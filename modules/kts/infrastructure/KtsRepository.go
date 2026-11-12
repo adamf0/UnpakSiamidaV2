@@ -131,8 +131,8 @@ func (r *KtsRepository) GetDefaultByUuid(
 		Joins(`LEFT JOIN master_standar_renstra sr ON mir.id_master_standar = sr.id`).
 		Joins(`LEFT JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id`).
 		Joins(`LEFT JOIN jenis_file_renstra jf ON tdt.jenis_file = jf.id`).
-		Joins(`LEFT JOIN users u1 ON r.auditee = u1.id`).
-		Joins(`LEFT JOIN users u2 ON k.auditor = u2.id`).
+		Joins(`LEFT JOIN usersv3 u1 ON r.auditee = u1.id`).
+		Joins(`LEFT JOIN usersv3 u2 ON k.auditor = u2.id`).
 		Where("k.uuid = ?", id).
 		Order("k.id_dokumen_tambahan DESC").
 		Take(&rowData).Error // Take otomatis LIMIT 1
@@ -273,8 +273,8 @@ func (r *KtsRepository) GetAll(
 			LEFT JOIN jenis_file_renstra jf 
 				ON tdt.jenis_file = jf.id
 		`).
-		Joins(`LEFT JOIN users u1 ON r.auditee = u1.id`).
-		Joins(`LEFT JOIN users u2 ON k.auditor = u2.id`)
+		Joins(`LEFT JOIN usersv3 u1 ON r.auditee = u1.id`).
+		Joins(`LEFT JOIN usersv3 u2 ON k.auditor = u2.id`)
 
 	// -----------------------------------
 	// ADVANCED FILTERS
@@ -598,9 +598,9 @@ func (r *KtsRepository) GetTemuanKts(
 			LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id
 			LEFT JOIN master_standar_renstra sr ON mir.id_master_standar = sr.id
 			LEFT JOIN kts_renstra kts ON rn.id = kts.id_renstra_nilai
-			LEFT JOIN users u1 ON r.auditor1 = u1.id
-			LEFT JOIN users u2 ON r.auditor2 = u2.id
-			LEFT JOIN users u3 ON r.auditee = u3.id
+			LEFT JOIN usersv3 u1 ON r.auditor1 = u1.id
+			LEFT JOIN usersv3 u2 ON r.auditor2 = u2.id
+			LEFT JOIN usersv3 u3 ON r.auditee = u3.id
 			LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
 			WHERE LOWER(TRIM(venr.klasifikasi)) != 'ok'
 			  AND venr.klasifikasi IS NOT NULL
@@ -694,9 +694,9 @@ func (r *KtsRepository) GetTemuanKts(
 			JOIN view_evaluasi_dokumen_tambahan vedt ON dt.id = vedt.id
 			LEFT JOIN template_dokumen_tambahan tdt ON dt.id_template_dokumen_tambahan = tdt.id
 			LEFT JOIN kts_renstra kts ON dt.id = kts.id_dokumen_tambahan
-			LEFT JOIN users u1 ON r.auditor1 = u1.id
-			LEFT JOIN users u2 ON r.auditor2 = u2.id
-			LEFT JOIN users u3 ON r.auditee = u3.id
+			LEFT JOIN usersv3 u1 ON r.auditor1 = u1.id
+			LEFT JOIN usersv3 u2 ON r.auditor2 = u2.id
+			LEFT JOIN usersv3 u3 ON r.auditee = u3.id
 			LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
 			WHERE LOWER(TRIM(vedt.klasifikasi)) != 'ok'
 			  AND vedt.klasifikasi IS NOT NULL
@@ -779,11 +779,11 @@ func (r *KtsRepository) GenerateKtsFromTemuan(
 		if _, err := strconv.ParseUint(trimmedAuditor, 10, 32); err == nil {
 			auditorIntStr = &trimmedAuditor
 		} else {
-			// Query users table by uuid
+			// Query usersv3 table by uuid
 			var userRow struct {
 				ID uint
 			}
-			err := r.db.WithContext(ctx).Table("users").Select("id").
+			err := r.db.WithContext(ctx).Table("usersv3").Select("id").
 				Where("uuid = ?", trimmedAuditor).
 				First(&userRow).Error
 			if err == nil && userRow.ID > 0 {
