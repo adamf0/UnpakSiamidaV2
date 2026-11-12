@@ -43,7 +43,7 @@ func TestNewUser(t *testing.T) {
 			wantSuccess:  true,
 		},
 		{
-			name:         "InvalidEmail",
+			name:         "AnyEmailAllowed",
 			username:     "user2",
 			password:     "secret",
 			nameField:    "Jane Doe",
@@ -52,8 +52,7 @@ func TestNewUser(t *testing.T) {
 			fakultasUnit: nil,
 			target:       nil,
 			tipe:         nil,
-			wantSuccess:  false,
-			wantErrCode:  domain.InvalidEmail().Code,
+			wantSuccess:  true,
 		},
 	}
 
@@ -142,7 +141,7 @@ func TestUpdateUser(t *testing.T) {
 			wantErrCode: domain.InvalidData().Code,
 		},
 		{
-			name:        "InvalidEmail",
+			name:        "AnyEmailAllowedOnUpdate",
 			prev:        prev,
 			uid:         baseUUID,
 			username:    "u1",
@@ -152,8 +151,7 @@ func TestUpdateUser(t *testing.T) {
 			level:       "user",
 			target:      nil,
 			tipe:        nil,
-			wantSuccess: false,
-			wantErrCode: domain.InvalidEmail().Code,
+			wantSuccess: true,
 		},
 		{
 			name:         "InvalidFakultasUnit",

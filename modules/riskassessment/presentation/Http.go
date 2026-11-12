@@ -24,7 +24,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 // =======================================================
 // POST /risk_assessment
 // =======================================================
@@ -574,7 +573,7 @@ func GetRiskOptionsHandler(c *fiber.Ctx) error {
 }
 
 func ModuleRiskAssessment(app *fiber.App, dbs ...*gorm.DB) {
-	roles := []string{"admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator", "anggaran", "keuangan", "verifikator"}
+	roles := []string{"user", "admin", "auditee", "fakultas", "unit", "upml", "upmf", "upms", "evaluator", "anggaran", "keuangan", "verifikator"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	// Dynamic Master Data Endpoints

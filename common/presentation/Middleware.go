@@ -451,7 +451,22 @@ func getTahun(c *fiber.Ctx) string {
 	if t := c.Params("tahun"); t != "" {
 		return t
 	}
-	return c.Query("ctxtahun")
+	if t := c.Query("ctxtahun"); t != "" {
+		return t
+	}
+	if t := c.Query("tahun"); t != "" {
+		return t
+	}
+	if t := c.FormValue("tahun"); t != "" {
+		return t
+	}
+	if t := c.Get("X-Position-Year"); t != "" {
+		return t
+	}
+	if t := c.Get("X-Tahun"); t != "" {
+		return t
+	}
+	return ""
 }
 
 func hasAnyRoleInWhitelist(user *Account, whitelist []string) bool {
@@ -562,7 +577,7 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 
 		tahun := getTahun(c)
 		if tahun == "" {
-			if len(whitelist) == 0 || hasAnyRoleInWhitelist(user, whitelist) {
+			if len(whitelist) == 0 || hasAnyRoleInWhitelist(user, whitelist) || (currentLevel != "" && roleInWhitelist(currentLevel, whitelist)) {
 				log.Println("[RBAC] Access granted without tahun")
 				return c.Next()
 			}
@@ -577,7 +592,7 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 		}
 
 		hasAccess, grantedAccess := checkRoleAccess(user, tahun, whitelist)
-		if !hasAccess && roleInWhitelist(user.Level, whitelist) {
+		if !hasAccess && (roleInWhitelist(user.Level, whitelist) || (currentLevel != "" && roleInWhitelist(currentLevel, whitelist))) {
 			hasAccess = true
 		}
 

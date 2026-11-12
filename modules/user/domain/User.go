@@ -4,7 +4,6 @@ import (
 	"time"
 
 	common "UnpakSiamida/common/domain"
-	helper "UnpakSiamida/common/helper"
 	event "UnpakSiamida/modules/user/event"
 
 	"github.com/google/uuid"
@@ -47,10 +46,6 @@ func (User) TableName() string {
 
 // === CREATE ===
 func NewUser(username string, password string, name string, email string, level string, fakultasunit *int, target *string, tipe *string) common.ResultValue[*User] {
-
-	if !helper.IsValidUnpakEmail(email) {
-		return common.FailureValue[*User](InvalidEmail())
-	}
 
 	if fakultasunit != nil && *fakultasunit <= 0 {
 		return common.FailureValue[*User](InvalidFakultasUnit())
@@ -106,10 +101,6 @@ func UpdateUser(
 
 	if fakultasunit != nil && *fakultasunit <= 0 {
 		return common.FailureValue[*User](InvalidFakultasUnit())
-	}
-
-	if !helper.IsValidUnpakEmail(email) {
-		return common.FailureValue[*User](InvalidEmail())
 	}
 
 	// update opsional
