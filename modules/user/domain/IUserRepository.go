@@ -32,4 +32,11 @@ type IUserRepository interface {
 	DeleteUserAbac(ctx context.Context, uid uuid.UUID) error
 	CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint) (bool, error)
 	GetFakultasUnitInfo(ctx context.Context, id *uint, uidStr string) (idRes uint, typeRes string, namaRes string, err error)
+
+	// User Role (userv3_role)
+	GetAllUserRole(ctx context.Context, tahun, status, level, search, userUuid, fuUuid string) ([]UserRole, error)
+	GetUserRoleByUuid(ctx context.Context, uid uuid.UUID) (*UserRole, error)
+	CreateUserRole(ctx context.Context, role *UserRole) error
+	UpdateUserRole(ctx context.Context, id uint, updates map[string]interface{}) error
+	DeleteUserRole(ctx context.Context, uid uuid.UUID) error
 }

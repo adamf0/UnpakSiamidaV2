@@ -29,15 +29,7 @@ func CreateUserCommandValidation(cmd CreateUserCommand) error {
 		),
 
 		validation.Field(&cmd.Level,
-			validation.Required.Error("Level cannot be blank"),
-			validation.By(helper.ValidateLevel),
 			validation.By(helper.NoXSSFullScanWithDecode()),
-		),
-
-		validation.Field(&cmd.UuidFakultasUnit,
-			validation.By(func(value interface{}) error {
-				return helper.ValidateFakultasUnit(value, cmd.Level)
-			}),
 		),
 	)
 }

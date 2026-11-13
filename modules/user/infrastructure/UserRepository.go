@@ -36,7 +36,6 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 			usersv3.password,
 			usersv3.name,
 			usersv3.email,
-			usersv3.level,
 			usersv3.fakultas_unit,
 			usersv3.id_user_merge,
 			mu.name as nama_user_merge,
@@ -56,6 +55,37 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 
 	if err != nil {
 		return nil, err
+	}
+
+	var roleSummaries []domainuser.UserRoleSummary
+	_ = r.db.WithContext(ctx).Table("userv3_role").
+		Select(`
+			userv3_role.id,
+			userv3_role.uuid,
+			userv3_role.id_user,
+			userv3_role.tahun,
+			userv3_role.id_fakultas_unit,
+			userv3_role.level,
+			userv3_role.status,
+			CASE 
+				WHEN userv3_role.id_fakultas_unit IS NULL OR userv3_role.id_fakultas_unit = 0 THEN 'Tingkat Universitas'
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fakultas_unit
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_role.id_fakultas_unit = fu.id").
+		Where("userv3_role.id_user = ?", user.ID).
+		Order("userv3_role.tahun DESC, userv3_role.id DESC").
+		Find(&roleSummaries).Error
+	user.UserRoles = roleSummaries
+	if len(roleSummaries) > 0 {
+		user.Level = roleSummaries[0].Level
+		if user.NamaFakultasUnit == nil || *user.NamaFakultasUnit == "" {
+			user.NamaFakultasUnit = &roleSummaries[0].NamaFakultasUnit
+		}
+	} else {
+		user.Level = "user"
 	}
 
 	var abacSummaries []domainuser.UserAbacSummary
@@ -96,7 +126,6 @@ var allowedSearchColumns = map[string]string{
 	"name":             "usersv3.name",
 	"username":         "usersv3.nidn_username",
 	"email":            "usersv3.email",
-	"level":            "usersv3.level",
 	"fakultas_unit":    "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"namafakultasunit": "CASE WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') ELSE fu.nama_fak_prod_unit END",
 	"id_user_merge":    "usersv3.id_user_merge",
@@ -105,8 +134,8 @@ var allowedSearchColumns = map[string]string{
 func (r *UserRepository) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
 	var users = make([]domainuser.UserOptions, 0)
 
-	// Ambil semua data dari table "usersv3"
-	if err := r.db.WithContext(ctx).Table("usersv3").Where("level != ?", "admin").Find(&users).Error; err != nil {
+	// Ambil semua data dari table "usersv3" kecuali yang memiliki role admin di userv3_role
+	if err := r.db.WithContext(ctx).Table("usersv3").Where("usersv3.id NOT IN (SELECT id_user FROM userv3_role WHERE level = 'admin')").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
@@ -134,7 +163,6 @@ func (r *UserRepository) GetAll(
 			usersv3.password,
 			usersv3.name,
 			usersv3.email,
-			usersv3.level,
 			usersv3.fakultas_unit,
 			usersv3.id_user_merge,
 			mu.name as nama_user_merge,
@@ -309,6 +337,68 @@ func (r *UserRepository) GetAll(
 					users[i].UserAbac = items
 				} else {
 					users[i].UserAbac = []domainuser.UserAbacSummary{}
+				}
+			}
+		}
+
+		type RoleRow struct {
+			ID               uint   `gorm:"column:id"`
+			UUID             string `gorm:"column:uuid"`
+			IdUser           uint   `gorm:"column:id_user"`
+			Tahun            string `gorm:"column:tahun"`
+			IdFakultasUnit   *uint  `gorm:"column:id_fakultas_unit"`
+			Level            string `gorm:"column:level"`
+			Status           string `gorm:"column:status"`
+			NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
+		}
+
+		var roleRows []RoleRow
+		errRole := r.db.WithContext(ctx).Table("userv3_role").
+			Select(`
+				userv3_role.id,
+				userv3_role.uuid,
+				userv3_role.id_user,
+				userv3_role.tahun,
+				userv3_role.id_fakultas_unit,
+				userv3_role.level,
+				userv3_role.status,
+				CASE 
+					WHEN userv3_role.id_fakultas_unit IS NULL OR userv3_role.id_fakultas_unit = 0 THEN 'Tingkat Universitas'
+					WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+					THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+					ELSE fu.nama_fak_prod_unit 
+				END as nama_fak_prod_unit
+			`).
+			Joins("LEFT JOIN v_fakultas_unit fu ON userv3_role.id_fakultas_unit = fu.id").
+			Where("userv3_role.id_user IN ?", userIds).
+			Order("userv3_role.tahun DESC, userv3_role.id DESC").
+			Find(&roleRows).Error
+
+		if errRole == nil {
+			rolesMap := make(map[uint][]domainuser.UserRoleSummary)
+			for _, row := range roleRows {
+				rolesMap[row.IdUser] = append(rolesMap[row.IdUser], domainuser.UserRoleSummary{
+					ID:               row.ID,
+					UUID:             row.UUID,
+					IdUser:           row.IdUser,
+					Tahun:            row.Tahun,
+					IdFakultasUnit:   row.IdFakultasUnit,
+					NamaFakultasUnit: row.NamaFakultasUnit,
+					Level:            row.Level,
+					Status:           row.Status,
+				})
+			}
+
+			for i := range users {
+				if items, ok := rolesMap[users[i].ID]; ok && len(items) > 0 {
+					users[i].UserRoles = items
+					users[i].Level = items[0].Level
+					if users[i].NamaFakultasUnit == nil || *users[i].NamaFakultasUnit == "" {
+						users[i].NamaFakultasUnit = &items[0].NamaFakultasUnit
+					}
+				} else {
+					users[i].UserRoles = []domainuser.UserRoleSummary{}
+					users[i].Level = "user"
 				}
 			}
 		}
@@ -641,4 +731,90 @@ func (r *UserRepository) GetFakultasUnitInfo(ctx context.Context, id *uint, uidS
 		return 0, "", "", err
 	}
 	return row.ID, row.Type, row.Nama, nil
+}
+
+// ------------------------
+// USER ROLE METHODS (userv3_role)
+// ------------------------
+func (r *UserRepository) GetAllUserRole(ctx context.Context, tahun, status, level, search, userUuid, fuUuid string) ([]domainuser.UserRole, error) {
+	query := r.db.WithContext(ctx).Table("userv3_role").
+		Select(`
+			userv3_role.id,
+			userv3_role.uuid,
+			userv3_role.id_user,
+			userv3_role.tahun,
+			userv3_role.id_fakultas_unit,
+			userv3_role.level,
+			userv3_role.status,
+			userv3_role.created_at,
+			userv3_role.updated_at,
+			u.name as user_name,
+			u.nidn_username as user_username,
+			u.email as user_email,
+			u.uuid as user_uuid,
+			CASE 
+				WHEN userv3_role.id_fakultas_unit IS NULL OR userv3_role.id_fakultas_unit = 0 THEN 'Tingkat Universitas'
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fak_prod_unit,
+			fu.jenjang as jenjang_fakultas_unit,
+			fu.uuid as uuid_fakultas_unit,
+			fu.type as type_fakultas_unit
+		`).
+		Joins("LEFT JOIN usersv3 u ON userv3_role.id_user = u.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_role.id_fakultas_unit = fu.id")
+
+	if tahun != "" && tahun != "all" {
+		query = query.Where("userv3_role.tahun = ?", tahun)
+	}
+	if status != "" && status != "all" {
+		query = query.Where("userv3_role.status = ?", status)
+	}
+	if level != "" && level != "all" {
+		query = query.Where("LOWER(userv3_role.level) = ?", strings.ToLower(level))
+	}
+	if userUuid != "" {
+		query = query.Where("u.uuid = ?", userUuid)
+	}
+	if fuUuid != "" {
+		query = query.Where("fu.uuid = ?", fuUuid)
+	}
+	if search != "" {
+		like := "%" + strings.ToLower(search) + "%"
+		query = query.Where("LOWER(u.name) LIKE ? OR LOWER(u.nidn_username) LIKE ? OR LOWER(fu.nama_fak_prod_unit) LIKE ?", like, like, like)
+	}
+
+	var results []domainuser.UserRole
+	if err := query.Order("userv3_role.id DESC").Find(&results).Error; err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *UserRepository) GetUserRoleByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.UserRole, error) {
+	var role domainuser.UserRole
+	if err := r.db.WithContext(ctx).Table("userv3_role").Where("uuid = ?", uid).First(&role).Error; err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+func (r *UserRepository) CreateUserRole(ctx context.Context, role *domainuser.UserRole) error {
+	return r.db.WithContext(ctx).Table("userv3_role").Create(role).Error
+}
+
+func (r *UserRepository) UpdateUserRole(ctx context.Context, id uint, updates map[string]interface{}) error {
+	return r.db.WithContext(ctx).Table("userv3_role").Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *UserRepository) DeleteUserRole(ctx context.Context, uid uuid.UUID) error {
+	res := r.db.WithContext(ctx).Table("userv3_role").Where("uuid = ?", uid).Delete(&domainuser.UserRole{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }

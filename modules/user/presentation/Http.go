@@ -23,6 +23,7 @@ import (
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
+	userinfra "UnpakSiamida/modules/user/infrastructure"
 
 	"gorm.io/gorm"
 )
@@ -406,4 +407,8 @@ func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 
 	ModuleUserAbac(app)
+	if len(dbs) > 0 && dbs[0] != nil {
+		repo := userinfra.NewUserRepository(dbs[0])
+		ModuleUserRole(app, repo)
+	}
 }
