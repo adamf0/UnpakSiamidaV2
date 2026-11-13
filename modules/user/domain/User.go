@@ -17,27 +17,15 @@ type User struct {
 	Password         string    `gorm:"type:longtext;not null" json:"-"`
 	Name             string    `gorm:"size:255;not null" json:"Name"`
 	Email            string    `gorm:"size:255;" json:"Email"`
-	Level            string    `gorm:"-" json:"Level,omitempty"`
-	FakultasUnit     *int      `gorm:"column:fakultas_unit;" json:"FakultasUnit,omitempty"`
-	NamaFakultasUnit *string   `gorm:"column:nama_fak_prod_unit;->" json:"NamaFakultasUnit,omitempty"`
-	Jenjang          *string   `gorm:"column:jenjang;->" json:"Jenjang,omitempty"`
-	Type             *string   `gorm:"column:type;->" json:"Type,omitempty"`
-	UuidFakultasUnit *string   `gorm:"column:uuid_fakultas_unit;->" json:"UuidFakultasUnit,omitempty"`
+	Level            string    `gorm:"column:level;size:50;default:user" json:"Level"`
+	FakultasUnit     *int      `gorm:"-" json:"FakultasUnit,omitempty"`
+	NamaFakultasUnit *string   `gorm:"-" json:"NamaFakultasUnit,omitempty"`
+	Jenjang          *string   `gorm:"-" json:"Jenjang,omitempty"`
+	Type             *string   `gorm:"-" json:"Type,omitempty"`
+	UuidFakultasUnit *string   `gorm:"-" json:"UuidFakultasUnit,omitempty"`
 	IdUserMerge      *uint             `gorm:"column:id_user_merge;" json:"IdUserMerge"`
 	NamaUserMerge    *string           `gorm:"column:nama_user_merge;->" json:"NamaUserMerge,omitempty"`
 	UserAbac         []UserAbacSummary `gorm:"-" json:"UserAbac"`
-	UserRoles        []UserRoleSummary `gorm:"-" json:"UserRoles"`
-}
-
-type UserRoleSummary struct {
-	ID               uint   `json:"ID"`
-	UUID             string `json:"UUID"`
-	IdUser           uint   `json:"IdUser"`
-	Tahun            string `json:"Tahun"`
-	IdFakultasUnit   *uint  `json:"IdFakultasUnit"`
-	NamaFakultasUnit string `json:"NamaFakultasUnit"`
-	Level            string `json:"Level"`
-	Status           string `json:"Status"`
 }
 
 type UserAbacSummary struct {

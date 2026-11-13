@@ -32,14 +32,8 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 			usersv3.password,
 			usersv3.name,
 			usersv3.email,
-			COALESCE(usersv3.fakultas_unit, '') AS fakultas_unit,
-			CASE 
-				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
-				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
-				ELSE fu.nama_fak_prod_unit 
-			END AS nama_fakultas_unit
+			usersv3.level
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
 		Where("usersv3.nidn_username = ? AND usersv3.`password` = ?", username, password).
 		Take(&user).Error
 
@@ -50,7 +44,7 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 		return nil, err
 	}
 
-	// Ambil extrarole dari renstra, abac, dan userv3_role
+	// Ambil extrarole dari renstra dan userv3_abac
 	extraRoles, err := r.getExtraRole(ctx, user.ID)
 	if err != nil {
 		return nil, err
@@ -58,16 +52,10 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 	user.ExtraRole = extraRoles
 
 	for _, er := range extraRoles {
-		if er.Role == "admin" {
-			user.Level = "admin"
+		if er.IdFakultasUnit > 0 {
+			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
+			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break
-		}
-	}
-	if user.Level == "" && len(extraRoles) > 0 {
-		user.Level = extraRoles[0].Role
-		if (user.FakultasUnit == "" || user.FakultasUnit == "0") && extraRoles[0].IdFakultasUnit > 0 {
-			user.FakultasUnit = fmt.Sprint(extraRoles[0].IdFakultasUnit)
-			user.NamaFakultasUnit = extraRoles[0].NamaFakultasUnit
 		}
 	}
 	if user.Level == "" {
@@ -89,14 +77,8 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 			usersv3.password,
 			usersv3.name,
 			usersv3.email,
-			COALESCE(usersv3.fakultas_unit, '') AS fakultas_unit,
-			CASE 
-				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
-				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
-				ELSE fu.nama_fak_prod_unit 
-			END AS nama_fakultas_unit
+			usersv3.level
 		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON usersv3.fakultas_unit = fu.id").
 		Where("usersv3.uuid = ?", userUUID).
 		Take(&user).Error
 	if err != nil {
@@ -110,16 +92,10 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 	user.ExtraRole = extraRoles
 
 	for _, er := range extraRoles {
-		if er.Role == "admin" {
-			user.Level = "admin"
+		if er.IdFakultasUnit > 0 {
+			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
+			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break
-		}
-	}
-	if user.Level == "" && len(extraRoles) > 0 {
-		user.Level = extraRoles[0].Role
-		if (user.FakultasUnit == "" || user.FakultasUnit == "0") && extraRoles[0].IdFakultasUnit > 0 {
-			user.FakultasUnit = fmt.Sprint(extraRoles[0].IdFakultasUnit)
-			user.NamaFakultasUnit = extraRoles[0].NamaFakultasUnit
 		}
 	}
 	if user.Level == "" {
@@ -239,32 +215,11 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 		END AS nama_fakultas_unit
 	`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
-		Where("userv3_abac.id_user IN (?) AND (LOWER(userv3_abac.status) IN ('active', 'aktif') OR userv3_abac.status IS NULL OR userv3_abac.status = '') AND LOWER(userv3_abac.role) IN ('upms', 'upmf', 'upml')", userIDs).
+		Where("userv3_abac.id_user IN (?) AND (LOWER(userv3_abac.status) IN ('active', 'aktif') OR userv3_abac.status IS NULL OR userv3_abac.status = '')", userIDs).
 		Group("userv3_abac.tahun, role, userv3_abac.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
 		Scan(&abacRoles).Error
 
 	extraRoles = append(extraRoles, abacRoles...)
-
-	// 3. Ambil role dari userv3_role (level, tahun, status, unit)
-	var v3Roles []domain.ExtraRole
-	_ = r.db.WithContext(ctx).Table("userv3_role").
-		Select(`
-		userv3_role.tahun,
-		LOWER(userv3_role.level) AS role,
-		COALESCE(userv3_role.id_fakultas_unit, 0) as id_fakultas_unit,
-		CASE
-			WHEN userv3_role.id_fakultas_unit IS NULL OR userv3_role.id_fakultas_unit = 0 THEN 'Tingkat Universitas'
-			WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != ''
-			THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')')
-			ELSE fu.nama_fak_prod_unit
-		END AS nama_fakultas_unit
-	`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_role.id_fakultas_unit = fu.id").
-		Where("userv3_role.id_user IN (?) AND (LOWER(userv3_role.status) IN ('active', 'aktif') OR userv3_role.status IS NULL OR userv3_role.status = '')", userIDs).
-		Group("userv3_role.tahun, role, userv3_role.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
-		Scan(&v3Roles).Error
-
-	extraRoles = append(extraRoles, v3Roles...)
 
 	return extraRoles, nil
 }

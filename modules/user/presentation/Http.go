@@ -23,7 +23,6 @@ import (
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
-	userinfra "UnpakSiamida/modules/user/infrastructure"
 
 	"gorm.io/gorm"
 )
@@ -54,7 +53,7 @@ func CreateUserHandler(c *fiber.Ctx) error {
 	password := strings.TrimSpace(c.FormValue("password"))
 	email := strings.TrimSpace(c.FormValue("email"))
 	level := strings.ToLower(strings.TrimSpace(c.FormValue("level")))
-	if level == "users" {
+	if level != "admin" {
 		level = "user"
 	}
 
@@ -111,7 +110,7 @@ func UpdateUserHandler(c *fiber.Ctx) error {
 	password := strings.TrimSpace(c.FormValue("password"))
 	email := strings.TrimSpace(c.FormValue("email"))
 	level := strings.ToLower(strings.TrimSpace(c.FormValue("level")))
-	if level == "users" {
+	if level != "admin" {
 		level = "user"
 	}
 
@@ -407,8 +406,4 @@ func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 
 	ModuleUserAbac(app)
-	if len(dbs) > 0 && dbs[0] != nil {
-		repo := userinfra.NewUserRepository(dbs[0])
-		ModuleUserRole(app, repo)
-	}
 }
