@@ -506,7 +506,7 @@ func GenerateKtsHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleKts(app *fiber.App) {
 	admin := []string{"admin"}
-	audit := []string{"auditee", "auditor1", "auditor2"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "user"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/kts/setupuuid", SetupUuidKtssHandlerfunc)

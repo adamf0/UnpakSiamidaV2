@@ -2,27 +2,37 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
-	createAktivitas "UnpakSiamida/modules/prokerv3/application/CreateAktivitasV3"
+	"context"
+
+	checkJadwal "UnpakSiamida/modules/prokerv3/application/CheckJadwalProkerV3"
+	createDokumen "UnpakSiamida/modules/prokerv3/application/CreateProkerDokumen"
+	createJadwal "UnpakSiamida/modules/prokerv3/application/CreateJadwalProkerV3"
 	create "UnpakSiamida/modules/prokerv3/application/CreateProkerV3"
-	createTimeline "UnpakSiamida/modules/prokerv3/application/CreateTimelineV3"
-	deleteAktivitas "UnpakSiamida/modules/prokerv3/application/DeleteAktivitasV3"
 	deleteDokumen "UnpakSiamida/modules/prokerv3/application/DeleteDokumenV3"
+	deleteJadwal "UnpakSiamida/modules/prokerv3/application/DeleteJadwalProkerV3"
+	deletePagu "UnpakSiamida/modules/prokerv3/application/DeletePaguAnggaran"
 	delete "UnpakSiamida/modules/prokerv3/application/DeleteProkerV3"
-	deleteTimelineFile "UnpakSiamida/modules/prokerv3/application/DeleteTimelineFileV3"
-	deleteTimeline "UnpakSiamida/modules/prokerv3/application/DeleteTimelineV3"
-	getAktivitasByMatrix "UnpakSiamida/modules/prokerv3/application/GetAktivitasByMatrix"
-	getAktivitasDetail "UnpakSiamida/modules/prokerv3/application/GetAktivitasDetail"
+	getAllJadwal "UnpakSiamida/modules/prokerv3/application/GetAllJadwalProkerV3"
+	getAllPagu "UnpakSiamida/modules/prokerv3/application/GetAllPaguAnggaran"
 	getAll "UnpakSiamida/modules/prokerv3/application/GetAllProkerV3"
+	getCoa "UnpakSiamida/modules/prokerv3/application/GetCoa"
+	getDashboard "UnpakSiamida/modules/prokerv3/application/GetDashboardProkerMonitoring"
 	getDokumen "UnpakSiamida/modules/prokerv3/application/GetDokumenV3"
 	getHistory "UnpakSiamida/modules/prokerv3/application/GetHistoryStateV3"
+	getJadwal "UnpakSiamida/modules/prokerv3/application/GetJadwalProkerV3"
+	getProkerBatalSetting "UnpakSiamida/modules/prokerv3/application/GetProkerBatalSetting"
 	get "UnpakSiamida/modules/prokerv3/application/GetProkerV3"
 	getOptions "UnpakSiamida/modules/prokerv3/application/GetProkerV3Options"
+	getSankey "UnpakSiamida/modules/prokerv3/application/GetSankeyData"
 	getTargetUnpak "UnpakSiamida/modules/prokerv3/application/GetTargetUnpak"
-	reorderTimeline "UnpakSiamida/modules/prokerv3/application/ReorderTimelineV3"
-	updateAktivitas "UnpakSiamida/modules/prokerv3/application/UpdateAktivitasV3"
+	getUnitPagu "UnpakSiamida/modules/prokerv3/application/GetUnitPaguSummary"
+	savePagu "UnpakSiamida/modules/prokerv3/application/SavePaguAnggaran"
+	updateBatal "UnpakSiamida/modules/prokerv3/application/UpdateBatalProker"
+	updateBeban "UnpakSiamida/modules/prokerv3/application/UpdateBebanYayasan"
+	updateJadwal "UnpakSiamida/modules/prokerv3/application/UpdateJadwalProkerV3"
+	updateProkerBatalSetting "UnpakSiamida/modules/prokerv3/application/UpdateProkerBatalSetting"
 	update "UnpakSiamida/modules/prokerv3/application/UpdateProkerV3"
 	updateStatus "UnpakSiamida/modules/prokerv3/application/UpdateStatusV3"
-	updateTimeline "UnpakSiamida/modules/prokerv3/application/UpdateTimelineV3"
 	updateVerifikasiDokumen "UnpakSiamida/modules/prokerv3/application/UpdateVerifikasiDokumenV3"
 	domain "UnpakSiamida/modules/prokerv3/domain"
 
@@ -31,12 +41,11 @@ import (
 )
 
 func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
-	var dbIku *gorm.DB
-	if len(dbs) > 0 {
-		dbIku = dbs[0]
-	}
-	repoProker := NewProkerV3Repository(db, dbIku)
+	repoProker := NewProkerV3Repository(db, dbs...)
+	_ = repoProker.EnsureAppSettingsTable(context.Background())
+	_ = db.AutoMigrate(&domain.JadwalProkerV3{})
 
+	// 1. Proker Core CRUD
 	mediatr.RegisterRequestHandler[
 		create.CreateProkerV3Command,
 		string,
@@ -74,6 +83,7 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 		Repo: repoProker,
 	})
 
+	// 2. Options, Target, COA
 	mediatr.RegisterRequestHandler[
 		getOptions.GetProkerV3OptionsQuery,
 		*domain.ProkerOptionsResult,
@@ -89,41 +99,13 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 	})
 
 	mediatr.RegisterRequestHandler[
-		getAktivitasByMatrix.GetAktivitasByMatrixQuery,
-		*domain.AktivitasByMatrixResult,
-	](&getAktivitasByMatrix.GetAktivitasByMatrixQueryHandler{
+		getCoa.GetCoaQuery,
+		[]domain.CoaItem,
+	](&getCoa.GetCoaQueryHandler{
 		Repo: repoProker,
 	})
 
-	mediatr.RegisterRequestHandler[
-		getAktivitasDetail.GetAktivitasDetailQuery,
-		*domain.AktivitasDetailResult,
-	](&getAktivitasDetail.GetAktivitasDetailQueryHandler{
-		Repo: repoProker,
-		DB:   db,
-	})
-
-	mediatr.RegisterRequestHandler[
-		createAktivitas.CreateAktivitasV3Command,
-		*domain.AktivitasV2,
-	](&createAktivitas.CreateAktivitasV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		updateAktivitas.UpdateAktivitasV3Command,
-		*domain.AktivitasV2,
-	](&updateAktivitas.UpdateAktivitasV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		deleteAktivitas.DeleteAktivitasV3Command,
-		string,
-	](&deleteAktivitas.DeleteAktivitasV3CommandHandler{
-		Repo: repoProker,
-	})
-
+	// 3. Status, Verification, History
 	mediatr.RegisterRequestHandler[
 		updateStatus.UpdateStatusV3Command,
 		*domain.UpdateStatusResult,
@@ -138,41 +120,7 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 		Repo: repoProker,
 	})
 
-	mediatr.RegisterRequestHandler[
-		createTimeline.CreateTimelineV3Command,
-		*domain.ProkerTimelineV3,
-	](&createTimeline.CreateTimelineV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		updateTimeline.UpdateTimelineV3Command,
-		*domain.ProkerTimelineV3,
-	](&updateTimeline.UpdateTimelineV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		deleteTimeline.DeleteTimelineV3Command,
-		string,
-	](&deleteTimeline.DeleteTimelineV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		reorderTimeline.ReorderTimelineV3Command,
-		int,
-	](&reorderTimeline.ReorderTimelineV3CommandHandler{
-		Repo: repoProker,
-	})
-
-	mediatr.RegisterRequestHandler[
-		deleteTimelineFile.DeleteTimelineFileV3Command,
-		string,
-	](&deleteTimelineFile.DeleteTimelineFileV3CommandHandler{
-		Repo: repoProker,
-	})
-
+	// 4. Dokumen
 	mediatr.RegisterRequestHandler[
 		getDokumen.GetDokumenV3Query,
 		*domain.ProkerDokumenResult,
@@ -191,6 +139,130 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 		updateVerifikasiDokumen.UpdateVerifikasiDokumenV3Command,
 		*domain.MatrixProkerDokumen,
 	](&updateVerifikasiDokumen.UpdateVerifikasiDokumenV3CommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		createDokumen.CreateProkerDokumenCommand,
+		*domain.MatrixProkerDokumen,
+	](&createDokumen.CreateProkerDokumenCommandHandler{
+		Repo: repoProker,
+	})
+
+	// 5. Beban Yayasan & Batal Proker
+	mediatr.RegisterRequestHandler[
+		updateBeban.UpdateBebanYayasanCommand,
+		*updateBeban.UpdateBebanYayasanResult,
+	](&updateBeban.UpdateBebanYayasanCommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		updateBatal.UpdateBatalProkerCommand,
+		*updateBatal.UpdateBatalProkerResult,
+	](&updateBatal.UpdateBatalProkerCommandHandler{
+		Repo: repoProker,
+	})
+
+	// 6. Settings Batal
+	mediatr.RegisterRequestHandler[
+		getProkerBatalSetting.GetProkerBatalSettingQuery,
+		*getProkerBatalSetting.GetProkerBatalSettingResult,
+	](&getProkerBatalSetting.GetProkerBatalSettingQueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		updateProkerBatalSetting.UpdateProkerBatalSettingCommand,
+		*updateProkerBatalSetting.UpdateProkerBatalSettingResult,
+	](&updateProkerBatalSetting.UpdateProkerBatalSettingCommandHandler{
+		Repo: repoProker,
+	})
+
+	// 7. Jadwal Proker V3
+	mediatr.RegisterRequestHandler[
+		getAllJadwal.GetAllJadwalProkerV3Query,
+		*getAllJadwal.GetAllJadwalProkerV3Result,
+	](&getAllJadwal.GetAllJadwalProkerV3QueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getJadwal.GetJadwalProkerV3Query,
+		*domain.JadwalProkerV3DTO,
+	](&getJadwal.GetJadwalProkerV3QueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		checkJadwal.CheckJadwalProkerV3Query,
+		*domain.CheckJadwalResult,
+	](&checkJadwal.CheckJadwalProkerV3QueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		createJadwal.CreateJadwalProkerV3Command,
+		*createJadwal.CreateJadwalProkerV3Result,
+	](&createJadwal.CreateJadwalProkerV3CommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		updateJadwal.UpdateJadwalProkerV3Command,
+		*updateJadwal.UpdateJadwalProkerV3Result,
+	](&updateJadwal.UpdateJadwalProkerV3CommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		deleteJadwal.DeleteJadwalProkerV3Command,
+		*deleteJadwal.DeleteJadwalProkerV3Result,
+	](&deleteJadwal.DeleteJadwalProkerV3CommandHandler{
+		Repo: repoProker,
+	})
+
+	// 8. Pagu Anggaran
+	mediatr.RegisterRequestHandler[
+		getAllPagu.GetAllPaguAnggaranQuery,
+		*getAllPagu.GetAllPaguAnggaranResult,
+	](&getAllPagu.GetAllPaguAnggaranQueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		savePagu.SavePaguAnggaranCommand,
+		*savePagu.SavePaguAnggaranResult,
+	](&savePagu.SavePaguAnggaranCommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		deletePagu.DeletePaguAnggaranCommand,
+		*deletePagu.DeletePaguAnggaranResult,
+	](&deletePagu.DeletePaguAnggaranCommandHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getUnitPagu.GetUnitPaguSummaryQuery,
+		*domain.UnitPaguSummaryResult,
+	](&getUnitPagu.GetUnitPaguSummaryQueryHandler{
+		Repo: repoProker,
+	})
+
+	// 9. Dashboard Monitoring & Sankey
+	mediatr.RegisterRequestHandler[
+		getDashboard.GetDashboardProkerMonitoringQuery,
+		*domain.DashboardMonitoringResult,
+	](&getDashboard.GetDashboardProkerMonitoringQueryHandler{
+		Repo: repoProker,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getSankey.GetSankeyDataQuery,
+		*domain.SankeyDataResult,
+	](&getSankey.GetSankeyDataQueryHandler{
 		Repo: repoProker,
 	})
 

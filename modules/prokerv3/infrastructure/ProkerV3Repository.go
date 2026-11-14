@@ -5,7 +5,6 @@ import (
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -20,14 +19,18 @@ import (
 )
 
 type ProkerV3Repository struct {
-	db    *gorm.DB
-	dbIku *gorm.DB
+	db       *gorm.DB
+	dbIku    *gorm.DB
+	dbSiakun *gorm.DB
 }
 
 func NewProkerV3Repository(db *gorm.DB, dbs ...*gorm.DB) domain.IProkerV3Repository {
 	repo := &ProkerV3Repository{db: db}
 	if len(dbs) > 0 {
 		repo.dbIku = dbs[0]
+	}
+	if len(dbs) > 1 {
+		repo.dbSiakun = dbs[1]
 	}
 	return repo
 }
@@ -92,14 +95,14 @@ func (r *ProkerV3Repository) populatePaguInfo(ctx context.Context, item *domain.
 		item.PaguUnit = nomPagu
 
 		// Hitung total anggaran akumulatif unit pada tahun tersebut (hanya non-yayasan dan tidak batal)
+		// Prioritaskan bagian realisasi jika ada, fallback ke total rincian RAB jika belum ada realisasi
 		var totalUnitAnggaran float64
-		_ = r.db.WithContext(ctx).Table("aktivitasv2_rab r").
-			Joins("JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2").
+		_ = r.db.WithContext(ctx).Table("aktivitasv2 a").
 			Joins("JOIN matrix_proker mp ON mp.id = a.id_matrik_proker").
 			Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
 			Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
 			Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(mp.is_batal, 0) = 0 AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(mp.beban_yayasan, 0) = 0", fuId, fuName, tahun).
-			Select("COALESCE(SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)), 0)").
+			Select("COALESCE(SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END), 0)").
 			Scan(&totalUnitAnggaran).Error
 
 		item.TotalAnggaranUnit = totalUnitAnggaran
@@ -359,6 +362,16 @@ func (r *ProkerV3Repository) GetAll(
 		Joins("LEFT JOIN v_fakultas_unit fu ON mp_t.id_fakultas_unit = fu.id")
 
 	// Apply Search Filters
+	var activeRole string
+	for _, f := range searchFilters {
+		fField := strings.TrimSpace(strings.ToLower(f.Field))
+		if fField == "active_role" || fField == "role" {
+			if f.Value != nil {
+				activeRole = strings.ToLower(strings.TrimSpace(*f.Value))
+			}
+		}
+	}
+
 	if len(searchFilters) > 0 {
 		for _, f := range searchFilters {
 			field := strings.TrimSpace(strings.ToLower(f.Field))
@@ -404,6 +417,7 @@ func (r *ProkerV3Repository) GetAll(
 				}
 
 				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" || field == "nama_fakultas_unit" || field == "namafakultasunit" || field == "target_unit" || field == "target" {
+					isStrictScoped := activeRole == "upml" || activeRole == "upms"
 					if strings.Contains(val, ",") {
 						parts := strings.Split(val, ",")
 						var ids []int
@@ -413,24 +427,37 @@ func (r *ProkerV3Repository) GetAll(
 							}
 						}
 						if len(ids) > 0 {
-							db = db.Where("(mp_t.id_fakultas_unit IN (?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) IN (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id IN (?))))", ids, ids)
+							if isStrictScoped {
+								db = db.Where("mp_t.id_fakultas_unit IN (?)", ids)
+							} else {
+								db = db.Where("(mp_t.id_fakultas_unit IN (?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) IN (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id IN (?) AND type = 'fakultas')))", ids, ids)
+							}
 							continue
 						}
 					}
 					if _, err := uuid.Parse(val); err == nil {
-						db = db.Where("(fu.uuid = ? OR mp_t.id_fakultas_unit IN (SELECT id FROM v_fakultas_unit WHERE uuid = ?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE uuid = ? LIMIT 1)))", val, val, val)
+						if isStrictScoped {
+							db = db.Where("(fu.uuid = ? OR mp_t.id_fakultas_unit IN (SELECT id FROM v_fakultas_unit WHERE uuid = ?))", val, val)
+						} else {
+							db = db.Where("(fu.uuid = ? OR mp_t.id_fakultas_unit IN (SELECT id FROM v_fakultas_unit WHERE uuid = ?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE uuid = ? AND type = 'fakultas' LIMIT 1)))", val, val, val)
+						}
 					} else if valInt, err := strconv.Atoi(val); err == nil {
 						if valInt == -1 {
 							db = db.Where("1 = 0")
+						} else if isStrictScoped {
+							db = db.Where("mp_t.id_fakultas_unit = ?", valInt)
 						} else {
-							db = db.Where("(mp_t.id_fakultas_unit = ? OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id = ? LIMIT 1)))", valInt, valInt)
+							db = db.Where("(mp_t.id_fakultas_unit = ? OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) = (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id = ? AND type = 'fakultas' LIMIT 1)))", valInt, valInt)
 						}
 					} else {
 						if val == "none" || val == "-1" {
 							db = db.Where("1 = 0")
+						} else if isStrictScoped {
+							likeVal := "%" + strings.ToLower(val) + "%"
+							db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR LOWER(fu.nama_fak_prod_unit) LIKE ?)", val, val, likeVal)
 						} else {
 							likeVal := "%" + strings.ToLower(val) + "%"
-							db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR LOWER(fu.nama_fak_prod_unit) LIKE ? OR LOWER(COALESCE(fu.fakultas, '')) LIKE ?)", val, val, likeVal, likeVal)
+							db = db.Where("(mp_t.id_fakultas_unit = ? OR fu.uuid = ? OR LOWER(fu.nama_fak_prod_unit) LIKE ? OR (fu.fakultas IS NOT NULL AND LOWER(COALESCE(fu.fakultas, '')) LIKE ? AND EXISTS (SELECT 1 FROM v_fakultas_unit fux WHERE (fux.uuid = ? OR LOWER(fux.nama_fak_prod_unit) LIKE ?) AND fux.type = 'fakultas')))", val, val, likeVal, likeVal, val, likeVal)
 						}
 					}
 					continue
@@ -695,8 +722,8 @@ func (r *ProkerV3Repository) populateDeletedSimilarity(ctx context.Context, list
 			if list[i].IdFakultasUnit != nil && cand.IdFakultasUnit != nil && *list[i].IdFakultasUnit != *cand.IdFakultasUnit {
 				continue
 			}
-			sim := ComputeTitleSimilarity(title, cand.NamaProgram)
-			if sim >= TitleSimilarityThreshold {
+			sim := commoninfra.ComputeTitleSimilarity(title, cand.NamaProgram)
+			if sim >= commoninfra.TitleSimilarityThreshold {
 				matches = append(matches, domain.DuplicateDeletedProker{
 					UUID:          cand.UUID,
 					NamaProgram:   cand.NamaProgram,
@@ -823,19 +850,14 @@ func (r *ProkerV3Repository) Delete(ctx context.Context, uid uuid.UUID) error {
 			return err
 		}
 
-		// Find all child aktivitas
-		var acts []domain.AktivitasV2
-		if err := tx.Unscoped().Where("id_matrik_proker = ?", matrix.ID).Find(&acts).Error; err == nil {
-			for _, act := range acts {
-				// Delete timeline files
-				_ = tx.Unscoped().Where("id_aktivitasv2 = ?", act.ID).Delete(&domain.ProkerTimelineFileV3{}).Error
-				// Delete timelines
-				_ = tx.Unscoped().Where("id_aktivitasv2 = ?", act.ID).Delete(&domain.ProkerTimelineV3{}).Error
-				// Delete aktivitasv2_rab
-				_ = tx.Unscoped().Where("id_aktivitasv2 = ?", act.ID).Delete(&domain.AktivitasV2Rab{}).Error
-				// Delete aktivitas
-				_ = tx.Unscoped().Delete(&act).Error
-			}
+		// Find all child aktivitas IDs
+		var actIDs []uint
+		_ = tx.Table("aktivitasv2").Where("id_matrik_proker = ?", matrix.ID).Pluck("id", &actIDs).Error
+		if len(actIDs) > 0 {
+			_ = tx.Table("aktivitasv2_timeline_file").Where("id_aktivitasv2 IN (?)", actIDs).Delete(nil).Error
+			_ = tx.Table("aktivitasv2_timeline").Where("id_aktivitasv2 IN (?)", actIDs).Delete(nil).Error
+			_ = tx.Table("aktivitasv2_rab").Where("id_aktivitasv2 IN (?)", actIDs).Delete(nil).Error
+			_ = tx.Table("aktivitasv2").Where("id IN (?)", actIDs).Delete(nil).Error
 		}
 
 		// Delete matrix_proker_dokumen
@@ -850,686 +872,17 @@ func (r *ProkerV3Repository) Delete(ctx context.Context, uid uuid.UUID) error {
 }
 
 // -------------------------------------------------------------
-// AKTIVITAS V2 REPOSITORY METHODS
+// DOKUMEN & AKTIVITAS OPTIONS
 // -------------------------------------------------------------
 
-func GenerateWeeklySlots(start, end time.Time) string {
-	if start.IsZero() || end.IsZero() {
-		return "[]"
-	}
-	months := []struct {
-		key   string
-		month time.Month
-	}{
-		{"JANUARI", time.January},
-		{"PEBRUARI", time.February},
-		{"MARET", time.March},
-		{"APRIL", time.April},
-		{"MEI", time.May},
-		{"JUNI", time.June},
-		{"JULI", time.July},
-		{"AGUSTUS", time.August},
-		{"SEPTEMBER", time.September},
-		{"OKTOBER", time.October},
-		{"NOVEMBER", time.November},
-		{"DESEMBER", time.December},
-	}
-
-	weeks := []struct {
-		week   string
-		startD int
-		endD   int
-	}{
-		{"M1", 1, 7},
-		{"M2", 8, 14},
-		{"M3", 15, 21},
-		{"M4", 22, 31},
-	}
-
-	var slots []string
-	year := start.Year()
-	if year <= 1970 {
-		year = 2026
-	}
-
-	for _, m := range months {
-		for _, w := range weeks {
-			wStart := time.Date(year, m.month, w.startD, 0, 0, 0, 0, time.Local)
-			lastDayOfMonth := time.Date(year, m.month+1, 0, 23, 59, 59, 0, time.Local).Day()
-			endDay := w.endD
-			if endDay > lastDayOfMonth {
-				endDay = lastDayOfMonth
-			}
-			wEnd := time.Date(year, m.month, endDay, 23, 59, 59, 0, time.Local)
-
-			if wEnd.After(start) && wStart.Before(end) {
-				slots = append(slots, fmt.Sprintf("%s_%s", m.key, w.week))
-			}
-		}
-	}
-
-	if len(slots) == 0 {
-		return "[]"
-	}
-	b, err := json.Marshal(slots)
-	if err != nil {
-		return "[]"
-	}
-	return string(b)
-}
-
-func parseRabJsonToEntities(rabStr string, aktivitasID uint) []domain.AktivitasV2Rab {
-	rabStr = strings.TrimSpace(rabStr)
-	if rabStr == "" || rabStr == "[]" {
-		return nil
-	}
-	var rawItems []map[string]interface{}
-	if err := json.Unmarshal([]byte(rabStr), &rawItems); err != nil {
-		return nil
-	}
-
-	parseNum := func(v interface{}) float64 {
-		switch val := v.(type) {
-		case float64:
-			return val
-		case int:
-			return float64(val)
-		case string:
-			f, _ := strconv.ParseFloat(strings.TrimSpace(val), 64)
-			return f
-		default:
-			return 0
-		}
-	}
-
-	var results []domain.AktivitasV2Rab
-	for _, raw := range rawItems {
-		item := domain.AktivitasV2Rab{
-			UUID:          uuid.New(),
-			IdAktivitasV2: aktivitasID,
-		}
-		if uStr, ok := raw["uuid"].(string); ok && strings.TrimSpace(uStr) != "" {
-			if parsed, err := uuid.Parse(uStr); err == nil {
-				item.UUID = parsed
-			}
-		}
-		if noAkun, ok := raw["no_akun"].(string); ok {
-			item.NoAkun = strings.TrimSpace(noAkun)
-		}
-		if namaAkun, ok := raw["nama_akun"].(string); ok {
-			item.NamaAkun = strings.TrimSpace(namaAkun)
-		}
-		if kat, ok := raw["kategori"].(string); ok {
-			item.Kategori = strings.TrimSpace(kat)
-		}
-		if item.Kategori == "" {
-			if item.NoAkun != "" && item.NamaAkun != "" {
-				item.Kategori = fmt.Sprintf("%s - %s", item.NoAkun, item.NamaAkun)
-			} else if item.NamaAkun != "" {
-				item.Kategori = item.NamaAkun
-			}
-		}
-		if rin, ok := raw["rincian"].(string); ok {
-			item.Rincian = strings.TrimSpace(rin)
-		}
-		if ket, ok := raw["keterangan"].(string); ok {
-			item.Keterangan = strings.TrimSpace(ket)
-			if item.Rincian == "" {
-				item.Rincian = strings.TrimSpace(ket)
-			}
-		} else if item.Rincian != "" {
-			item.Keterangan = item.Rincian
-		}
-
-		item.QtySatuan = parseNum(raw["qty_satuan"])
-		if item.QtySatuan <= 0 {
-			item.QtySatuan = 1
-		}
-		item.QtyPaket = parseNum(raw["qty_paket"])
-		if item.QtyPaket <= 0 {
-			item.QtyPaket = 1
-		}
-		item.SBU = parseNum(raw["sbu"])
-		if item.SBU <= 0 {
-			item.SBU = parseNum(raw["harga_satuan"])
-		}
-		item.Total = parseNum(raw["total"])
-		if item.Total <= 0 {
-			item.Total = item.QtySatuan * item.QtyPaket * item.SBU
-		}
-
-		results = append(results, item)
-	}
-	return results
-}
-
-func (r *ProkerV3Repository) saveAktivitasRab(tx *gorm.DB, aktivitasID uint, rabStr string, rabItems []domain.AktivitasV2Rab) error {
-	var itemsToSave []domain.AktivitasV2Rab
-	if strings.TrimSpace(rabStr) != "" {
-		itemsToSave = parseRabJsonToEntities(rabStr, aktivitasID)
-	} else if len(rabItems) > 0 {
-		for _, ri := range rabItems {
-			ri.IdAktivitasV2 = aktivitasID
-			if ri.UUID == uuid.Nil {
-				ri.UUID = uuid.New()
-			}
-			if ri.Total <= 0 {
-				ri.Total = ri.QtySatuan * ri.QtyPaket * ri.SBU
-			}
-			if ri.Rincian == "" && ri.Keterangan != "" {
-				ri.Rincian = ri.Keterangan
-			} else if ri.Keterangan == "" && ri.Rincian != "" {
-				ri.Keterangan = ri.Rincian
-			}
-			if ri.Kategori == "" && ri.NamaAkun != "" {
-				if ri.NoAkun != "" {
-					ri.Kategori = fmt.Sprintf("%s - %s", ri.NoAkun, ri.NamaAkun)
-				} else {
-					ri.Kategori = ri.NamaAkun
-				}
-			}
-			itemsToSave = append(itemsToSave, ri)
-		}
-	}
-
-	// Delete old rab items for this aktivitas
-	_ = tx.Unscoped().Where("id_aktivitasv2 = ?", aktivitasID).Delete(&domain.AktivitasV2Rab{}).Error
-
-	if len(itemsToSave) > 0 {
-		return tx.Create(&itemsToSave).Error
-	}
-	return nil
-}
-
-func (r *ProkerV3Repository) populateAktivitasRab(ctx context.Context, a *domain.AktivitasV2) {
-	if a == nil || a.ID == 0 {
-		return
-	}
-	var rabItems []domain.AktivitasV2Rab
-	_ = r.db.WithContext(ctx).
-		Where("id_aktivitasv2 = ?", a.ID).
-		Order("id ASC").
-		Find(&rabItems).Error
-
-	var total float64
-	for _, ri := range rabItems {
-		t := ri.Total
-		if t <= 0 {
-			t = ri.QtySatuan * ri.QtyPaket * ri.SBU
-		}
-		total += t
-	}
-	a.Anggaran = total
-	a.RabItems = rabItems
-	b, _ := json.Marshal(rabItems)
-	a.RAB = string(b)
-}
-
-func (r *ProkerV3Repository) GetAktivitasByMatrikId(ctx context.Context, matrikID uint) ([]domain.AktivitasV2Default, error) {
-	var acts []domain.AktivitasV2
-	err := r.db.WithContext(ctx).
+func (r *ProkerV3Repository) GetAktivitasOptionsByMatrikId(ctx context.Context, matrikID uint) ([]domain.AktivitasDokumenOption, error) {
+	var list []domain.AktivitasDokumenOption
+	err := r.db.WithContext(ctx).Table("aktivitasv2").
+		Select("id, uuid, aktivitas").
 		Where("id_matrik_proker = ?", matrikID).
 		Order("id ASC").
-		Find(&acts).Error
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]domain.AktivitasV2Default, 0, len(acts))
-	for _, a := range acts {
-		// Load RAB items from aktivitasv2_rab
-		var rabItems []domain.AktivitasV2Rab
-		_ = r.db.WithContext(ctx).
-			Where("id_aktivitasv2 = ?", a.ID).
-			Order("id ASC").
-			Find(&rabItems).Error
-
-		var totalAnggaran float64
-		for _, ri := range rabItems {
-			t := ri.Total
-			if t <= 0 {
-				t = ri.QtySatuan * ri.QtyPaket * ri.SBU
-			}
-			totalAnggaran += t
-		}
-		rabJsonBytes, _ := json.Marshal(rabItems)
-		rabJson := string(rabJsonBytes)
-
-		item := domain.AktivitasV2Default{
-			ID:                 a.ID,
-			UUID:               a.UUID,
-			IdMatrikProker:     a.IdMatrikProker,
-			IdFakultasUnit:     a.IdFakultasUnit,
-			Aktivitas:          a.Aktivitas,
-			PIC:                a.PIC,
-			Capaian:            a.Capaian,
-			Masalah:            a.Masalah,
-			Anggaran:           totalAnggaran,
-			RAB:                rabJson,
-			RabItems:           rabItems,
-			Realisasi:             a.Realisasi,
-			CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
-			Pencairan:          a.Pencairan,
-			Status:             a.Status,
-			CatatanPenolakan:   a.CatatanPenolakan,
-			StatusVerifikator: func() string {
-				if a.StatusLpm == "disetujui" {
-					return "terima_verifikator"
-				}
-				if a.StatusLpm == "ditolak" || a.StatusUpml == "ditolak" || a.StatusUpmf == "ditolak" || a.StatusUpms == "ditolak" {
-					return "ditolak"
-				}
-				return a.Status
-			}(),
-			CatatanVerifikator: a.CatatanPenolakan,
-			StatusAnggaran:     a.StatusAnggaran,
-			CatatanAnggaran:    a.CatatanAnggaran,
-			StatusUpml:         a.StatusUpml,
-			CatatanTolakUpml:   a.CatatanTolakUpml,
-			StatusUpmf:         a.StatusUpmf,
-			CatatanTolakUpmf:   a.CatatanTolakUpmf,
-			StatusUpms:         a.StatusUpms,
-			CatatanTolakUpms:   a.CatatanTolakUpms,
-			StatusLpm:          a.StatusLpm,
-			CatatanTolakLpm:    a.CatatanTolakLpm,
-			IsBatal:            a.IsBatal,
-			CatatanBatal:       a.CatatanBatal,
-			CreatedAt:          a.CreatedAt,
-			UpdatedAt:          a.UpdatedAt,
-		}
-
-		// Load timelines
-		var tls []domain.ProkerTimelineV3
-		_ = r.db.WithContext(ctx).
-			Where("id_aktivitasv2 = ?", a.ID).
-			Order("no_aktivitas ASC, id ASC").
-			Find(&tls).Error
-
-		item.TimelinesCount = len(tls)
-		item.Timelines = make([]domain.ProkerTimelineDefault, 0, len(tls))
-
-		for _, tl := range tls {
-			var rAwal, rAkhir *string
-			if tl.TanggalRAwal != nil {
-				s := tl.TanggalRAwal.Format("2006-01-02")
-				rAwal = &s
-			}
-			if tl.TanggalRAkhir != nil {
-				s := tl.TanggalRAkhir.Format("2006-01-02")
-				rAkhir = &s
-			}
-
-			// Load files for timeline
-			var rawFiles []domain.ProkerTimelineFileV3
-			_ = r.db.WithContext(ctx).
-				Where("id_aktivitasv2_timeline = ?", tl.ID).
-				Find(&rawFiles).Error
-
-			filesDefault := make([]domain.ProkerTimelineFileDefault, 0, len(rawFiles))
-			for _, rf := range rawFiles {
-				filesDefault = append(filesDefault, domain.ProkerTimelineFileDefault{
-					ID:                    rf.ID,
-					UUID:                  rf.UUID,
-					IdAktivitasV2Timeline: rf.IdAktivitasV2Timeline,
-					IdAktivitasV2:         rf.IdAktivitasV2,
-					File:                  rf.File,
-					NamaFile:              rf.NamaFile,
-					FileURL:               rf.FileURL,
-					FileSize:              rf.FileSize,
-					FileType:              rf.FileType,
-					Keterangan:            rf.Keterangan,
-					CreatedAt:             rf.CreatedAt,
-					UpdatedAt:             rf.UpdatedAt,
-				})
-			}
-
-			jRk := strings.TrimSpace(tl.JadwalRk)
-			if jRk == "" || jRk == "[]" {
-				jRk = GenerateWeeklySlots(tl.TanggalRkAwal, tl.TanggalRkAkhir)
-			}
-
-			jR := strings.TrimSpace(tl.JadwalR)
-			if (jR == "" || jR == "[]") && tl.TanggalRAwal != nil && tl.TanggalRAkhir != nil {
-				jR = GenerateWeeklySlots(*tl.TanggalRAwal, *tl.TanggalRAkhir)
-			}
-
-			item.Timelines = append(item.Timelines, domain.ProkerTimelineDefault{
-				ID:               tl.ID,
-				UUID:             tl.UUID,
-				IdAktivitasV2:    tl.IdAktivitasV2,
-				TanggalRkAwal:    tl.TanggalRkAwal.Format("2006-01-02"),
-				TanggalRkAkhir:   tl.TanggalRkAkhir.Format("2006-01-02"),
-				TanggalRAwal:     rAwal,
-				TanggalRAkhir:    rAkhir,
-				NoAktivitas:      tl.NoAktivitas,
-				NamaAktivitas:    tl.NamaAktivitas,
-				PIC:              tl.PIC,
-				TitikKontrol:     tl.TitikKontrol,
-				Anggaran:         tl.Anggaran,
-				RAB:              tl.RAB,
-				JadwalRk:         jRk,
-				JadwalR:          jR,
-				Capaian:          tl.Capaian,
-				Masalah:          tl.Masalah,
-				PemecahanMasalah: tl.PemecahanMasalah,
-				Status:           tl.Status,
-				CreatedAt:        tl.CreatedAt,
-				UpdatedAt:        tl.UpdatedAt,
-				Files:            filesDefault,
-			})
-		}
-
-		// Load Dokumen Referensi files (files with id_aktivitasv2_timeline is NULL)
-		var docFiles []domain.ProkerTimelineFileV3
-		_ = r.db.WithContext(ctx).
-			Where("id_aktivitasv2 = ? AND (id_aktivitasv2_timeline IS NULL OR id_aktivitasv2_timeline = 0)", a.ID).
-			Find(&docFiles).Error
-
-		for _, df := range docFiles {
-			item.DokumenReferensiFiles = append(item.DokumenReferensiFiles, domain.ProkerTimelineFileDefault{
-				ID:                    df.ID,
-				UUID:                  df.UUID,
-				IdAktivitasV2Timeline: df.IdAktivitasV2Timeline,
-				IdAktivitasV2:         df.IdAktivitasV2,
-				File:                  df.File,
-				NamaFile:              df.NamaFile,
-				FileURL:               df.FileURL,
-				FileSize:              df.FileSize,
-				FileType:              df.FileType,
-				Keterangan:            df.Keterangan,
-				CreatedAt:             df.CreatedAt,
-				UpdatedAt:             df.UpdatedAt,
-			})
-		}
-
-		result = append(result, item)
-	}
-
-	return result, nil
-}
-
-func (r *ProkerV3Repository) GetAktivitasByUuid(ctx context.Context, uid uuid.UUID) (*domain.AktivitasV2Default, error) {
-	var a domain.AktivitasV2
-	err := r.db.WithContext(ctx).
-		Where("uuid = ?", uid).
-		First(&a).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	// Load RAB items from aktivitasv2_rab
-	var rabItems []domain.AktivitasV2Rab
-	_ = r.db.WithContext(ctx).
-		Where("id_aktivitasv2 = ?", a.ID).
-		Order("id ASC").
-		Find(&rabItems).Error
-
-	var totalAnggaran float64
-	for _, ri := range rabItems {
-		t := ri.Total
-		if t <= 0 {
-			t = ri.QtySatuan * ri.QtyPaket * ri.SBU
-		}
-		totalAnggaran += t
-	}
-	rabJsonBytes, _ := json.Marshal(rabItems)
-	rabJson := string(rabJsonBytes)
-
-	item := &domain.AktivitasV2Default{
-		ID:                 a.ID,
-		UUID:               a.UUID,
-		IdMatrikProker:     a.IdMatrikProker,
-		IdFakultasUnit:     a.IdFakultasUnit,
-		Aktivitas:          a.Aktivitas,
-		PIC:                a.PIC,
-		Capaian:            a.Capaian,
-		Masalah:            a.Masalah,
-		Anggaran:           totalAnggaran,
-		RAB:                rabJson,
-		RabItems:           rabItems,
-		Realisasi:             a.Realisasi,
-		CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
-		Pencairan:          a.Pencairan,
-		Status:             a.Status,
-		CatatanPenolakan:   a.CatatanPenolakan,
-		StatusVerifikator: func() string {
-			if a.StatusLpm == "disetujui" {
-				return "terima_verifikator"
-			}
-			if a.StatusLpm == "ditolak" || a.StatusUpml == "ditolak" || a.StatusUpmf == "ditolak" || a.StatusUpms == "ditolak" {
-				return "ditolak"
-			}
-			return a.Status
-		}(),
-		CatatanVerifikator: a.CatatanPenolakan,
-		StatusAnggaran:     a.StatusAnggaran,
-		CatatanAnggaran:    a.CatatanAnggaran,
-		StatusUpml:         a.StatusUpml,
-		CatatanTolakUpml:   a.CatatanTolakUpml,
-		StatusUpmf:         a.StatusUpmf,
-		CatatanTolakUpmf:   a.CatatanTolakUpmf,
-		StatusUpms:         a.StatusUpms,
-		CatatanTolakUpms:   a.CatatanTolakUpms,
-		StatusLpm:          a.StatusLpm,
-		CatatanTolakLpm:    a.CatatanTolakLpm,
-		IsBatal:            a.IsBatal,
-		CatatanBatal:       a.CatatanBatal,
-		CreatedAt:          a.CreatedAt,
-		UpdatedAt:          a.UpdatedAt,
-	}
-
-	// Timelines
-	var tls []domain.ProkerTimelineV3
-	_ = r.db.WithContext(ctx).
-		Where("id_aktivitasv2 = ?", a.ID).
-		Order("no_aktivitas ASC, id ASC").
-		Find(&tls).Error
-
-	item.TimelinesCount = len(tls)
-	item.Timelines = make([]domain.ProkerTimelineDefault, 0, len(tls))
-
-	for _, tl := range tls {
-		var rAwal, rAkhir *string
-		if tl.TanggalRAwal != nil {
-			s := tl.TanggalRAwal.Format("2006-01-02")
-			rAwal = &s
-		}
-		if tl.TanggalRAkhir != nil {
-			s := tl.TanggalRAkhir.Format("2006-01-02")
-			rAkhir = &s
-		}
-
-		var rawFiles []domain.ProkerTimelineFileV3
-		_ = r.db.WithContext(ctx).
-			Where("id_aktivitasv2_timeline = ?", tl.ID).
-			Find(&rawFiles).Error
-
-		filesDefault := make([]domain.ProkerTimelineFileDefault, 0, len(rawFiles))
-		for _, rf := range rawFiles {
-			filesDefault = append(filesDefault, domain.ProkerTimelineFileDefault{
-				ID:                    rf.ID,
-				UUID:                  rf.UUID,
-				IdAktivitasV2Timeline: rf.IdAktivitasV2Timeline,
-				IdAktivitasV2:         rf.IdAktivitasV2,
-				File:                  rf.File,
-				NamaFile:              rf.NamaFile,
-				FileURL:               rf.FileURL,
-				FileSize:              rf.FileSize,
-				FileType:              rf.FileType,
-				Keterangan:            rf.Keterangan,
-				CreatedAt:             rf.CreatedAt,
-				UpdatedAt:             rf.UpdatedAt,
-			})
-		}
-
-		jRk := strings.TrimSpace(tl.JadwalRk)
-		if jRk == "" || jRk == "[]" {
-			jRk = GenerateWeeklySlots(tl.TanggalRkAwal, tl.TanggalRkAkhir)
-		}
-
-		jR := strings.TrimSpace(tl.JadwalR)
-		if (jR == "" || jR == "[]") && tl.TanggalRAwal != nil && tl.TanggalRAkhir != nil {
-			jR = GenerateWeeklySlots(*tl.TanggalRAwal, *tl.TanggalRAkhir)
-		}
-
-		item.Timelines = append(item.Timelines, domain.ProkerTimelineDefault{
-			ID:               tl.ID,
-			UUID:             tl.UUID,
-			IdAktivitasV2:    tl.IdAktivitasV2,
-			TanggalRkAwal:    tl.TanggalRkAwal.Format("2006-01-02"),
-			TanggalRkAkhir:   tl.TanggalRkAkhir.Format("2006-01-02"),
-			TanggalRAwal:     rAwal,
-			TanggalRAkhir:    rAkhir,
-			NoAktivitas:      tl.NoAktivitas,
-			NamaAktivitas:    tl.NamaAktivitas,
-			PIC:              tl.PIC,
-			TitikKontrol:     tl.TitikKontrol,
-			Anggaran:         tl.Anggaran,
-			RAB:              tl.RAB,
-			JadwalRk:         jRk,
-			JadwalR:          jR,
-			Capaian:          tl.Capaian,
-			Masalah:          tl.Masalah,
-			PemecahanMasalah: tl.PemecahanMasalah,
-			Status:           tl.Status,
-			CreatedAt:        tl.CreatedAt,
-			UpdatedAt:        tl.UpdatedAt,
-			Files:            filesDefault,
-		})
-	}
-
-	return item, nil
-}
-
-func (r *ProkerV3Repository) CreateAktivitas(ctx context.Context, data *domain.AktivitasV2, timelines []domain.ProkerTimelineV3) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if data.UUID == uuid.Nil {
-			data.UUID = uuid.New()
-		}
-		if err := tx.Create(data).Error; err != nil {
-			return err
-		}
-
-		// Save RAB items in aktivitasv2_rab
-		if err := r.saveAktivitasRab(tx, data.ID, data.RAB, data.RabItems); err != nil {
-			return err
-		}
-
-		for _, t := range timelines {
-			t.IdAktivitasV2 = data.ID
-			if t.UUID == uuid.Nil {
-				t.UUID = uuid.New()
-			}
-			if err := tx.Create(&t).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (r *ProkerV3Repository) UpdateAktivitas(ctx context.Context, data *domain.AktivitasV2) error {
-	data.UpdatedAt = time.Now()
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(data).Error; err != nil {
-			return err
-		}
-		// Save/replace RAB items in aktivitasv2_rab if RAB or RabItems is provided
-		if strings.TrimSpace(data.RAB) != "" || len(data.RabItems) > 0 {
-			if err := r.saveAktivitasRab(tx, data.ID, data.RAB, data.RabItems); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (r *ProkerV3Repository) DeleteAktivitas(ctx context.Context, uid uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var a domain.AktivitasV2
-		if err := tx.Where("uuid = ?", uid).First(&a).Error; err != nil {
-			return err
-		}
-
-		// Delete timeline files
-		_ = tx.Unscoped().Where("id_aktivitasv2 = ?", a.ID).Delete(&domain.ProkerTimelineFileV3{}).Error
-		// Delete timelines
-		_ = tx.Unscoped().Where("id_aktivitasv2 = ?", a.ID).Delete(&domain.ProkerTimelineV3{}).Error
-		// Delete aktivitasv2_rab
-		_ = tx.Unscoped().Where("id_aktivitasv2 = ?", a.ID).Delete(&domain.AktivitasV2Rab{}).Error
-		// Delete aktivitas
-		return tx.Unscoped().Delete(&a).Error
-	})
-}
-
-// -------------------------------------------------------------
-// TIMELINE & FILES METHODS
-// -------------------------------------------------------------
-
-func (r *ProkerV3Repository) GetTimelineByUuid(ctx context.Context, uid uuid.UUID) (*domain.ProkerTimelineV3, error) {
-	var tl domain.ProkerTimelineV3
-	err := r.db.WithContext(ctx).
-		Where("uuid = ?", uid).
-		First(&tl).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &tl, nil
-}
-
-func (r *ProkerV3Repository) AddTimelineFiles(ctx context.Context, files []domain.ProkerTimelineFileV3) error {
-	if len(files) == 0 {
-		return nil
-	}
-	return r.db.WithContext(ctx).Create(&files).Error
-}
-
-func (r *ProkerV3Repository) DeleteTimelineFile(ctx context.Context, fileUid uuid.UUID) error {
-	return r.db.WithContext(ctx).Unscoped().Where("uuid = ?", fileUid).Delete(&domain.ProkerTimelineFileV3{}).Error
-}
-
-func (r *ProkerV3Repository) GetTimelineFileByUuid(ctx context.Context, fileUid uuid.UUID) (*domain.ProkerTimelineFileV3, error) {
-	var file domain.ProkerTimelineFileV3
-	err := r.db.WithContext(ctx).Where("uuid = ?", fileUid).First(&file)
-	if err.Error != nil {
-		if errors.Is(err.Error, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err.Error
-	}
-	return &file, nil
-}
-
-func (r *ProkerV3Repository) GetAktivitasEntityByUuid(ctx context.Context, uid uuid.UUID) (*domain.AktivitasV2, error) {
-	var a domain.AktivitasV2
-	err := r.db.WithContext(ctx).Where("uuid = ?", uid).First(&a).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	r.populateAktivitasRab(ctx, &a)
-	return &a, nil
-}
-
-func (r *ProkerV3Repository) GetAktivitasEntityById(ctx context.Context, id uint) (*domain.AktivitasV2, error) {
-	var a domain.AktivitasV2
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&a).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	r.populateAktivitasRab(ctx, &a)
-	return &a, nil
+		Scan(&list).Error
+	return list, err
 }
 
 // ------------------------
@@ -1708,52 +1061,6 @@ func (r *ProkerV3Repository) GetTargetUnpak(ctx context.Context, tahun, indikato
 }
 
 // ------------------------
-// TIMELINE CRUD
-// ------------------------
-
-func (r *ProkerV3Repository) CountTimelineByAktivitasId(ctx context.Context, aktivitasId uint) (int64, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Table("aktivitasv2_timeline").Where("id_aktivitasv2 = ?", aktivitasId).Count(&count).Error
-	return count, err
-}
-
-func (r *ProkerV3Repository) CreateTimeline(ctx context.Context, tl *domain.ProkerTimelineV3) error {
-	if tl.UUID == uuid.Nil {
-		tl.UUID = uuid.New()
-	}
-	return r.db.WithContext(ctx).Create(tl).Error
-}
-
-func (r *ProkerV3Repository) UpdateTimeline(ctx context.Context, tl *domain.ProkerTimelineV3) error {
-	tl.UpdatedAt = time.Now()
-	return r.db.WithContext(ctx).Save(tl).Error
-}
-
-func (r *ProkerV3Repository) DeleteTimeline(ctx context.Context, uid uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var tl domain.ProkerTimelineV3
-		if err := tx.Where("uuid = ?", uid).First(&tl).Error; err != nil {
-			return err
-		}
-		_ = tx.Unscoped().Where("id_aktivitasv2_timeline = ?", tl.ID).Delete(&domain.ProkerTimelineFileV3{}).Error
-		return tx.Delete(&tl).Error
-	})
-}
-
-func (r *ProkerV3Repository) ReorderTimeline(ctx context.Context, items []domain.ReorderTimelineItem) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for _, item := range items {
-			if item.UUID != "" {
-				if err := tx.Table("aktivitasv2_timeline").Where("uuid = ?", item.UUID).Update("no_aktivitas", item.NoAktivitas).Error; err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	})
-}
-
-// ------------------------
 // DOKUMEN CRUD
 // ------------------------
 
@@ -1846,9 +1153,21 @@ func (r *ProkerV3Repository) RecordHistoryState(ctx context.Context, h *domain.H
 func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string) ([]domain.HistoryState, error) {
 	var mp domain.ProkerV3
 	_ = r.db.WithContext(ctx).Unscoped().Where("uuid = ?", rawUuid).First(&mp).Error
-	var act domain.AktivitasV2
+	var act struct {
+		ID               uint
+		IdMatrikProker   *uint64   `gorm:"column:id_matrik_proker"`
+		Status           string    `gorm:"column:status"`
+		StatusLpm        string    `gorm:"column:status_lpm"`
+		StatusUpml       string    `gorm:"column:status_upml"`
+		StatusUpmf       string    `gorm:"column:status_upmf"`
+		StatusUpms       string    `gorm:"column:status_upms"`
+		StatusAnggaran   string    `gorm:"column:status_anggaran"`
+		CreatedAt        time.Time `gorm:"column:created_at"`
+		CatatanPenolakan string    `gorm:"column:catatan_penolakan"`
+		CatatanAnggaran  string    `gorm:"column:catatan_anggaran"`
+	}
 	if mp.ID == 0 {
-		_ = r.db.WithContext(ctx).Where("uuid = ?", rawUuid).First(&act).Error
+		_ = r.db.WithContext(ctx).Table("aktivitasv2").Where("uuid = ?", rawUuid).First(&act).Error
 	}
 
 	var history []domain.HistoryState
@@ -2088,381 +1407,9 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		userName = strings.ToUpper(level)
 	}
 
-	// 1. Try finding AktivitasV2
-	var act domain.AktivitasV2
-	errAct := r.db.WithContext(ctx).Where("uuid = ?", parsedUuid).First(&act).Error
-	if errAct != nil {
-		// 2. Try finding Matrix Proker
-		var mp domain.ProkerV3
-		if errMp := r.db.WithContext(ctx).Where("uuid = ?", parsedUuid).First(&mp).Error; errMp == nil {
-			if !isVerifier && !isAnggaran && level != "admin" {
-				if newStatus != "draft" && newStatus != "diajukan" && newStatus != "revisi" {
-					return nil, errors.New("Sebagai auditee, status hanya boleh Draf, Diajukan, atau Revisi")
-				}
-			}
-
-			// Validasi Jadwal Proker V3 ketika mengajukan program kerja
-			if newStatus == "diajukan" && level != "admin" {
-				var prokerYear string
-				if mp.IdMataProgram != nil {
-					var mt struct {
-						Tahun string `gorm:"column:tahun"`
-					}
-					_ = r.db.WithContext(ctx).Table("mata_program prog").
-						Select("COALESCE(mt.tahun, '') as tahun").
-						Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
-						Where("prog.id = ?", *mp.IdMataProgram).
-						First(&mt).Error
-					prokerYear = mt.Tahun
-				}
-
-				if prokerYear != "" {
-					var jw domain.JadwalProkerV3
-					foundSchedule := false
-
-					// 1. Cek jadwal spesifik unit
-					if mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
-						if errJw := r.db.WithContext(ctx).
-							Where("tahun = ? AND id_fakultas_unit = ?", prokerYear, *mp.IdFakultasUnit).
-							Order("id DESC").First(&jw).Error; errJw == nil {
-							foundSchedule = true
-						} else {
-							// Jika unit adalah prodi, cek jadwal parent fakultas
-							var fu struct {
-								Type     string
-								Fakultas string
-							}
-							if errFu := r.db.WithContext(ctx).Table("v_fakultas_unit").
-								Select("type, fakultas").Where("id = ?", *mp.IdFakultasUnit).Take(&fu).Error; errFu == nil {
-								if strings.EqualFold(fu.Type, "prodi") && fu.Fakultas != "" {
-									var parentFu struct{ ID uint64 }
-									if errP := r.db.WithContext(ctx).Table("v_fakultas_unit").
-										Select("id").
-										Where("LOWER(TRIM(nama_fak_prod_unit)) = ? AND LOWER(type) = 'fakultas'", strings.ToLower(strings.TrimSpace(fu.Fakultas))).
-										Take(&parentFu).Error; errP == nil {
-										if errJwP := r.db.WithContext(ctx).
-											Where("tahun = ? AND id_fakultas_unit = ?", prokerYear, parentFu.ID).
-											Order("id DESC").First(&jw).Error; errJwP == nil {
-											foundSchedule = true
-										}
-									}
-								}
-							}
-						}
-					}
-
-					// 2. Fallback ke jadwal global (semua unit)
-					if !foundSchedule {
-						if errJw := r.db.WithContext(ctx).
-							Where("tahun = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", prokerYear).
-							Order("id DESC").First(&jw).Error; errJw == nil {
-							foundSchedule = true
-						}
-					}
-
-					if foundSchedule {
-						now := time.Now()
-						startOfDay := time.Date(jw.TanggalMulai.Year(), jw.TanggalMulai.Month(), jw.TanggalMulai.Day(), 0, 0, 0, 0, jw.TanggalMulai.Location())
-						endOfDay := time.Date(jw.TanggalAkhir.Year(), jw.TanggalAkhir.Month(), jw.TanggalAkhir.Day(), 23, 59, 59, 999999999, jw.TanggalAkhir.Location())
-
-						if now.Before(startOfDay) {
-							return nil, fmt.Errorf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", prokerYear, formatTanggalIndo(jw.TanggalMulai), formatTanggalIndo(jw.TanggalAkhir))
-						}
-						if now.After(endOfDay) {
-							return nil, fmt.Errorf("Pengajuan program kerja tahun %s telah ditutup pada %s", prokerYear, formatTanggalIndo(jw.TanggalAkhir))
-						}
-					}
-				}
-			}
-
-			if isAnggaran && !isVerifier && level != "admin" {
-				verifOk := mp.StatusVerifikator == "terima_verifikator" ||
-					mp.StatusVerifikator == "disetujui" ||
-					strings.Contains(mp.StatusVerifikator, "diverifikasi") ||
-					strings.Contains(mp.Status, "diverifikasi") ||
-					mp.Status == "disetujui" ||
-					mp.Status == "terima_anggaran"
-				if !verifOk && newStatus != "draft" && newStatus != "draf" && newStatus != "revisi" {
-					return nil, errors.New("Program kerja belum diverifikasi oleh verifikator (UPM)")
-				}
-			}
-
-			updatesMp := map[string]interface{}{
-				"updated_at": time.Now(),
-			}
-			updatesAct := map[string]interface{}{
-				"updated_at": time.Now(),
-			}
-			var toStateHistory string
-			var fromStateHistory string
-
-			if (level == "anggaran" || level == "keuangan") && !isVerifier {
-				if newStatus == "draft" || newStatus == "draf" {
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "terima anggaran"
-					}
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status_verifikator"] = "draft"
-					updatesMp["status"] = "draft"
-					if catatanPenolakan != "" {
-						updatesMp["catatan_anggaran"] = catatanPenolakan
-					}
-
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "draft"
-					if catatanPenolakan != "" {
-						updatesAct["catatan_anggaran"] = catatanPenolakan
-					}
-					toStateHistory = "draf"
-				} else if newStatus == "revisi" {
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "terima verifikator"
-					}
-					updatesMp["status_anggaran"] = "revisi"
-					updatesMp["status_verifikator"] = "revisi"
-					updatesMp["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesMp["catatan_anggaran"] = catatanPenolakan
-						updatesMp["catatan_penolakan"] = catatanPenolakan
-					}
-
-					updatesAct["status_anggaran"] = "revisi"
-					updatesAct["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesAct["catatan_anggaran"] = catatanPenolakan
-						updatesAct["catatan_penolakan"] = catatanPenolakan
-					}
-					toStateHistory = "revisi"
-				} else if strings.Contains(newStatus, "tolak") {
-					updatesMp["status_anggaran"] = "ditolak"
-					updatesMp["catatan_anggaran"] = catatanPenolakan
-					updatesMp["status"] = "ditolak"
-					updatesMp["catatan_penolakan"] = catatanPenolakan
-
-					updatesAct["status_anggaran"] = "ditolak"
-					updatesAct["catatan_anggaran"] = catatanPenolakan
-					updatesAct["status"] = "ditolak"
-					updatesAct["catatan_penolakan"] = catatanPenolakan
-					toStateHistory = "ditolak anggaran"
-				} else {
-					updatesMp["status_anggaran"] = "terima_anggaran"
-					updatesMp["catatan_anggaran"] = ""
-					updatesMp["status"] = "terima_anggaran"
-
-					updatesAct["status_anggaran"] = "terima_anggaran"
-					updatesAct["catatan_anggaran"] = ""
-					updatesAct["status"] = "terima_anggaran"
-					toStateHistory = "terima anggaran"
-				}
-			} else if isVerifier && (level == "upml" || level == "upmf" || level == "upms" || level == "evaluator") {
-				if newStatus == "draft" || newStatus == "draf" {
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "terima verifikator"
-					}
-					updatesMp["status_verifikator"] = "draft"
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status"] = "draft"
-					if catatanPenolakan != "" {
-						updatesMp["catatan_verifikator"] = catatanPenolakan
-					}
-
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "draft"
-					if catatanPenolakan != "" {
-						updatesAct["catatan_penolakan"] = catatanPenolakan
-					}
-					toStateHistory = "draf"
-				} else if newStatus == "revisi" {
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "diajukan"
-					}
-					updatesMp["status_verifikator"] = "revisi"
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesMp["catatan_verifikator"] = catatanPenolakan
-						updatesMp["catatan_penolakan"] = catatanPenolakan
-					}
-
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesAct["catatan_penolakan"] = catatanPenolakan
-					}
-					toStateHistory = "revisi"
-				} else if strings.Contains(newStatus, "tolak") {
-					updatesMp["status_verifikator"] = "ditolak"
-					updatesMp["catatan_verifikator"] = catatanPenolakan
-					updatesMp["status_anggaran"] = "dibatalkan"
-					updatesMp["status"] = "ditolak"
-					updatesMp["catatan_penolakan"] = catatanPenolakan
-
-					updatesAct["status_anggaran"] = "dibatalkan"
-					updatesAct["status"] = "ditolak"
-					updatesAct["catatan_penolakan"] = catatanPenolakan
-					toStateHistory = "ditolak verifikator"
-				} else {
-					updatesMp["status_verifikator"] = "terima_verifikator"
-					updatesMp["catatan_verifikator"] = ""
-					updatesMp["status_anggaran"] = "menunggu_anggaran"
-					updatesMp["status"] = newStatus
-
-					updatesAct["status_anggaran"] = "menunggu_anggaran"
-					updatesAct["status"] = newStatus
-					toStateHistory = "terima verifikator"
-				}
-
-				if level == "upml" {
-					updatesMp["verified_upml_at"] = time.Now()
-				} else if level == "upmf" {
-					updatesMp["verified_upmf_at"] = time.Now()
-				} else if level == "upms" || level == "evaluator" {
-					updatesMp["verified_upms_at"] = time.Now()
-				}
-			} else {
-				if newStatus == "diajukan" {
-					updatesMp["status_verifikator"] = "diajukan"
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status"] = "diajukan"
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "diajukan"
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "draf"
-					}
-					toStateHistory = "diajukan"
-				} else if newStatus == "draft" {
-					updatesMp["status_verifikator"] = "draft"
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status"] = "draft"
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "draft"
-					fromStateHistory = "diajukan"
-					toStateHistory = "draf"
-				} else if newStatus == "revisi" {
-					fromStateHistory = mp.Status
-					if fromStateHistory == "" {
-						fromStateHistory = "diajukan"
-					}
-					updatesMp["status_verifikator"] = "revisi"
-					updatesMp["status_anggaran"] = "menunggu_verifikator"
-					updatesMp["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesMp["catatan_verifikator"] = catatanPenolakan
-						updatesMp["catatan_penolakan"] = catatanPenolakan
-					}
-					updatesAct["status_anggaran"] = "menunggu_verifikator"
-					updatesAct["status"] = "revisi"
-					if catatanPenolakan != "" {
-						updatesAct["catatan_penolakan"] = catatanPenolakan
-					}
-					toStateHistory = "revisi"
-				} else if newStatus == "terima_anggaran" {
-					updatesMp["status_anggaran"] = "terima_anggaran"
-					updatesMp["status"] = "terima_anggaran"
-					updatesAct["status_anggaran"] = "terima_anggaran"
-					updatesAct["status"] = "terima_anggaran"
-					fromStateHistory = "terima verifikator"
-					toStateHistory = "terima anggaran"
-				} else if strings.Contains(newStatus, "diverifikasi") || newStatus == "disetujui" {
-					updatesMp["status_verifikator"] = "terima_verifikator"
-					updatesMp["status_anggaran"] = "menunggu_anggaran"
-					updatesMp["status"] = newStatus
-					updatesAct["status_anggaran"] = "menunggu_anggaran"
-					updatesAct["status"] = newStatus
-					fromStateHistory = "diajukan"
-					toStateHistory = "terima verifikator"
-				} else {
-					updatesMp["status"] = newStatus
-					updatesAct["status"] = newStatus
-					toStateHistory = newStatus
-				}
-			}
-
-			if err := r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", mp.ID).Updates(updatesMp).Error; err != nil {
-				return nil, err
-			}
-			if len(updatesAct) > 1 {
-				_ = r.db.WithContext(ctx).Model(&domain.AktivitasV2{}).Where("id_matrik_proker = ?", mp.ID).Updates(updatesAct).Error
-			}
-
-			mpIDInt := int(mp.ID)
-			_ = r.RecordHistoryState(ctx, &domain.HistoryState{
-				UUID:           uuid.New(),
-				IdMatrikProker: &mpIDInt,
-				EntityType:     "proker",
-				EntityUUID:     req.UUID,
-				FromState:      fromStateHistory,
-				ToState:        toStateHistory,
-				Role:           level,
-				Action:         toStateHistory,
-				ActorID:        req.UserID,
-				ActorName:      userName,
-				ActorUsername:  userName,
-				UserID:         req.UserID,
-				UserName:       userName,
-				Catatan:        catatanPenolakan,
-				CreatedAt:      time.Now(),
-			})
-
-			var count int64
-			_ = r.db.WithContext(ctx).Model(&domain.AktivitasV2{}).Where("id_matrik_proker = ?", mp.ID).Count(&count)
-			if count == 0 {
-				var fuUint *uint64
-				if mp.IdFakultasUnit != nil {
-					v := uint64(*mp.IdFakultasUnit)
-					fuUint = &v
-				}
-				mid := uint64(mp.ID)
-				newAct := domain.AktivitasV2{
-					UUID:              uuid.New(),
-					IdMatrikProker:    &mid,
-					IdFakultasUnit:    fuUint,
-					Aktivitas:         "Pelaksanaan Program Kerja",
-					Status:            newStatus,
-					StatusAnggaran:    "menunggu_verifikator",
-					CatatanPenolakan:  catatanPenolakan,
-					CreatedAt:         time.Now(),
-					UpdatedAt:         time.Now(),
-				}
-				_ = r.db.WithContext(ctx).Create(&newAct)
-			}
-
-			return &domain.UpdateStatusResult{
-				Message:          "Status program kerja berhasil diubah",
-				Status:           newStatus,
-				CatatanPenolakan: catatanPenolakan,
-				UUID:             req.UUID,
-			}, nil
-		}
-		return nil, errors.New("Data aktivitas/program kerja tidak ditemukan")
-	}
-
-	// Found AktivitasV2
-	var fuID *int
-	if act.IdFakultasUnit != nil {
-		val := int(*act.IdFakultasUnit)
-		fuID = &val
-	} else if act.IdMatrikProker != nil {
-		var parentMp domain.ProkerV3
-		if errMp := r.db.WithContext(ctx).Select("id_fakultas_unit").Where("id = ?", *act.IdMatrikProker).First(&parentMp).Error; errMp == nil {
-			fuID = parentMp.IdFakultasUnit
-		}
-	}
-
-	if isVerifier && level != "admin" && act.IdMatrikProker != nil {
-		var parentMp domain.ProkerV3
-		if errMp := r.db.WithContext(ctx).Where("id = ?", *act.IdMatrikProker).First(&parentMp).Error; errMp == nil {
-			isParentApproved := (parentMp.StatusAnggaran == "terima_anggaran" || parentMp.Status == "terima_anggaran" || parentMp.Status == "disetujui") &&
-				(parentMp.StatusVerifikator == "terima_verifikator" || parentMp.StatusVerifikator == "disetujui" || strings.Contains(parentMp.StatusVerifikator, "diverifikasi") || parentMp.Status == "terima_anggaran")
-			if !isParentApproved && newStatus != "draft" && newStatus != "draf" {
-				return nil, errors.New("Aktivitas belum dapat diverifikasi: Program kerja harus disetujui oleh verifikator dan anggaran terlebih dahulu")
-			}
-		}
+	var mp domain.ProkerV3
+	if errMp := r.db.WithContext(ctx).Where("uuid = ?", parsedUuid).First(&mp).Error; errMp != nil {
+		return nil, errors.New("Data program kerja tidak ditemukan")
 	}
 
 	if !isVerifier && !isAnggaran && level != "admin" {
@@ -2471,31 +1418,29 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		}
 	}
 
-	// Validasi Jadwal Proker V3 ketika mengajukan aktivitas
+	// Validasi Jadwal Proker V3 ketika mengajukan program kerja
 	if newStatus == "diajukan" && level != "admin" {
-		var actYear string
-		if act.IdMatrikProker != nil {
-			var pMp domain.ProkerV3
-			if errMp := r.db.WithContext(ctx).Select("id_mata_program").Where("id = ?", *act.IdMatrikProker).First(&pMp).Error; errMp == nil && pMp.IdMataProgram != nil {
-				var mt struct {
-					Tahun string `gorm:"column:tahun"`
-				}
-				_ = r.db.WithContext(ctx).Table("mata_program prog").
-					Select("COALESCE(mt.tahun, '') as tahun").
-					Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
-					Where("prog.id = ?", *pMp.IdMataProgram).
-					First(&mt).Error
-				actYear = mt.Tahun
+		var prokerYear string
+		if mp.IdMataProgram != nil {
+			var mt struct {
+				Tahun string `gorm:"column:tahun"`
 			}
+			_ = r.db.WithContext(ctx).Table("mata_program prog").
+				Select("COALESCE(mt.tahun, '') as tahun").
+				Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+				Where("prog.id = ?", *mp.IdMataProgram).
+				First(&mt).Error
+			prokerYear = mt.Tahun
 		}
-		if actYear != "" {
+
+		if prokerYear != "" {
 			var jw domain.JadwalProkerV3
 			foundSchedule := false
 
 			// 1. Cek jadwal spesifik unit
-			if fuID != nil && *fuID > 0 {
+			if mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
 				if errJw := r.db.WithContext(ctx).
-					Where("tahun = ? AND id_fakultas_unit = ?", actYear, *fuID).
+					Where("tahun = ? AND id_fakultas_unit = ?", prokerYear, *mp.IdFakultasUnit).
 					Order("id DESC").First(&jw).Error; errJw == nil {
 					foundSchedule = true
 				} else {
@@ -2505,7 +1450,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 						Fakultas string
 					}
 					if errFu := r.db.WithContext(ctx).Table("v_fakultas_unit").
-						Select("type, fakultas").Where("id = ?", *fuID).Take(&fu).Error; errFu == nil {
+						Select("type, fakultas").Where("id = ?", *mp.IdFakultasUnit).Take(&fu).Error; errFu == nil {
 						if strings.EqualFold(fu.Type, "prodi") && fu.Fakultas != "" {
 							var parentFu struct{ ID uint64 }
 							if errP := r.db.WithContext(ctx).Table("v_fakultas_unit").
@@ -2513,7 +1458,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 								Where("LOWER(TRIM(nama_fak_prod_unit)) = ? AND LOWER(type) = 'fakultas'", strings.ToLower(strings.TrimSpace(fu.Fakultas))).
 								Take(&parentFu).Error; errP == nil {
 								if errJwP := r.db.WithContext(ctx).
-									Where("tahun = ? AND id_fakultas_unit = ?", actYear, parentFu.ID).
+									Where("tahun = ? AND id_fakultas_unit = ?", prokerYear, parentFu.ID).
 									Order("id DESC").First(&jw).Error; errJwP == nil {
 									foundSchedule = true
 								}
@@ -2526,7 +1471,7 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			// 2. Fallback ke jadwal global (semua unit)
 			if !foundSchedule {
 				if errJw := r.db.WithContext(ctx).
-					Where("tahun = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", actYear).
+					Where("tahun = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", prokerYear).
 					Order("id DESC").First(&jw).Error; errJw == nil {
 					foundSchedule = true
 				}
@@ -2538,306 +1483,200 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 				endOfDay := time.Date(jw.TanggalAkhir.Year(), jw.TanggalAkhir.Month(), jw.TanggalAkhir.Day(), 23, 59, 59, 999999999, jw.TanggalAkhir.Location())
 
 				if now.Before(startOfDay) {
-					return nil, fmt.Errorf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", actYear, formatTanggalIndo(jw.TanggalMulai), formatTanggalIndo(jw.TanggalAkhir))
+					return nil, fmt.Errorf("Pengajuan program kerja tahun %s belum dibuka. Jadwal pengajuan: %s s/d %s", prokerYear, formatTanggalIndo(jw.TanggalMulai), formatTanggalIndo(jw.TanggalAkhir))
 				}
 				if now.After(endOfDay) {
-					return nil, fmt.Errorf("Pengajuan program kerja tahun %s telah ditutup pada %s", actYear, formatTanggalIndo(jw.TanggalAkhir))
+					return nil, fmt.Errorf("Pengajuan program kerja tahun %s telah ditutup pada %s", prokerYear, formatTanggalIndo(jw.TanggalAkhir))
 				}
 			}
 		}
 	}
 
 	if isAnggaran && !isVerifier && level != "admin" {
-		verifOk := act.StatusLpm == "disetujui" ||
-			strings.Contains(act.Status, "diverifikasi") ||
-			act.Status == "disetujui" ||
-			act.Status == "terima_anggaran"
+		verifOk := mp.StatusVerifikator == "terima_verifikator" ||
+			mp.StatusVerifikator == "disetujui" ||
+			strings.Contains(mp.StatusVerifikator, "diverifikasi") ||
+			strings.Contains(mp.Status, "diverifikasi") ||
+			mp.Status == "disetujui" ||
+			mp.Status == "terima_anggaran"
 		if !verifOk && newStatus != "draft" && newStatus != "draf" && newStatus != "revisi" {
-			return nil, errors.New("Aktivitas belum diverifikasi oleh verifikator (UPM)")
+			return nil, errors.New("Program kerja belum diverifikasi oleh verifikator")
 		}
 	}
 
-	var isProdi bool
-	if fuID != nil {
-		var fu struct {
-			Type string `gorm:"column:type"`
-		}
-		if err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("type").Where("id = ?", *fuID).First(&fu).Error; err == nil {
-			isProdi = strings.ToLower(fu.Type) == "prodi"
-		}
-	}
-
-	targetRole := strings.ToLower(strings.TrimSpace(req.Role))
-	if targetRole == "" {
-		targetRole = level
-	}
-	if targetRole == "fakultas" {
-		targetRole = "upmf"
-	}
-	if targetRole == "evaluator" {
-		targetRole = "lpm"
-	}
-	if level == "admin" && (targetRole == "admin" || targetRole == "") {
-		if !isProdi {
-			if act.StatusUpml != "disetujui" {
-				targetRole = "upml"
-			} else {
-				targetRole = "lpm"
-			}
-		} else {
-			if act.StatusUpms != "disetujui" {
-				targetRole = "upms"
-			} else if act.StatusUpmf != "disetujui" {
-				targetRole = "upmf"
-			} else {
-				targetRole = "lpm"
-			}
-		}
-	}
-
-	actUpdates := map[string]interface{}{
+	updatesMp := map[string]interface{}{
 		"updated_at": time.Now(),
 	}
-	var toStateHistoryAct string
-	var fromStateHistoryAct string
+	updatesAct := map[string]interface{}{
+		"updated_at": time.Now(),
+	}
+	var toStateHistory string
+	var fromStateHistory string
 
 	if (level == "anggaran" || level == "keuangan") && !isVerifier {
-		fromStateHistoryAct = "terima verifikator"
 		if newStatus == "draft" || newStatus == "draf" {
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "draft"
+			updatesMp["status_anggaran"] = "draft"
+			updatesMp["status"] = "draft"
+			updatesAct["status_anggaran"] = "draft"
+			updatesAct["status"] = "draft"
+			fromStateHistory = "terima verifikator"
+			toStateHistory = "draf anggaran"
+		} else if newStatus == "revisi" || strings.Contains(newStatus, "tolak") {
+			updatesMp["status_anggaran"] = "ditolak"
+			updatesMp["status"] = "revisi"
 			if catatanPenolakan != "" {
-				actUpdates["catatan_anggaran"] = catatanPenolakan
+				updatesMp["catatan_anggaran"] = catatanPenolakan
+				updatesMp["catatan_penolakan"] = catatanPenolakan
 			}
-			toStateHistoryAct = "draf"
-		} else if newStatus == "revisi" {
-			fromStateHistoryAct = act.Status
-			actUpdates["status_anggaran"] = "revisi"
-			actUpdates["status"] = "revisi"
+			updatesAct["status_anggaran"] = "ditolak"
+			updatesAct["status"] = "revisi"
 			if catatanPenolakan != "" {
-				actUpdates["catatan_anggaran"] = catatanPenolakan
-				actUpdates["catatan_penolakan"] = catatanPenolakan
+				updatesAct["catatan_penolakan"] = catatanPenolakan
 			}
-			toStateHistoryAct = "revisi"
-		} else if strings.Contains(newStatus, "tolak") {
-			actUpdates["status_anggaran"] = "ditolak"
-			actUpdates["catatan_anggaran"] = catatanPenolakan
-			actUpdates["status"] = "ditolak"
-			actUpdates["catatan_penolakan"] = catatanPenolakan
-			toStateHistoryAct = "ditolak anggaran"
+			fromStateHistory = "terima verifikator"
+			toStateHistory = "revisi anggaran"
 		} else {
-			actUpdates["status_anggaran"] = "terima_anggaran"
-			actUpdates["catatan_anggaran"] = ""
-			actUpdates["status"] = "terima_anggaran"
-			toStateHistoryAct = "terima anggaran"
+			updatesMp["status_anggaran"] = "terima_anggaran"
+			updatesMp["catatan_anggaran"] = ""
+			updatesMp["status"] = "terima_anggaran"
+			updatesAct["status_anggaran"] = "terima_anggaran"
+			updatesAct["status"] = "terima_anggaran"
+			fromStateHistory = "terima verifikator"
+			toStateHistory = "terima anggaran"
 		}
-	} else if isVerifier && (targetRole == "upml" || targetRole == "upmf" || targetRole == "upms" || targetRole == "lpm" || targetRole == "admin") {
-		if level != "admin" && level != targetRole && !(level == "evaluator" && (targetRole == "upms" || targetRole == "lpm")) {
-			return nil, fmt.Errorf("Role %s tidak memiliki akses untuk verifikasi tahap %s", strings.ToUpper(level), strings.ToUpper(targetRole))
+	} else if isVerifier && level != "admin" {
+		fromStateHistory = mp.Status
+		if fromStateHistory == "" {
+			fromStateHistory = "diajukan"
 		}
+		if strings.Contains(newStatus, "tolak") {
+			updatesMp["status_verifikator"] = "ditolak"
+			updatesMp["catatan_verifikator"] = catatanPenolakan
+			updatesMp["status_anggaran"] = "dibatalkan"
+			updatesMp["status"] = "ditolak"
+			updatesMp["catatan_penolakan"] = catatanPenolakan
 
-		if newStatus == "draft" || newStatus == "draf" {
-			fromStateHistoryAct = act.Status
-			actUpdates["status_upml"] = "draft"
-			actUpdates["status_upmf"] = "draft"
-			actUpdates["status_upms"] = "draft"
-			actUpdates["status_lpm"] = "draft"
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "draft"
-			if catatanPenolakan != "" {
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-			}
-			toStateHistoryAct = "draf"
-		} else if newStatus == "revisi" {
-			fromStateHistoryAct = act.Status
-			actUpdates["status_upml"] = "revisi"
-			actUpdates["status_upmf"] = "revisi"
-			actUpdates["status_upms"] = "revisi"
-			actUpdates["status_lpm"] = "revisi"
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "revisi"
-			if catatanPenolakan != "" {
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-			}
-			toStateHistoryAct = "revisi"
-		} else if targetRole == "upms" {
-			if !isProdi {
-				return nil, errors.New("Aktivitas berasal dari Unit non-Prodi, verifikasi UPMS tidak berlaku (hanya UPML lalu Admin/LPM)")
-			}
-			fromStateHistoryAct = act.StatusUpms
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_upms"] = "ditolak"
-				actUpdates["catatan_tolak_upms"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak UPMS"
-			} else {
-				actUpdates["status_upms"] = "disetujui"
-				actUpdates["catatan_tolak_upms"] = ""
-				actUpdates["status"] = "menunggu_upmf"
-				if act.StatusUpmf != "disetujui" {
-					actUpdates["status_upmf"] = "menunggu"
-				}
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui UPMS"
-			}
-		} else if targetRole == "upmf" {
-			if !isProdi {
-				return nil, errors.New("Aktivitas berasal dari Unit non-Prodi, verifikasi UPMF tidak berlaku (hanya UPML lalu Admin/LPM)")
-			}
-			if act.StatusUpms != "disetujui" {
-				return nil, errors.New("Aktivitas prodi belum disetujui oleh UPMS. Verifikasi harus berurutan (UPMS -> Fakultas -> Admin/LPM)")
-			}
-			fromStateHistoryAct = act.StatusUpmf
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_upmf"] = "ditolak"
-				actUpdates["catatan_tolak_upmf"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak UPMF"
-			} else {
-				actUpdates["status_upmf"] = "disetujui"
-				actUpdates["catatan_tolak_upmf"] = ""
-				actUpdates["status"] = "menunggu_lpm"
-				if act.StatusLpm != "disetujui" {
-					actUpdates["status_lpm"] = "menunggu"
-				}
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui UPMF"
-			}
-		} else if targetRole == "upml" {
-			if isProdi {
-				return nil, errors.New("Aktivitas prodi diverifikasi oleh UPMS (bukan UPML)")
-			}
-			fromStateHistoryAct = act.StatusUpml
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_upml"] = "ditolak"
-				actUpdates["catatan_tolak_upml"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak UPML"
-			} else {
-				actUpdates["status_upml"] = "disetujui"
-				actUpdates["catatan_tolak_upml"] = ""
-				actUpdates["status_upmf"] = "-"
-				actUpdates["status"] = "menunggu_lpm"
-				if act.StatusLpm != "disetujui" {
-					actUpdates["status_lpm"] = "menunggu"
-				}
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui UPML"
-			}
-		} else if targetRole == "lpm" || targetRole == "admin" {
-			if isProdi {
-				if act.StatusUpms != "disetujui" {
-					return nil, errors.New("Aktivitas prodi belum disetujui oleh UPMS")
-				}
-				if act.StatusUpmf != "disetujui" {
-					return nil, errors.New("Aktivitas prodi belum disetujui oleh Fakultas (UPMF)")
-				}
-			} else {
-				if act.StatusUpml != "disetujui" {
-					return nil, errors.New("Aktivitas belum disetujui oleh UPML")
-				}
-			}
-			fromStateHistoryAct = act.StatusLpm
-			if fromStateHistoryAct == "" {
-				fromStateHistoryAct = "menunggu"
-			}
-			if strings.Contains(newStatus, "tolak") {
-				actUpdates["status_lpm"] = "ditolak"
-				actUpdates["catatan_tolak_lpm"] = catatanPenolakan
-				actUpdates["status"] = "ditolak"
-				actUpdates["catatan_penolakan"] = catatanPenolakan
-				toStateHistoryAct = "ditolak LPM"
-			} else {
-				actUpdates["status_lpm"] = "disetujui"
-				actUpdates["catatan_tolak_lpm"] = ""
-				actUpdates["status"] = "disetujui"
-				actUpdates["status_anggaran"] = "menunggu_anggaran"
-				actUpdates["catatan_penolakan"] = ""
-				toStateHistoryAct = "disetujui LPM"
+			updatesAct["status_anggaran"] = "dibatalkan"
+			updatesAct["status"] = "ditolak"
+			updatesAct["catatan_penolakan"] = catatanPenolakan
+			toStateHistory = "ditolak verifikator"
+		} else if newStatus == "revisi" || strings.Contains(newStatus, "revisi") {
+			updatesMp["status_verifikator"] = "revisi"
+			updatesMp["catatan_verifikator"] = catatanPenolakan
+			updatesMp["status_anggaran"] = "menunggu_verifikator"
+			updatesMp["status"] = "revisi"
+			updatesMp["catatan_penolakan"] = catatanPenolakan
+
+			updatesAct["status_anggaran"] = "menunggu_verifikator"
+			updatesAct["status"] = "revisi"
+			updatesAct["catatan_penolakan"] = catatanPenolakan
+			toStateHistory = "revisi verifikator"
+		} else if newStatus == "draft" || newStatus == "draf" {
+			updatesMp["status_verifikator"] = "draft"
+			updatesMp["catatan_verifikator"] = catatanPenolakan
+			updatesMp["status_anggaran"] = "menunggu_verifikator"
+			updatesMp["status"] = "draft"
+			updatesMp["catatan_penolakan"] = catatanPenolakan
+
+			updatesAct["status_anggaran"] = "menunggu_verifikator"
+			updatesAct["status"] = "draft"
+			updatesAct["catatan_penolakan"] = catatanPenolakan
+			toStateHistory = "draf verifikator"
+		} else {
+			updatesMp["status_verifikator"] = "terima_verifikator"
+			updatesMp["catatan_verifikator"] = ""
+			updatesMp["status_anggaran"] = "menunggu_anggaran"
+			updatesMp["status"] = newStatus
+
+			updatesAct["status_anggaran"] = "menunggu_anggaran"
+			updatesAct["status"] = newStatus
+			toStateHistory = "terima verifikator"
+
+			if level == "upml" {
+				updatesMp["verified_upml_at"] = time.Now()
+			} else if level == "upmf" {
+				updatesMp["verified_upmf_at"] = time.Now()
+			} else if level == "upms" || level == "evaluator" {
+				updatesMp["verified_upms_at"] = time.Now()
 			}
 		}
 	} else {
 		if newStatus == "diajukan" {
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "diajukan"
-			if isProdi {
-				actUpdates["status_upms"] = "menunggu"
-				actUpdates["status_upmf"] = "menunggu"
-				actUpdates["status_upml"] = "-"
-			} else {
-				actUpdates["status_upml"] = "menunggu"
-				actUpdates["status_upmf"] = "-"
-				actUpdates["status_upms"] = "-"
+			updatesMp["status_verifikator"] = "diajukan"
+			updatesMp["status_anggaran"] = "menunggu_verifikator"
+			updatesMp["status"] = "diajukan"
+			updatesAct["status_anggaran"] = "menunggu_verifikator"
+			updatesAct["status"] = "diajukan"
+			fromStateHistory = mp.Status
+			if fromStateHistory == "" {
+				fromStateHistory = "draf"
 			}
-			actUpdates["status_lpm"] = "menunggu"
-			actUpdates["catatan_tolak_upml"] = ""
-			actUpdates["catatan_tolak_upmf"] = ""
-			actUpdates["catatan_tolak_upms"] = ""
-			actUpdates["catatan_tolak_lpm"] = ""
-			actUpdates["catatan_penolakan"] = ""
-			fromStateHistoryAct = act.Status
-			toStateHistoryAct = "diajukan"
+			toStateHistory = "diajukan"
 		} else if newStatus == "draft" {
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "draft"
-			fromStateHistoryAct = act.Status
-			toStateHistoryAct = "draf"
+			updatesMp["status_verifikator"] = "draft"
+			updatesMp["status_anggaran"] = "menunggu_verifikator"
+			updatesMp["status"] = "draft"
+			updatesAct["status_anggaran"] = "menunggu_verifikator"
+			updatesAct["status"] = "draft"
+			fromStateHistory = "diajukan"
+			toStateHistory = "draf"
 		} else if newStatus == "revisi" {
-			actUpdates["status_anggaran"] = "menunggu_verifikator"
-			actUpdates["status"] = "revisi"
-			if catatanPenolakan != "" {
-				actUpdates["catatan_penolakan"] = catatanPenolakan
+			fromStateHistory = mp.Status
+			if fromStateHistory == "" {
+				fromStateHistory = "diajukan"
 			}
-			fromStateHistoryAct = act.Status
-			toStateHistoryAct = "revisi"
+			updatesMp["status_verifikator"] = "revisi"
+			updatesMp["status_anggaran"] = "menunggu_verifikator"
+			updatesMp["status"] = "revisi"
+			if catatanPenolakan != "" {
+				updatesMp["catatan_verifikator"] = catatanPenolakan
+				updatesMp["catatan_penolakan"] = catatanPenolakan
+			}
+			updatesAct["status_anggaran"] = "menunggu_verifikator"
+			updatesAct["status"] = "revisi"
+			if catatanPenolakan != "" {
+				updatesAct["catatan_penolakan"] = catatanPenolakan
+			}
+			toStateHistory = "revisi"
 		} else if newStatus == "terima_anggaran" {
-			actUpdates["status_anggaran"] = "terima_anggaran"
-			actUpdates["status"] = "terima_anggaran"
-			fromStateHistoryAct = "terima verifikator"
-			toStateHistoryAct = "terima anggaran"
+			updatesMp["status_anggaran"] = "terima_anggaran"
+			updatesMp["status"] = "terima_anggaran"
+			updatesAct["status_anggaran"] = "terima_anggaran"
+			updatesAct["status"] = "terima_anggaran"
+			fromStateHistory = "terima verifikator"
+			toStateHistory = "terima anggaran"
 		} else if strings.Contains(newStatus, "diverifikasi") || newStatus == "disetujui" {
-			actUpdates["status_anggaran"] = "menunggu_anggaran"
-			actUpdates["status"] = newStatus
-			fromStateHistoryAct = "diajukan"
-			toStateHistoryAct = "terima verifikator"
+			updatesMp["status_verifikator"] = "terima_verifikator"
+			updatesMp["status_anggaran"] = "menunggu_anggaran"
+			updatesMp["status"] = newStatus
+			updatesAct["status_anggaran"] = "menunggu_anggaran"
+			updatesAct["status"] = newStatus
+			fromStateHistory = "diajukan"
+			toStateHistory = "terima verifikator"
 		} else {
-			actUpdates["status"] = newStatus
-			toStateHistoryAct = newStatus
+			updatesMp["status"] = newStatus
+			updatesAct["status"] = newStatus
+			toStateHistory = newStatus
 		}
 	}
 
-	if err := r.db.WithContext(ctx).Model(&act).Updates(actUpdates).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", mp.ID).Updates(updatesMp).Error; err != nil {
 		return nil, err
 	}
-
-	actIDInt := int(act.ID)
-	var pMpID *int
-	if act.IdMatrikProker != nil {
-		val := int(*act.IdMatrikProker)
-		pMpID = &val
+	if len(updatesAct) > 1 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2").Where("id_matrik_proker = ?", mp.ID).Updates(updatesAct).Error
 	}
+
+	mpIDInt := int(mp.ID)
 	_ = r.RecordHistoryState(ctx, &domain.HistoryState{
 		UUID:           uuid.New(),
-		IdMatrikProker: pMpID,
-		IdAktivitas:    &actIDInt,
-		EntityType:     "aktivitas",
+		IdMatrikProker: &mpIDInt,
+		EntityType:     "proker",
 		EntityUUID:     req.UUID,
-		FromState:      fromStateHistoryAct,
-		ToState:        toStateHistoryAct,
+		FromState:      fromStateHistory,
+		ToState:        toStateHistory,
 		Role:           level,
-		Action:         toStateHistoryAct,
+		Action:         toStateHistory,
 		ActorID:        req.UserID,
 		ActorName:      userName,
 		ActorUsername:  userName,
@@ -2847,24 +1686,1467 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		CreatedAt:      time.Now(),
 	})
 
-	if act.IdMatrikProker != nil {
-		mpUpdates := map[string]interface{}{
-			"updated_at": time.Now(),
-		}
-		if targetRole == "upml" {
-			mpUpdates["verified_upml_at"] = time.Now()
-		} else if targetRole == "upmf" {
-			mpUpdates["verified_upmf_at"] = time.Now()
-		} else if targetRole == "upms" {
-			mpUpdates["verified_upms_at"] = time.Now()
-		}
-		_ = r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", *act.IdMatrikProker).Updates(mpUpdates)
-	}
-
 	return &domain.UpdateStatusResult{
-		Message:          "Status aktivitas berhasil diubah",
+		Message:          "Status program kerja berhasil diubah",
 		Status:           newStatus,
 		CatatanPenolakan: catatanPenolakan,
 		UUID:             req.UUID,
+	}, nil
+}
+
+func (r *ProkerV3Repository) EnsureAppSettingsTable(ctx context.Context) error {
+	if r.db == nil {
+		return nil
+	}
+	return r.db.WithContext(ctx).Exec(`
+		CREATE TABLE IF NOT EXISTS app_settings (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			setting_key varchar(100) NOT NULL,
+			setting_value text DEFAULT NULL,
+			updated_by int(11) DEFAULT NULL,
+			created_at timestamp NULL DEFAULT current_timestamp(),
+			updated_at timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+			PRIMARY KEY (id),
+			UNIQUE KEY uk_app_settings_key (setting_key)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+	`).Error
+}
+
+func (r *ProkerV3Repository) GetProkerBatalSettingStatus(ctx context.Context, now time.Time, targetUnitID *int) (*domain.ProkerBatalSettingStatus, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+
+	var row domain.AppSetting
+	err := r.db.WithContext(ctx).
+		Where("setting_key = ?", domain.ProkerBatalAktifTanggalKey).
+		Take(&row).Error
+
+	val := ""
+	if err == nil && row.SettingValue != nil {
+		val = *row.SettingValue
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	status := domain.EvalProkerBatalSettingWithUnit(val, now, targetUnitID)
+	if err == nil && !row.UpdatedAt.IsZero() {
+		status.UpdatedAt = row.UpdatedAt.Format("2006-01-02 15:04:05")
+	}
+
+	if targetUnitID != nil && *targetUnitID > 0 {
+		var uUUID string
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").Select("uuid").Where("id = ?", *targetUnitID).Take(&uUUID).Error
+		status.TargetUnitUUID = uUUID
+	}
+
+	if len(status.Units) > 0 {
+		unitIDs := make([]int, len(status.Units))
+		for i, u := range status.Units {
+			unitIDs[i] = u.IdFakultasUnit
+		}
+		var fuRows []struct {
+			ID   int    `gorm:"column:id"`
+			UUID string `gorm:"column:uuid"`
+		}
+		if err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id, uuid").Where("id IN (?)", unitIDs).Find(&fuRows).Error; err == nil {
+			uuidMap := make(map[int]string)
+			for _, rRow := range fuRows {
+				uuidMap[rRow.ID] = rRow.UUID
+			}
+			for i := range status.Units {
+				status.Units[i].UuidFakultasUnit = uuidMap[status.Units[i].IdFakultasUnit]
+			}
+		}
+	}
+
+	return &status, nil
+}
+
+func (r *ProkerV3Repository) GetProkerBatalSettingRaw(ctx context.Context) (string, error) {
+	if r.db == nil {
+		return "", errors.New("Database tidak tersedia")
+	}
+	var row domain.AppSetting
+	err := r.db.WithContext(ctx).
+		Where("setting_key = ?", domain.ProkerBatalAktifTanggalKey).
+		Take(&row).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	if row.SettingValue != nil {
+		return *row.SettingValue, nil
+	}
+	return "", nil
+}
+
+func (r *ProkerV3Repository) SaveProkerBatalSetting(ctx context.Context, serialized string, updatedBy *int) error {
+	if r.db == nil {
+		return errors.New("Database tidak tersedia")
+	}
+	return r.db.WithContext(ctx).Exec(`
+		INSERT INTO app_settings (setting_key, setting_value, updated_by, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE
+			setting_value = VALUES(setting_value),
+			updated_by = VALUES(updated_by),
+			updated_at = NOW()
+	`, domain.ProkerBatalAktifTanggalKey, &serialized, updatedBy).Error
+}
+
+func (r *ProkerV3Repository) GetFakultasUnitNamesMap(ctx context.Context, unitIDs []int) (map[int]string, error) {
+	namesMap := make(map[int]string)
+	if len(unitIDs) == 0 || r.db == nil {
+		return namesMap, nil
+	}
+	var fuRows []struct {
+		ID   int    `gorm:"column:id"`
+		Nama string `gorm:"column:nama_fak_prod_unit"`
+	}
+	err := r.db.WithContext(ctx).Table("v_fakultas_unit").
+		Where("id IN (?)", unitIDs).
+		Select("id, nama_fak_prod_unit").
+		Find(&fuRows).Error
+	if err != nil {
+		return namesMap, err
+	}
+	for _, row := range fuRows {
+		namesMap[row.ID] = row.Nama
+	}
+	return namesMap, nil
+}
+
+func (r *ProkerV3Repository) GetUserIDByUUID(ctx context.Context, uuid string) (*int, error) {
+	if r.db == nil || strings.TrimSpace(uuid) == "" {
+		return nil, nil
+	}
+	var uid int
+	err := r.db.WithContext(ctx).Table("usersv3").Select("id").Where("uuid = ?", strings.TrimSpace(uuid)).Take(&uid).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &uid, nil
+}
+
+func (r *ProkerV3Repository) GetFakultasUnitIDByUUIDOrName(ctx context.Context, key string) (*int, error) {
+	if r.db == nil || strings.TrimSpace(key) == "" {
+		return nil, nil
+	}
+	var uid int
+	err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").
+		Where("uuid = ? OR nama_fak_prod_unit = ?", key, key).
+		Take(&uid).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &uid, nil
+}
+
+// =======================================================
+// Beban Yayasan & Batal Proker
+// =======================================================
+
+func (r *ProkerV3Repository) UpdateBebanYayasan(ctx context.Context, uid uuid.UUID, beban bool) (*domain.ProkerV3, error) {
+	proker, err := r.GetByUuid(ctx, uid)
+	if err != nil || proker == nil {
+		return nil, domain.ProkerNotFound()
+	}
+	proker.BebanYayasan = beban
+	proker.UpdatedAt = time.Now()
+	if err := r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", proker.ID).Updates(map[string]interface{}{
+		"beban_yayasan": beban,
+		"updated_at":    proker.UpdatedAt,
+	}).Error; err != nil {
+		return nil, err
+	}
+	return proker, nil
+}
+
+func (r *ProkerV3Repository) UpdateBatalProker(ctx context.Context, uid uuid.UUID, isBatal bool, catatan string) (*domain.ProkerV3, error) {
+	proker, err := r.GetByUuid(ctx, uid)
+	if err != nil || proker == nil {
+		return nil, domain.ProkerNotFound()
+	}
+	proker.IsBatal = isBatal
+	proker.CatatanBatal = catatan
+	proker.UpdatedAt = time.Now()
+
+	err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domain.ProkerV3{}).Where("id = ?", proker.ID).Updates(map[string]interface{}{
+			"is_batal":      isBatal,
+			"catatan_batal": catatan,
+			"updated_at":    proker.UpdatedAt,
+		}).Error; err != nil {
+			return err
+		}
+
+		actUpdates := map[string]interface{}{
+			"is_batal":   isBatal,
+			"updated_at": time.Now(),
+		}
+		if isBatal {
+			actUpdates["catatan_batal"] = catatan
+		} else {
+			actUpdates["catatan_batal"] = ""
+		}
+		return tx.Table("aktivitasv2").Where("id_matrik_proker = ?", proker.ID).Updates(actUpdates).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proker, nil
+}
+
+// =======================================================
+// COA
+// =======================================================
+
+func (r *ProkerV3Repository) GetCoa(ctx context.Context, search string) ([]domain.CoaItem, error) {
+	targetDB := r.dbSiakun
+	tableName := "m_coa"
+	if targetDB == nil {
+		targetDB = r.db
+		tableName = "yps_siakun.m_coa"
+	}
+	if targetDB == nil {
+		return nil, errors.New("Database not initialized")
+	}
+
+	combinedNoAkun := "CONCAT(TRIM(no_akun), IF(kode_unit IS NOT NULL AND kode_unit > 0, kode_unit, ''))"
+
+	query := targetDB.WithContext(ctx).Table(tableName).
+		Select("DISTINCT " + combinedNoAkun + " as no_akun, TRIM(nama_akun_id) as nama_akun").
+		Where("LENGTH(TRIM(no_akun)) >= 6").
+		Where("nama_akun_id IS NOT NULL AND TRIM(nama_akun_id) != ''")
+
+	if search != "" {
+		s := "%" + strings.ToLower(search) + "%"
+		query = query.Where("("+combinedNoAkun+" LIKE ? OR LOWER(nama_akun_id) LIKE ?)", s, s)
+	}
+
+	var items []domain.CoaItem
+	err := query.Order("no_akun ASC").Find(&items).Error
+	return items, err
+}
+
+// =======================================================
+// Jadwal Proker V3
+// =======================================================
+
+func (r *ProkerV3Repository) GetAllJadwalProkerV3(ctx context.Context, filter domain.JadwalFilter) ([]domain.JadwalProkerV3DTO, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	var list []domain.JadwalProkerV3Row
+	query := r.db.WithContext(ctx).
+		Table("jadwal_proker_v3 j").
+		Select("j.*, COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit, COALESCE(fu.type, '') as type_fakultas_unit").
+		Joins("LEFT JOIN v_fakultas_unit fu ON j.id_fakultas_unit = fu.id")
+
+	if filter.Tahun != "" && filter.Tahun != "all" {
+		query = query.Where("j.tahun = ?", filter.Tahun)
+	}
+	if filter.FilterUnit == "global" {
+		query = query.Where("j.id_fakultas_unit IS NULL OR j.id_fakultas_unit = 0")
+	} else if filter.FilterUnit == "specific" {
+		query = query.Where("j.id_fakultas_unit IS NOT NULL AND j.id_fakultas_unit > 0")
+	} else if filter.FilterUnit != "" && filter.FilterUnit != "all" {
+		query = query.Where("j.id_fakultas_unit = ?", filter.FilterUnit)
+	}
+	if filter.Search != "" {
+		likeSearch := "%" + filter.Search + "%"
+		query = query.Where("(j.tahun LIKE ? OR fu.nama_fak_prod_unit LIKE ?)", likeSearch, likeSearch)
+	}
+
+	if err := query.Order("j.tahun DESC, (j.id_fakultas_unit IS NULL) DESC, j.tanggal_mulai ASC").Find(&list).Error; err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	res := make([]domain.JadwalProkerV3DTO, 0, len(list))
+	for _, item := range list {
+		startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+		endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+		status := "berjalan"
+		statusLabel := "Sedang Dibuka"
+		if now.Before(startOfDay) {
+			status = "belum_dibuka"
+			statusLabel = "Belum Dibuka"
+		} else if now.After(endOfDay) {
+			status = "ditutup"
+			statusLabel = "Ditutup"
+		}
+
+		namaUnit := item.NamaFakultasUnit
+		typeUnit := item.TypeFakultasUnit
+		if item.IdFakultasUnit == nil || *item.IdFakultasUnit == 0 {
+			namaUnit = "Semua Unit / Fakultas (Global)"
+			typeUnit = "all"
+		}
+
+		res = append(res, domain.JadwalProkerV3DTO{
+			ID:               item.ID,
+			UUID:             item.UUID.String(),
+			Tahun:            item.Tahun,
+			TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
+			TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
+			IdFakultasUnit:   item.IdFakultasUnit,
+			NamaFakultasUnit: namaUnit,
+			TypeFakultasUnit: typeUnit,
+			Status:           status,
+			StatusLabel:      statusLabel,
+			CreatedAt:        item.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:        item.UpdatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return res, nil
+}
+
+func (r *ProkerV3Repository) GetJadwalProkerV3(ctx context.Context, uid uuid.UUID) (*domain.JadwalProkerV3DTO, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	var item domain.JadwalProkerV3Row
+	if err := r.db.WithContext(ctx).
+		Table("jadwal_proker_v3 j").
+		Select("j.*, COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit, COALESCE(fu.type, '') as type_fakultas_unit").
+		Joins("LEFT JOIN v_fakultas_unit fu ON j.id_fakultas_unit = fu.id").
+		Where("j.uuid = ?", uid).First(&item).Error; err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+	status := "berjalan"
+	statusLabel := "Sedang Dibuka"
+	if now.Before(startOfDay) {
+		status = "belum_dibuka"
+		statusLabel = "Belum Dibuka"
+	} else if now.After(endOfDay) {
+		status = "ditutup"
+		statusLabel = "Ditutup"
+	}
+
+	namaUnit := item.NamaFakultasUnit
+	typeUnit := item.TypeFakultasUnit
+	if item.IdFakultasUnit == nil || *item.IdFakultasUnit == 0 {
+		namaUnit = "Semua Unit / Fakultas (Global)"
+		typeUnit = "all"
+	}
+
+	return &domain.JadwalProkerV3DTO{
+		ID:               item.ID,
+		UUID:             item.UUID.String(),
+		Tahun:            item.Tahun,
+		TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
+		TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
+		IdFakultasUnit:   item.IdFakultasUnit,
+		NamaFakultasUnit: namaUnit,
+		TypeFakultasUnit: typeUnit,
+		Status:           status,
+		StatusLabel:      statusLabel,
+		CreatedAt:        item.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:        item.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (r *ProkerV3Repository) CheckJadwalProkerV3(ctx context.Context, req domain.CheckJadwalRequest) (*domain.CheckJadwalResult, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	tahun := strings.TrimSpace(req.Tahun)
+	if tahun == "" {
+		tahun = "2027"
+	}
+	unitParam := strings.TrimSpace(req.UnitParam)
+
+	var targetUnitID uint64
+	var targetUnitName string
+	var parentFakultasID uint64
+
+	if unitParam != "" && unitParam != "all" && unitParam != "0" {
+		var fu struct {
+			ID       uint64 `gorm:"column:id"`
+			Nama     string `gorm:"column:nama_fak_prod_unit"`
+			Type     string `gorm:"column:type"`
+			Fakultas string `gorm:"column:fakultas"`
+		}
+		var qFu *gorm.DB
+		if _, errU := uuid.Parse(unitParam); errU == nil {
+			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("uuid = ?", unitParam)
+		} else {
+			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("id = ?", unitParam)
+		}
+		if errTake := qFu.Take(&fu).Error; errTake == nil {
+			targetUnitID = fu.ID
+			targetUnitName = fu.Nama
+
+			if strings.EqualFold(fu.Type, "prodi") && fu.Fakultas != "" {
+				var parentFu struct {
+					ID uint64 `gorm:"column:id"`
+				}
+				if errP := r.db.WithContext(ctx).Table("v_fakultas_unit").
+					Select("id").
+					Where("LOWER(TRIM(nama_fak_prod_unit)) = ? AND LOWER(type) = 'fakultas'", strings.ToLower(strings.TrimSpace(fu.Fakultas))).
+					Take(&parentFu).Error; errP == nil {
+					parentFakultasID = parentFu.ID
+				}
+			}
+		}
+	}
+
+	var item domain.JadwalProkerV3
+	found := false
+	isUnitSpecific := false
+
+	if targetUnitID > 0 {
+		if errFind := r.db.WithContext(ctx).
+			Where("tahun = ? AND id_fakultas_unit = ?", tahun, targetUnitID).
+			Order("id DESC").First(&item).Error; errFind == nil {
+			found = true
+			isUnitSpecific = true
+		}
+	}
+
+	if !found && parentFakultasID > 0 {
+		if errFind := r.db.WithContext(ctx).
+			Where("tahun = ? AND id_fakultas_unit = ?", tahun, parentFakultasID).
+			Order("id DESC").First(&item).Error; errFind == nil {
+			found = true
+			isUnitSpecific = true
+		}
+	}
+
+	if !found {
+		if errFind := r.db.WithContext(ctx).
+			Where("tahun = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", tahun).
+			Order("id DESC").First(&item).Error; errFind == nil {
+			found = true
+			isUnitSpecific = false
+		}
+	}
+
+	if !found {
+		return &domain.CheckJadwalResult{
+			HasSchedule:    false,
+			IsOpen:         true,
+			Status:         "tidak_ada_jadwal",
+			StatusLabel:    "Tidak Ada Pembatasan Jadwal",
+			Tahun:          tahun,
+			IsUnitSpecific: false,
+			Message:        fmt.Sprintf("Belum ada jadwal khusus pengajuan program kerja untuk tahun %s", tahun),
+		}, nil
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(item.TanggalMulai.Year(), item.TanggalMulai.Month(), item.TanggalMulai.Day(), 0, 0, 0, 0, item.TanggalMulai.Location())
+	endOfDay := time.Date(item.TanggalAkhir.Year(), item.TanggalAkhir.Month(), item.TanggalAkhir.Day(), 23, 59, 59, 999999999, item.TanggalAkhir.Location())
+
+	isOpen := true
+	status := "berjalan"
+	statusLabel := "Sedang Dibuka"
+
+	unitSuffix := ""
+	if isUnitSpecific && targetUnitName != "" {
+		unitSuffix = fmt.Sprintf(" (%s)", targetUnitName)
+	}
+
+	message := fmt.Sprintf("Pengajuan program kerja tahun %s%s dibuka dari %s s/d %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
+
+	if now.Before(startOfDay) {
+		isOpen = false
+		status = "belum_dibuka"
+		statusLabel = "Belum Dibuka"
+		message = fmt.Sprintf("Pengajuan program kerja tahun %s%s belum dibuka. Jadwal pengajuan: %s s/d %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalMulai), formatTanggalIndo(item.TanggalAkhir))
+	} else if now.After(endOfDay) {
+		isOpen = false
+		status = "ditutup"
+		statusLabel = "Ditutup"
+		message = fmt.Sprintf("Pengajuan program kerja tahun %s%s telah ditutup pada %s", item.Tahun, unitSuffix, formatTanggalIndo(item.TanggalAkhir))
+	}
+
+	return &domain.CheckJadwalResult{
+		HasSchedule:      true,
+		IsOpen:           isOpen,
+		Status:           status,
+		StatusLabel:      statusLabel,
+		Tahun:            item.Tahun,
+		TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
+		TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
+		IdFakultasUnit:   item.IdFakultasUnit,
+		IsUnitSpecific:   isUnitSpecific,
+		NamaFakultasUnit: targetUnitName,
+		Message:          message,
+	}, nil
+}
+
+func (r *ProkerV3Repository) CreateJadwalProkerV3(ctx context.Context, data *domain.JadwalProkerV3) error {
+	if r.db == nil {
+		return errors.New("Database tidak tersedia")
+	}
+	return r.db.WithContext(ctx).Create(data).Error
+}
+
+func (r *ProkerV3Repository) UpdateJadwalProkerV3(ctx context.Context, uid uuid.UUID, data *domain.JadwalProkerV3) error {
+	if r.db == nil {
+		return errors.New("Database tidak tersedia")
+	}
+	var existing domain.JadwalProkerV3
+	if err := r.db.WithContext(ctx).Where("uuid = ?", uid).First(&existing).Error; err != nil {
+		return err
+	}
+	data.ID = existing.ID
+	data.UUID = existing.UUID
+	data.UpdatedAt = time.Now()
+	return r.db.WithContext(ctx).Save(data).Error
+}
+
+func (r *ProkerV3Repository) DeleteJadwalProkerV3(ctx context.Context, uid uuid.UUID) error {
+	if r.db == nil {
+		return errors.New("Database tidak tersedia")
+	}
+	return r.db.WithContext(ctx).Where("uuid = ?", uid).Delete(&domain.JadwalProkerV3{}).Error
+}
+
+// =======================================================
+// Pagu Anggaran
+// =======================================================
+
+func (r *ProkerV3Repository) GetAllPaguAnggaran(ctx context.Context, tahun string, idFu string) ([]domain.PaguAnggaran, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	var list []domain.PaguAnggaran
+	query := r.db.WithContext(ctx).Table("pagu_anggaran")
+	if tahun != "" {
+		query = query.Where("tahun = ?", tahun)
+	}
+	if idFu != "" && idFu != "0" {
+		query = query.Where("id_fakultas_unit = ?", idFu)
+	}
+	err := query.Order("id DESC").Find(&list).Error
+	return list, err
+}
+
+func (r *ProkerV3Repository) SavePaguAnggaran(ctx context.Context, req domain.SavePaguAnggaranRequest) (*domain.PaguAnggaran, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	if req.Tahun == "" {
+		return nil, errors.New("Tahun wajib diisi")
+	}
+
+	nom := float64(0)
+	if req.Pagu != nil {
+		nom = *req.Pagu
+	}
+
+	fakultasUnit := req.FakultasUnit
+	if req.IdFakultasUnit != nil && *req.IdFakultasUnit > 0 && fakultasUnit == "" {
+		var fuName string
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Select("nama_fak_prod_unit").
+			Where("id = ?", *req.IdFakultasUnit).
+			Scan(&fuName).Error
+		fakultasUnit = fuName
+	}
+
+	var item domain.PaguAnggaran
+	if req.ID > 0 {
+		if err := r.db.WithContext(ctx).Where("id = ?", req.ID).First(&item).Error; err != nil {
+			return nil, err
+		}
+		item.IdFakultasUnit = req.IdFakultasUnit
+		item.FakultasUnit = fakultasUnit
+		item.Tahun = req.Tahun
+		item.Pagu = nom
+		item.UpdatedAt = time.Now()
+		if err := r.db.WithContext(ctx).Save(&item).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		var existing domain.PaguAnggaran
+		checkQuery := r.db.WithContext(ctx).Where("tahun = ?", req.Tahun)
+		if req.IdFakultasUnit != nil {
+			checkQuery = checkQuery.Where("id_fakultas_unit = ?", *req.IdFakultasUnit)
+		} else if fakultasUnit != "" {
+			checkQuery = checkQuery.Where("fakultas_unit = ?", fakultasUnit)
+		}
+		if err := checkQuery.First(&existing).Error; err == nil {
+			existing.Pagu = nom
+			existing.UpdatedAt = time.Now()
+			if fakultasUnit != "" {
+				existing.FakultasUnit = fakultasUnit
+			}
+			if req.IdFakultasUnit != nil {
+				existing.IdFakultasUnit = req.IdFakultasUnit
+			}
+			if err := r.db.WithContext(ctx).Save(&existing).Error; err != nil {
+				return nil, err
+			}
+			item = existing
+		} else {
+			item = domain.PaguAnggaran{
+				IdFakultasUnit: req.IdFakultasUnit,
+				FakultasUnit:   fakultasUnit,
+				Tahun:          req.Tahun,
+				Pagu:           nom,
+				CreatedAt:      time.Now(),
+				UpdatedAt:      time.Now(),
+			}
+			if err := r.db.WithContext(ctx).Create(&item).Error; err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &item, nil
+}
+
+func (r *ProkerV3Repository) DeletePaguAnggaran(ctx context.Context, id string) error {
+	if r.db == nil {
+		return errors.New("Database tidak tersedia")
+	}
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&domain.PaguAnggaran{}).Error
+}
+
+func (r *ProkerV3Repository) GetUnitPaguSummary(ctx context.Context, tahun string, reqFu, userFu string) (*domain.UnitPaguSummaryResult, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+	if tahun == "" {
+		tahun = "2027"
+	}
+	if reqFu == "" || reqFu == "0" || reqFu == "all" {
+		reqFu = userFu
+	}
+
+	var fuId int
+	var fuName string
+
+	if reqFu != "" {
+		var fuRow struct {
+			ID              int    `gorm:"column:id"`
+			NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit"`
+		}
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Where("id = ? OR nama_fak_prod_unit = ?", reqFu, reqFu).
+			First(&fuRow).Error
+
+		if fuRow.ID > 0 {
+			fuId = fuRow.ID
+			fuName = fuRow.NamaFakProdUnit
+		} else if parsed, err := strconv.Atoi(reqFu); err == nil {
+			fuId = parsed
+		}
+	}
+
+	if fuId == 0 && userFu != "" {
+		if parsed, err := strconv.Atoi(userFu); err == nil {
+			fuId = parsed
+		}
+	}
+
+	var paguRow struct {
+		Pagu float64
+	}
+	errPagu := r.db.WithContext(ctx).Table("pagu_anggaran").
+		Select("pagu").
+		Where("tahun = ? AND (id_fakultas_unit = ? OR (fakultas_unit IS NOT NULL AND fakultas_unit != '' AND (fakultas_unit = ? OR fakultas_unit = ?)))", tahun, fuId, strconv.Itoa(fuId), fuName).
+		Order("id DESC").
+		Limit(1).
+		Scan(&paguRow).Error
+
+	hasPagu := errPagu == nil && paguRow.Pagu > 0
+	paguVal := float64(0)
+	if hasPagu {
+		paguVal = paguRow.Pagu
+	}
+
+	var prokers []struct {
+		ID             uint    `gorm:"column:id"`
+		TotAnggaran    float64 `gorm:"column:tot_anggaran"`
+		TotRealisasi   float64 `gorm:"column:tot_realisasi"`
+		CountRealisasi int     `gorm:"column:count_realisasi"`
+	}
+
+	_ = r.db.WithContext(ctx).Table("matrix_proker mp").
+		Select(`
+			mp.id,
+			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_anggaran,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_realisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) as count_realisasi
+		`).
+		Joins("LEFT JOIN mata_program p ON p.id = mp.id_mata_program").
+		Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
+		Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ? AND COALESCE(mp.beban_yayasan, 0) = 0 AND COALESCE(mp.is_batal, 0) = 0", fuId, fuName, tahun).
+		Scan(&prokers).Error
+
+	totalAnggaran := float64(0)
+	totalRealisasi := float64(0)
+	hasAnyRealisasi := false
+
+	for _, p := range prokers {
+		totalAnggaran += p.TotAnggaran
+		totalRealisasi += p.TotRealisasi
+		if p.CountRealisasi > 0 {
+			hasAnyRealisasi = true
+		}
+	}
+
+	hasRealDiff := hasAnyRealisasi && (totalRealisasi != totalAnggaran)
+	effectiveTotal := totalRealisasi
+	if !hasAnyRealisasi {
+		effectiveTotal = totalAnggaran
+	}
+	isMelebihiPagu := hasPagu && (effectiveTotal > paguVal)
+	sisaPagu := float64(0)
+	if hasPagu {
+		sisaPagu = paguVal - effectiveTotal
+	}
+
+	return &domain.UnitPaguSummaryResult{
+		HasPagu:          hasPagu,
+		Pagu:             paguVal,
+		TotalAnggaran:    totalAnggaran,
+		TotalRealisasi:   totalRealisasi,
+		HasRealisasi:     hasAnyRealisasi,
+		HasRealDiff:      hasRealDiff,
+		IsMelebihiPagu:   isMelebihiPagu,
+		SisaPagu:         sisaPagu,
+		NamaFakultasUnit: fuName,
+		IdFakultasUnit:   fuId,
+		Tahun:            tahun,
+	}, nil
+}
+
+// =======================================================
+// Dashboard Monitoring & Sankey Data
+// =======================================================
+
+func (r *ProkerV3Repository) GetDashboardProkerMonitoring(ctx context.Context, filter domain.DashboardMonitoringFilter) (*domain.DashboardMonitoringResult, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+
+	var userRow struct {
+		ID           uint   `gorm:"column:id"`
+		UUID         string `gorm:"column:uuid"`
+		NidnUsername string `gorm:"column:nidn_username"`
+		Level        string `gorm:"column:level"`
+		Name         string `gorm:"column:name"`
+		FakultasUnit string `gorm:"column:fakultas_unit"`
+	}
+
+	if filter.SID != "" {
+		_ = r.db.WithContext(ctx).Table("usersv3").Where("uuid = ?", filter.SID).First(&userRow).Error
+	}
+	if userRow.ID == 0 && filter.UserFU != "" {
+		_ = r.db.WithContext(ctx).Table("usersv3").Where("fakultas_unit = ? AND level = ?", filter.UserFU, filter.Level).First(&userRow).Error
+	}
+
+	userName := strings.TrimSpace(userRow.NidnUsername)
+	userLevel := strings.ToLower(strings.TrimSpace(userRow.Level))
+	if filter.Level != "" {
+		userLevel = strings.ToLower(strings.TrimSpace(filter.Level))
+	}
+	fuID := strings.TrimSpace(userRow.FakultasUnit)
+	if fuID == "" {
+		fuID = strings.TrimSpace(filter.UserFU)
+	}
+
+	isAdmin := userLevel == "admin" || strings.EqualFold(userName, "admin")
+	isWarek := strings.Contains(strings.ToLower(userName), "wakil rektor") ||
+		strings.Contains(strings.ToLower(userName), "warek") ||
+		strings.Contains(userLevel, "wakil rektor") ||
+		strings.Contains(userLevel, "warek") ||
+		fuID == "65" || fuID == "66" || fuID == "67" || fuID == "122"
+
+	var fuInfo struct {
+		ID              int    `gorm:"column:id"`
+		NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit"`
+		Type            string `gorm:"column:type"`
+		KodeFakultas    string `gorm:"column:kode_fakultas"`
+	}
+	if fuID != "" {
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Where("id = ? OR nama_fak_prod_unit = ?", fuID, fuID).
+			First(&fuInfo).Error
+	}
+
+	isFakultas := fuInfo.Type == "fakultas" || userLevel == "fakultas"
+
+	if !isAdmin && !isWarek && !isFakultas {
+		return nil, errors.New("Fitur monitoring ini hanya dapat diakses oleh Wakil Rektor 1-4 dan Tingkat Fakultas")
+	}
+
+	userRoleType := "warek"
+	if isFakultas && !isWarek && !isAdmin {
+		userRoleType = "fakultas"
+	} else if isAdmin {
+		userRoleType = "admin"
+	}
+
+	var unitOptions []domain.DashboardMonitoringUnitOption
+	if isAdmin || isWarek {
+		unitOptions = append(unitOptions, domain.DashboardMonitoringUnitOption{
+			ID:   "all",
+			Nama: "Semua Fakultas & Unit",
+			Type: "all",
+		})
+		var allUnits []struct {
+			ID              int    `gorm:"column:id"`
+			NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit"`
+			Type            string `gorm:"column:type"`
+			Jenjang         string `gorm:"column:jenjang"`
+		}
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Order("FIELD(type, 'fakultas', 'prodi', 'unit'), nama_fak_prod_unit ASC").
+			Scan(&allUnits).Error
+
+		for _, u := range allUnits {
+			label := u.NamaFakProdUnit
+			if u.Type == "prodi" && u.Jenjang != "" {
+				label = fmt.Sprintf("%s (%s)", u.NamaFakProdUnit, strings.ToUpper(u.Jenjang))
+			}
+			unitOptions = append(unitOptions, domain.DashboardMonitoringUnitOption{
+				ID:   u.ID,
+				Nama: label,
+				Type: u.Type,
+			})
+		}
+	} else if isFakultas {
+		facultyName := fuInfo.NamaFakProdUnit
+		if facultyName == "" {
+			facultyName = "Fakultas"
+		}
+		unitOptions = append(unitOptions, domain.DashboardMonitoringUnitOption{
+			ID:   "all",
+			Nama: fmt.Sprintf("Semua Prodi (%s)", facultyName),
+			Type: "all",
+		})
+		var facUnits []struct {
+			ID              int    `gorm:"column:id"`
+			NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit"`
+			Type            string `gorm:"column:type"`
+			Jenjang         string `gorm:"column:jenjang"`
+		}
+		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Where("kode_fakultas = ?", fuInfo.KodeFakultas).
+			Order("FIELD(type, 'fakultas', 'prodi'), nama_fak_prod_unit ASC").
+			Scan(&facUnits).Error
+
+		for _, u := range facUnits {
+			label := u.NamaFakProdUnit
+			if u.Type == "prodi" && u.Jenjang != "" {
+				label = fmt.Sprintf("%s (%s)", u.NamaFakProdUnit, strings.ToUpper(u.Jenjang))
+			}
+			unitOptions = append(unitOptions, domain.DashboardMonitoringUnitOption{
+				ID:   u.ID,
+				Nama: label,
+				Type: u.Type,
+			})
+		}
+	}
+
+	tahun := strings.TrimSpace(filter.Tahun)
+	if tahun == "" {
+		var activeTahun string
+		_ = r.db.WithContext(ctx).Table("master_tahun").
+			Where("status = 'active'").
+			Order("tahun DESC").
+			Pluck("tahun", &activeTahun).Error
+		if activeTahun != "" {
+			tahun = activeTahun
+		} else {
+			tahun = "2027"
+		}
+	}
+	selectedUnit := strings.TrimSpace(filter.FilterUnit)
+	search := strings.TrimSpace(filter.Search)
+
+	query := r.db.WithContext(ctx).Table("matrix_proker mp").
+		Select(`
+			mp.id as id,
+			mp.uuid as uuid,
+			mp.id_fakultas_unit as id_fakultas_unit,
+			COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+			COALESCE(fu.type, '') as type_fakultas_unit,
+			COALESCE(fu.jenjang, '') as jenjang,
+			COALESCE(prog.mata_program, '') as nama_program,
+			COALESCE(mt.tahun, '') as tahun,
+			COALESCE(mir.indikator, '') as indikator_kinerja,
+			COALESCE((SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unpak,
+			COALESCE((SELECT mps.target_unit FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unit,
+			COALESCE((SELECT mps.output FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as output,
+			COALESCE((SELECT mps.outcome FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as outcome,
+			COALESCE(NULLIF(mp.pic, ''), '') as pic,
+			COALESCE(NULLIF(mp.status, ''), 'draft') as status,
+			COALESCE(NULLIF(mp.status_verifikator, ''), 'draft') as status_verifikator,
+			COALESCE(NULLIF(mp.status_anggaran, ''), 'menunggu_verifikator') as status_anggaran,
+			COALESCE(mp.beban_yayasan, 0) as beban_yayasan,
+			COALESCE(mp.is_batal, 0) as is_batal,
+			COALESCE(mp.catatan_batal, '') as catatan_batal
+		`).
+		Joins("LEFT JOIN mata_program prog ON mp.id_mata_program = prog.id").
+		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+		Joins("LEFT JOIN master_indikator_renstra mir ON mp.id_indikator = mir.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
+		Where("mp.deleted_at IS NULL AND COALESCE(mt.tahun, '') = ?", tahun)
+
+	if selectedUnit != "" && selectedUnit != "all" {
+		query = query.Where("mp.id_fakultas_unit = ?", selectedUnit)
+	} else if isFakultas && !isAdmin && !isWarek && fuInfo.KodeFakultas != "" {
+		query = query.Where("mp.id_fakultas_unit IN (SELECT id FROM v_fakultas_unit WHERE kode_fakultas = ?)", fuInfo.KodeFakultas)
+	}
+
+	if search != "" {
+		searchPattern := "%" + search + "%"
+		query = query.Where("(prog.mata_program LIKE ? OR fu.nama_fak_prod_unit LIKE ? OR mir.indikator LIKE ? OR mp.pic LIKE ?)", searchPattern, searchPattern, searchPattern, searchPattern)
+	}
+
+	var prokerRows []struct {
+		Id                uint   `gorm:"column:id"`
+		UUID              string `gorm:"column:uuid"`
+		IdFakultasUnit    *int   `gorm:"column:id_fakultas_unit"`
+		NamaFakultasUnit  string `gorm:"column:nama_fakultas_unit"`
+		TypeFakultasUnit  string `gorm:"column:type_fakultas_unit"`
+		Jenjang           string `gorm:"column:jenjang"`
+		NamaProgram       string `gorm:"column:nama_program"`
+		Tahun             string `gorm:"column:tahun"`
+		IndikatorKinerja  string `gorm:"column:indikator_kinerja"`
+		TargetUnpak       string `gorm:"column:target_unpak"`
+		TargetUnit        string `gorm:"column:target_unit"`
+		Output            string `gorm:"column:output"`
+		Outcome           string `gorm:"column:outcome"`
+		PIC               string `gorm:"column:pic"`
+		Status            string `gorm:"column:status"`
+		StatusVerifikator string `gorm:"column:status_verifikator"`
+		StatusAnggaran    string `gorm:"column:status_anggaran"`
+		BebanYayasan      int    `gorm:"column:beban_yayasan"`
+		IsBatal           int    `gorm:"column:is_batal"`
+		CatatanBatal      string `gorm:"column:catatan_batal"`
+	}
+
+	if err := query.Order("mp.id DESC").Scan(&prokerRows).Error; err != nil {
+		return nil, err
+	}
+
+	var prokerIDs []uint
+	for _, p := range prokerRows {
+		prokerIDs = append(prokerIDs, p.Id)
+	}
+
+	var rawAktivitas []struct {
+		Id                    uint     `gorm:"column:id"`
+		UUID                  string   `gorm:"column:uuid"`
+		IdMatrikProker        uint     `gorm:"column:id_matrik_proker"`
+		Aktivitas             string   `gorm:"column:aktivitas"`
+		PIC                   string   `gorm:"column:pic"`
+		Capaian               string   `gorm:"column:capaian"`
+		Realisasi             *float64 `gorm:"column:realisasi"`
+		CatatanRevisiAnggaran string   `gorm:"column:catatan_revisi_anggaran"`
+		Pencairan             *float64 `gorm:"column:pencairan"`
+		Status                string   `gorm:"column:status"`
+		StatusAnggaran        string   `gorm:"column:status_anggaran"`
+		StatusUpml            string   `gorm:"column:status_upml"`
+		StatusUpmf            string   `gorm:"column:status_upmf"`
+		StatusUpms            string   `gorm:"column:status_upms"`
+		StatusLpm             string   `gorm:"column:status_lpm"`
+		IsBatal               int      `gorm:"column:is_batal"`
+		CatatanBatal          string   `gorm:"column:catatan_batal"`
+	}
+
+	var aktivitasIDs []uint
+	if len(prokerIDs) > 0 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, capaian, realisasi, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, pencairan, status, status_anggaran, status_upml, status_upmf, status_upms, status_lpm, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Where("id_matrik_proker IN (?)", prokerIDs).
+			Order("id ASC").
+			Scan(&rawAktivitas).Error
+
+		for _, a := range rawAktivitas {
+			aktivitasIDs = append(aktivitasIDs, a.Id)
+		}
+	}
+
+	var rawRAB []struct {
+		Id            uint    `gorm:"column:id"`
+		UUID          string  `gorm:"column:uuid"`
+		IdAktivitasv2 uint    `gorm:"column:id_aktivitasv2"`
+		NoAkun        string  `gorm:"column:no_akun"`
+		NamaAkun      string  `gorm:"column:nama_akun"`
+		Kategori      string  `gorm:"column:kategori"`
+		Rincian       string  `gorm:"column:rincian"`
+		Keterangan    string  `gorm:"column:keterangan"`
+		QtySatuan     float64 `gorm:"column:qty_satuan"`
+		QtyPaket      float64 `gorm:"column:qty_paket"`
+		Sbu           float64 `gorm:"column:sbu"`
+		Total         float64 `gorm:"column:total"`
+	}
+
+	if len(aktivitasIDs) > 0 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2_rab").
+			Where("id_aktivitasv2 IN (?)", aktivitasIDs).
+			Order("id ASC").
+			Scan(&rawRAB).Error
+	}
+
+	var rawTimeline []struct {
+		Id               uint       `gorm:"column:id"`
+		UUID             string     `gorm:"column:uuid"`
+		IdAktivitasv2    uint       `gorm:"column:id_aktivitasv2"`
+		NoAktivitas      int        `gorm:"column:no_aktivitas"`
+		NamaAktivitas    string     `gorm:"column:nama_aktivitas"`
+		TanggalRkAwal    *time.Time `gorm:"column:tanggal_rk_awal"`
+		TanggalRkAkhir   *time.Time `gorm:"column:tanggal_rk_akhir"`
+		TanggalRAwal     *time.Time `gorm:"column:tanggal_r_awal"`
+		TanggalRAkhir    *time.Time `gorm:"column:tanggal_r_akhir"`
+		Capaian          string     `gorm:"column:capaian"`
+		Masalah          string     `gorm:"column:masalah"`
+		PemecahanMasalah string     `gorm:"column:pemecahan_masalah"`
+		Status           string     `gorm:"column:status"`
+	}
+
+	if len(aktivitasIDs) > 0 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2_timeline").
+			Where("id_aktivitasv2 IN (?)", aktivitasIDs).
+			Order("no_aktivitas ASC, id ASC").
+			Scan(&rawTimeline).Error
+	}
+
+	timelineMap := make(map[uint][]domain.DashboardMonitoringTimelineItem)
+	for _, t := range rawTimeline {
+		var rkAwalStr, rkAkhirStr string
+		if t.TanggalRkAwal != nil && !t.TanggalRkAwal.IsZero() {
+			rkAwalStr = t.TanggalRkAwal.Format("2006-01-02")
+		}
+		if t.TanggalRkAkhir != nil && !t.TanggalRkAkhir.IsZero() {
+			rkAkhirStr = t.TanggalRkAkhir.Format("2006-01-02")
+		}
+		var rAwalStr, rAkhirStr *string
+		if t.TanggalRAwal != nil && !t.TanggalRAwal.IsZero() {
+			s := t.TanggalRAwal.Format("2006-01-02")
+			rAwalStr = &s
+		}
+		if t.TanggalRAkhir != nil && !t.TanggalRAkhir.IsZero() {
+			s := t.TanggalRAkhir.Format("2006-01-02")
+			rAkhirStr = &s
+		}
+
+		item := domain.DashboardMonitoringTimelineItem{
+			ID:               t.Id,
+			UUID:             t.UUID,
+			IdAktivitasv2:    t.IdAktivitasv2,
+			NoAktivitas:      t.NoAktivitas,
+			NamaAktivitas:    t.NamaAktivitas,
+			TanggalRkAwal:    rkAwalStr,
+			TanggalRkAkhir:   rkAkhirStr,
+			TanggalRAwal:     rAwalStr,
+			TanggalRAkhir:    rAkhirStr,
+			Capaian:          t.Capaian,
+			Masalah:          t.Masalah,
+			PemecahanMasalah: t.PemecahanMasalah,
+			Status:           t.Status,
+		}
+		timelineMap[t.IdAktivitasv2] = append(timelineMap[t.IdAktivitasv2], item)
+	}
+
+	rabMap := make(map[uint][]domain.DashboardMonitoringRabItem)
+	rabTotalMap := make(map[uint]float64)
+	for _, rItem := range rawRAB {
+		tot := rItem.Total
+		if tot == 0 && rItem.QtySatuan > 0 && rItem.QtyPaket > 0 && rItem.Sbu > 0 {
+			tot = rItem.QtySatuan * rItem.QtyPaket * rItem.Sbu
+		}
+		item := domain.DashboardMonitoringRabItem{
+			ID:         rItem.Id,
+			UUID:       rItem.UUID,
+			NoAkun:     rItem.NoAkun,
+			NamaAkun:   rItem.NamaAkun,
+			Kategori:   rItem.Kategori,
+			Rincian:    rItem.Rincian,
+			Keterangan: rItem.Keterangan,
+			QtySatuan:  rItem.QtySatuan,
+			QtyPaket:   rItem.QtyPaket,
+			Sbu:        rItem.Sbu,
+			Total:      tot,
+		}
+		rabMap[rItem.IdAktivitasv2] = append(rabMap[rItem.IdAktivitasv2], item)
+		rabTotalMap[rItem.IdAktivitasv2] += tot
+	}
+
+	aktMap := make(map[uint][]domain.DashboardMonitoringAktivitas)
+	prokerAnggaranMap := make(map[uint]float64)
+	prokerAnggaranPengajuanMap := make(map[uint]float64)
+	prokerIsRevisedMap := make(map[uint]bool)
+	prokerPencairanMap := make(map[uint]float64)
+
+	for _, a := range rawAktivitas {
+		rabItems := rabMap[a.Id]
+		if rabItems == nil {
+			rabItems = []domain.DashboardMonitoringRabItem{}
+		}
+		totRab := rabTotalMap[a.Id]
+
+		targetBanding := totRab
+		if a.Realisasi != nil && *a.Realisasi >= 0 {
+			targetBanding = *a.Realisasi
+		}
+
+		statusPencairan := "belum_dicairkan"
+		if a.Pencairan != nil && *a.Pencairan > 0 {
+			pencairanVal := *a.Pencairan
+			if pencairanVal == targetBanding {
+				statusPencairan = "cair"
+			} else if pencairanVal < targetBanding {
+				statusPencairan = "tidak_penuh"
+			} else {
+				statusPencairan = "cair_kelebihan"
+			}
+			if a.IsBatal == 0 {
+				prokerPencairanMap[a.IdMatrikProker] += pencairanVal
+			}
+		}
+
+		actApprovedBudget := totRab
+		if a.Realisasi != nil && *a.Realisasi >= 0 {
+			actApprovedBudget = *a.Realisasi
+		}
+
+		if a.IsBatal == 0 {
+			prokerAnggaranMap[a.IdMatrikProker] += actApprovedBudget
+			prokerAnggaranPengajuanMap[a.IdMatrikProker] += totRab
+			if totRab != actApprovedBudget {
+				prokerIsRevisedMap[a.IdMatrikProker] = true
+			}
+		}
+
+		timelineItems := timelineMap[a.Id]
+		if timelineItems == nil {
+			timelineItems = []domain.DashboardMonitoringTimelineItem{}
+		}
+
+		aktItem := domain.DashboardMonitoringAktivitas{
+			ID:                    a.Id,
+			UUID:                  a.UUID,
+			Aktivitas:             a.Aktivitas,
+			PIC:                   a.PIC,
+			Capaian:               a.Capaian,
+			Realisasi:             a.Realisasi,
+			CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
+			Pencairan:             a.Pencairan,
+			Status:                a.Status,
+			StatusAnggaran:        a.StatusAnggaran,
+			StatusUpml:            a.StatusUpml,
+			StatusUpmf:            a.StatusUpmf,
+			StatusUpms:            a.StatusUpms,
+			StatusLpm:             a.StatusLpm,
+			IsBatal:               a.IsBatal == 1,
+			CatatanBatal:          a.CatatanBatal,
+			TotalRab:              totRab,
+			StatusPencairan:       statusPencairan,
+			Rab:                   rabItems,
+			Timelines:             timelineItems,
+		}
+		aktMap[a.IdMatrikProker] = append(aktMap[a.IdMatrikProker], aktItem)
+	}
+
+	var prokerList []domain.DashboardMonitoringProker
+	var globalTotalProker int
+	var globalTotalAktivitas int
+	var globalTotalAnggaran float64
+	var globalTotalPencairan float64
+
+	for _, p := range prokerRows {
+		activities := aktMap[p.Id]
+		if activities == nil {
+			activities = []domain.DashboardMonitoringAktivitas{}
+		}
+		totAnggaran := prokerAnggaranMap[p.Id]
+		totPengajuan := prokerAnggaranPengajuanMap[p.Id]
+		isRevised := prokerIsRevisedMap[p.Id]
+		totPencairan := prokerPencairanMap[p.Id]
+
+		unitLabel := p.NamaFakultasUnit
+		if p.TypeFakultasUnit == "prodi" && p.Jenjang != "" {
+			unitLabel = fmt.Sprintf("%s (%s)", p.NamaFakultasUnit, strings.ToUpper(p.Jenjang))
+		}
+
+		prokerItem := domain.DashboardMonitoringProker{
+			ID:                     p.Id,
+			UUID:                   p.UUID,
+			IdFakultasUnit:         p.IdFakultasUnit,
+			NamaFakultasUnit:       unitLabel,
+			TypeFakultasUnit:       p.TypeFakultasUnit,
+			Jenjang:                p.Jenjang,
+			NamaProgram:            p.NamaProgram,
+			Tahun:                  p.Tahun,
+			IndikatorKinerja:       p.IndikatorKinerja,
+			TargetUnpak:            p.TargetUnpak,
+			TargetUnit:             p.TargetUnit,
+			Output:                 p.Output,
+			Outcome:                p.Outcome,
+			PIC:                    p.PIC,
+			Status:                 p.Status,
+			StatusVerifikator:      p.StatusVerifikator,
+			StatusAnggaran:         p.StatusAnggaran,
+			BebanYayasan:           p.BebanYayasan == 1,
+			IsBatal:                p.IsBatal == 1,
+			CatatanBatal:           p.CatatanBatal,
+			TotalAktivitas:         len(activities),
+			TotalAnggaran:          totAnggaran,
+			TotalAnggaranPengajuan: totPengajuan,
+			IsAnggaranRevised:      isRevised,
+			TotalPencairan:         totPencairan,
+			Aktivitas:              activities,
+		}
+
+		prokerList = append(prokerList, prokerItem)
+		globalTotalProker++
+		globalTotalAktivitas += len(activities)
+		if p.IsBatal == 0 {
+			globalTotalAnggaran += totAnggaran
+			globalTotalPencairan += totPencairan
+		}
+	}
+
+	if prokerList == nil {
+		prokerList = []domain.DashboardMonitoringProker{}
+	}
+	if unitOptions == nil {
+		unitOptions = []domain.DashboardMonitoringUnitOption{}
+	}
+
+	return &domain.DashboardMonitoringResult{
+		Meta: map[string]interface{}{
+			"allowed":      true,
+			"role_type":    userRoleType,
+			"user_name":    userName,
+			"unit_options": unitOptions,
+		},
+		Summary: map[string]interface{}{
+			"total_proker":    globalTotalProker,
+			"total_aktivitas": globalTotalAktivitas,
+			"total_anggaran":  globalTotalAnggaran,
+			"total_pencairan": globalTotalPencairan,
+		},
+		Data: prokerList,
+	}, nil
+}
+
+func (r *ProkerV3Repository) GetSankeyData(ctx context.Context, tahun string) (*domain.SankeyDataResult, error) {
+	if r.db == nil {
+		return nil, errors.New("Database tidak tersedia")
+	}
+
+	if tahun == "" {
+		_ = r.db.WithContext(ctx).Table("master_tahun").
+			Where("status = 'active'").
+			Order("tahun DESC").
+			Pluck("tahun", &tahun).Error
+		if tahun == "" {
+			tahun = "2027"
+		}
+	}
+
+	var masterIkus []map[string]interface{}
+	_ = r.db.WithContext(ctx).Table("master_iku").Order("id asc").Scan(&masterIkus).Error
+
+	var allUnits []map[string]interface{}
+	_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
+		Order("FIELD(type, 'fakultas', 'prodi', 'unit'), nama_fak_prod_unit ASC").
+		Scan(&allUnits).Error
+
+	var prokerRows []struct {
+		ID               uint   `gorm:"column:id"`
+		UUID             string `gorm:"column:uuid"`
+		IdFakultasUnit   *int   `gorm:"column:id_fakultas_unit"`
+		IdIndikator      *int   `gorm:"column:id_indikator"`
+		NamaFakultasUnit string `gorm:"column:nama_fakultas_unit"`
+		TypeFakultasUnit string `gorm:"column:type_fakultas_unit"`
+		Jenjang          string `gorm:"column:jenjang"`
+		NamaProgram      string `gorm:"column:nama_program"`
+		Tahun            string `gorm:"column:tahun"`
+		IndikatorKinerja string `gorm:"column:indikator_kinerja"`
+		PIC              string `gorm:"column:pic"`
+		Status           string `gorm:"column:status"`
+		IsBatal          int    `gorm:"column:is_batal"`
+	}
+
+	_ = r.db.WithContext(ctx).Table("matrix_proker mp").
+		Select(`
+			mp.id, mp.uuid, mp.id_fakultas_unit, mp.id_indikator,
+			COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+			COALESCE(fu.type, '') as type_fakultas_unit,
+			COALESCE(fu.jenjang, '') as jenjang,
+			COALESCE(prog.mata_program, '') as nama_program,
+			COALESCE(mt.tahun, '') as tahun,
+			COALESCE(mir.indikator, '') as indikator_kinerja,
+			COALESCE(NULLIF(mp.pic, ''), '') as pic,
+			COALESCE(NULLIF(mp.status, ''), 'draft') as status,
+			COALESCE(mp.is_batal, 0) as is_batal
+		`).
+		Joins("LEFT JOIN mata_program prog ON mp.id_mata_program = prog.id").
+		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+		Joins("LEFT JOIN master_indikator_renstra mir ON mp.id_indikator = mir.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
+		Where("mp.deleted_at IS NULL AND COALESCE(mt.tahun, '') = ?", tahun).
+		Order("mp.id DESC").
+		Scan(&prokerRows).Error
+
+	var prokerIDs []uint
+	for _, p := range prokerRows {
+		prokerIDs = append(prokerIDs, p.ID)
+	}
+
+	var rawAktivitas []struct {
+		ID                    uint     `gorm:"column:id"`
+		UUID                  string   `gorm:"column:uuid"`
+		IdMatrikProker        uint     `gorm:"column:id_matrik_proker"`
+		Aktivitas             string   `gorm:"column:aktivitas"`
+		PIC                   string   `gorm:"column:pic"`
+		Realisasi             *float64 `gorm:"column:realisasi"`
+		Pencairan             *float64 `gorm:"column:pencairan"`
+		CatatanRevisiAnggaran string   `gorm:"column:catatan_revisi_anggaran"`
+		Status                string   `gorm:"column:status"`
+		IsBatal               int      `gorm:"column:is_batal"`
+		CatatanBatal          string   `gorm:"column:catatan_batal"`
+	}
+	var aktivitasIDs []uint
+	if len(prokerIDs) > 0 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, realisasi, pencairan, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, status, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Where("id_matrik_proker IN (?)", prokerIDs).
+			Order("id ASC").
+			Scan(&rawAktivitas).Error
+
+		for _, a := range rawAktivitas {
+			aktivitasIDs = append(aktivitasIDs, a.ID)
+		}
+	}
+
+	var rawRAB []struct {
+		ID            uint    `gorm:"column:id"`
+		UUID          string  `gorm:"column:uuid"`
+		IdAktivitasV2 uint    `gorm:"column:id_aktivitasv2"`
+		NoAkun        string  `gorm:"column:no_akun"`
+		NamaAkun      string  `gorm:"column:nama_akun"`
+		Rincian       string  `gorm:"column:rincian"`
+		QtySatuan     float64 `gorm:"column:qty_satuan"`
+		QtyPaket      float64 `gorm:"column:qty_paket"`
+		Sbu           float64 `gorm:"column:sbu"`
+		Total         float64 `gorm:"column:total"`
+	}
+	if len(aktivitasIDs) > 0 {
+		_ = r.db.WithContext(ctx).Table("aktivitasv2_rab").
+			Where("id_aktivitasv2 IN (?)", aktivitasIDs).
+			Order("id ASC").
+			Scan(&rawRAB).Error
+	}
+
+	rabMap := make(map[uint][]map[string]interface{})
+	for _, rItem := range rawRAB {
+		tot := rItem.Total
+		if tot == 0 && rItem.QtySatuan > 0 && rItem.QtyPaket > 0 && rItem.Sbu > 0 {
+			tot = rItem.QtySatuan * rItem.QtyPaket * rItem.Sbu
+		}
+		rabMap[rItem.IdAktivitasV2] = append(rabMap[rItem.IdAktivitasV2], map[string]interface{}{
+			"id":         rItem.ID,
+			"uuid":       rItem.UUID,
+			"no_akun":    rItem.NoAkun,
+			"nama_akun":  rItem.NamaAkun,
+			"rincian":    rItem.Rincian,
+			"qty_satuan": rItem.QtySatuan,
+			"qty_paket":  rItem.QtyPaket,
+			"sbu":        rItem.Sbu,
+			"total":      tot,
+		})
+	}
+
+	aktMap := make(map[uint][]map[string]interface{})
+	for _, a := range rawAktivitas {
+		rabs := rabMap[a.ID]
+		if rabs == nil {
+			rabs = []map[string]interface{}{}
+		}
+		var totRab float64
+		for _, rItem := range rabs {
+			if t, ok := rItem["total"].(float64); ok {
+				totRab += t
+			}
+		}
+		aktMap[a.IdMatrikProker] = append(aktMap[a.IdMatrikProker], map[string]interface{}{
+			"id":                      a.ID,
+			"uuid":                    a.UUID,
+			"aktivitas":               a.Aktivitas,
+			"pic":                     a.PIC,
+			"realisasi":               a.Realisasi,
+			"pencairan":               a.Pencairan,
+			"status":                  a.Status,
+			"catatan_revisi_anggaran": a.CatatanRevisiAnggaran,
+			"catatan_batal":           a.CatatanBatal,
+			"is_batal":                a.IsBatal == 1,
+			"total_rab":               totRab,
+			"rab":                     rabs,
+		})
+	}
+
+	var monitoringList []map[string]interface{}
+	for _, p := range prokerRows {
+		acts := aktMap[p.ID]
+		if acts == nil {
+			acts = []map[string]interface{}{}
+		}
+		var totAnggaran, totPencairan float64
+		for _, act := range acts {
+			if rabTot, ok := act["total_rab"].(float64); ok {
+				totAnggaran += rabTot
+			}
+			if pcr, ok := act["pencairan"].(*float64); ok && pcr != nil {
+				totPencairan += *pcr
+			} else if act["status"] == "terima_anggaran" || act["status"] == "terlaksana" {
+				if rabTot, ok := act["total_rab"].(float64); ok {
+					totPencairan += rabTot
+				}
+			}
+		}
+
+		monitoringList = append(monitoringList, map[string]interface{}{
+			"id":                 p.ID,
+			"uuid":               p.UUID,
+			"id_fakultas_unit":   p.IdFakultasUnit,
+			"id_indikator":       p.IdIndikator,
+			"nama_fakultas_unit": p.NamaFakultasUnit,
+			"type_fakultas_unit": p.TypeFakultasUnit,
+			"jenjang":            p.Jenjang,
+			"nama_program":       p.NamaProgram,
+			"tahun":              p.Tahun,
+			"indikator_kinerja":  p.IndikatorKinerja,
+			"pic":                p.PIC,
+			"status":             p.Status,
+			"is_batal":           p.IsBatal == 1,
+			"total_anggaran":     totAnggaran,
+			"total_pencairan":    totPencairan,
+			"aktivitas":          acts,
+		})
+	}
+
+	return &domain.SankeyDataResult{
+		Tahun:        tahun,
+		Monitoring:   monitoringList,
+		MasterIkus:   masterIkus,
+		FakultasUnit: allUnits,
 	}, nil
 }

@@ -3,7 +3,6 @@ package UpdateVerifikasiDokumenV3
 import (
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,7 +15,7 @@ type UpdateVerifikasiDokumenV3CommandHandler struct {
 func (h *UpdateVerifikasiDokumenV3CommandHandler) Handle(ctx context.Context, cmd UpdateVerifikasiDokumenV3Command) (*domain.MatrixProkerDokumen, error) {
 	docUUID, err := uuid.Parse(cmd.DocUUID)
 	if err != nil {
-		return nil, errors.New("Invalid document UUID")
+		return nil, domain.InvalidDocUuid()
 	}
 
 	status := strings.TrimSpace(cmd.StatusVerifikasi)

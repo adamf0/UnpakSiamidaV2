@@ -2,7 +2,6 @@ package UpdateUserAbac
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -18,17 +17,17 @@ type UpdateUserAbacCommandHandler struct {
 func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUserAbacCommand) (string, error) {
 	rawUUID := strings.TrimSpace(cmd.UUID)
 	if rawUUID == "" {
-		return "", errors.New("UUID penugasan wajib disertakan")
+		return "", domainuser.AbacUuidRequired()
 	}
 
 	parsedUUID, err := uuid.Parse(rawUUID)
 	if err != nil {
-		return "", errors.New("Format UUID penugasan tidak valid")
+		return "", domainuser.AbacInvalidUuid()
 	}
 
 	existing, err := h.Repo.GetUserAbacByUuid(ctx, parsedUUID)
 	if err != nil || existing == nil {
-		return "", errors.New("Data penugasan tidak ditemukan")
+		return "", domainuser.AbacNotFound()
 	}
 
 	updates := map[string]interface{}{
@@ -62,7 +61,14 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 	if cmd.Role != "" {
 		reqRole := strings.ToLower(strings.TrimSpace(cmd.Role))
 		if reqRole == "admin" {
-			return "", errors.New("Role admin tidak dapat ditugaskan melalui ABAC, gunakan level akun pengguna")
+			return "", domainuser.AbacAdminNotAllowed()
+		}
+		if reqRole == "auditee" {
+			reqRole = "user"
+		}
+		if reqRole == "evaluator" || reqRole == "anggaran" {
+			updates["id_fakultas_unit"] = nil
+			targetFuID = nil
 		}
 		if reqRole != "auto" {
 			if targetFuID != nil && *targetFuID > 0 {
@@ -74,18 +80,18 @@ func (h *UpdateUserAbacCommandHandler) Handle(ctx context.Context, cmd UpdateUse
 					isProdi := lowType == "prodi" || strings.Contains(lowNama, "(prodi)") || strings.HasPrefix(lowNama, "prodi") || strings.HasPrefix(lowNama, "program studi")
 
 					if reqRole == "upms" && !isProdi {
-						return "", errors.New("Target untuk role UPMS harus berupa Program Studi (Prodi)")
+						return "", domainuser.AbacTargetUpmsInvalid()
 					}
-					if reqRole == "upmf" && !isFak {
-						return "", errors.New("Target untuk role UPMF harus berupa Fakultas")
+					if (reqRole == "upmf" || reqRole == "fakultas") && !isFak {
+						return "", domainuser.AbacTargetUpmfInvalid()
 					}
 					if reqRole == "upml" && isProdi {
-						return "", errors.New("Target untuk role UPML harus berupa Fakultas atau Unit (bukan Program Studi)")
+						return "", domainuser.AbacTargetUpmlInvalid()
 					}
 				}
 			} else {
-				if reqRole == "fakultas" || reqRole == "upmf" || reqRole == "upms" {
-					return "", errors.New("Target Fakultas/Unit/Prodi wajib dipilih untuk role ini")
+				if reqRole != "evaluator" && reqRole != "anggaran" {
+					return "", domainuser.AbacTargetRequired()
 				}
 			}
 			updates["role"] = reqRole

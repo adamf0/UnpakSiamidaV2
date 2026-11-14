@@ -3,7 +3,6 @@ package GetDokumenV3
 import (
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
-	"errors"
 )
 
 type GetDokumenV3QueryHandler struct {
@@ -16,7 +15,7 @@ func (h *GetDokumenV3QueryHandler) Handle(ctx context.Context, query GetDokumenV
 		return nil, err
 	}
 	if proker == nil {
-		return nil, errors.New("Program kerja tidak ditemukan")
+		return nil, domain.ProkerNotFound()
 	}
 
 	docs, err := h.Repo.GetDokumenByMatrikId(ctx, proker.ID)
@@ -24,7 +23,7 @@ func (h *GetDokumenV3QueryHandler) Handle(ctx context.Context, query GetDokumenV
 		return nil, err
 	}
 
-	activities, _ := h.Repo.GetAktivitasByMatrikId(ctx, proker.ID)
+	activities, _ := h.Repo.GetAktivitasOptionsByMatrikId(ctx, proker.ID)
 
 	return &domain.ProkerDokumenResult{
 		Proker:     proker,

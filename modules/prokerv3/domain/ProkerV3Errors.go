@@ -81,3 +81,87 @@ func AlreadyDeleted() commondomain.Error {
 		"Program kerja sudah berada di tab Buang",
 	)
 }
+
+func InvalidDocUuid() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.InvalidDocUuid",
+		"Invalid document UUID",
+	)
+}
+
+func DokumenEmpty() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DokumenEmpty",
+		"Dokumen data tidak boleh kosong",
+	)
+}
+
+func JadwalNotFound() commondomain.Error {
+	return commondomain.NotFoundError(
+		"ProkerV3.JadwalNotFound",
+		"Jadwal proker tidak ditemukan",
+	)
+}
+
+func TahunRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.TahunRequired",
+		"Tahun wajib diisi",
+	)
+}
+
+func TanggalMulaiRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.TanggalMulaiRequired",
+		"Tanggal mulai wajib diisi",
+	)
+}
+
+func TanggalAkhirRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.TanggalAkhirRequired",
+		"Tanggal akhir wajib diisi",
+	)
+}
+
+func TanggalAkhirInvalid() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.TanggalAkhirInvalid",
+		"Tanggal akhir tidak boleh lebih awal dari tanggal mulai",
+	)
+}
+
+func PaguIdRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.PaguIdRequired",
+		"ID wajib diisi",
+	)
+}
+
+func AdminOnlyProkerBatal() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.AdminOnlyProkerBatal",
+		"Hanya Admin yang dapat mengubah tanggal aktif Proker Batal",
+	)
+}
+
+func TanggalAktifTargetRequired() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.TanggalAktifTargetRequired",
+		"Tanggal aktif harus diisi untuk target fakultas/unit yang dipilih",
+	)
+}
+
+func DateFormatInvalid() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DateFormatInvalid",
+		"Format tanggal aktif Proker Batal harus YYYY-MM-DD",
+	)
+}
+
+func RepoNotInitialized() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.RepoNotInitialized",
+		"repository IProkerV3Repository is not initialized",
+	)
+}

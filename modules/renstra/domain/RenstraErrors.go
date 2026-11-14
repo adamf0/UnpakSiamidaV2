@@ -64,3 +64,19 @@ func PeriodOverlapUploadLapangan() domain.Error {
 func PeriodOverlapDokumenLapangan() domain.Error {
 	return domain.NotFoundError("Renstra.PeriodOverlapDokumenLapangan", "document period overlaps with AL period")
 }
+
+func EmptySelection() domain.Error {
+	return domain.Error{
+		Code:        "Renstra.EmptySelection",
+		Description: "Pilih minimal 1 jadwal audit untuk dikirim email kode akses.",
+		Type:        domain.Validation,
+	}
+}
+
+func MissingKodeAkses() domain.Error {
+	return domain.Error{
+		Code:        "Renstra.MissingKodeAkses",
+		Description: "Gagal mengirim email: tidak ada kode akses pada jadwal yang dipilih. Silakan atur kode akses terlebih dahulu.",
+		Type:        domain.Validation,
+	}
+}

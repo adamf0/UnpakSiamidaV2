@@ -3,6 +3,7 @@ package domain
 import (
 	commondomain "UnpakSiamida/common/domain"
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,39 +26,52 @@ type IProkerV3Repository interface {
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SoftDelete(ctx context.Context, params SoftDeleteProkerParams) error
 
-	// Options & Target
+	// Beban Yayasan & Batal
+	UpdateBebanYayasan(ctx context.Context, uid uuid.UUID, beban bool) (*ProkerV3, error)
+	UpdateBatalProker(ctx context.Context, uid uuid.UUID, isBatal bool, catatan string) (*ProkerV3, error)
+
+	// Options & Target & COA
 	GetOptions(ctx context.Context) (*ProkerOptionsResult, error)
 	GetTargetUnpak(ctx context.Context, tahun, indikatorParam, unitParam string) (*TargetUnpakResult, error)
-
-	// Aktivitas V2
-	GetAktivitasByMatrikId(ctx context.Context, matrikID uint) ([]AktivitasV2Default, error)
-	GetAktivitasByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2Default, error)
-	GetAktivitasEntityByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2, error)
-	GetAktivitasEntityById(ctx context.Context, id uint) (*AktivitasV2, error)
-	CreateAktivitas(ctx context.Context, data *AktivitasV2, timelines []ProkerTimelineV3) error
-	UpdateAktivitas(ctx context.Context, data *AktivitasV2) error
-	DeleteAktivitas(ctx context.Context, uid uuid.UUID) error
+	GetCoa(ctx context.Context, search string) ([]CoaItem, error)
 
 	// Status & History
 	UpdateStatus(ctx context.Context, req UpdateStatusRequest) (*UpdateStatusResult, error)
 	GetHistoryState(ctx context.Context, entityUuid string) ([]HistoryState, error)
 	RecordHistoryState(ctx context.Context, h *HistoryState) error
 
-	// Timeline
-	GetTimelineByUuid(ctx context.Context, uid uuid.UUID) (*ProkerTimelineV3, error)
-	CreateTimeline(ctx context.Context, tl *ProkerTimelineV3) error
-	UpdateTimeline(ctx context.Context, tl *ProkerTimelineV3) error
-	DeleteTimeline(ctx context.Context, uid uuid.UUID) error
-	ReorderTimeline(ctx context.Context, items []ReorderTimelineItem) error
-	CountTimelineByAktivitasId(ctx context.Context, aktivitasId uint) (int64, error)
-	AddTimelineFiles(ctx context.Context, files []ProkerTimelineFileV3) error
-	DeleteTimelineFile(ctx context.Context, fileUid uuid.UUID) error
-	GetTimelineFileByUuid(ctx context.Context, fileUid uuid.UUID) (*ProkerTimelineFileV3, error)
-
-	// Dokumen
+	// Dokumen & Aktivitas Options
 	GetDokumenByMatrikId(ctx context.Context, matrikID uint) ([]MatrixProkerDokumen, error)
+	GetAktivitasOptionsByMatrikId(ctx context.Context, matrikID uint) ([]AktivitasDokumenOption, error)
 	GetDokumenByUuid(ctx context.Context, uid uuid.UUID) (*MatrixProkerDokumen, error)
 	CreateDokumen(ctx context.Context, doc *MatrixProkerDokumen) error
 	DeleteDokumen(ctx context.Context, uid uuid.UUID) error
 	UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, status, catatan, catatanPenolakan string) (*MatrixProkerDokumen, error)
+
+	// App Settings & Proker Batal
+	EnsureAppSettingsTable(ctx context.Context) error
+	GetProkerBatalSettingStatus(ctx context.Context, now time.Time, targetUnitID *int) (*ProkerBatalSettingStatus, error)
+	GetProkerBatalSettingRaw(ctx context.Context) (string, error)
+	SaveProkerBatalSetting(ctx context.Context, serialized string, updatedBy *int) error
+	GetFakultasUnitNamesMap(ctx context.Context, unitIDs []int) (map[int]string, error)
+	GetUserIDByUUID(ctx context.Context, uuid string) (*int, error)
+	GetFakultasUnitIDByUUIDOrName(ctx context.Context, key string) (*int, error)
+
+	// Jadwal Proker V3
+	GetAllJadwalProkerV3(ctx context.Context, filter JadwalFilter) ([]JadwalProkerV3DTO, error)
+	GetJadwalProkerV3(ctx context.Context, uid uuid.UUID) (*JadwalProkerV3DTO, error)
+	CheckJadwalProkerV3(ctx context.Context, req CheckJadwalRequest) (*CheckJadwalResult, error)
+	CreateJadwalProkerV3(ctx context.Context, data *JadwalProkerV3) error
+	UpdateJadwalProkerV3(ctx context.Context, uid uuid.UUID, data *JadwalProkerV3) error
+	DeleteJadwalProkerV3(ctx context.Context, uid uuid.UUID) error
+
+	// Pagu Anggaran
+	GetAllPaguAnggaran(ctx context.Context, tahun string, idFu string) ([]PaguAnggaran, error)
+	SavePaguAnggaran(ctx context.Context, req SavePaguAnggaranRequest) (*PaguAnggaran, error)
+	DeletePaguAnggaran(ctx context.Context, id string) error
+	GetUnitPaguSummary(ctx context.Context, tahun string, reqFu, userFu string) (*UnitPaguSummaryResult, error)
+
+	// Dashboard Monitoring & Sankey
+	GetDashboardProkerMonitoring(ctx context.Context, filter DashboardMonitoringFilter) (*DashboardMonitoringResult, error)
+	GetSankeyData(ctx context.Context, tahun string) (*SankeyDataResult, error)
 }

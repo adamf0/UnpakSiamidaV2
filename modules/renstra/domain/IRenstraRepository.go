@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	commonDomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	"github.com/google/uuid"
 )
 
@@ -21,4 +22,7 @@ type IRenstraRepository interface {
 	Update(ctx context.Context, renstra *Renstra) error
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SetupUuid(ctx context.Context) error
+	GetRenstraEmailTargets(ctx context.Context, uuids []string) ([]RenstraEmailTarget, error)
+	WithTx(ctx context.Context, fn func(txRepo IRenstraRepositoryTx) error) error
+	InsertOutbox(ctx context.Context, msg *commoninfra.OutboxMessage) error
 }

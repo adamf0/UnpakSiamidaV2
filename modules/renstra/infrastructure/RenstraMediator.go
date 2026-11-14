@@ -9,6 +9,7 @@ import (
 	getAll "UnpakSiamida/modules/renstra/application/GetAllRenstras"
 	getDefault "UnpakSiamida/modules/renstra/application/GetRenstraDefault"
 	giveCode "UnpakSiamida/modules/renstra/application/GiveCodeAccessRenstra"
+	sendEmail "UnpakSiamida/modules/renstra/application/SendEmailRenstra"
 	setupUuid "UnpakSiamida/modules/renstra/application/SetupUuidRenstra"
 	update "UnpakSiamida/modules/renstra/application/UpdateRenstra"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
@@ -92,10 +93,18 @@ func RegisterModuleRenstra(db *gorm.DB, tgs ...commoninfra.TelegramSender) error
 		Repo: repoRenstra,
 	})
 
+	mediatr.RegisterRequestHandler[
+		sendEmail.SendEmailRenstraCommand,
+		*sendEmail.SendEmailRenstraResult,
+	](&sendEmail.SendEmailRenstraCommandHandler{
+		Repo: repoRenstra,
+	})
+
 	commoninfra.RegisterValidation(create.CreateRenstraCommandValidation, "RenstraCreate.Validation")
 	commoninfra.RegisterValidation(update.UpdateRenstraCommandValidation, "RenstraUpdate.Validation")
 	commoninfra.RegisterValidation(delete.DeleteRenstraCommandValidation, "RenstraDelete.Validation")
 	commoninfra.RegisterValidation(giveCode.GiveCodeAccessRenstraCommandValidation, "RenstraGiveCode.Validation")
+	commoninfra.RegisterValidation(sendEmail.SendEmailRenstraCommandValidation, "RenstraSendEmail.Validation")
 
 	return nil
 }

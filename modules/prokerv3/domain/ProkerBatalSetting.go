@@ -25,6 +25,7 @@ func (AppSetting) TableName() string {
 // UnitBatalSchedule holds the activation date for a specific fakultas / unit.
 type UnitBatalSchedule struct {
 	IdFakultasUnit   int    `json:"id_fakultas_unit"`
+	UuidFakultasUnit string `json:"uuid_fakultas_unit,omitempty"`
 	NamaFakultasUnit string `json:"nama_fakultas_unit,omitempty"`
 	Tanggal          string `json:"tanggal"`
 	UpdatedAt        string `json:"updated_at,omitempty"`
@@ -39,6 +40,7 @@ type ProkerBatalConfig struct {
 // UnitBatalStatus is the evaluated status for a specific unit.
 type UnitBatalStatus struct {
 	IdFakultasUnit   int    `json:"id_fakultas_unit"`
+	UuidFakultasUnit string `json:"uuid_fakultas_unit,omitempty"`
 	NamaFakultasUnit string `json:"nama_fakultas_unit,omitempty"`
 	Tanggal          string `json:"tanggal"`
 	HasDate          bool   `json:"has_date"`
@@ -51,18 +53,19 @@ type UnitBatalStatus struct {
 
 // ProkerBatalSettingStatus holds the evaluated activation state for Proker Batal.
 type ProkerBatalSettingStatus struct {
-	SettingKey   string            `json:"setting_key"`
-	ActiveDate   string            `json:"proker_batal_aktif_tanggal"`
-	GlobalDate   string            `json:"global_date"`
-	HasDate      bool              `json:"has_date"`
-	IsActive     bool              `json:"is_active"`
-	Status       string            `json:"status"`
-	StatusText   string            `json:"status_label"`
-	Message      string            `json:"message"`
-	UpdatedAt    string            `json:"updated_at,omitempty"`
-	Scope        string            `json:"scope,omitempty"` // "unit" | "global" | "none"
-	TargetUnitID *int              `json:"target_unit_id,omitempty"`
-	Units        []UnitBatalStatus `json:"units,omitempty"`
+	SettingKey     string            `json:"setting_key"`
+	ActiveDate     string            `json:"proker_batal_aktif_tanggal"`
+	GlobalDate     string            `json:"global_date"`
+	HasDate        bool              `json:"has_date"`
+	IsActive       bool              `json:"is_active"`
+	Status         string            `json:"status"`
+	StatusText     string            `json:"status_label"`
+	Message        string            `json:"message"`
+	UpdatedAt      string            `json:"updated_at,omitempty"`
+	Scope          string            `json:"scope,omitempty"` // "unit" | "global" | "none"
+	TargetUnitID   *int              `json:"target_unit_id,omitempty"`
+	TargetUnitUUID string            `json:"target_unit_uuid,omitempty"`
+	Units          []UnitBatalStatus `json:"units,omitempty"`
 }
 
 func formatTanggalSettingIndo(t time.Time) string {

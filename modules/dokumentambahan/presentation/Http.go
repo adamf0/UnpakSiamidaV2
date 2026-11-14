@@ -238,7 +238,7 @@ func SetupUuidDokumenTambahansHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleDokumenTambahan(app *fiber.App) {
 	admin := []string{"admin"}
-	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "user"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/dokumentambahan/setupuuid", SetupUuidDokumenTambahansHandlerfunc)

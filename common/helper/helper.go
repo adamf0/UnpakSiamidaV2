@@ -310,20 +310,36 @@ func Contains(list []string, value string) bool {
 func GrantedContains(audit []string, tahun string, granted string, isother bool) bool {
 	entries := strings.Split(granted, ",")
 	for _, e := range entries {
-		parts := strings.Split(e, "#")
+		parts := strings.Split(strings.TrimSpace(e), "#")
 		if len(parts) != 2 {
-			return false
+			continue
 		}
 
 		year := strings.TrimSpace(parts[0])
-		level := strings.TrimSpace(parts[1])
+		level := strings.ToLower(strings.TrimSpace(parts[1]))
+
+		matchLevel := func(lvl string) bool {
+			for _, a := range audit {
+				aLower := strings.ToLower(strings.TrimSpace(a))
+				if lvl == aLower {
+					return true
+				}
+				if lvl == "user" && (aLower == "auditee" || aLower == "unit" || aLower == "fakultas") {
+					return true
+				}
+				if (lvl == "auditee" || lvl == "unit" || lvl == "fakultas") && aLower == "user" {
+					return true
+				}
+			}
+			return false
+		}
 
 		if isother {
-			if Contains(audit, level) {
+			if matchLevel(level) {
 				return true
 			}
 		} else {
-			if year == tahun && Contains(audit, level) {
+			if year == tahun && matchLevel(level) {
 				return true
 			}
 		}

@@ -2,10 +2,8 @@ package presentation
 
 import (
 	"context"
-	"encoding/json"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mehdihadeli/go-mediatr"
@@ -18,14 +16,16 @@ import (
 
 	CreateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
 	DeleteIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/DeleteIndikatorRenstra"
-	GetIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstra"
-	UpdateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
-	indikatorrenstradomain "UnpakSiamida/modules/indikatorrenstra/domain"
-
-	// GetTreeIndikatorRenstraByTahun "UnpakSiamida/modules/indikatorrenstra/application/GetTreeIndikatorRenstraByTahun"
 	GetAllIndikatorRenstras "UnpakSiamida/modules/indikatorrenstra/application/GetAllIndikatorRenstras"
+	GetAllMasterIku "UnpakSiamida/modules/indikatorrenstra/application/GetAllMasterIku"
+	GetDashboardIkuAnggaran "UnpakSiamida/modules/indikatorrenstra/application/GetDashboardIkuAnggaran"
+	GetIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstra"
+	GetIndikatorRenstraIku "UnpakSiamida/modules/indikatorrenstra/application/GetIndikatorRenstraIku"
+	SaveIndikatorRenstraIku "UnpakSiamida/modules/indikatorrenstra/application/SaveIndikatorRenstraIku"
 	SetupUuidIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/SetupUuidIndikatorRenstra"
 	TreeIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/TreeIndikatorRenstra"
+	UpdateIndikatorRenstra "UnpakSiamida/modules/indikatorrenstra/application/UpdateIndikatorRenstra"
+	indikatorrenstradomain "UnpakSiamida/modules/indikatorrenstra/domain"
 )
 
 // CreateIndikatorRenstraHandler godoc
@@ -341,39 +341,24 @@ func SetupUuidIndikatorRenstrasHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
-var (
-	dbInstance    *gorm.DB
-	dbIkuInstance *gorm.DB
-)
-
-type SaveIndikatorIkuReq struct {
-	IkuIds []uint64 `json:"iku_ids" form:"iku_ids"`
-}
-
 // GetAllMasterIkuHandler godoc
 // @Summary Get all Master IKU
 // @Tags IndikatorRenstra
 // @Produce json
 // @Router /master_iku [get]
 func GetAllMasterIkuHandler(c *fiber.Ctx) error {
-	targetDB := dbIkuInstance
-	if targetDB == nil {
-		targetDB = dbInstance
-	}
-	if targetDB == nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database not initialized"})
+	query := GetAllMasterIku.GetAllMasterIkuQuery{}
+
+	result, err := mediatr.Send[
+		GetAllMasterIku.GetAllMasterIkuQuery,
+		[]indikatorrenstradomain.MasterIku,
+	](c.Context(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
 	}
 
-	var ikus []indikatorrenstradomain.MasterIku
-	err := targetDB.Table("master_indikator").Order("id asc").Find(&ikus).Error
-	if err != nil {
-		err = targetDB.Table("master_iku").Order("id asc").Find(&ikus).Error
-	}
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(ikus)
+	return c.JSON(result)
 }
 
 // GetIndikatorRenstraIkuHandler godoc
@@ -383,43 +368,20 @@ func GetAllMasterIkuHandler(c *fiber.Ctx) error {
 // @Produce json
 // @Router /indikatorrenstra/{identifier}/iku [get]
 func GetIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database not initialized"})
+	query := GetIndikatorRenstraIku.GetIndikatorRenstraIkuQuery{
+		Identifier: strings.TrimSpace(c.Params("identifier")),
 	}
 
-	identifier := strings.TrimSpace(c.Params("identifier"))
-	if identifier == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Identifier is required"})
+	result, err := mediatr.Send[
+		GetIndikatorRenstraIku.GetIndikatorRenstraIkuQuery,
+		*GetIndikatorRenstraIku.GetIndikatorRenstraIkuResult,
+	](c.Context(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
 	}
 
-	var indikatorRow struct {
-		ID   uint64 `gorm:"column:id"`
-		UUID string `gorm:"column:uuid"`
-	}
-
-	if err := dbInstance.Table("master_indikator_renstra").
-		Select("id, uuid").
-		Where("uuid = ? OR id = ?", identifier, identifier).
-		First(&indikatorRow).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Indikator Renstra not found"})
-	}
-
-	var mappings []indikatorrenstradomain.IndikatorRenstraIku
-	if err := dbInstance.Where("id_indikator_renstra = ?", indikatorRow.ID).Find(&mappings).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	ikuIds := make([]uint64, 0, len(mappings))
-	for _, m := range mappings {
-		ikuIds = append(ikuIds, m.IdIku)
-	}
-
-	return c.JSON(fiber.Map{
-		"id_indikator_renstra": indikatorRow.ID,
-		"uuid":                 indikatorRow.UUID,
-		"iku_ids":              ikuIds,
-		"mappings":             mappings,
-	})
+	return c.JSON(result)
 }
 
 // SaveIndikatorRenstraIkuHandler godoc
@@ -429,14 +391,7 @@ func GetIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
 // @Produce json
 // @Router /indikatorrenstra/{identifier}/iku [post]
 func SaveIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database not initialized"})
-	}
-
 	identifier := strings.TrimSpace(c.Params("identifier"))
-	if identifier == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Identifier is required"})
-	}
 
 	var ikuIds []uint64
 	if rawIkuIds := strings.TrimSpace(c.FormValue("iku_ids")); rawIkuIds != "" {
@@ -448,172 +403,21 @@ func SaveIndikatorRenstraIkuHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var indikatorRow struct {
-		ID   uint64 `gorm:"column:id"`
-		UUID string `gorm:"column:uuid"`
+	cmd := SaveIndikatorRenstraIku.SaveIndikatorRenstraIkuCommand{
+		Identifier: identifier,
+		IkuIds:     ikuIds,
 	}
 
-	if err := dbInstance.Table("master_indikator_renstra").
-		Select("id, uuid").
-		Where("uuid = ? OR id = ?", identifier, identifier).
-		First(&indikatorRow).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Indikator Renstra not found"})
+	result, err := mediatr.Send[
+		SaveIndikatorRenstraIku.SaveIndikatorRenstraIkuCommand,
+		*SaveIndikatorRenstraIku.SaveIndikatorRenstraIkuResult,
+	](c.Context(), cmd)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
 	}
 
-	tx := dbInstance.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Delete existing mappings
-	if err := tx.Where("id_indikator_renstra = ?", indikatorRow.ID).
-		Delete(&indikatorrenstradomain.IndikatorRenstraIku{}).Error; err != nil {
-		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	// Insert new mappings if any
-	now := time.Now()
-	for _, ikuId := range ikuIds {
-		if ikuId == 0 {
-			continue
-		}
-		newRecord := indikatorrenstradomain.IndikatorRenstraIku{
-			IdIndikatorRenstra: indikatorRow.ID,
-			IdIku:              ikuId,
-			CreatedAt:          now,
-			UpdatedAt:          now,
-		}
-		if err := tx.Create(&newRecord).Error; err != nil {
-			tx.Rollback()
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return c.JSON(fiber.Map{
-		"message": "Data IKU berhasil disimpan",
-		"count":   len(ikuIds),
-		"iku_ids": ikuIds,
-	})
-}
-
-type DashboardRabItemDetail struct {
-	ID            string  `json:"id"`
-	Keterangan    string  `json:"keterangan"`
-	QtySatuan     float64 `json:"qty_satuan"`
-	QtyPaket      float64 `json:"qty_paket"`
-	HargaSatuan   float64 `json:"harga_satuan"`
-	Total         float64 `json:"total"`
-	BuktiUrl      string  `json:"bukti_url"`
-	BuktiName     string  `json:"bukti_name"`
-	TimelineNama  string  `json:"timeline_nama"`
-	StatusTahapan string  `json:"status_tahapan"`
-	AktivitasNama string  `json:"aktivitas_nama"`
-	ProkerTarget  string  `json:"proker_target"`
-	UnitNama      string  `json:"unit_nama"`
-}
-
-type DashboardKegiatanFlowItem struct {
-	ID           uint64                   `json:"id"`
-	Aktivitas    string                   `json:"aktivitas"`
-	UnitNama     string                   `json:"unit_nama"`
-	PIC          string                   `json:"pic"`
-	TargetProker string                   `json:"target_proker"`
-	Anggaran     float64                  `json:"anggaran"`
-	Realisasi    float64                  `json:"realisasi"`
-	TotalRab     float64                  `json:"total_rab"`
-	PencairanRab float64                  `json:"pencairan_rab"`
-	SisaDana     float64                  `json:"sisa_dana"`
-	Persentase   float64                  `json:"persentase"`
-	RabItems     []DashboardRabItemDetail `json:"rab_items"`
-}
-
-type DashboardIndikatorFlowItem struct {
-	ID            uint64                      `json:"id"`
-	Indikator     string                      `json:"indikator"`
-	Tahun         string                      `json:"tahun"`
-	Anggaran      float64                     `json:"anggaran"`
-	Realisasi     float64                     `json:"realisasi"`
-	TotalRab      float64                     `json:"total_rab"`
-	PencairanRab  float64                     `json:"pencairan_rab"`
-	SisaDana      float64                     `json:"sisa_dana"`
-	Persentase    float64                     `json:"persentase"`
-	KegiatanItems []DashboardKegiatanFlowItem `json:"kegiatan_items"`
-}
-
-type DashboardIkuItem struct {
-	IkuID               uint64                       `json:"iku_id"`
-	Iku                 string                       `json:"iku"`
-	Kategori            string                       `json:"kategori"`
-	Satuan              string                       `json:"satuan"`
-	JenisIku            string                       `json:"jenis_iku"`
-	Target              string                       `json:"target"`
-	IsMapped            bool                         `json:"is_mapped"`
-	TotalIndikator      int                          `json:"total_indikator"`
-	TotalProker         int                          `json:"total_proker"`
-	TotalAktivitas      int                          `json:"total_aktivitas"`
-	TotalTimeline       int                          `json:"total_timeline"`
-	TotalItemRab        int                          `json:"total_item_rab"`
-	TotalItemDicairkan  int                          `json:"total_item_dicairkan"`
-	Anggaran            float64                      `json:"anggaran"`
-	Realisasi           float64                      `json:"realisasi"`
-	TotalRab            float64                      `json:"total_rab"`
-	PencairanRab        float64                      `json:"pencairan_rab"`
-	PersentaseRealisasi float64                      `json:"persentase_realisasi"`
-	PersentasePencairan float64                      `json:"persentase_pencairan"`
-	RabDetails          []DashboardRabItemDetail     `json:"rab_details"`
-	IndikatorItems      []DashboardIndikatorFlowItem `json:"indikator_items"`
-}
-
-type DashboardIkuSummary struct {
-	TotalIku                     int     `json:"total_iku"`
-	TotalIkuMapped               int     `json:"total_iku_mapped"`
-	TotalAnggaran                float64 `json:"total_anggaran"`
-	TotalRealisasi               float64 `json:"total_realisasi"`
-	TotalRab                     float64 `json:"total_rab"`
-	TotalPencairanRab            float64 `json:"total_pencairan_rab"`
-	PersentaseRealisasi          float64 `json:"persentase_realisasi"`
-	PersentasePencairanAnggaran  float64 `json:"persentase_pencairan_anggaran"`
-	PersentasePencairanRealisasi float64 `json:"persentase_pencairan_realisasi"`
-}
-
-type RawRabItem struct {
-	ID          string      `json:"id"`
-	Keterangan  string      `json:"keterangan"`
-	QtySatuan   interface{} `json:"qty_satuan"`
-	QtyPaket    interface{} `json:"qty_paket"`
-	HargaSatuan interface{} `json:"harga_satuan"`
-	Total       interface{} `json:"total"`
-	BuktiUrl    string      `json:"bukti_url"`
-	BuktiName   string      `json:"bukti_name"`
-}
-
-func parseRabFloat(val interface{}) float64 {
-	if val == nil {
-		return 0
-	}
-	switch v := val.(type) {
-	case float64:
-		return v
-	case float32:
-		return float64(v)
-	case int:
-		return float64(v)
-	case int64:
-		return float64(v)
-	case string:
-		var f float64
-		_ = json.Unmarshal([]byte(v), &f)
-		return f
-	default:
-		return 0
-	}
+	return c.JSON(result)
 }
 
 // GetDashboardIkuAnggaranHandler godoc
@@ -622,334 +426,28 @@ func parseRabFloat(val interface{}) float64 {
 // @Produce json
 // @Router /dashboard/iku_anggaran [get]
 func GetDashboardIkuAnggaranHandler(c *fiber.Ctx) error {
-	if dbInstance == nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database not initialized"})
+	query := GetDashboardIkuAnggaran.GetDashboardIkuAnggaranQuery{
+		Tahun: strings.TrimSpace(c.Query("tahun")),
+		Unit:  strings.TrimSpace(c.Query("unit")),
 	}
 
-	filterTahun := strings.TrimSpace(c.Query("tahun"))
-	filterUnit := strings.TrimSpace(c.Query("unit"))
+	result, err := mediatr.Send[
+		GetDashboardIkuAnggaran.GetDashboardIkuAnggaranQuery,
+		*GetDashboardIkuAnggaran.GetDashboardIkuAnggaranResult,
+	](c.Context(), query)
 
-	// 1. Ambil Master IKU
-	targetDB := dbIkuInstance
-	if targetDB == nil {
-		targetDB = dbInstance
-	}
-	var masterIkus []indikatorrenstradomain.MasterIku
-	err := targetDB.Table("master_indikator").Order("id asc").Find(&masterIkus).Error
 	if err != nil {
-		err = targetDB.Table("master_iku").Order("id asc").Find(&masterIkus).Error
-	}
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	// 2. Ambil Mapping indikator_renstra_iku & master_indikator_renstra
-	type MapRow struct {
-		IdIku              uint64 `gorm:"column:id_iku"`
-		IdIndikatorRenstra uint64 `gorm:"column:id_indikator_renstra"`
-		Tahun              string `gorm:"column:tahun"`
-		Indikator          string `gorm:"column:indikator"`
-	}
-	var mapRows []MapRow
-	mapQuery := dbInstance.Table("indikator_renstra_iku iri").
-		Select("DISTINCT iri.id_iku, iri.id_indikator_renstra, mir.tahun, mir.indikator").
-		Joins("JOIN master_indikator_renstra mir ON mir.id = iri.id_indikator_renstra")
-	if filterTahun != "" && filterTahun != "all" {
-		mapQuery = mapQuery.Where("mir.tahun = ?", filterTahun)
-	}
-	_ = mapQuery.Scan(&mapRows).Error
-
-	ikuToIndikators := make(map[uint64][]MapRow)
-	for _, mr := range mapRows {
-		ikuToIndikators[mr.IdIku] = append(ikuToIndikators[mr.IdIku], mr)
-	}
-
-	// 3. Ambil matrix_proker
-	type ProkerDbRow struct {
-		ID             uint64  `gorm:"column:id"`
-		IdIndikator    uint64  `gorm:"column:id_indikator"`
-		IdFakultasUnit *uint64 `gorm:"column:id_fakultas_unit"`
-		TargetUnpak    string  `gorm:"column:target_unpak"`
-		PIC            string  `gorm:"column:pic"`
-		UnitNama       string  `gorm:"column:unit_nama"`
-	}
-	var prokerRows []ProkerDbRow
-	prokerQuery := dbInstance.Table("matrix_proker mp").
-		Select("mp.id, mp.id_indikator, mp.id_fakultas_unit, mp.target_unpak, mp.pic, COALESCE(sfu.nama, '') as unit_nama").
-		Joins("LEFT JOIN sijamu_fakultas_unit sfu ON sfu.id = mp.id_fakultas_unit").
-		Where("mp.deleted_at IS NULL")
-	if filterUnit != "" && filterUnit != "all" {
-		prokerQuery = prokerQuery.Where("mp.id_fakultas_unit = ?", filterUnit)
-	}
-	_ = prokerQuery.Scan(&prokerRows).Error
-
-	indikatorToProkers := make(map[uint64][]ProkerDbRow)
-	for _, pr := range prokerRows {
-		indikatorToProkers[pr.IdIndikator] = append(indikatorToProkers[pr.IdIndikator], pr)
-	}
-
-	// 4. Ambil aktivitasv2
-	type AktivitasDbRow struct {
-		ID             uint64   `gorm:"column:id"`
-		IdMatrikProker uint64   `gorm:"column:id_matrik_proker"`
-		Aktivitas      string   `gorm:"column:aktivitas"`
-		Anggaran       float64  `gorm:"column:anggaran"`
-		Realisasi      *float64 `gorm:"column:realisasi"`
-	}
-	var actRows []AktivitasDbRow
-	_ = dbInstance.Table("aktivitasv2").
-		Select("aktivitasv2.id, aktivitasv2.id_matrik_proker, aktivitasv2.aktivitas, COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r WHERE r.id_aktivitasv2 = aktivitasv2.id), 0) as anggaran, aktivitasv2.realisasi").
-		Scan(&actRows).Error
-
-	prokerToAktivitas := make(map[uint64][]AktivitasDbRow)
-	for _, ar := range actRows {
-		prokerToAktivitas[ar.IdMatrikProker] = append(prokerToAktivitas[ar.IdMatrikProker], ar)
-	}
-
-	// 5. Ambil aktivitasv2_timeline
-	type TimelineDbRow struct {
-		ID            uint64  `gorm:"column:id"`
-		IdAktivitasV2 uint64  `gorm:"column:id_aktivitasv2"`
-		NamaAktivitas string  `gorm:"column:nama_aktivitas"`
-		Status        string  `gorm:"column:status"`
-		Anggaran      float64 `gorm:"column:anggaran"`
-		RAB           string  `gorm:"column:rab"`
-	}
-	var tlRows []TimelineDbRow
-	_ = dbInstance.Table("aktivitasv2_timeline").
-		Select("id, id_aktivitasv2, nama_aktivitas, status, anggaran, rab").
-		Scan(&tlRows).Error
-
-	actToTimelines := make(map[uint64][]TimelineDbRow)
-	for _, tr := range tlRows {
-		actToTimelines[tr.IdAktivitasV2] = append(actToTimelines[tr.IdAktivitasV2], tr)
-	}
-
-	// 6. Agregasikan per IKU
-	var items []DashboardIkuItem
-	var summary DashboardIkuSummary
-	summary.TotalIku = len(masterIkus)
-
-	for _, iku := range masterIkus {
-		indRows := ikuToIndikators[iku.ID]
-		isMapped := len(indRows) > 0
-		if isMapped {
-			summary.TotalIkuMapped++
-		}
-
-		item := DashboardIkuItem{
-			IkuID:          iku.ID,
-			Iku:            iku.Iku,
-			Kategori:       iku.Kategori,
-			Satuan:         iku.Satuan,
-			JenisIku:       iku.JenisIku,
-			Target:         iku.Target,
-			IsMapped:       isMapped,
-			TotalIndikator: len(indRows),
-			RabDetails:     make([]DashboardRabItemDetail, 0),
-			IndikatorItems: make([]DashboardIndikatorFlowItem, 0),
-		}
-
-		seenProker := make(map[uint64]bool)
-		seenAct := make(map[uint64]bool)
-
-		for _, indRow := range indRows {
-			indItem := DashboardIndikatorFlowItem{
-				ID:            indRow.IdIndikatorRenstra,
-				Indikator:     indRow.Indikator,
-				Tahun:         indRow.Tahun,
-				KegiatanItems: make([]DashboardKegiatanFlowItem, 0),
-			}
-
-			prokers := indikatorToProkers[indRow.IdIndikatorRenstra]
-			seenIndAct := make(map[uint64]bool)
-
-			for _, p := range prokers {
-				if !seenProker[p.ID] {
-					seenProker[p.ID] = true
-					item.TotalProker++
-				}
-
-				acts := prokerToAktivitas[p.ID]
-				for _, a := range acts {
-					if seenIndAct[a.ID] {
-						continue
-					}
-					seenIndAct[a.ID] = true
-
-					kegItem := DashboardKegiatanFlowItem{
-						ID:           a.ID,
-						Aktivitas:    a.Aktivitas,
-						UnitNama:     p.UnitNama,
-						PIC:          p.PIC,
-						TargetProker: p.TargetUnpak,
-						Anggaran:     a.Anggaran,
-						RabItems:     make([]DashboardRabItemDetail, 0),
-					}
-
-					if a.Realisasi != nil {
-						kegItem.Realisasi = *a.Realisasi
-					} else {
-						kegItem.Realisasi = a.Anggaran
-					}
-
-					if !seenAct[a.ID] {
-						seenAct[a.ID] = true
-						item.TotalAktivitas++
-						item.Anggaran += a.Anggaran
-						if a.Realisasi != nil {
-							item.Realisasi += *a.Realisasi
-						}
-					}
-
-					tls := actToTimelines[a.ID]
-					for _, tl := range tls {
-						item.TotalTimeline++
-
-						var rabList []RawRabItem
-						if strings.TrimSpace(tl.RAB) != "" {
-							_ = json.Unmarshal([]byte(tl.RAB), &rabList)
-						}
-
-						if len(rabList) > 0 {
-							for _, r := range rabList {
-								rTotal := parseRabFloat(r.Total)
-								if rTotal == 0 {
-									rTotal = parseRabFloat(r.QtySatuan) * parseRabFloat(r.QtyPaket) * parseRabFloat(r.HargaSatuan)
-								}
-								kegItem.TotalRab += rTotal
-
-								isCair := strings.TrimSpace(r.BuktiUrl) != "" || strings.EqualFold(tl.Status, "Terlaksana")
-								if isCair {
-									kegItem.PencairanRab += rTotal
-								}
-
-								rabDetail := DashboardRabItemDetail{
-									ID:            r.ID,
-									Keterangan:    r.Keterangan,
-									QtySatuan:     parseRabFloat(r.QtySatuan),
-									QtyPaket:      parseRabFloat(r.QtyPaket),
-									HargaSatuan:   parseRabFloat(r.HargaSatuan),
-									Total:         rTotal,
-									BuktiUrl:      r.BuktiUrl,
-									BuktiName:     r.BuktiName,
-									TimelineNama:  tl.NamaAktivitas,
-									StatusTahapan: tl.Status,
-									AktivitasNama: a.Aktivitas,
-									ProkerTarget:  p.TargetUnpak,
-									UnitNama:      p.UnitNama,
-								}
-								kegItem.RabItems = append(kegItem.RabItems, rabDetail)
-							}
-						} else if tl.Anggaran > 0 {
-							kegItem.TotalRab += tl.Anggaran
-							if strings.EqualFold(tl.Status, "Terlaksana") {
-								kegItem.PencairanRab += tl.Anggaran
-							}
-						}
-					}
-
-					kegSisa := kegItem.Realisasi - kegItem.PencairanRab
-					if kegSisa < 0 {
-						kegSisa = 0
-					}
-					kegItem.SisaDana = kegSisa
-					if kegItem.Realisasi > 0 {
-						kegItem.Persentase = (kegItem.PencairanRab / kegItem.Realisasi) * 100
-					} else if kegItem.Anggaran > 0 {
-						kegItem.Persentase = (kegItem.PencairanRab / kegItem.Anggaran) * 100
-					}
-
-					indItem.Anggaran += kegItem.Anggaran
-					indItem.Realisasi += kegItem.Realisasi
-					indItem.TotalRab += kegItem.TotalRab
-					indItem.PencairanRab += kegItem.PencairanRab
-					indItem.KegiatanItems = append(indItem.KegiatanItems, kegItem)
-				}
-			}
-
-			indSisa := indItem.Realisasi - indItem.PencairanRab
-			if indSisa < 0 {
-				indSisa = 0
-			}
-			indItem.SisaDana = indSisa
-			if indItem.Realisasi > 0 {
-				indItem.Persentase = (indItem.PencairanRab / indItem.Realisasi) * 100
-			} else if indItem.Anggaran > 0 {
-				indItem.Persentase = (indItem.PencairanRab / indItem.Anggaran) * 100
-			}
-
-			item.IndikatorItems = append(item.IndikatorItems, indItem)
-		}
-
-		// Agregasikan detail RAB unik ke level IKU
-		seenRabDetailId := make(map[string]bool)
-		for _, indItem := range item.IndikatorItems {
-			for _, kItem := range indItem.KegiatanItems {
-				for _, r := range kItem.RabItems {
-					rKey := r.ID + "_" + r.TimelineNama
-					if !seenRabDetailId[rKey] {
-						seenRabDetailId[rKey] = true
-						item.RabDetails = append(item.RabDetails, r)
-						item.TotalItemRab++
-						item.TotalRab += r.Total
-						isCair := strings.TrimSpace(r.BuktiUrl) != "" || strings.EqualFold(r.StatusTahapan, "Terlaksana")
-						if isCair {
-							item.TotalItemDicairkan++
-							item.PencairanRab += r.Total
-						}
-					}
-				}
-				if len(kItem.RabItems) == 0 && kItem.TotalRab > 0 {
-					item.TotalRab += kItem.TotalRab
-					item.PencairanRab += kItem.PencairanRab
-					if kItem.PencairanRab > 0 {
-						item.TotalItemDicairkan++
-					}
-				}
-			}
-		}
-
-		if item.Anggaran > 0 {
-			item.PersentaseRealisasi = (item.Realisasi / item.Anggaran) * 100
-		}
-		if item.Realisasi > 0 {
-			item.PersentasePencairan = (item.PencairanRab / item.Realisasi) * 100
-		} else if item.Anggaran > 0 {
-			item.PersentasePencairan = (item.PencairanRab / item.Anggaran) * 100
-		}
-
-		summary.TotalAnggaran += item.Anggaran
-		summary.TotalRealisasi += item.Realisasi
-		summary.TotalRab += item.TotalRab
-		summary.TotalPencairanRab += item.PencairanRab
-
-		items = append(items, item)
-	}
-
-	if summary.TotalAnggaran > 0 {
-		summary.PersentaseRealisasi = (summary.TotalRealisasi / summary.TotalAnggaran) * 100
-		summary.PersentasePencairanAnggaran = (summary.TotalPencairanRab / summary.TotalAnggaran) * 100
-	}
-	if summary.TotalRealisasi > 0 {
-		summary.PersentasePencairanRealisasi = (summary.TotalPencairanRab / summary.TotalRealisasi) * 100
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
-		"summary": summary,
-		"items":   items,
-		"tahun":   filterTahun,
+		"summary": result.Summary,
+		"items":   result.Items,
+		"tahun":   result.Tahun,
 	})
 }
 
 func ModuleIndikatorRenstra(app *fiber.App, dbs ...*gorm.DB) {
-	if len(dbs) > 0 {
-		dbInstance = dbs[0]
-	}
-	if len(dbs) > 1 {
-		dbIkuInstance = dbs[1]
-	}
-
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 

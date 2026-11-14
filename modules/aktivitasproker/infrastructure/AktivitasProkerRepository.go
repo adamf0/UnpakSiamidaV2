@@ -183,7 +183,7 @@ func (r *AktivitasProkerRepository) GetAll(
 				FakultasUnit *uint  `gorm:"column:fakultas_unit"`
 			}
 			if err := r.db.WithContext(ctx).
-				Table("usersv3").
+				Table("users").
 				Select("level, fakultas_unit").
 				Where("uuid = ?", val).
 				Take(&userRow).Error; err == nil {

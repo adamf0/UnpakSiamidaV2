@@ -123,3 +123,15 @@ func InvalidTugas() domain.Error {
 func InvalidParsing(target string) domain.Error {
 	return domain.NotFoundError("GenerateRenstra.InvalidParsing", fmt.Sprintf("failed parsing %s to UUID", target))
 }
+
+func RepoNotInitialized() domain.Error {
+	return domain.FailureError("GenerateRenstra.RepoNotInitialized", "repository ISyncRenstraRepository is not initialized")
+}
+
+func PilihMinimalSatuJadwal() domain.Error {
+	return domain.FailureError("GenerateRenstra.PilihMinimalSatuJadwal", "pilih minimal 1 jadwal audit")
+}
+
+func InvalidConfirmationPhrase(phrase string) domain.Error {
+	return domain.FailureError("GenerateRenstra.InvalidConfirmationPhrase", fmt.Sprintf("kalimat konfirmasi tidak sesuai. Ketik tepat: \"%s\"", phrase))
+}

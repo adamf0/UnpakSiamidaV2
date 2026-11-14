@@ -123,6 +123,10 @@ import (
 
 	prokerv3Presentation "UnpakSiamida/modules/prokerv3/presentation"
 
+	aktivitasv2Infrastructure "UnpakSiamida/modules/aktivitasv2/infrastructure"
+
+	aktivitasv2Presentation "UnpakSiamida/modules/aktivitasv2/presentation"
+
 	/////////
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -337,7 +341,11 @@ func main() {
 	})
 
 	mustStart("Proker V3 Module", func() error {
-		return prokerv3Infrastructure.RegisterModuleProkerV3(db, dbIku)
+		return prokerv3Infrastructure.RegisterModuleProkerV3(db, dbIku, dbSiakun)
+	})
+
+	mustStart("Aktivitas V2 Module", func() error {
+		return aktivitasv2Infrastructure.RegisterModuleAktivitasV2(db)
 	})
 
 	if len(startupErrors) > 0 {
@@ -384,6 +392,7 @@ func main() {
 	swotPresentation.ModuleSwot(app)
 	riskassessmentPresentation.ModuleRiskAssessment(app, db)
 	prokerv3Presentation.ModuleProkerV3(app, db, dbIku, dbSiakun)
+	aktivitasv2Presentation.ModuleAktivitasV2(app, db)
 
 	app.Static("/upload", "./upload")
 	app.Get("/upload/*", func(c *fiber.Ctx) error {

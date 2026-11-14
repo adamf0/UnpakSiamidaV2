@@ -2,7 +2,6 @@ package DeleteUserAbac
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	domainuser "UnpakSiamida/modules/user/domain"
@@ -17,12 +16,12 @@ type DeleteUserAbacCommandHandler struct {
 func (h *DeleteUserAbacCommandHandler) Handle(ctx context.Context, cmd DeleteUserAbacCommand) (string, error) {
 	rawUUID := strings.TrimSpace(cmd.UUID)
 	if rawUUID == "" {
-		return "", errors.New("UUID penugasan wajib disertakan")
+		return "", domainuser.AbacUuidRequired()
 	}
 
 	parsedUUID, err := uuid.Parse(rawUUID)
 	if err != nil {
-		return "", errors.New("Format UUID penugasan tidak valid")
+		return "", domainuser.AbacInvalidUuid()
 	}
 
 	if err := h.Repo.DeleteUserAbac(ctx, parsedUUID); err != nil {

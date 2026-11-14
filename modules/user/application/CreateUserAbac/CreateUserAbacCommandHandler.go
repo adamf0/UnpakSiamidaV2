@@ -2,7 +2,6 @@ package CreateUserAbac
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -18,7 +17,7 @@ type CreateUserAbacCommandHandler struct {
 func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUserAbacCommand) (*CreateUserAbacResult, error) {
 	tahun := strings.TrimSpace(cmd.Tahun)
 	if tahun == "" {
-		return nil, errors.New("Tahun penugasan wajib diisi")
+		return nil, domainuser.AbacTahunRequired()
 	}
 
 	// Resolve User ID
@@ -28,29 +27,32 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 	} else if strings.TrimSpace(cmd.UserUuid) != "" {
 		parsedUuid, err := uuid.Parse(strings.TrimSpace(cmd.UserUuid))
 		if err != nil {
-			return nil, errors.New("UUID User tidak valid")
+			return nil, domainuser.AbacUserUuidInvalid()
 		}
 		u, err := h.Repo.GetByUuid(ctx, parsedUuid)
 		if err != nil || u == nil {
-			return nil, errors.New("User yang dipilih tidak ditemukan dalam sistem")
+			return nil, domainuser.AbacUserNotFound()
 		}
 		userID = u.ID
 	} else {
-		return nil, errors.New("Pengguna wajib dipilih")
+		return nil, domainuser.AbacUserRequired()
 	}
 
 	// Resolve Fakultas Unit & Role
 	var fuID *uint
 	role := strings.ToLower(strings.TrimSpace(cmd.Role))
 	if role == "admin" {
-		return nil, errors.New("Role admin tidak dapat ditugaskan melalui ABAC, gunakan level akun pengguna")
+		return nil, domainuser.AbacAdminNotAllowed()
+	}
+	if role == "auditee" {
+		role = "user"
 	}
 
 	hasTarget := (cmd.IdFakultasUnit != nil && *cmd.IdFakultasUnit > 0) || strings.TrimSpace(cmd.UuidFakultasUnit) != ""
 	if hasTarget {
 		resolvedID, fuType, fuNama, err := h.Repo.GetFakultasUnitInfo(ctx, cmd.IdFakultasUnit, cmd.UuidFakultasUnit)
 		if err != nil {
-			return nil, errors.New("Fakultas/Unit/Prodi yang dipilih tidak ditemukan")
+			return nil, domainuser.AbacFakultasUnitNotFound()
 		}
 		fuID = &resolvedID
 
@@ -70,21 +72,18 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 			}
 		} else {
 			if role == "upms" && !isProdi {
-				return nil, errors.New("Target untuk role UPMS harus berupa Program Studi (Prodi)")
+				return nil, domainuser.AbacTargetUpmsInvalid()
 			}
-			if role == "upmf" && !isFakultas {
-				return nil, errors.New("Target untuk role UPMF harus berupa Fakultas")
+			if (role == "upmf" || role == "fakultas") && !isFakultas {
+				return nil, domainuser.AbacTargetUpmfInvalid()
 			}
 			if role == "upml" && isProdi {
-				return nil, errors.New("Target untuk role UPML harus berupa Fakultas atau Unit (bukan Program Studi)")
+				return nil, domainuser.AbacTargetUpmlInvalid()
 			}
 		}
 	} else {
-		if role == "fakultas" || role == "upmf" || role == "upms" {
-			return nil, errors.New("Target Fakultas/Unit/Prodi wajib dipilih untuk role ini")
-		}
-		if role == "" || role == "auto" {
-			role = "user"
+		if role != "evaluator" && role != "anggaran" {
+			return nil, domainuser.AbacTargetRequired()
 		}
 	}
 
@@ -99,7 +98,7 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 		return nil, err
 	}
 	if exists {
-		return nil, errors.New("Penugasan untuk user, tahun, dan target unit ini sudah ada")
+		return nil, domainuser.AbacDuplicateAssignment()
 	}
 
 	newUUID := uuid.New()

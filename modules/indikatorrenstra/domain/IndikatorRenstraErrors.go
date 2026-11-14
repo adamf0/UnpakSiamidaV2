@@ -40,3 +40,11 @@ func InvalidTahun() domain.Error {
 func NotFound(id string) domain.Error {
 	return domain.NotFoundError("IndikatorRenstra.NotFound", fmt.Sprintf("IndikatorRenstra with identifier %s not found", id))
 }
+
+func RequiredIdentifier() domain.Error {
+	return domain.Error{
+		Code:        "IndikatorRenstra.RequiredIdentifier",
+		Description: "Identifier is required",
+		Type:        domain.Validation,
+	}
+}

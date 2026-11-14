@@ -3,7 +3,9 @@ package infrastructure
 import (
 	// domaingeneraterenstra "UnpakSiamida/modules/generaterenstra/domain"
 	deletegenerate "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
+	executesync "UnpakSiamida/modules/generaterenstra/application/ExecuteScheduleSync"
 	generate "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
+	previewsync "UnpakSiamida/modules/generaterenstra/application/PreviewScheduleSync"
 	infraRenstra "UnpakSiamida/modules/renstra/infrastructure"
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -28,6 +30,7 @@ func RegisterModuleGenerateRenstra(db *gorm.DB) error {
 	// }
 
 	repoGenerate := NewGenerateRenstraRepository(db)
+	repoSyncRenstra := NewSyncRenstraRepository(db)
 	repoRenstra := infraRenstra.NewRenstraRepository(db)
 
 	repoFakultasUnit := infraFakultasUnit.NewFakultasUnitRepository(db)
@@ -59,6 +62,20 @@ func RegisterModuleGenerateRenstra(db *gorm.DB) error {
 	](&deletegenerate.DeleteGenerateRenstraCommandHandler{
 		Repo:        repoGenerate, //renstra_nilai & dokumen_tambahan
 		RepoRenstra: repoRenstra,
+	})
+
+	mediatr.RegisterRequestHandler[
+		previewsync.PreviewScheduleSyncQuery,
+		*previewsync.PreviewScheduleSyncResult,
+	](&previewsync.PreviewScheduleSyncQueryHandler{
+		Repo: repoSyncRenstra,
+	})
+
+	mediatr.RegisterRequestHandler[
+		executesync.ExecuteScheduleSyncCommand,
+		*executesync.ExecuteScheduleSyncResult,
+	](&executesync.ExecuteScheduleSyncCommandHandler{
+		Repo: repoSyncRenstra,
 	})
 
 	commoninfra.RegisterValidation(generate.GenerateRenstraCommandValidation, "GenerateRenstra.Validation")

@@ -398,7 +398,7 @@ func SetupUuidBeritaAcarasHandlerfunc(c *fiber.Ctx) error {
 
 func ModuleBeritaAcara(app *fiber.App) {
 	// admin := []string{"admin"}
-	audit := []string{"admin", "auditee", "auditor1", "auditor2"}
+	audit := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "user"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/beritaacara/setupuuid", SetupUuidBeritaAcarasHandlerfunc)

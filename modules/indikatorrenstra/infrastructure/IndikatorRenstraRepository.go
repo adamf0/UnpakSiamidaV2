@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -619,4 +620,164 @@ func (r *IndikatorRenstraRepository) SetupUuid(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *IndikatorRenstraRepository) GetAllMasterIku(ctx context.Context) ([]domainindikatorrenstra.MasterIku, error) {
+	targetDB := r.dbIku
+	if targetDB == nil {
+		targetDB = r.db
+	}
+	if targetDB == nil {
+		return nil, errors.New("database not initialized")
+	}
+
+	var ikus []domainindikatorrenstra.MasterIku
+	err := targetDB.WithContext(ctx).Table("master_indikator").Order("id asc").Find(&ikus).Error
+	if err != nil {
+		err = targetDB.WithContext(ctx).Table("master_iku").Order("id asc").Find(&ikus).Error
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ikus, nil
+}
+
+func (r *IndikatorRenstraRepository) GetIndikatorRenstraIku(ctx context.Context, identifier string) (*domainindikatorrenstra.IndikatorRenstraIkuData, error) {
+	var indikatorRow struct {
+		ID   uint64 `gorm:"column:id"`
+		UUID string `gorm:"column:uuid"`
+	}
+
+	if err := r.db.WithContext(ctx).Table("master_indikator_renstra").
+		Select("id, uuid").
+		Where("uuid = ? OR id = ?", identifier, identifier).
+		First(&indikatorRow).Error; err != nil {
+		return nil, domainindikatorrenstra.NotFound(identifier)
+	}
+
+	var mappings []domainindikatorrenstra.IndikatorRenstraIku
+	if err := r.db.WithContext(ctx).Where("id_indikator_renstra = ?", indikatorRow.ID).Find(&mappings).Error; err != nil {
+		return nil, err
+	}
+
+	ikuIds := make([]uint64, 0, len(mappings))
+	for _, m := range mappings {
+		ikuIds = append(ikuIds, m.IdIku)
+	}
+
+	return &domainindikatorrenstra.IndikatorRenstraIkuData{
+		IDIndikator: indikatorRow.ID,
+		UUID:        indikatorRow.UUID,
+		IkuIDs:      ikuIds,
+		Mappings:    mappings,
+	}, nil
+}
+
+func (r *IndikatorRenstraRepository) SaveIndikatorRenstraIku(ctx context.Context, identifier string, ikuIds []uint64) (*domainindikatorrenstra.IndikatorRenstraIkuData, error) {
+	var indikatorRow struct {
+		ID   uint64 `gorm:"column:id"`
+		UUID string `gorm:"column:uuid"`
+	}
+
+	if err := r.db.WithContext(ctx).Table("master_indikator_renstra").
+		Select("id, uuid").
+		Where("uuid = ? OR id = ?", identifier, identifier).
+		First(&indikatorRow).Error; err != nil {
+		return nil, domainindikatorrenstra.NotFound(identifier)
+	}
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Delete existing mappings
+		if err := tx.Where("id_indikator_renstra = ?", indikatorRow.ID).
+			Delete(&domainindikatorrenstra.IndikatorRenstraIku{}).Error; err != nil {
+			return err
+		}
+
+		now := time.Now()
+		for _, ikuId := range ikuIds {
+			if ikuId == 0 {
+				continue
+			}
+			newRecord := domainindikatorrenstra.IndikatorRenstraIku{
+				IdIndikatorRenstra: indikatorRow.ID,
+				IdIku:              ikuId,
+				CreatedAt:          now,
+				UpdatedAt:          now,
+			}
+			if err := tx.Create(&newRecord).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &domainindikatorrenstra.IndikatorRenstraIkuData{
+		IDIndikator: indikatorRow.ID,
+		UUID:        indikatorRow.UUID,
+		IkuIDs:      ikuIds,
+	}, nil
+}
+
+func (r *IndikatorRenstraRepository) GetDashboardIkuRawData(ctx context.Context, tahun, unit string) (*domainindikatorrenstra.DashboardIkuRawData, error) {
+	// 1. Ambil Master IKU
+	targetDB := r.dbIku
+	if targetDB == nil {
+		targetDB = r.db
+	}
+	if targetDB == nil {
+		return nil, errors.New("database not initialized")
+	}
+
+	var masterIkus []domainindikatorrenstra.MasterIku
+	err := targetDB.WithContext(ctx).Table("master_indikator").Order("id asc").Find(&masterIkus).Error
+	if err != nil {
+		err = targetDB.WithContext(ctx).Table("master_iku").Order("id asc").Find(&masterIkus).Error
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Ambil Mapping indikator_renstra_iku & master_indikator_renstra
+	var mapRows []domainindikatorrenstra.IkuMapRow
+	mapQuery := r.db.WithContext(ctx).Table("indikator_renstra_iku iri").
+		Select("DISTINCT iri.id_iku, iri.id_indikator_renstra, mir.tahun, mir.indikator").
+		Joins("JOIN master_indikator_renstra mir ON mir.id = iri.id_indikator_renstra")
+	if tahun != "" && tahun != "all" {
+		mapQuery = mapQuery.Where("mir.tahun = ?", tahun)
+	}
+	_ = mapQuery.Scan(&mapRows).Error
+
+	// 3. Ambil matrix_proker
+	var prokerRows []domainindikatorrenstra.ProkerDbRow
+	prokerQuery := r.db.WithContext(ctx).Table("matrix_proker mp").
+		Select("mp.id, mp.id_indikator, mp.id_fakultas_unit, mp.target_unpak, mp.pic, COALESCE(sfu.nama, '') as unit_nama").
+		Joins("LEFT JOIN sijamu_fakultas_unit sfu ON sfu.id = mp.id_fakultas_unit").
+		Where("mp.deleted_at IS NULL")
+	if unit != "" && unit != "all" {
+		prokerQuery = prokerQuery.Where("mp.id_fakultas_unit = ?", unit)
+	}
+	_ = prokerQuery.Scan(&prokerRows).Error
+
+	// 4. Ambil aktivitasv2
+	var actRows []domainindikatorrenstra.AktivitasDbRow
+	_ = r.db.WithContext(ctx).Table("aktivitasv2").
+		Select("aktivitasv2.id, aktivitasv2.id_matrik_proker, aktivitasv2.aktivitas, COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r WHERE r.id_aktivitasv2 = aktivitasv2.id), 0) as anggaran, aktivitasv2.realisasi").
+		Scan(&actRows).Error
+
+	// 5. Ambil aktivitasv2_timeline
+	var tlRows []domainindikatorrenstra.TimelineDbRow
+	_ = r.db.WithContext(ctx).Table("aktivitasv2_timeline").
+		Select("id, id_aktivitasv2, nama_aktivitas, status, anggaran, rab").
+		Scan(&tlRows).Error
+
+	return &domainindikatorrenstra.DashboardIkuRawData{
+		MasterIkus:    masterIkus,
+		MapRows:       mapRows,
+		ProkerRows:    prokerRows,
+		AktivitasRows: actRows,
+		TimelineRows:  tlRows,
+	}, nil
 }

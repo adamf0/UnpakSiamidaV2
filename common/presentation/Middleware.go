@@ -550,22 +550,62 @@ func RBACMiddleware(whitelist []string, whoamiURL string) fiber.Handler {
 			currentLevel = strings.ToLower(strings.TrimSpace(user.Level))
 		}
 
-		if (user.FakultasUnit == "" || c.Locals("fakultas_unit") == "") && len(user.ExtraRole) > 0 {
+		activeYear := strings.TrimSpace(c.Get("X-Active-Year"))
+		if activeYear == "" {
+			activeYear = strings.TrimSpace(c.Get("X-Position-Year"))
+		}
+		if activeYear == "" {
+			activeYear = strings.TrimSpace(c.Query("filter_tahun"))
+		}
+		if activeYear == "" {
+			activeYear = strings.TrimSpace(c.Query("tahun"))
+		}
+
+		activeUnit := strings.TrimSpace(c.Get("X-Active-Unit"))
+		if activeUnit != "" {
+			c.Locals("fakultas_unit", activeUnit)
+			c.Locals("target", activeUnit)
+			c.Request().PostArgs().Set("fakultas_unit", activeUnit)
+			c.Request().PostArgs().Set("target", activeUnit)
+		} else if len(user.ExtraRole) > 0 {
+			matchedExtraRole := false
 			for _, r := range user.ExtraRole {
 				if currentLevel != "" && !strings.EqualFold(r.Role, currentLevel) && currentLevel != "user" {
 					continue
 				}
+				if activeYear != "" && r.Tahun != "" && r.Tahun != activeYear {
+					continue
+				}
 				if r.IdFakultasUnit > 0 {
-					c.Locals("fakultas_unit", strconv.Itoa(int(r.IdFakultasUnit)))
-					c.Locals("target", strconv.Itoa(int(r.IdFakultasUnit)))
+					fuStr := strconv.Itoa(int(r.IdFakultasUnit))
+					c.Locals("fakultas_unit", fuStr)
+					c.Locals("target", fuStr)
+					c.Request().PostArgs().Set("fakultas_unit", fuStr)
+					c.Request().PostArgs().Set("target", fuStr)
 					if r.NamaFakultasUnit != "" {
-						c.Locals("target", r.NamaFakultasUnit)
+						c.Locals("nama_fakultas_unit", r.NamaFakultasUnit)
 					}
+					matchedExtraRole = true
 					break
 				} else if r.NamaFakultasUnit != "" {
 					c.Locals("fakultas_unit", r.NamaFakultasUnit)
 					c.Locals("target", r.NamaFakultasUnit)
+					c.Request().PostArgs().Set("fakultas_unit", r.NamaFakultasUnit)
+					c.Request().PostArgs().Set("target", r.NamaFakultasUnit)
+					matchedExtraRole = true
 					break
+				}
+			}
+			if !matchedExtraRole && (user.FakultasUnit == "" || c.Locals("fakultas_unit") == "") {
+				for _, r := range user.ExtraRole {
+					if r.IdFakultasUnit > 0 {
+						fuStr := strconv.Itoa(int(r.IdFakultasUnit))
+						c.Locals("fakultas_unit", fuStr)
+						c.Locals("target", fuStr)
+						c.Request().PostArgs().Set("fakultas_unit", fuStr)
+						c.Request().PostArgs().Set("target", fuStr)
+						break
+					}
 				}
 			}
 		}
@@ -735,8 +775,16 @@ func checkRoleAccess(user *Account, tahun string, whitelist []string) (bool, []s
 }
 
 func roleInWhitelist(role string, whitelist []string) bool {
+	roleLower := strings.ToLower(strings.TrimSpace(role))
 	for _, w := range whitelist {
-		if role == strings.ToLower(w) {
+		wLower := strings.ToLower(strings.TrimSpace(w))
+		if roleLower == wLower {
+			return true
+		}
+		if roleLower == "user" && (wLower == "auditee" || wLower == "unit" || wLower == "fakultas") {
+			return true
+		}
+		if (roleLower == "auditee" || roleLower == "unit" || roleLower == "fakultas") && wLower == "user" {
 			return true
 		}
 	}

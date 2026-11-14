@@ -6,46 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProkerTimelineFileDefault struct {
-	ID                    uint      `json:"Id"`
-	UUID                  uuid.UUID `json:"UUID"`
-	IdAktivitasV2Timeline *uint     `json:"IdAktivitasV2Timeline"`
-	IdAktivitasV2         *uint     `json:"IdAktivitasV2"`
-	File                  string    `json:"File"`
-	NamaFile              string    `json:"NamaFile"`
-	FileURL               string    `json:"FileURL"`
-	FileSize              int64     `json:"FileSize"`
-	FileType              string    `json:"FileType"`
-	Keterangan            string    `json:"Keterangan"`
-	CreatedAt             time.Time `json:"CreatedAt"`
-	UpdatedAt             time.Time `json:"UpdatedAt"`
-}
-
-type ProkerTimelineDefault struct {
-	ID               uint                        `json:"Id"`
-	UUID             uuid.UUID                   `json:"UUID"`
-	IdAktivitasV2    uint                        `json:"IdAktivitasV2"`
-	TanggalRkAwal    string                      `json:"TanggalRkAwal"`
-	TanggalRkAkhir   string                      `json:"TanggalRkAkhir"`
-	TanggalRAwal     *string                     `json:"TanggalRAwal"`
-	TanggalRAkhir    *string                     `json:"TanggalRAkhir"`
-	NoAktivitas      int                         `json:"NoAktivitas"`
-	NamaAktivitas    string                      `json:"NamaAktivitas"`
-	PIC              string                      `json:"PIC"`
-	TitikKontrol     string                      `json:"TitikKontrol"`
-	Anggaran         float64                     `json:"Anggaran"`
-	RAB              string                      `json:"RAB"`
-	JadwalRk         string                      `json:"JadwalRk"`
-	JadwalR          string                      `json:"JadwalR"`
-	Capaian          string                      `json:"Capaian"`
-	Masalah          string                      `json:"Masalah"`
-	PemecahanMasalah string                      `json:"PemecahanMasalah"`
-	Status           string                      `json:"Status"`
-	CreatedAt        time.Time                   `json:"CreatedAt"`
-	UpdatedAt        time.Time                   `json:"UpdatedAt"`
-	Files            []ProkerTimelineFileDefault `json:"Files"`
-}
-
 type DuplicateDeletedProker struct {
 	UUID          string     `json:"UUID"`
 	NamaProgram   string     `json:"NamaProgram"`
@@ -112,46 +72,6 @@ type ProkerV3Default struct {
 	UpdatedAt              time.Time                `json:"UpdatedAt"`
 }
 
-// AktivitasV2Default maps to aktivitasv2 with timelines and files
-type AktivitasV2Default struct {
-	ID                    uint                        `json:"Id"`
-	UUID                  uuid.UUID                   `json:"UUID"`
-	IdMatrikProker        *uint64                     `json:"IdMatrikProker"`
-	IdFakultasUnit        *uint64                     `json:"IdFakultasUnit"`
-	NamaFakultasUnit      string                      `json:"NamaFakultasUnit"`
-	Aktivitas             string                      `json:"Aktivitas"`
-	PIC                   string                      `json:"PIC"`
-	Capaian               string                      `json:"Capaian"`
-	Masalah               string                      `json:"Masalah"`
-	Anggaran              float64                     `json:"Anggaran"`
-	RAB                   string                      `json:"RAB"`
-	RabItems              []AktivitasV2Rab            `json:"RabItems,omitempty"`
-	Realisasi             *float64                    `json:"Realisasi"`
-	CatatanRevisiAnggaran string                      `json:"CatatanRevisiAnggaran"`
-	Pencairan             *float64                    `json:"Pencairan"`
-	Status                string                      `json:"Status"`
-	CatatanPenolakan      string                      `json:"CatatanPenolakan"`
-	StatusVerifikator     string                      `json:"StatusVerifikator"`
-	CatatanVerifikator    string                      `json:"CatatanVerifikator"`
-	StatusAnggaran        string                      `json:"StatusAnggaran"`
-	CatatanAnggaran       string                      `json:"CatatanAnggaran"`
-	StatusUpml            string                      `json:"StatusUpml"`
-	CatatanTolakUpml      string                      `json:"CatatanTolakUpml"`
-	StatusUpmf            string                      `json:"StatusUpmf"`
-	CatatanTolakUpmf      string                      `json:"CatatanTolakUpmf"`
-	StatusUpms            string                      `json:"StatusUpms"`
-	CatatanTolakUpms      string                      `json:"CatatanTolakUpms"`
-	StatusLpm             string                      `json:"StatusLpm"`
-	CatatanTolakLpm       string                      `json:"CatatanTolakLpm"`
-	IsBatal               bool                        `json:"IsBatal"`
-	CatatanBatal          string                      `json:"CatatanBatal"`
-	CreatedAt             time.Time                   `json:"CreatedAt"`
-	UpdatedAt             time.Time                   `json:"UpdatedAt"`
-	TimelinesCount        int                         `json:"TimelinesCount"`
-	Timelines             []ProkerTimelineDefault     `json:"Timelines"`
-	DokumenReferensiFiles []ProkerTimelineFileDefault `json:"DokumenReferensiFiles,omitempty"`
-}
-
 type ProkerUnitOption struct {
 	ID           int    `json:"id"`
 	UUID         string `json:"uuid"`
@@ -198,28 +118,16 @@ type TargetUnpakResult struct {
 	TargetUnpak string `json:"target_unpak"`
 }
 
-type AktivitasByMatrixResult struct {
-	Proker *ProkerV3Default     `json:"proker"`
-	Data   []AktivitasV2Default `json:"data"`
-	Total  int                  `json:"total"`
-}
-
-type AktivitasDetailResult struct {
-	Aktivitas *AktivitasV2Default     `json:"aktivitas"`
-	Proker    *ProkerV3Default        `json:"proker"`
-	Timelines []ProkerTimelineDefault `json:"timelines"`
-	Data      []ProkerTimelineDefault `json:"data"`
+type AktivitasDokumenOption struct {
+	ID        uint      `json:"ID"`
+	UUID      uuid.UUID `json:"UUID"`
+	Aktivitas string    `json:"Aktivitas"`
 }
 
 type ProkerDokumenResult struct {
-	Proker     *ProkerV3Default      `json:"proker"`
-	Activities []AktivitasV2Default  `json:"activities"`
-	Data       []MatrixProkerDokumen `json:"data"`
-}
-
-type ReorderTimelineItem struct {
-	UUID        string `json:"uuid" form:"uuid"`
-	NoAktivitas int64  `json:"no_aktivitas" form:"no_aktivitas"`
+	Proker     *ProkerV3Default         `json:"proker"`
+	Activities []AktivitasDokumenOption `json:"activities"`
+	Data       []MatrixProkerDokumen    `json:"data"`
 }
 
 type UpdateStatusRequest struct {
@@ -239,4 +147,3 @@ type UpdateStatusResult struct {
 	CatatanPenolakan string `json:"catatan_penolakan"`
 	UUID             string `json:"uuid"`
 }
-

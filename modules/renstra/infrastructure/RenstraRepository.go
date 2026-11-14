@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	commondomainrenstra "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	domainrenstra "UnpakSiamida/modules/renstra/domain"
 	"context"
 	"fmt"
@@ -322,9 +323,9 @@ func (r *RenstraRepository) GetDefaultByUuid(
 		) AS TotalKts
 	`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
-		Joins("LEFT JOIN usersv3 a0 ON r.auditee = a0.id").
-		Joins("LEFT JOIN usersv3 a1 ON r.auditor1 = a1.id").
-		Joins("LEFT JOIN usersv3 a2 ON r.auditor2 = a2.id").
+		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
+		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
+		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id").
 		Where("r.uuid = ?", id).
 		Take(&result).Error // Take = LIMIT 1
 
@@ -665,9 +666,9 @@ func (r *RenstraRepository) GetAll(
 			) AS TotalKts
 		`).
 		Joins("JOIN v_fakultas_unit vfu ON r.fakultas_unit = vfu.id").
-		Joins("LEFT JOIN usersv3 a0 ON r.auditee = a0.id").
-		Joins("LEFT JOIN usersv3 a1 ON r.auditor1 = a1.id").
-		Joins("LEFT JOIN usersv3 a2 ON r.auditor2 = a2.id")
+		Joins("LEFT JOIN users a0 ON r.auditee = a0.id").
+		Joins("LEFT JOIN users a1 ON r.auditor1 = a1.id").
+		Joins("LEFT JOIN users a2 ON r.auditor2 = a2.id")
 
 	// -------------------------------
 	// SEARCH FILTERS (ADVANCED)
@@ -1154,4 +1155,48 @@ func (r *RenstraRepository) SetupUuid(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *RenstraRepository) WithTx(
+	ctx context.Context,
+	fn func(txRepo domainrenstra.IRenstraRepositoryTx) error,
+) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := &RenstraRepository{db: tx}
+		return fn(txRepo)
+	})
+}
+
+func (r *RenstraRepository) InsertOutbox(
+	ctx context.Context,
+	msg *commoninfra.OutboxMessage,
+) error {
+	return r.db.WithContext(ctx).Create(msg).Error
+}
+
+func (r *RenstraRepository) GetRenstraEmailTargets(
+	ctx context.Context,
+	uuids []string,
+) ([]domainrenstra.RenstraEmailTarget, error) {
+	var rows []domainrenstra.RenstraEmailTarget
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT 
+			r.uuid AS uuid,
+			r.tahun AS tahun,
+			r.kodeAkses AS kodeAkses,
+			COALESCE(fu.nama_fak_prod_unit, '-') AS target_audit,
+			u1.name AS auditee_name,
+			u1.email AS auditee_email,
+			u2.name AS auditor1_name,
+			u2.email AS auditor1_email,
+			u3.name AS auditor2_name,
+			u3.email AS auditor2_email
+		FROM renstra r
+		LEFT JOIN v_fakultas_unit fu ON r.fakultas_unit = fu.id
+		LEFT JOIN users u1 ON r.auditee = u1.id
+		LEFT JOIN users u2 ON r.auditor1 = u2.id
+		LEFT JOIN users u3 ON r.auditor2 = u3.id
+		WHERE r.uuid IN ?
+	`, uuids).Scan(&rows).Error
+	return rows, err
 }

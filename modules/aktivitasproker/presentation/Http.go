@@ -483,7 +483,7 @@ func SetupUuidAktivitasProkersHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleAktivitasProker(app *fiber.App) {
-	roles := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "upml", "upmf", "upms"}
+	roles := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "user", "upml", "upmf", "upms"}
 	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/aktivitasproker/setupuuid", SetupUuidAktivitasProkersHandlerfunc)

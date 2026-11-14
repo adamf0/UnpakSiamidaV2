@@ -21,4 +21,8 @@ type IIndikatorRenstraRepository interface {
 	Delete(ctx context.Context, uid uuid.UUID) error
 	GetIndikatorTree(ctx context.Context, tahun string) ([]IndikatorTree, error)
 	SetupUuid(ctx context.Context) error
+	GetAllMasterIku(ctx context.Context) ([]MasterIku, error)
+	GetIndikatorRenstraIku(ctx context.Context, identifier string) (*IndikatorRenstraIkuData, error)
+	SaveIndikatorRenstraIku(ctx context.Context, identifier string, ikuIds []uint64) (*IndikatorRenstraIkuData, error)
+	GetDashboardIkuRawData(ctx context.Context, tahun, unit string) (*DashboardIkuRawData, error)
 }

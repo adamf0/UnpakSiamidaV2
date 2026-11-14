@@ -21,6 +21,12 @@ func (JadwalProkerV3) TableName() string {
 	return "jadwal_proker_v3"
 }
 
+type JadwalProkerV3Row struct {
+	JadwalProkerV3
+	NamaFakultasUnit string `json:"nama_fakultas_unit"`
+	TypeFakultasUnit string `json:"type_fakultas_unit"`
+}
+
 type JadwalProkerV3DTO struct {
 	ID               uint    `json:"id"`
 	UUID             string  `json:"uuid"`
@@ -34,4 +40,29 @@ type JadwalProkerV3DTO struct {
 	StatusLabel      string  `json:"status_label"`
 	CreatedAt        string  `json:"created_at"`
 	UpdatedAt        string  `json:"updated_at"`
+}
+
+type JadwalFilter struct {
+	Search     string
+	Tahun      string
+	FilterUnit string
+}
+
+type CheckJadwalRequest struct {
+	Tahun     string
+	UnitParam string
+}
+
+type CheckJadwalResult struct {
+	HasSchedule      bool    `json:"has_schedule"`
+	IsOpen           bool    `json:"is_open"`
+	Status           string  `json:"status"`
+	StatusLabel      string  `json:"status_label"`
+	Tahun            string  `json:"tahun"`
+	TanggalMulai     string  `json:"tanggal_mulai,omitempty"`
+	TanggalAkhir     string  `json:"tanggal_akhir,omitempty"`
+	IdFakultasUnit   *uint64 `json:"id_fakultas_unit,omitempty"`
+	IsUnitSpecific   bool    `json:"is_unit_specific"`
+	NamaFakultasUnit string  `json:"nama_fakultas_unit,omitempty"`
+	Message          string  `json:"message"`
 }

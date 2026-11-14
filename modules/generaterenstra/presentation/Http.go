@@ -2,7 +2,6 @@ package presentation
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,10 +12,10 @@ import (
 	commonpresentation "UnpakSiamida/common/presentation"
 
 	DeleteGenerateRenstra "UnpakSiamida/modules/generaterenstra/application/DeleteGenerateRenstra"
+	ExecuteScheduleSync "UnpakSiamida/modules/generaterenstra/application/ExecuteScheduleSync"
 	GenerateRenstra "UnpakSiamida/modules/generaterenstra/application/GenerateRenstra"
+	PreviewScheduleSync "UnpakSiamida/modules/generaterenstra/application/PreviewScheduleSync"
 )
-
-var generateDB *gorm.DB
 
 func parseGenerateUUIDs(c *fiber.Ctx) ([]string, string) {
 	var rawList []string
@@ -55,10 +54,6 @@ func parseGenerateUUIDs(c *fiber.Ctx) ([]string, string) {
 
 // POST /renstra/generate/preview & GET /renstra/generate/preview
 func PreviewGenerateRenstraHandlerfunc(c *fiber.Ctx) error {
-	if generateDB == nil {
-		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": "Database not initialized"})
-	}
-
 	uuids, _ := parseGenerateUUIDs(c)
 	if len(uuids) == 0 {
 		return c.Status(400).JSON(fiber.Map{
@@ -67,45 +62,24 @@ func PreviewGenerateRenstraHandlerfunc(c *fiber.Ctx) error {
 		})
 	}
 
-	var items []SchedulePreviewComparison
-	var totalBeforeRows, totalAfterRows, totalInserted, totalDeleted, totalMerged, totalUpdatedTugas int
-
-	for _, u := range uuids {
-		comp, err := BuildSchedulePreview(generateDB, u)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{
-				"Code":    "GenerateRenstra.PreviewFailed",
-				"Message": err.Error(),
-			})
-		}
-		items = append(items, *comp)
-		totalBeforeRows += comp.Summary.BeforeTotalRows
-		totalAfterRows += comp.Summary.AfterTotalRows
-		totalInserted += comp.Summary.InsertedCount
-		totalDeleted += comp.Summary.DeletedCount
-		totalMerged += comp.Summary.MergedGroupCount
-		totalUpdatedTugas += comp.Summary.UpdatedTugasCount
+	query := PreviewScheduleSync.PreviewScheduleSyncQuery{
+		UUIDs: uuids,
 	}
 
-	return c.JSON(fiber.Map{
-		"items":                items,
-		"totalSchedules":       len(items),
-		"totalBeforeRows":      totalBeforeRows,
-		"totalAfterRows":       totalAfterRows,
-		"totalInserted":        totalInserted,
-		"totalDeleted":         totalDeleted,
-		"totalMerged":          totalMerged,
-		"totalUpdatedTugas":    totalUpdatedTugas,
-		"requiredConfirmation": RequiredGenerateConfirmationPhrase,
-	})
+	res, err := mediatr.Send[
+		PreviewScheduleSync.PreviewScheduleSyncQuery,
+		*PreviewScheduleSync.PreviewScheduleSyncResult,
+	](c.Context(), query)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
 }
 
 // POST /renstra/generate/execute
 func ExecuteGenerateRenstraHandlerfunc(c *fiber.Ctx) error {
-	if generateDB == nil {
-		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": "Database not initialized"})
-	}
-
 	uuids, confirmation := parseGenerateUUIDs(c)
 	if len(uuids) == 0 {
 		return c.Status(400).JSON(fiber.Map{
@@ -114,50 +88,21 @@ func ExecuteGenerateRenstraHandlerfunc(c *fiber.Ctx) error {
 		})
 	}
 
-	if confirmation != RequiredGenerateConfirmationPhrase {
-		return c.Status(400).JSON(fiber.Map{
-			"Code":    "GenerateRenstra.InvalidConfirmation",
-			"Message": fmt.Sprintf("Kalimat konfirmasi tidak sesuai. Ketik tepat: \"%s\"", RequiredGenerateConfirmationPhrase),
-		})
+	cmd := ExecuteScheduleSync.ExecuteScheduleSyncCommand{
+		UUIDs:        uuids,
+		Confirmation: confirmation,
 	}
 
-	tx := generateDB.Begin()
-	if tx.Error != nil {
-		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": tx.Error.Error()})
+	res, err := mediatr.Send[
+		ExecuteScheduleSync.ExecuteScheduleSyncCommand,
+		*ExecuteScheduleSync.ExecuteScheduleSyncResult,
+	](c.Context(), cmd)
+
+	if err != nil {
+		return commoninfra.HandleError(c, err)
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	var processedTargets []string
-	var processedUUIDs []string
-
-	for _, u := range uuids {
-		rec, err := ExecuteLegacySyncRenstra(tx, u)
-		if err != nil {
-			tx.Rollback()
-			return c.Status(500).JSON(fiber.Map{
-				"Code":    "GenerateRenstra.ExecuteFailed",
-				"Message": err.Error(),
-			})
-		}
-		processedUUIDs = append(processedUUIDs, rec.UUID)
-		processedTargets = append(processedTargets, fmt.Sprintf("%s (%s)", rec.NamaFakProdUnit, rec.Tahun))
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
-	}
-
-	return c.JSON(fiber.Map{
-		"message":          fmt.Sprintf("Berhasil generate data pada %d jadwal audit.", len(processedUUIDs)),
-		"processedCount":   len(processedUUIDs),
-		"processedUuids":   processedUUIDs,
-		"processedTargets": processedTargets,
-	})
+	return c.JSON(res)
 }
 
 // GenerateRenstraHandler godoc
@@ -170,23 +115,6 @@ func ExecuteGenerateRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]string "uuid of created GenerateRenstra"
 // @Router /renstra/generate [post]
 func GenerateRenstraHandlerfunc(c *fiber.Ctx) error {
-	renstraUUID := strings.TrimSpace(c.FormValue("renstra"))
-	if renstraUUID != "" && generateDB != nil {
-		tx := generateDB.Begin()
-		if tx.Error != nil {
-			return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": tx.Error.Error()})
-		}
-		rec, err := ExecuteLegacySyncRenstra(tx, renstraUUID)
-		if err != nil {
-			tx.Rollback()
-			return c.Status(400).JSON(fiber.Map{"Code": "GenerateRenstra.Failed", "Message": err.Error()})
-		}
-		if err := tx.Commit().Error; err != nil {
-			return c.Status(500).JSON(fiber.Map{"Code": "INTERNAL_SERVER_ERROR", "Message": err.Error()})
-		}
-		return commonpresentation.JsonUUID(c, rec.UUID)
-	}
-
 	cmd := GenerateRenstra.GenerateRenstraCommand{
 		Tahun:            c.FormValue("tahun"),
 		UuidRenstra:      c.FormValue("renstra"),
@@ -225,10 +153,6 @@ func DeleteRenstraQuestionHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleGenerateRenstra(app *fiber.App, dbs ...*gorm.DB) {
-	if len(dbs) > 0 && dbs[0] != nil {
-		generateDB = dbs[0]
-	}
-
 	admin := []string{"admin"}
 	auditRoles := []string{"admin", "auditee", "auditor1", "auditor2"}
 	whoamiURL := "http://localhost:3000/whoami"

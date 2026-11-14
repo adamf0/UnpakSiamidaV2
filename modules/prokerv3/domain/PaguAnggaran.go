@@ -17,3 +17,25 @@ type PaguAnggaran struct {
 func (PaguAnggaran) TableName() string {
 	return "pagu_anggaran"
 }
+
+type SavePaguAnggaranRequest struct {
+	ID             uint     `json:"id"`
+	IdFakultasUnit *int     `json:"id_fakultas_unit"`
+	FakultasUnit   string   `json:"fakultas_unit"`
+	Tahun          string   `json:"tahun"`
+	Pagu           *float64 `json:"pagu"`
+}
+
+type UnitPaguSummaryResult struct {
+	HasPagu          bool    `json:"has_pagu"`
+	Pagu             float64 `json:"pagu"`
+	TotalAnggaran    float64 `json:"total_anggaran"`
+	TotalRealisasi   float64 `json:"total_realisasi"`
+	HasRealisasi     bool    `json:"has_realisasi"`
+	HasRealDiff      bool    `json:"has_real_diff"`
+	IsMelebihiPagu   bool    `json:"is_melebihi_pagu"`
+	SisaPagu         float64 `json:"sisa_pagu"`
+	NamaFakultasUnit string  `json:"nama_fakultas_unit"`
+	IdFakultasUnit   int     `json:"id_fakultas_unit"`
+	Tahun            string  `json:"tahun"`
+}
