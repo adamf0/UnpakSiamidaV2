@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
+	auditDomain "UnpakSiamida/modules/audit/domain"
+	auditInfra "UnpakSiamida/modules/audit/infrastructure"
 	domain "UnpakSiamida/modules/aktivitasv2/domain"
 
 	"github.com/google/uuid"
@@ -780,6 +783,69 @@ func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.Upd
 	if err := r.db.WithContext(ctx).Model(&act).Updates(updates).Error; err != nil {
 		return nil, err
 	}
+
+	// Record Audit Log with Pre-computed Diff
+	go func(oldAct domain.AktivitasV2, upd map[string]interface{}) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[AuditService] Recovered in audit goroutine: %v", r)
+			}
+		}()
+		auditSvc := auditInfra.NewAuditService(r.db)
+		var diffs []auditDomain.DiffItem
+
+		for k, v := range upd {
+			if k == "updated_at" {
+				continue
+			}
+			newValStr := fmt.Sprintf("%v", v)
+			oldValStr := "-"
+			switch k {
+			case "status":
+				oldValStr = oldAct.Status
+			case "status_lpm":
+				oldValStr = oldAct.StatusLpm
+			case "status_upml":
+				oldValStr = oldAct.StatusUpml
+			case "status_upmf":
+				oldValStr = oldAct.StatusUpmf
+			case "status_upms":
+				oldValStr = oldAct.StatusUpms
+			case "catatan_penolakan":
+				oldValStr = oldAct.CatatanPenolakan
+			}
+			isChanged := oldValStr != newValStr
+			diffs = append(diffs, auditDomain.DiffItem{
+				Field:     k,
+				Label:     strings.Title(strings.ReplaceAll(k, "_", " ")),
+				OldVal:    oldValStr,
+				NewVal:    newValStr,
+				IsChanged: isChanged,
+			})
+		}
+
+		roleName := req.Role
+		if roleName == "" {
+			roleName = "user"
+		}
+		actorName := req.UserName
+		if actorName == "" {
+			actorName = strings.ToUpper(roleName)
+		}
+		actor := auditDomain.ActorInfo{
+			ID:   roleName,
+			Name: actorName,
+			Role: roleName,
+			Unit: "-",
+		}
+		headline := fmt.Sprintf("Aktivitas \"%s\" - Verifikasi %s: Status diubah menjadi %s", oldAct.Aktivitas, strings.ToUpper(roleName), strings.ToUpper(status))
+		if status == "draft" {
+			headline = fmt.Sprintf("Aktivitas \"%s\" dikembalikan ke Draft", oldAct.Aktivitas)
+		}
+		if _, err := auditSvc.RecordAudit(r.db, actor, "PROKER_AKTIVITAS", "UPDATE_STATUS", headline, "aktivitas_v2", oldAct.UUID.String(), diffs, nil); err != nil {
+			log.Printf("[AuditService] Error recording audit in AktivitasV2: %v", err)
+		}
+	}(act, updates)
 
 	return &domain.UpdateStatusResult{
 		Message:          "Status aktivitas berhasil diubah",

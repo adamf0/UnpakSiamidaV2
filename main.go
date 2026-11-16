@@ -127,6 +127,9 @@ import (
 
 	aktivitasv2Presentation "UnpakSiamida/modules/aktivitasv2/presentation"
 
+	auditPresentation "UnpakSiamida/modules/audit/presentation"
+	auditDomain "UnpakSiamida/modules/audit/domain"
+
 	/////////
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -366,6 +369,8 @@ func main() {
 	commoninfra.RegisterEvent[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventKts.KtsPdfRequestedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventRenstra.RenstraSendEmailEvent](dispatcher)
+	commoninfra.RegisterDomainEvent(&auditDomain.AuditLoggedEvent{})
+	commoninfra.RegisterEvent[auditDomain.AuditLoggedEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
 	userPresentation.ModuleUser(app, db)
@@ -393,6 +398,7 @@ func main() {
 	riskassessmentPresentation.ModuleRiskAssessment(app, db)
 	prokerv3Presentation.ModuleProkerV3(app, db, dbIku, dbSiakun)
 	aktivitasv2Presentation.ModuleAktivitasV2(app, db)
+	auditPresentation.ModuleAudit(app, db)
 
 	app.Static("/upload", "./upload")
 	app.Get("/upload/*", func(c *fiber.Ctx) error {

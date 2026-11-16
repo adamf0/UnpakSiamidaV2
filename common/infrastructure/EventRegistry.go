@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -28,21 +29,32 @@ func RegisterDomainEvent(event any) {
 
 	elem := t.Elem()
 	key := elem.PkgPath() + "." + elem.Name()
+	simpleKey := elem.Name()
 
 	mu.Lock()
 	defer mu.Unlock()
 
 	eventRegistry[key] = elem
+	eventRegistry[simpleKey] = elem
 }
 
 // resolveType dipakai OutboxProcessor
-func resolveType(typeName string) reflect.Type {
+func resolveType(typeName string) (reflect.Type, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	t, ok := eventRegistry[typeName]
-	if !ok {
-		panic("domain event not registered: " + typeName)
+	if ok {
+		return t, true
 	}
-	return t
+
+	// Try short/simple name
+	if idx := strings.LastIndex(typeName, "."); idx >= 0 && idx < len(typeName)-1 {
+		short := typeName[idx+1:]
+		if tShort, okShort := eventRegistry[short]; okShort {
+			return tShort, true
+		}
+	}
+
+	return nil, false
 }

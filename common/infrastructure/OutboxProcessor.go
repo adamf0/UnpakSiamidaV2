@@ -56,7 +56,15 @@ func (p *OutboxProcessor) processMessage(
 
 	log.Println("[outbox] Execute:", msg.Type)
 
-	eventType := resolveType(msg.Type)
+	eventType, ok := resolveType(msg.Type)
+	if !ok {
+		log.Printf("[outbox] Notice: Event type '%s' is not registered in dispatcher. Marking processed to prevent loop.\n", msg.Type)
+		now := time.Now().UTC()
+		return p.DB.Model(msg).Updates(map[string]interface{}{
+			"processed_at": &now,
+			"status":       "PROCESSED",
+		}).Error
+	}
 	eventPtr := reflect.New(eventType)
 
 	if err := json.Unmarshal(
@@ -73,6 +81,8 @@ func (p *OutboxProcessor) processMessage(
 	}
 
 	now := time.Now().UTC()
-	return p.DB.Model(msg).
-		Update("processed_at", &now).Error
+	return p.DB.Model(msg).Updates(map[string]interface{}{
+		"processed_at": &now,
+		"status":       "PROCESSED",
+	}).Error
 }

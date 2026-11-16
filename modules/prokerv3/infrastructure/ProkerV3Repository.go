@@ -3,6 +3,8 @@ package infrastructure
 import (
 	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
+	auditDomain "UnpakSiamida/modules/audit/domain"
+	auditInfra "UnpakSiamida/modules/audit/infrastructure"
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
 	"errors"
@@ -1685,6 +1687,51 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		Catatan:        catatanPenolakan,
 		CreatedAt:      time.Now(),
 	})
+
+	// Pre-rendered Audit Log & Outbox Record
+	go func(oldMp domain.ProkerV3, upMp map[string]interface{}) {
+		auditSvc := auditInfra.NewAuditService(r.db)
+		var diffs []auditDomain.DiffItem
+		for k, v := range upMp {
+			if k == "updated_at" {
+				continue
+			}
+			newValStr := fmt.Sprintf("%v", v)
+			oldValStr := ""
+			switch k {
+			case "status":
+				oldValStr = oldMp.Status
+			case "status_verifikator":
+				oldValStr = oldMp.StatusVerifikator
+			case "status_anggaran":
+				oldValStr = oldMp.StatusAnggaran
+			case "catatan_penolakan":
+				oldValStr = oldMp.CatatanPenolakan
+			}
+			diffs = append(diffs, auditDomain.DiffItem{
+				Field:     k,
+				Label:     strings.Title(strings.ReplaceAll(k, "_", " ")),
+				OldVal:    oldValStr,
+				NewVal:    newValStr,
+				IsChanged: oldValStr != newValStr,
+			})
+		}
+		actor := auditDomain.ActorInfo{
+			ID:   level,
+			Name: userName,
+			Role: level,
+			Unit: "-",
+		}
+		shortID := oldMp.UUID.String()
+		if len(shortID) > 8 {
+			shortID = shortID[:8]
+		}
+		headline := fmt.Sprintf("Program Kerja %s: Status diubah ke %s", shortID, strings.ToUpper(newStatus))
+		if newStatus == "draft" {
+			headline = fmt.Sprintf("Program Kerja %s dikembalikan ke Draft", shortID)
+		}
+		_, _ = auditSvc.RecordAudit(r.db, actor, "PROKER", "UPDATE_STATUS", headline, "proker", oldMp.UUID.String(), diffs, nil)
+	}(mp, updatesMp)
 
 	return &domain.UpdateStatusResult{
 		Message:          "Status program kerja berhasil diubah",
