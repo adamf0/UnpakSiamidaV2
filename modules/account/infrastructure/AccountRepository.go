@@ -52,7 +52,8 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 	user.ExtraRole = extraRoles
 
 	for _, er := range extraRoles {
-		if er.IdFakultasUnit > 0 {
+		rLow := strings.ToLower(strings.TrimSpace(er.Role))
+		if (rLow == "user" || rLow == "auditee") && er.IdFakultasUnit > 0 {
 			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
 			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break
@@ -92,7 +93,8 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 	user.ExtraRole = extraRoles
 
 	for _, er := range extraRoles {
-		if er.IdFakultasUnit > 0 {
+		rLow := strings.ToLower(strings.TrimSpace(er.Role))
+		if (rLow == "user" || rLow == "auditee") && er.IdFakultasUnit > 0 {
 			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
 			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break

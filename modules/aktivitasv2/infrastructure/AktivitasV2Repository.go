@@ -707,65 +707,73 @@ func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.Upd
 		"updated_at": time.Now(),
 	}
 
-	switch role {
-	case "upms":
-		updates["status_upms"] = status
-		if status == "ditolak" {
-			updates["catatan_tolak_upms"] = req.CatatanPenolakan
-			updates["status"] = "ditolak"
-			updates["catatan_penolakan"] = req.CatatanPenolakan
-		} else if status == "disetujui" {
-			updates["catatan_tolak_upms"] = ""
-			if act.Status == "ditolak" {
-				updates["status"] = "diajukan"
+	if status == "draft" {
+		updates["status"] = "draft"
+		updates["status_lpm"] = "menunggu"
+		updates["status_anggaran"] = "menunggu_verifikator"
+		updates["catatan_penolakan"] = ""
+		updates["catatan_tolak_lpm"] = ""
+	} else {
+		switch role {
+		case "upms":
+			updates["status_upms"] = status
+			if status == "ditolak" {
+				updates["catatan_tolak_upms"] = req.CatatanPenolakan
+				updates["status"] = "ditolak"
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			} else if status == "disetujui" {
+				updates["catatan_tolak_upms"] = ""
+				if act.Status == "ditolak" {
+					updates["status"] = "diajukan"
+				}
 			}
-		}
-	case "upmf", "fakultas":
-		updates["status_upmf"] = status
-		if status == "ditolak" {
-			updates["catatan_tolak_upmf"] = req.CatatanPenolakan
-			updates["status"] = "ditolak"
-			updates["catatan_penolakan"] = req.CatatanPenolakan
-		} else if status == "disetujui" {
-			updates["catatan_tolak_upmf"] = ""
-			if act.Status == "ditolak" {
-				updates["status"] = "diajukan"
+		case "upmf":
+			updates["status_upmf"] = status
+			if status == "ditolak" {
+				updates["catatan_tolak_upmf"] = req.CatatanPenolakan
+				updates["status"] = "ditolak"
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			} else if status == "disetujui" {
+				updates["catatan_tolak_upmf"] = ""
+				if act.Status == "ditolak" {
+					updates["status"] = "diajukan"
+				}
 			}
-		}
-	case "upml":
-		updates["status_upml"] = status
-		if status == "ditolak" {
-			updates["catatan_tolak_upml"] = req.CatatanPenolakan
-			updates["status"] = "ditolak"
-			updates["catatan_penolakan"] = req.CatatanPenolakan
-		} else if status == "disetujui" {
-			updates["catatan_tolak_upml"] = ""
-			if act.Status == "ditolak" {
-				updates["status"] = "diajukan"
+		case "upml":
+			updates["status_upml"] = status
+			if status == "ditolak" {
+				updates["catatan_tolak_upml"] = req.CatatanPenolakan
+				updates["status"] = "ditolak"
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			} else if status == "disetujui" {
+				updates["catatan_tolak_upml"] = ""
+				if act.Status == "ditolak" {
+					updates["status"] = "diajukan"
+				}
 			}
-		}
-	case "evaluator", "admin":
-		updates["status_lpm"] = status
-		updates["status"] = status
-		if status == "ditolak" {
-			updates["catatan_tolak_lpm"] = req.CatatanPenolakan
-			updates["catatan_penolakan"] = req.CatatanPenolakan
-		} else if status == "disetujui" {
-			updates["catatan_tolak_lpm"] = ""
-			updates["catatan_penolakan"] = ""
-		}
-	case "anggaran", "keuangan":
-		updates["status_anggaran"] = status
-		if status == "ditolak" {
-			updates["catatan_anggaran"] = req.CatatanPenolakan
-		} else {
-			updates["catatan_anggaran"] = ""
-		}
-	default:
-		// generic / admin
-		updates["status"] = status
-		if req.CatatanPenolakan != "" {
-			updates["catatan_penolakan"] = req.CatatanPenolakan
+		case "admin":
+			updates["status_lpm"] = status
+			updates["status"] = status
+			if status == "ditolak" {
+				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			} else if status == "disetujui" {
+				updates["catatan_tolak_lpm"] = ""
+				updates["catatan_penolakan"] = ""
+			}
+		case "anggaran", "keuangan":
+			updates["status_anggaran"] = status
+			if status == "ditolak" {
+				updates["catatan_anggaran"] = req.CatatanPenolakan
+			} else {
+				updates["catatan_anggaran"] = ""
+			}
+		default:
+			// generic / admin
+			updates["status"] = status
+			if req.CatatanPenolakan != "" {
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			}
 		}
 	}
 
