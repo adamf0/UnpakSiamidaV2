@@ -30,7 +30,6 @@ func RegisterModuleRiskAssessment(db *gorm.DB) error {
 	](&create.CreateRiskAssessmentCommandHandler{
 		Repo:             repoRisk,
 		RepoFakultasUnit: repoFakultasUnit,
-		DB:               db,
 	})
 
 	mediatr.RegisterRequestHandler[
@@ -39,7 +38,6 @@ func RegisterModuleRiskAssessment(db *gorm.DB) error {
 	](&update.UpdateRiskAssessmentCommandHandler{
 		Repo:             repoRisk,
 		RepoFakultasUnit: repoFakultasUnit,
-		DB:               db,
 	})
 
 	mediatr.RegisterRequestHandler[

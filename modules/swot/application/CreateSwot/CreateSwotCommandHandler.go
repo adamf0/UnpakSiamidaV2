@@ -9,13 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type CreateSwotCommandHandler struct {
 	Repo             domainSwot.ISwotRepository
 	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository
-	DB               *gorm.DB
 }
 
 func (h *CreateSwotCommandHandler) Handle(
@@ -43,14 +41,10 @@ func (h *CreateSwotCommandHandler) Handle(
 
 	if strings.TrimSpace(cmd.TahunUuid) != "" {
 		if parsed, err := uuid.Parse(strings.TrimSpace(cmd.TahunUuid)); err == nil {
-			var mt struct {
-				ID    int
-				Tahun string
-			}
-			if err := h.DB.WithContext(ctx).Table("master_tahun").Select("id, tahun").Where("uuid = ?", parsed).Take(&mt).Error; err == nil {
-				tahunID = &mt.ID
+			if id, t, err := h.Repo.GetMasterTahunByUuid(ctx, parsed); err == nil {
+				tahunID = &id
 				if tahunStr == "" {
-					tahunStr = mt.Tahun
+					tahunStr = t
 				}
 			}
 		} else if id, err := strconv.Atoi(strings.TrimSpace(cmd.TahunUuid)); err == nil && id > 0 {

@@ -93,7 +93,7 @@ func (h *CreateUserAbacCommandHandler) Handle(ctx context.Context, cmd CreateUse
 	}
 
 	// Check duplicate
-	exists, err := h.Repo.CheckUserAbacExists(ctx, userID, tahun, fuID)
+	exists, err := h.Repo.CheckUserAbacExists(ctx, userID, tahun, fuID, role)
 	if err != nil {
 		return nil, err
 	}

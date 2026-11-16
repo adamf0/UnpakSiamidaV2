@@ -19,6 +19,8 @@ type IRiskAssessmentRepository interface {
 	Create(ctx context.Context, item *RiskAssessment) error
 	Update(ctx context.Context, item *RiskAssessment) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	GetMasterTahunByUuid(ctx context.Context, uid uuid.UUID) (id int, tahun string, err error)
+	GetMataProgramIDByUuid(ctx context.Context, uid uuid.UUID) (int, error)
 
 	// Master Options
 	GetCriteria(ctx context.Context, tipe string) ([]RiskCriteriaItem, error)

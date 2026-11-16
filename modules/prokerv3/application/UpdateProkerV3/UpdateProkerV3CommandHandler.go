@@ -8,12 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type UpdateProkerV3CommandHandler struct {
 	Repo domain.IProkerV3Repository
-	DB   *gorm.DB
 }
 
 func (h *UpdateProkerV3CommandHandler) Handle(
@@ -41,15 +39,10 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 	var fuID *int = cmd.IdFakultasUnit
 	if fuID == nil && strings.TrimSpace(cmd.FakultasUuid) != "" {
 		trimmed := strings.TrimSpace(cmd.FakultasUuid)
-		if parsed, err := uuid.Parse(trimmed); err == nil {
-			var fu struct {
-				ID int
-			}
-			if err := h.DB.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", parsed).Take(&fu).Error; err == nil {
-				fuID = &fu.ID
-			}
-		} else if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
+		if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
 			fuID = &id
+		} else if idPtr, err := h.Repo.GetFakultasUnitIDByUUIDOrName(ctx, trimmed); err == nil && idPtr != nil {
+			fuID = idPtr
 		}
 	}
 	if fuID != nil {
@@ -66,151 +59,23 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 		}
 	}
 
-	if existing.IdMataProgram != nil && *existing.IdMataProgram > 0 {
-		var currentMp struct {
-			ID          int
-			MataProgram string
-		}
-		errMp := h.DB.WithContext(ctx).Table("mata_program").
-			Select("id, mata_program").
-			Where("id = ?", *existing.IdMataProgram).
-			Take(&currentMp).Error
-
-		if errMp == nil && currentMp.ID > 0 {
-			var mt struct {
-				ID int
-			}
-			tahunStr := strings.TrimSpace(cmd.Tahun)
-			if tahunStr != "" {
-				_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
-				if mt.ID == 0 {
-					newUUID := uuid.New().String()
-					_ = h.DB.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error
-					_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
-				}
-			}
-
-			// Check if other prokers share this mata_program
-			var otherUsageCount int64
-			h.DB.WithContext(ctx).Table("matrix_proker").
-				Where("id_mata_program = ? AND id != ?", currentMp.ID, existing.ID).
-				Count(&otherUsageCount)
-
-			if otherUsageCount == 0 {
-				// Only this proker uses it, update in-place
-				updateFields := map[string]interface{}{}
-				if namaProg != "" {
-					updateFields["mata_program"] = namaProg
-				}
-				if fuID != nil && *fuID > 0 {
-					updateFields["id_fakultas_unit"] = *fuID
-				}
-				if mt.ID > 0 {
-					updateFields["id_master_tahun"] = mt.ID
-				}
-				if len(updateFields) > 0 {
-					_ = h.DB.WithContext(ctx).Table("mata_program").
-						Where("id = ?", currentMp.ID).
-						Updates(updateFields).Error
-				}
-			} else if (namaProg != "" && currentMp.MataProgram != namaProg) || (mt.ID > 0) {
-				if mt.ID == 0 {
-					mt.ID = 1
-				}
-				targetNamaProg := currentMp.MataProgram
-				if namaProg != "" {
-					targetNamaProg = namaProg
-				}
-				var existingWithNewName struct {
-					ID int
-				}
-				errFind := h.DB.WithContext(ctx).Table("mata_program").
-					Select("id").
-					Where("mata_program = ? AND id_master_tahun = ?", targetNamaProg, mt.ID).
-					Take(&existingWithNewName).Error
-
-				if errFind == nil && existingWithNewName.ID > 0 {
-					existing.IdMataProgram = &existingWithNewName.ID
-				} else {
-					newMpUUID := uuid.New()
-					_ = h.DB.WithContext(ctx).Exec(
-						"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-						newMpUUID, mt.ID, fuID, targetNamaProg,
-					).Error
-					var createdMp struct {
-						ID int
-					}
-					_ = h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", newMpUUID).Take(&createdMp).Error
-					if createdMp.ID > 0 {
-						existing.IdMataProgram = &createdMp.ID
-					}
-				}
-			} else if fuID != nil && *fuID > 0 {
-				// Name identical, ensure id_fakultas_unit is synced if empty
-				_ = h.DB.WithContext(ctx).Table("mata_program").
-					Where("id = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", currentMp.ID).
-					Update("id_fakultas_unit", *fuID).Error
-			}
-		}
-	} else if namaProg != "" {
-		// No IdMataProgram on existing proker, find by name or create
-		var existingMp struct {
-			ID int
-		}
-		err := h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("mata_program = ?", namaProg).Take(&existingMp).Error
-		if err == nil && existingMp.ID > 0 {
-			existing.IdMataProgram = &existingMp.ID
-		} else {
-			tahunStr := strings.TrimSpace(cmd.Tahun)
-			if tahunStr == "" {
-				tahunStr = "2026"
-			}
-			var mt struct {
-				ID int
-			}
-			_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
-			if mt.ID == 0 {
-				mt.ID = 1
-			}
-
-			newMpUUID := uuid.New()
-			_ = h.DB.WithContext(ctx).Exec(
-				"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-				newMpUUID, mt.ID, fuID, namaProg,
-			).Error
-			var createdMp struct {
-				ID int
-			}
-			_ = h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", newMpUUID).Take(&createdMp).Error
-			if createdMp.ID > 0 {
-				existing.IdMataProgram = &createdMp.ID
-			}
-		}
+	updatedMpID, err := h.Repo.SyncMataProgramForUpdate(ctx, existing.ID, existing.IdMataProgram, namaProg, strings.TrimSpace(cmd.Tahun), fuID)
+	if err == nil && updatedMpID != nil {
+		existing.IdMataProgram = updatedMpID
 	}
 
 	// 3. Resolve Indikator ID
 	if cmd.IdIndikator != nil && *cmd.IdIndikator > 0 {
 		existing.IdIndikator = cmd.IdIndikator
 	} else if strings.TrimSpace(cmd.IndikatorKinerja) != "" {
-		indKinerja := strings.TrimSpace(cmd.IndikatorKinerja)
-		var mir struct {
-			ID int
-		}
-		if _, err := uuid.Parse(indKinerja); err == nil {
-			_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", indKinerja).Take(&mir).Error
-		} else {
-			_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", indKinerja).Take(&mir).Error
-		}
-		if mir.ID > 0 {
-			existing.IdIndikator = &mir.ID
+		if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, strings.TrimSpace(cmd.IndikatorKinerja)); err == nil && resolvedInd != nil {
+			existing.IdIndikator = resolvedInd
 		}
 	}
 
 	// 4. Update PIC in matrix_proker & sync to aktivitasv2
 	existing.PIC = strings.TrimSpace(cmd.PIC)
-	_ = h.DB.WithContext(ctx).Table("aktivitasv2").
-		Where("id_matrik_proker = ?", existing.ID).
-		Update("PIC", strings.TrimSpace(cmd.PIC)).Error
+	_ = h.Repo.SyncAktivitasPIC(ctx, existing.ID, cmd.PIC)
 
 	if cmd.BebanYayasan != nil {
 		existing.BebanYayasan = *cmd.BebanYayasan
@@ -223,23 +88,14 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 			existing.IdIndikator = firstScope.IdIndikator
 		}
 
-		_ = h.DB.WithContext(ctx).Where("id_matrix_proker = ?", existing.ID).Delete(&domain.MatrixProkerScope{}).Error
-
+		scopesToSync := make([]domain.MatrixProkerScope, 0, len(cmd.Scopes))
 		for _, sc := range cmd.Scopes {
 			var scIndID *int = sc.IdIndikator
 			if scIndID == nil || *scIndID <= 0 {
 				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
 				if scIndKinerja != "" {
-					var mir struct {
-						ID int
-					}
-					if _, err := uuid.Parse(scIndKinerja); err == nil {
-						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", scIndKinerja).Take(&mir).Error
-					} else {
-						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", scIndKinerja).Take(&mir).Error
-					}
-					if mir.ID > 0 {
-						scIndID = &mir.ID
+					if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, scIndKinerja); err == nil && resolvedInd != nil {
+						scIndID = resolvedInd
 					}
 				}
 			}
@@ -251,7 +107,7 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 				}
 			}
 
-			scopeRecord := domain.MatrixProkerScope{
+			scopesToSync = append(scopesToSync, domain.MatrixProkerScope{
 				UUID:             scUUID,
 				IdMatrixProker:   existing.ID,
 				IdMataProgram:    existing.IdMataProgram,
@@ -263,50 +119,24 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 				Outcome:          strings.TrimSpace(sc.Outcome),
 				CreatedAt:        time.Now(),
 				UpdatedAt:        time.Now(),
-			}
-			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+			})
 		}
+		_ = h.Repo.SyncScopesForUpdate(ctx, existing.ID, scopesToSync, nil)
 	} else {
-		// Update single scope if exists
-		var existingScope domain.MatrixProkerScope
-		if err := h.DB.WithContext(ctx).Where("id_matrix_proker = ?", existing.ID).First(&existingScope).Error; err == nil {
-			existingScope.IdMataProgram = existing.IdMataProgram
-			if existing.IdIndikator != nil {
-				existingScope.IdIndikator = existing.IdIndikator
-			}
-			if cmd.TargetUnpak != "" {
-				existingScope.TargetUnpak = strings.TrimSpace(cmd.TargetUnpak)
-			}
-			if cmd.CapaianUnitLalu != "" {
-				existingScope.CapaianTerdahulu = strings.TrimSpace(cmd.CapaianUnitLalu)
-			}
-			if cmd.TargetUnit != "" {
-				existingScope.TargetUnit = strings.TrimSpace(cmd.TargetUnit)
-			}
-			if cmd.Output != "" {
-				existingScope.Output = strings.TrimSpace(cmd.Output)
-			}
-			if cmd.Outcome != "" {
-				existingScope.Outcome = strings.TrimSpace(cmd.Outcome)
-			}
-			existingScope.UpdatedAt = time.Now()
-			_ = h.DB.WithContext(ctx).Save(&existingScope).Error
-		} else {
-			scopeRecord := domain.MatrixProkerScope{
-				UUID:             uuid.New(),
-				IdMatrixProker:   existing.ID,
-				IdMataProgram:    existing.IdMataProgram,
-				IdIndikator:      existing.IdIndikator,
-				TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
-				CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
-				TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
-				Output:           strings.TrimSpace(cmd.Output),
-				Outcome:          strings.TrimSpace(cmd.Outcome),
-				CreatedAt:        time.Now(),
-				UpdatedAt:        time.Now(),
-			}
-			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+		fallbackScope := &domain.MatrixProkerScope{
+			UUID:             uuid.New(),
+			IdMatrixProker:   existing.ID,
+			IdMataProgram:    existing.IdMataProgram,
+			IdIndikator:      existing.IdIndikator,
+			TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
+			CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
+			TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
+			Output:           strings.TrimSpace(cmd.Output),
+			Outcome:          strings.TrimSpace(cmd.Outcome),
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
 		}
+		_ = h.Repo.SyncScopesForUpdate(ctx, existing.ID, nil, fallbackScope)
 	}
 
 	if err := h.Repo.Update(ctx, existing); err != nil {

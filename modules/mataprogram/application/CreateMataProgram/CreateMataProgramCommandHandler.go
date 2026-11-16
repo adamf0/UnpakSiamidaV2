@@ -10,13 +10,11 @@ import (
 	domaintahunproker "UnpakSiamida/modules/tahunproker/domain"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type CreateMataProgramCommandHandler struct {
 	Repo            domainmataprogram.IMataProgramRepository
 	RepoTahunProker domaintahunproker.ITahunProkerRepository
-	DB              *gorm.DB
 }
 
 func (h *CreateMataProgramCommandHandler) Handle(
@@ -42,12 +40,9 @@ func (h *CreateMataProgramCommandHandler) Handle(
 	var fuID uint = cmd.IdFakultasUnit
 	if fuID == 0 && strings.TrimSpace(cmd.FakultasUnitUuid) != "" {
 		trimmed := strings.TrimSpace(cmd.FakultasUnitUuid)
-		if parsed, err := uuid.Parse(trimmed); err == nil && h.DB != nil {
-			var fu struct {
-				ID uint
-			}
-			if err := h.DB.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", parsed).Take(&fu).Error; err == nil {
-				fuID = fu.ID
+		if parsed, err := uuid.Parse(trimmed); err == nil {
+			if id, err := h.Repo.GetFakultasUnitIDByUuid(ctx, parsed); err == nil {
+				fuID = id
 			}
 		} else if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
 			fuID = uint(id)

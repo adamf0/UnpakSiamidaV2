@@ -20,4 +20,5 @@ type IMataProgramRepository interface {
 	Update(ctx context.Context, mataprogram *MataProgram) error
 	Delete(ctx context.Context, uid uuid.UUID) error
 	SetupUuid(ctx context.Context) error
+	GetFakultasUnitIDByUuid(ctx context.Context, uid uuid.UUID) (uint, error)
 }

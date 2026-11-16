@@ -8,12 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type CreateProkerV3CommandHandler struct {
 	Repo domain.IProkerV3Repository
-	DB   *gorm.DB
 }
 
 func parseDateFlexible(val string) *time.Time {
@@ -42,15 +40,10 @@ func (h *CreateProkerV3CommandHandler) Handle(
 	var fuID *int = cmd.IdFakultasUnit
 	if fuID == nil && strings.TrimSpace(cmd.FakultasUuid) != "" {
 		trimmed := strings.TrimSpace(cmd.FakultasUuid)
-		if parsed, err := uuid.Parse(trimmed); err == nil {
-			var fu struct {
-				ID int
-			}
-			if err := h.DB.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", parsed).Take(&fu).Error; err == nil {
-				fuID = &fu.ID
-			}
-		} else if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
+		if id, err := strconv.Atoi(trimmed); err == nil && id > 0 {
 			fuID = &id
+		} else if idPtr, err := h.Repo.GetFakultasUnitIDByUUIDOrName(ctx, trimmed); err == nil && idPtr != nil {
+			fuID = idPtr
 		}
 	}
 
@@ -60,54 +53,17 @@ func (h *CreateProkerV3CommandHandler) Handle(
 	if tahunStr == "" {
 		tahunStr = "2026"
 	}
-	var mt struct {
-		ID int
-	}
-	_ = h.DB.WithContext(ctx).Table("master_tahun").
-		Select("id").
-		Where("tahun = ?", tahunStr).
-		Take(&mt).Error
-	if mt.ID == 0 {
-		newUUID := uuid.New().String()
-		_ = h.DB.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error
-		_ = h.DB.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
-	}
-	if mt.ID == 0 {
-		mt.ID = 1
-	}
+	masterTahunID, _ := h.Repo.ResolveMasterTahun(ctx, tahunStr)
 
 	if mpID == nil || *mpID <= 0 {
 		namaProg := strings.TrimSpace(cmd.NamaProgram)
 		if namaProg != "" {
-			var existingMp struct {
-				ID int
-			}
-			err := h.DB.WithContext(ctx).Table("mata_program").
-				Select("id").
-				Where("mata_program = ? AND id_master_tahun = ?", namaProg, mt.ID).
-				Take(&existingMp).Error
-
-			if err == nil && existingMp.ID > 0 {
-				mpID = &existingMp.ID
-			} else {
-				newMpUUID := uuid.New()
-				res := h.DB.WithContext(ctx).Exec(
-					"INSERT INTO mata_program (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-					newMpUUID, mt.ID, fuID, namaProg,
-				)
-				if res.Error == nil {
-					var createdMp struct {
-						ID int
-					}
-					_ = h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", newMpUUID).Take(&createdMp).Error
-					if createdMp.ID > 0 {
-						mpID = &createdMp.ID
-					}
-				}
+			if createdID, err := h.Repo.ResolveOrCreateMataProgram(ctx, namaProg, masterTahunID, fuID); err == nil && createdID != nil {
+				mpID = createdID
 			}
 		}
 	} else if mpID != nil && *mpID > 0 && strings.TrimSpace(cmd.Tahun) != "" {
-		_ = h.DB.WithContext(ctx).Table("mata_program").Where("id = ?", *mpID).Update("id_master_tahun", mt.ID).Error
+		_ = h.Repo.UpdateMataProgramTahun(ctx, *mpID, masterTahunID)
 	}
 
 	// 3. Resolve Indikator ID
@@ -115,17 +71,8 @@ func (h *CreateProkerV3CommandHandler) Handle(
 	if indID == nil || *indID <= 0 {
 		indKinerja := strings.TrimSpace(cmd.IndikatorKinerja)
 		if indKinerja != "" {
-			var mir struct {
-				ID int
-			}
-			// Search by UUID or indikator text
-			if _, err := uuid.Parse(indKinerja); err == nil {
-				_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", indKinerja).Take(&mir).Error
-			} else {
-				_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", indKinerja).Take(&mir).Error
-			}
-			if mir.ID > 0 {
-				indID = &mir.ID
+			if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, indKinerja); err == nil && resolvedInd != nil {
+				indID = resolvedInd
 			}
 		}
 	}
@@ -153,21 +100,14 @@ func (h *CreateProkerV3CommandHandler) Handle(
 
 	// 5. Save dynamic scopes into matrix_proker_scope
 	if len(cmd.Scopes) > 0 {
+		scopesToSave := make([]domain.MatrixProkerScope, 0, len(cmd.Scopes))
 		for _, sc := range cmd.Scopes {
 			var scIndID *int = sc.IdIndikator
 			if scIndID == nil || *scIndID <= 0 {
 				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
 				if scIndKinerja != "" {
-					var mir struct {
-						ID int
-					}
-					if _, err := uuid.Parse(scIndKinerja); err == nil {
-						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("uuid = ?", scIndKinerja).Take(&mir).Error
-					} else {
-						_ = h.DB.WithContext(ctx).Table("master_indikator_renstra").Select("id").Where("indikator = ?", scIndKinerja).Take(&mir).Error
-					}
-					if mir.ID > 0 {
-						scIndID = &mir.ID
+					if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, scIndKinerja); err == nil && resolvedInd != nil {
+						scIndID = resolvedInd
 					}
 				}
 			}
@@ -179,7 +119,7 @@ func (h *CreateProkerV3CommandHandler) Handle(
 				}
 			}
 
-			scopeRecord := domain.MatrixProkerScope{
+			scopesToSave = append(scopesToSave, domain.MatrixProkerScope{
 				UUID:             scUUID,
 				IdMatrixProker:   matrixProker.ID,
 				IdMataProgram:    mpID,
@@ -191,24 +131,26 @@ func (h *CreateProkerV3CommandHandler) Handle(
 				Outcome:          strings.TrimSpace(sc.Outcome),
 				CreatedAt:        time.Now(),
 				UpdatedAt:        time.Now(),
-			}
-			_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+			})
 		}
+		_ = h.Repo.SaveMatrixProkerScopes(ctx, scopesToSave)
 	} else {
-		scopeRecord := domain.MatrixProkerScope{
-			UUID:             uuid.New(),
-			IdMatrixProker:   matrixProker.ID,
-			IdMataProgram:    mpID,
-			IdIndikator:      indID,
-			TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
-			CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
-			TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
-			Output:           strings.TrimSpace(cmd.Output),
-			Outcome:          strings.TrimSpace(cmd.Outcome),
-			CreatedAt:        time.Now(),
-			UpdatedAt:        time.Now(),
+		fallbackScope := []domain.MatrixProkerScope{
+			{
+				UUID:             uuid.New(),
+				IdMatrixProker:   matrixProker.ID,
+				IdMataProgram:    mpID,
+				IdIndikator:      indID,
+				TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
+				CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
+				TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
+				Output:           strings.TrimSpace(cmd.Output),
+				Outcome:          strings.TrimSpace(cmd.Outcome),
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
+			},
 		}
-		_ = h.DB.WithContext(ctx).Create(&scopeRecord).Error
+		_ = h.Repo.SaveMatrixProkerScopes(ctx, fallbackScope)
 	}
 
 	return matrixProker.UUID.String(), nil

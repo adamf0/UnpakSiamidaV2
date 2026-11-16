@@ -61,7 +61,7 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
-		Joins("LEFT JOIN mata_program prog ON mp.id_mata_program = prog.id").
+		Joins("LEFT JOIN mata_programv2 prog ON mp.id_mata_program = prog.id").
 		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
 		Joins("LEFT JOIN master_indikator_renstra mir ON mp.id_indikator = mir.id").
 		Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
@@ -93,7 +93,7 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 		}
 		_ = r.db.WithContext(ctx).Table("matrix_proker mp2").
 			Select("COALESCE(SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)), 0) as total").
-			Joins("JOIN mata_program prog2 ON mp2.id_mata_program = prog2.id").
+			Joins("JOIN mata_programv2 prog2 ON mp2.id_mata_program = prog2.id").
 			Joins("JOIN master_tahun mt2 ON prog2.id_master_tahun = mt2.id").
 			Joins("JOIN aktivitasv2 a ON a.id_matrik_proker = mp2.id AND COALESCE(a.is_batal, 0) = 0").
 			Joins("JOIN aktivitasv2_rab r ON r.id_aktivitasv2 = a.id").

@@ -19,4 +19,5 @@ type ISwotRepository interface {
 	Create(ctx context.Context, data *Swot) error
 	Update(ctx context.Context, data *Swot) error
 	Delete(ctx context.Context, uid uuid.UUID) error
+	GetMasterTahunByUuid(ctx context.Context, uid uuid.UUID) (int, string, error)
 }

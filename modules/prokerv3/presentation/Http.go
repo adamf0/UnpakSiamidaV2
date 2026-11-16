@@ -981,10 +981,7 @@ func GetCoaHandler(c *fiber.Ctx) error {
 		getCoa.GetCoaQuery{Search: search},
 	)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Gagal mengambil data akun COA: " + err.Error(),
-		})
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -1306,7 +1303,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 		)
 		if err != nil {
 			_ = os.Remove(destPath)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyimpan record dokumen: " + err.Error()})
+			return commoninfra.HandleError(c, err)
 		}
 
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -1434,9 +1431,7 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 		)
 		if err != nil {
 			_ = os.Remove(destPath)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Gagal menyimpan record dokumen: " + err.Error(),
-			})
+			return commoninfra.HandleError(c, err)
 		}
 		if createdDoc != nil {
 			createdDocs = append(createdDocs, *createdDoc)
@@ -1577,7 +1572,7 @@ func GetJadwalProkerV3Handler(c *fiber.Ctx) error {
 		*domain.JadwalProkerV3DTO,
 	](c.Context(), getJadwal.GetJadwalProkerV3Query{UUID: parsedUuid})
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Jadwal proker tidak ditemukan"})
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.JSON(result)
@@ -1836,10 +1831,7 @@ func GetDashboardProkerMonitoringHandler(c *fiber.Ctx) error {
 		*domain.DashboardMonitoringResult,
 	](c.Context(), getDashboard.GetDashboardProkerMonitoringQuery{Filter: filter})
 	if err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"allowed": false,
-			"message": err.Error(),
-		})
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{

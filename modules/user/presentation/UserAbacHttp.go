@@ -79,9 +79,7 @@ func CreateUserAbacHandler(c *fiber.Ctx) error {
 
 	res, err := mediatr.Send[createAbac.CreateUserAbacCommand, *createAbac.CreateUserAbacResult](c.Context(), cmd)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": err.Error(),
-		})
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(res)
@@ -96,7 +94,7 @@ func CreateUserAbacHandler(c *fiber.Ctx) error {
 func UpdateUserAbacHandler(c *fiber.Ctx) error {
 	rawUUID := strings.TrimSpace(c.Params("uuid"))
 	if rawUUID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "UUID penugasan wajib disertakan"})
+		return commoninfra.HandleError(c, domainuser.AbacUuidRequired())
 	}
 
 	cmd := updateAbac.UpdateUserAbacCommand{
@@ -125,9 +123,7 @@ func UpdateUserAbacHandler(c *fiber.Ctx) error {
 
 	msg, err := mediatr.Send[updateAbac.UpdateUserAbacCommand, string](c.Context(), cmd)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": err.Error(),
-		})
+		return commoninfra.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -143,7 +139,7 @@ func UpdateUserAbacHandler(c *fiber.Ctx) error {
 func DeleteUserAbacHandler(c *fiber.Ctx) error {
 	rawUUID := strings.TrimSpace(c.Params("uuid"))
 	if rawUUID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "UUID penugasan wajib disertakan"})
+		return commoninfra.HandleError(c, domainuser.AbacUuidRequired())
 	}
 
 	cmd := deleteAbac.DeleteUserAbacCommand{

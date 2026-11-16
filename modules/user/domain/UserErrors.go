@@ -97,5 +97,5 @@ func AbacTargetUpmlInvalid() domain.Error {
 }
 
 func AbacDuplicateAssignment() domain.Error {
-	return domain.ConflictError("User.AbacDuplicateAssignment", "Penugasan untuk user, tahun, dan target unit ini sudah ada")
+	return domain.ConflictError("User.AbacDuplicateAssignment", "Penugasan untuk user, tahun, target unit, dan role ini sudah ada")
 }

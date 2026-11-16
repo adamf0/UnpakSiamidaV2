@@ -51,7 +51,6 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 		string,
 	](&create.CreateProkerV3CommandHandler{
 		Repo: repoProker,
-		DB:   db,
 	})
 
 	mediatr.RegisterRequestHandler[
@@ -59,7 +58,6 @@ func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 		string,
 	](&update.UpdateProkerV3CommandHandler{
 		Repo: repoProker,
-		DB:   db,
 	})
 
 	mediatr.RegisterRequestHandler[

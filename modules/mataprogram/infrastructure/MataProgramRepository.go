@@ -286,6 +286,8 @@ func (r *MataProgramRepository) ensureUuidColumn(ctx context.Context, tableName 
 	return nil
 }
 
+
+
 func (r *MataProgramRepository) SetupUuid(ctx context.Context) error {
 	if err := r.ensureUuidColumn(ctx, "mata_program"); err != nil {
 		return err
@@ -338,3 +340,16 @@ func (r *MataProgramRepository) SetupUuid(ctx context.Context) error {
 
 	return nil
 }
+
+func (r *MataProgramRepository) GetFakultasUnitIDByUuid(ctx context.Context, uid uuid.UUID) (uint, error) {
+	var fu struct {
+		ID uint
+	}
+	err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", uid).Take(&fu).Error
+	if err != nil {
+		return 0, err
+	}
+	return fu.ID, nil
+}
+
+

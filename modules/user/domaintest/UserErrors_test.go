@@ -65,6 +65,12 @@ func TestUserErrors(t *testing.T) {
 			expectedCode: "User.NotFoundFakultasUnit",
 			expectedDesc: "fakultas unit with identifier FK-01 not found",
 		},
+		{
+			name:         "AbacDuplicateAssignment_ReturnsCorrectError",
+			err:          domain.AbacDuplicateAssignment(),
+			expectedCode: "User.AbacDuplicateAssignment",
+			expectedDesc: "Penugasan untuk user, tahun, target unit, dan role ini sudah ada",
+		},
 	}
 
 	for _, tt := range tests {

@@ -127,6 +127,8 @@ import (
 
 	aktivitasv2Presentation "UnpakSiamida/modules/aktivitasv2/presentation"
 
+	mataprogramv2Presentation "UnpakSiamida/modules/mataprogramv2/presentation"
+
 	/////////
 
 	commoninfra "UnpakSiamida/common/infrastructure"
@@ -393,6 +395,7 @@ func main() {
 	riskassessmentPresentation.ModuleRiskAssessment(app, db)
 	prokerv3Presentation.ModuleProkerV3(app, db, dbIku, dbSiakun)
 	aktivitasv2Presentation.ModuleAktivitasV2(app, db)
+	mataprogramv2Presentation.ModuleMataProgramV2(app, db)
 
 	app.Static("/upload", "./upload")
 	app.Get("/upload/*", func(c *fiber.Ctx) error {

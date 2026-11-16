@@ -608,7 +608,7 @@ func (r *UserRepository) DeleteUserAbac(ctx context.Context, uid uuid.UUID) erro
 	return nil
 }
 
-func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint) (bool, error) {
+func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint, role string) (bool, error) {
 	var count int64
 	q := r.db.WithContext(ctx).Table("userv3_abac").
 		Where("id_user = ? AND tahun = ?", userID, tahun)
@@ -616,6 +616,9 @@ func (r *UserRepository) CheckUserAbacExists(ctx context.Context, userID uint, t
 		q = q.Where("id_fakultas_unit = ?", *fuID)
 	} else {
 		q = q.Where("id_fakultas_unit IS NULL OR id_fakultas_unit = 0")
+	}
+	if strings.TrimSpace(role) != "" {
+		q = q.Where("LOWER(role) = ?", strings.ToLower(strings.TrimSpace(role)))
 	}
 	err := q.Count(&count).Error
 	return count > 0, err

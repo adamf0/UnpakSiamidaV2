@@ -240,3 +240,15 @@ func (r *SwotRepository) Update(ctx context.Context, data *domainSwot.Swot) erro
 func (r *SwotRepository) Delete(ctx context.Context, uid uuid.UUID) error {
 	return r.db.WithContext(ctx).Table("swot").Where("uuid = ?", uid).Delete(&domainSwot.Swot{}).Error
 }
+
+func (r *SwotRepository) GetMasterTahunByUuid(ctx context.Context, uid uuid.UUID) (int, string, error) {
+	var mt struct {
+		ID    int
+		Tahun string
+	}
+	if err := r.db.WithContext(ctx).Table("master_tahun").Select("id, tahun").Where("uuid = ?", uid).Take(&mt).Error; err != nil {
+		return 0, "", err
+	}
+	return mt.ID, mt.Tahun, nil
+}
+

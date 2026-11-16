@@ -29,7 +29,6 @@ func RegisterModuleSwot(db *gorm.DB) error {
 	](&create.CreateSwotCommandHandler{
 		Repo:             repoSwot,
 		RepoFakultasUnit: repoFakultasUnit,
-		DB:               db,
 	})
 
 	mediatr.RegisterRequestHandler[
@@ -38,7 +37,6 @@ func RegisterModuleSwot(db *gorm.DB) error {
 	](&update.UpdateSwotCommandHandler{
 		Repo:             repoSwot,
 		RepoFakultasUnit: repoFakultasUnit,
-		DB:               db,
 	})
 
 	mediatr.RegisterRequestHandler[

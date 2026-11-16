@@ -74,4 +74,14 @@ type IProkerV3Repository interface {
 	// Dashboard Monitoring & Sankey
 	GetDashboardProkerMonitoring(ctx context.Context, filter DashboardMonitoringFilter) (*DashboardMonitoringResult, error)
 	GetSankeyData(ctx context.Context, tahun string) (*SankeyDataResult, error)
+
+	// Proker V3 Command Helpers
+	ResolveMasterTahun(ctx context.Context, tahunStr string) (int, error)
+	ResolveOrCreateMataProgram(ctx context.Context, namaProg string, masterTahunID int, fuID *int) (*int, error)
+	UpdateMataProgramTahun(ctx context.Context, mpID int, masterTahunID int) error
+	ResolveIndikatorID(ctx context.Context, indKinerja string) (*int, error)
+	SaveMatrixProkerScopes(ctx context.Context, scopes []MatrixProkerScope) error
+	SyncMataProgramForUpdate(ctx context.Context, prokerID uint, currentMpID *int, namaProg string, tahunStr string, fuID *int) (*int, error)
+	SyncAktivitasPIC(ctx context.Context, prokerID uint, pic string) error
+	SyncScopesForUpdate(ctx context.Context, prokerID uint, scopes []MatrixProkerScope, fallbackScope *MatrixProkerScope) error
 }

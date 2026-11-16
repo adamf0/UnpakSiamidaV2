@@ -9,13 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type UpdateRiskAssessmentCommandHandler struct {
 	Repo             domainRisk.IRiskAssessmentRepository
 	RepoFakultasUnit domainfakultasunit.IFakultasUnitRepository
-	DB               *gorm.DB
 }
 
 func (h *UpdateRiskAssessmentCommandHandler) Handle(
@@ -62,14 +60,10 @@ func (h *UpdateRiskAssessmentCommandHandler) Handle(
 
 	if strings.TrimSpace(cmd.TahunUuid) != "" {
 		if parsed, err := uuid.Parse(strings.TrimSpace(cmd.TahunUuid)); err == nil {
-			var mt struct {
-				ID    int
-				Tahun string
-			}
-			if err := h.DB.WithContext(ctx).Table("master_tahun").Select("id, tahun").Where("uuid = ?", parsed).Take(&mt).Error; err == nil {
-				tahunID = &mt.ID
+			if id, t, err := h.Repo.GetMasterTahunByUuid(ctx, parsed); err == nil {
+				tahunID = &id
 				if strings.TrimSpace(cmd.Tahun) == "" {
-					tahunStr = mt.Tahun
+					tahunStr = t
 				}
 			}
 		} else if id, err := strconv.Atoi(strings.TrimSpace(cmd.TahunUuid)); err == nil && id > 0 {
@@ -80,11 +74,8 @@ func (h *UpdateRiskAssessmentCommandHandler) Handle(
 	idMataProgram := cmd.IdMataProgram
 	if idMataProgram <= 0 && strings.TrimSpace(cmd.MataProgramUuid) != "" {
 		if parsed, err := uuid.Parse(strings.TrimSpace(cmd.MataProgramUuid)); err == nil {
-			var mp struct {
-				ID int
-			}
-			if err := h.DB.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", parsed).Take(&mp).Error; err == nil {
-				idMataProgram = mp.ID
+			if id, err := h.Repo.GetMataProgramIDByUuid(ctx, parsed); err == nil && id > 0 {
+				idMataProgram = id
 			}
 		} else if id, err := strconv.Atoi(strings.TrimSpace(cmd.MataProgramUuid)); err == nil && id > 0 {
 			idMataProgram = id

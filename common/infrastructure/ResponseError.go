@@ -43,9 +43,12 @@ func NewInternalError(err error) *ResponseError {
 		return nil
 	}
 
+	msg := err.Error()
+	msg = strings.TrimPrefix(msg, "pipeline error: ")
+
 	return &ResponseError{
 		Code:    "INTERNAL_SERVER_ERROR",
-		Message: err.Error(),
+		Message: msg,
 		Trace:   getTrace(),
 	}
 }
@@ -67,7 +70,7 @@ func mapCodeToStatus(code string) int {
 // mapDomainErrorToStatus mapping domain.ErrorType ke http status
 func mapDomainErrorToStatus(errType domain.ErrorType) int {
 	switch errType {
-	case domain.Validation:
+	case domain.Validation, domain.ErrorFailure:
 		return 400
 	case domain.NotFound:
 		return 404

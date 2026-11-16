@@ -486,7 +486,7 @@ func GetRiskCriteriaHandler(c *fiber.Ctx) error {
 	tipe := c.Query("tipe")
 	items, err := mediatr.Send[getOptions.GetRiskCriteriaQuery, []domainRisk.RiskCriteriaItem](c.Context(), getOptions.GetRiskCriteriaQuery{Tipe: tipe})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(items)
 }
@@ -494,7 +494,7 @@ func GetRiskCriteriaHandler(c *fiber.Ctx) error {
 func GetRiskLevelsHandler(c *fiber.Ctx) error {
 	items, err := mediatr.Send[getOptions.GetRiskLevelsQuery, []domainRisk.RiskLevelItem](c.Context(), getOptions.GetRiskLevelsQuery{})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(items)
 }
@@ -502,7 +502,7 @@ func GetRiskLevelsHandler(c *fiber.Ctx) error {
 func GetRiskCategoriesHandler(c *fiber.Ctx) error {
 	items, err := mediatr.Send[getOptions.GetRiskCategoriesQuery, []domainRisk.RiskCategoryItem](c.Context(), getOptions.GetRiskCategoriesQuery{})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(items)
 }
@@ -510,7 +510,7 @@ func GetRiskCategoriesHandler(c *fiber.Ctx) error {
 func GetRiskStatusesHandler(c *fiber.Ctx) error {
 	items, err := mediatr.Send[getOptions.GetRiskStatusesQuery, []domainRisk.RiskStatusItem](c.Context(), getOptions.GetRiskStatusesQuery{})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(items)
 }
@@ -535,7 +535,7 @@ func GetRiskProgramsHandler(c *fiber.Ctx) error {
 		Search:       c.Query("search"),
 	})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(items)
 }
@@ -559,7 +559,7 @@ func GetRiskOptionsHandler(c *fiber.Ctx) error {
 		Tahun:        c.Query("tahun"),
 	})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return commoninfra.HandleError(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"criteria":    res.Criteria,
