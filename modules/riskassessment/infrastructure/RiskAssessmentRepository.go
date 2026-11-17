@@ -55,8 +55,8 @@ func (r *RiskAssessmentRepository) GetDefaultByUuid(ctx context.Context, uid uui
 			mt.uuid as TahunUuid,
 
 			r.id_mata_program as IdMataProgram,
-			COALESCE(mp2.mata_program, mp.mata_program, '') as MataProgram,
-			mp.uuid as MataProgramUuid,
+			COALESCE(mp.mata_program, '') as MataProgram,
+			COALESCE(mp.uuid, '') as MataProgramUuid,
 			COALESCE(NULLIF(r.isu_internal_eksternal, ''), r.penyebab, '') as IsuInternalEksternal,
 			COALESCE(NULLIF(r.deskripsi_risiko, ''), r.pernyataan_risiko, '') as DeskripsiRisiko,
 			COALESCE(NULLIF(r.kemungkinan_awal, 0), r.kemungkinan, 0) as KemungkinanAwal,
@@ -93,8 +93,7 @@ func (r *RiskAssessmentRepository) GetDefaultByUuid(ctx context.Context, uid uui
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON r.id_fakultas_unit = fu.id").
 		Joins("LEFT JOIN master_tahun mt ON r.id_master_tahun = mt.id").
-		Joins("LEFT JOIN mata_program mp ON r.id_mata_program = mp.id").
-		Joins("LEFT JOIN mata_programv2 mp2 ON r.id_mata_program = mp2.id").
+		Joins("LEFT JOIN mata_programv2 mp ON r.id_mata_program = mp.id").
 		Joins("LEFT JOIN risk_levels rl_awal ON r.tingkat_risiko_awal = rl_awal.kode").
 		Joins("LEFT JOIN risk_levels rl_res ON r.tingkat_risiko_residu = rl_res.kode").
 		Where("r.uuid = ?", uid).
@@ -160,8 +159,8 @@ func (r *RiskAssessmentRepository) GetAll(
 			mt.uuid as TahunUuid,
 
 			r.id_mata_program as IdMataProgram,
-			COALESCE(mp2.mata_program, mp.mata_program, '') as MataProgram,
-			mp.uuid as MataProgramUuid,
+			COALESCE(mp.mata_program, '') as MataProgram,
+			COALESCE(mp.uuid, '') as MataProgramUuid,
 			COALESCE(NULLIF(r.isu_internal_eksternal, ''), r.penyebab, '') as IsuInternalEksternal,
 			COALESCE(NULLIF(r.deskripsi_risiko, ''), r.pernyataan_risiko, '') as DeskripsiRisiko,
 			COALESCE(NULLIF(r.kemungkinan_awal, 0), r.kemungkinan, 0) as KemungkinanAwal,
@@ -198,8 +197,7 @@ func (r *RiskAssessmentRepository) GetAll(
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON r.id_fakultas_unit = fu.id").
 		Joins("LEFT JOIN master_tahun mt ON r.id_master_tahun = mt.id").
-		Joins("LEFT JOIN mata_program mp ON r.id_mata_program = mp.id").
-		Joins("LEFT JOIN mata_programv2 mp2 ON r.id_mata_program = mp2.id").
+		Joins("LEFT JOIN mata_programv2 mp ON r.id_mata_program = mp.id").
 		Joins("LEFT JOIN risk_levels rl_awal ON r.tingkat_risiko_awal = rl_awal.kode").
 		Joins("LEFT JOIN risk_levels rl_res ON r.tingkat_risiko_residu = rl_res.kode")
 
@@ -330,7 +328,7 @@ func (r *RiskAssessmentRepository) GetStatuses(ctx context.Context) ([]domainRis
 
 func (r *RiskAssessmentRepository) GetPrograms(ctx context.Context, fu, thn, search string) ([]domainRisk.RiskMataProgramItem, error) {
 	var programs []domainRisk.RiskMataProgramItem
-	q := r.db.WithContext(ctx).Table("mata_program mp").
+	q := r.db.WithContext(ctx).Table("mata_programv2 mp").
 		Select(`
 			mp.id,
 			mp.uuid,
@@ -343,6 +341,7 @@ func (r *RiskAssessmentRepository) GetPrograms(ctx context.Context, fu, thn, sea
 		`).
 		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
+		Where("mp.deleted_at IS NULL").
 		Order("mp.mata_program ASC")
 
 	if fu != "" {
@@ -427,10 +426,8 @@ func (r *RiskAssessmentRepository) GetMataProgramIDByUuid(ctx context.Context, u
 	var mp struct {
 		ID int
 	}
-	if err := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("uuid = ?", uid).Take(&mp).Error; err != nil {
-		if err2 := r.db.WithContext(ctx).Table("mata_program").Select("id").Where("uuid = ?", uid).Take(&mp).Error; err2 != nil {
-			return 0, err2
-		}
+	if err := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("uuid = ? AND deleted_at IS NULL", uid).Take(&mp).Error; err != nil {
+		return 0, err
 	}
 	return mp.ID, nil
 }
