@@ -3,7 +3,6 @@ package presentation
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -46,7 +45,7 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	fileHeader, errFile := c.FormFile("file")
 	if errFile == nil && fileHeader != nil {
 		uploadDir := "./upload/pelaporan_dokumen"
-		if err := os.MkdirAll(uploadDir, 0755); err == nil {
+		if err := helper.EnsureDir775(uploadDir); err == nil {
 			ext := filepath.Ext(fileHeader.Filename)
 			if ext == "" {
 				ext = ".pdf"
@@ -54,6 +53,7 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 			savedName := fmt.Sprintf("dokumen-%s%s", uuid.NewString(), ext)
 			dest := filepath.Join(uploadDir, savedName)
 			if err := c.SaveFile(fileHeader, dest); err == nil {
+				_ = helper.EnsureFile664(dest)
 				fileName = savedName
 			}
 		}
@@ -105,7 +105,7 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	fileHeader, errFile := c.FormFile("file")
 	if errFile == nil && fileHeader != nil {
 		uploadDir := "./upload/pelaporan_dokumen"
-		if err := os.MkdirAll(uploadDir, 0755); err == nil {
+		if err := helper.EnsureDir775(uploadDir); err == nil {
 			ext := filepath.Ext(fileHeader.Filename)
 			if ext == "" {
 				ext = ".pdf"
@@ -113,6 +113,7 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 			savedName := fmt.Sprintf("dokumen-%s%s", uuid.NewString(), ext)
 			dest := filepath.Join(uploadDir, savedName)
 			if err := c.SaveFile(fileHeader, dest); err == nil {
+				_ = helper.EnsureFile664(dest)
 				fileName = savedName
 			}
 		}

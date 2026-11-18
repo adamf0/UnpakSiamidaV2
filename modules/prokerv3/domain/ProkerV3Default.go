@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,6 +46,7 @@ type ProkerV3Default struct {
 	StatusAnggaran         string                   `json:"StatusAnggaran"`
 	CatatanAnggaran        string                   `json:"CatatanAnggaran"`
 	TypeFakultasUnit       string                   `json:"TypeFakultasUnit"`
+	JenjangFakultasUnit    string                   `json:"JenjangFakultasUnit"`
 	ParentFakultas         string                   `json:"ParentFakultas"`
 	PIC                    string                   `json:"PIC"`
 	BebanYayasan           bool                     `json:"BebanYayasan"`
@@ -70,6 +73,21 @@ type ProkerV3Default struct {
 	Scopes                 []ProkerScopeDefault     `gorm:"-" json:"Scopes"`
 	CreatedAt              time.Time                `json:"CreatedAt"`
 	UpdatedAt              time.Time                `json:"UpdatedAt"`
+}
+
+func (p ProkerV3Default) DisplayFakultasUnit() string {
+	nama := strings.TrimSpace(p.NamaFakultasUnit)
+	if nama == "" {
+		return ""
+	}
+	jenjang := strings.ToUpper(strings.TrimSpace(p.JenjangFakultasUnit))
+	if jenjang != "" && strings.EqualFold(strings.TrimSpace(p.TypeFakultasUnit), "prodi") {
+		suffix := fmt.Sprintf("(%s)", jenjang)
+		if !strings.HasSuffix(strings.ToUpper(nama), suffix) {
+			return fmt.Sprintf("%s %s", nama, suffix)
+		}
+	}
+	return nama
 }
 
 type ProkerUnitOption struct {

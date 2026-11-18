@@ -1108,7 +1108,7 @@ func copyFile(src, dst string) error {
 	}
 	defer in.Close()
 
-	out, err := os.Create(dst)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, helper.UploadFilePerm)
 	if err != nil {
 		return err
 	}
@@ -1117,7 +1117,10 @@ func copyFile(src, dst string) error {
 	if _, err = io.Copy(out, in); err != nil {
 		return err
 	}
-	return out.Sync()
+	if err = out.Sync(); err != nil {
+		return err
+	}
+	return helper.EnsureFile664(dst)
 }
 
 func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
@@ -1177,7 +1180,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 	}
 
 	tmpDir := "./upload/tmp"
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+	if err := helper.EnsureDir775(tmpDir); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyiapkan direktori temporary: " + err.Error()})
 	}
 
@@ -1187,7 +1190,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	}
 
-	partFile, err := os.OpenFile(partPath, flags, 0644)
+	partFile, err := os.OpenFile(partPath, flags, helper.UploadFilePerm)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuka file temporary: " + err.Error()})
 	}
@@ -1214,14 +1217,14 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 		(totalSize > 0 && (chunkOffset+written) >= totalSize)
 
 	if isFinalChunk {
-		namaUnit := sanitizeFolderSegment(proker.NamaFakultasUnit)
+		namaUnit := sanitizeFolderSegment(proker.DisplayFakultasUnit())
 		tahun := sanitizeFolderSegment(proker.Tahun)
 		standar := sanitizeFolderSegment(proker.StandarSubStandar)
 		indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
 		jenisFolder := sanitizeFolderSegment(jenisDok)
 
 		targetDir := filepath.Join("./upload/prokerv2", namaUnit, tahun, standar, indikator, jenisFolder)
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
+		if err := helper.EnsureDir775(targetDir); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 		}
 
@@ -1238,6 +1241,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 			}
 			_ = os.Remove(partPath)
 		}
+		_ = helper.EnsureFile664(destPath)
 
 		relURL := filepath.ToSlash(destPath)
 		if !strings.HasPrefix(relURL, "/") {
@@ -1345,14 +1349,14 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 		keterangan = catatan
 	}
 
-	namaUnit := sanitizeFolderSegment(proker.NamaFakultasUnit)
+	namaUnit := sanitizeFolderSegment(proker.DisplayFakultasUnit())
 	tahun := sanitizeFolderSegment(proker.Tahun)
 	standar := sanitizeFolderSegment(proker.StandarSubStandar)
 	indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
 	jenisFolder := sanitizeFolderSegment(jenisDok)
 
 	targetDir := filepath.Join("./upload/prokerv2", namaUnit, tahun, standar, indikator, jenisFolder)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := helper.EnsureDir775(targetDir); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 	}
 
@@ -1366,6 +1370,7 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 		if err := c.SaveFile(fh, destPath); err != nil {
 			continue
 		}
+		_ = helper.EnsureFile664(destPath)
 
 		relURL := filepath.ToSlash(destPath)
 		if !strings.HasPrefix(relURL, "/") {

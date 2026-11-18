@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	commonpresentation "UnpakSiamida/common/presentation"
 	createAktivitas "UnpakSiamida/modules/aktivitasv2/application/CreateAktivitasV3"
@@ -549,7 +550,7 @@ func UploadTimelineFilesHandler(c *fiber.Ctx) error {
 	}
 
 	uploadDir := filepath.Join("upload", "timeline_files", fmt.Sprintf("%d", timeline.IdAktivitasV2))
-	_ = os.MkdirAll(uploadDir, 0755)
+	_ = helper.EnsureDir775(uploadDir)
 
 	var savedFiles []domain.ProkerTimelineFileV3
 	for _, f := range files {
@@ -562,6 +563,7 @@ func UploadTimelineFilesHandler(c *fiber.Ctx) error {
 		if err := c.SaveFile(f, destPath); err != nil {
 			continue
 		}
+		_ = helper.EnsureFile664(destPath)
 
 		savedFiles = append(savedFiles, domain.ProkerTimelineFileV3{
 			UUID:                  fileUid,
@@ -724,7 +726,7 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 	}
 
 	uploadDir := "./upload/proker_v3"
-	_ = os.MkdirAll(uploadDir, 0755)
+	_ = helper.EnsureDir775(uploadDir)
 
 	var filesToInsert []domain.ProkerTimelineFileV3
 	for _, fh := range fileHeaders {
@@ -736,6 +738,7 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 		if err := c.SaveFile(fh, destPath); err != nil {
 			continue
 		}
+		_ = helper.EnsureFile664(destPath)
 
 		var actIDPtr *uint
 		if act != nil {
@@ -835,14 +838,14 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Ukuran file melebihi batas maksimal 150 MB"})
 	}
 
-	_ = os.MkdirAll(tmpDir, 0755)
+	_ = helper.EnsureDir775(tmpDir)
 
 	flags := os.O_CREATE | os.O_WRONLY
 	if chunkIndex == 0 && chunkOffset == 0 {
 		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	}
 
-	partFile, err := os.OpenFile(partPath, flags, 0644)
+	partFile, err := os.OpenFile(partPath, flags, helper.UploadFilePerm)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuka file temporary: " + err.Error()})
 	}
@@ -878,7 +881,7 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 		}
 
 		targetDir := "./upload/proker_v3"
-		_ = os.MkdirAll(targetDir, 0755)
+		_ = helper.EnsureDir775(targetDir)
 
 		ext := filepath.Ext(effectiveName)
 		savedFileName := fmt.Sprintf("proker-%s%s", fileUUID.String(), ext)
@@ -886,6 +889,8 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 
 		if err := os.Rename(partPath, destPath); err != nil {
 			_ = os.Remove(partPath)
+		} else {
+			_ = helper.EnsureFile664(destPath)
 		}
 
 		relURL := "/upload/proker_v3/" + savedFileName
