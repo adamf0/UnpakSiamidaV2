@@ -14,7 +14,8 @@ import (
 )
 
 func TestUpdateIndikatorRenstraCommandValidation_Success(t *testing.T) {
-	validCmd := app.UpdateIndikatorRenstraCommand{
+	// 1. Without parent (nil)
+	validCmdWithoutParent := app.UpdateIndikatorRenstraCommand{
 		Uuid:           "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
 		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
 		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
@@ -23,8 +24,39 @@ func TestUpdateIndikatorRenstraCommandValidation_Success(t *testing.T) {
 		TipeTarget:     "numerik",
 		Operator:       nil,
 	}
-	err := app.UpdateIndikatorRenstraCommandValidation(validCmd)
+	err := app.UpdateIndikatorRenstraCommandValidation(validCmdWithoutParent)
 	assert.NoError(t, err)
+
+	// 2. With parent UUID
+	parentUUID := "8d8e06b8-e274-49ad-a8f7-47d68e17cd4d"
+	validCmdWithParent := app.UpdateIndikatorRenstraCommand{
+		Uuid:           "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
+		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
+		Parent:         &parentUUID,
+		Tahun:          "2080",
+		TipeTarget:     "numerik",
+		Operator:       nil,
+	}
+	err = app.UpdateIndikatorRenstraCommandValidation(validCmdWithParent)
+	assert.NoError(t, err)
+}
+
+func TestUpdateIndikatorRenstraCommandValidation_InvalidParent(t *testing.T) {
+	invalidParent := "not-a-valid-uuid"
+	invalidCmd := app.UpdateIndikatorRenstraCommand{
+		Uuid:           "b763b5b3-a18e-416c-9d0d-a0c23aa6076c",
+		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
+		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
+		Parent:         &invalidParent,
+		Tahun:          "2080",
+		TipeTarget:     "numerik",
+		Operator:       nil,
+	}
+	err := app.UpdateIndikatorRenstraCommandValidation(invalidCmd)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Parent")
+	assert.Contains(t, err.Error(), "UUID must be a valid UUIDv4 format")
 }
 
 func TestUpdateIndikatorRenstraCommandValidation_Fail(t *testing.T) {

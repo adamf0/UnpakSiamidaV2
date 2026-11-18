@@ -14,7 +14,8 @@ import (
 )
 
 func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
-	validCmd := app.CreateIndikatorRenstraCommand{
+	// 1. Without parent (nil)
+	validCmdWithoutParent := app.CreateIndikatorRenstraCommand{
 		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
 		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
 		Parent:         nil,
@@ -22,8 +23,37 @@ func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
 		TipeTarget:     "numerik",
 		Operator:       nil,
 	}
-	err := app.CreateIndikatorRenstraCommandValidation(validCmd)
+	err := app.CreateIndikatorRenstraCommandValidation(validCmdWithoutParent)
 	assert.NoError(t, err)
+
+	// 2. With parent UUID (pointer to string)
+	parentUUID := "8d8e06b8-e274-49ad-a8f7-47d68e17cd4d"
+	validCmdWithParent := app.CreateIndikatorRenstraCommand{
+		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
+		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
+		Parent:         &parentUUID,
+		Tahun:          "2080",
+		TipeTarget:     "numerik",
+		Operator:       nil,
+	}
+	err = app.CreateIndikatorRenstraCommandValidation(validCmdWithParent)
+	assert.NoError(t, err)
+}
+
+func TestCreateIndikatorRenstraCommandValidation_InvalidParent(t *testing.T) {
+	invalidParent := "not-a-valid-uuid"
+	invalidCmd := app.CreateIndikatorRenstraCommand{
+		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
+		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
+		Parent:         &invalidParent,
+		Tahun:          "2080",
+		TipeTarget:     "numerik",
+		Operator:       nil,
+	}
+	err := app.CreateIndikatorRenstraCommandValidation(invalidCmd)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Parent")
+	assert.Contains(t, err.Error(), "UUID must be a valid UUIDv4 format")
 }
 
 func TestCreateIndikatorRenstraCommandValidation_Fail(t *testing.T) {

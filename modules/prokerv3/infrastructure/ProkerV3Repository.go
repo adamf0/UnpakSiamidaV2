@@ -1122,7 +1122,7 @@ func (r *ProkerV3Repository) UpdateVerifikasiDokumen(ctx context.Context, uid uu
 			alasan = strings.TrimSpace(catatan)
 		}
 		doc.CatatanPenolakan = alasan
-	} else if status == "terverifikasi" {
+	} else if status == "terverifikasi" || status == "terverifikasi_fakultas" {
 		doc.CatatanPenolakan = ""
 	}
 	doc.UpdatedAt = time.Now()

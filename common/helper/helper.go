@@ -212,7 +212,7 @@ func ValidateParent(value interface{}) error {
 		return nil
 	}
 
-	return ValidateUUIDv4(value)
+	return ValidateUUIDv4(s)
 }
 
 func ValidateLevel(value interface{}) error {

@@ -26,9 +26,6 @@ func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) 
 
 		validation.Field(&cmd.Parent,
 			validation.By(helper.ValidateParent),
-			validation.When(cmd.Parent != nil,
-				validation.By(helper.ValidateUUIDv4),
-			),
 		),
 
 		validation.Field(&cmd.Tahun,

@@ -63,31 +63,31 @@ func (r *LaporanRepository) GetMonitoringByTargetTahun(
 
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' THEN 1 END), 0) as Sk,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' AND (mpd.status_verifikasi IS NULL OR TRIM(mpd.status_verifikasi) = '' OR LOWER(TRIM(mpd.status_verifikasi)) IN ('r0', 'draft')) THEN 1 END), 0) as SkR0,
-				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as SkR1,
+				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'terverifikasi_fakultas', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as SkR1,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('terverifikasi', 'disetujui', 'approved', 'r2') THEN 1 END), 0) as SkR2,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SK' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('gagal_terverifikasi', 'gagal terverifikasi', 'ditolak', 'rejected', 'revisi', 'r3') THEN 1 END), 0) as SkR3,
 
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' THEN 1 END), 0) as Sop,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' AND (mpd.status_verifikasi IS NULL OR TRIM(mpd.status_verifikasi) = '' OR LOWER(TRIM(mpd.status_verifikasi)) IN ('r0', 'draft')) THEN 1 END), 0) as SopR0,
-				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as SopR1,
+				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'terverifikasi_fakultas', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as SopR1,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('terverifikasi', 'disetujui', 'approved', 'r2') THEN 1 END), 0) as SopR2,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'SOP' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('gagal_terverifikasi', 'gagal terverifikasi', 'ditolak', 'rejected', 'revisi', 'r3') THEN 1 END), 0) as SopR3,
 
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') THEN 1 END), 0) as ProposalTor,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') AND (mpd.status_verifikasi IS NULL OR TRIM(mpd.status_verifikasi) = '' OR LOWER(TRIM(mpd.status_verifikasi)) IN ('r0', 'draft')) THEN 1 END), 0) as ProposalTorR0,
-				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as ProposalTorR1,
+				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'terverifikasi_fakultas', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as ProposalTorR1,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('terverifikasi', 'disetujui', 'approved', 'r2') THEN 1 END), 0) as ProposalTorR2,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('PROPOSAL/TOR', 'PROPOSAL', 'TOR', 'PROPOSAL / TOR') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('gagal_terverifikasi', 'gagal terverifikasi', 'ditolak', 'rejected', 'revisi', 'r3') THEN 1 END), 0) as ProposalTorR3,
 
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' THEN 1 END), 0) as Laporan,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' AND (mpd.status_verifikasi IS NULL OR TRIM(mpd.status_verifikasi) = '' OR LOWER(TRIM(mpd.status_verifikasi)) IN ('r0', 'draft')) THEN 1 END), 0) as LaporanR0,
-				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as LaporanR1,
+				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'terverifikasi_fakultas', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as LaporanR1,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('terverifikasi', 'disetujui', 'approved', 'r2') THEN 1 END), 0) as LaporanR2,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) = 'LAPORAN' AND LOWER(TRIM(mpd.status_verifikasi)) IN ('gagal_terverifikasi', 'gagal terverifikasi', 'ditolak', 'rejected', 'revisi', 'r3') THEN 1 END), 0) as LaporanR3,
 
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') THEN 1 END), 0) as DokumenPendukung,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') AND (mpd.status_verifikasi IS NULL OR TRIM(mpd.status_verifikasi) = '' OR LOWER(TRIM(mpd.status_verifikasi)) IN ('r0', 'draft')) THEN 1 END), 0) as DokumenPendukungR0,
-				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as DokumenPendukungR1,
+				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('belum_terverifikasi', 'belum terverifikasi', 'terverifikasi_fakultas', 'proses', 'r1', 'menunggu') THEN 1 END), 0) as DokumenPendukungR1,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('terverifikasi', 'disetujui', 'approved', 'r2') THEN 1 END), 0) as DokumenPendukungR2,
 				COALESCE(COUNT(CASE WHEN UPPER(TRIM(mpd.jenis_dokumen)) IN ('DOCUMENT PENDUKUNG', 'DOKUMEN PENDUKUNG') AND LOWER(TRIM(mpd.status_verifikasi)) IN ('gagal_terverifikasi', 'gagal terverifikasi', 'ditolak', 'rejected', 'revisi', 'r3') THEN 1 END), 0) as DokumenPendukungR3
 			`).

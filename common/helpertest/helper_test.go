@@ -92,6 +92,10 @@ func TestValidateLevel(t *testing.T) {
 }
 
 func TestValidateParent(t *testing.T) {
+	validUUIDStr := validUUID
+	emptyStr := ""
+	invalidUUIDStr := "not-a-uuid"
+
 	tests := []struct {
 		name  string
 		input interface{}
@@ -99,8 +103,12 @@ func TestValidateParent(t *testing.T) {
 	}{
 		{"nil_ok", nil, true},
 		{"empty_string_ok", "", true},
+		{"nil_ptr_ok", (*string)(nil), true},
+		{"empty_ptr_ok", &emptyStr, true},
 		{"valid_uuid", validUUID, true},
+		{"valid_uuid_ptr", &validUUIDStr, true},
 		{"invalid_uuid", "not-a-uuid", false},
+		{"invalid_uuid_ptr", &invalidUUIDStr, false},
 		{"wrong_type", 123, false},
 	}
 
