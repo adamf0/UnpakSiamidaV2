@@ -25,4 +25,5 @@ type IIndikatorRenstraRepository interface {
 	GetIndikatorRenstraIku(ctx context.Context, identifier string) (*IndikatorRenstraIkuData, error)
 	SaveIndikatorRenstraIku(ctx context.Context, identifier string, ikuIds []uint64) (*IndikatorRenstraIkuData, error)
 	GetDashboardIkuRawData(ctx context.Context, tahun, unit string) (*DashboardIkuRawData, error)
+	EnsureTargetColumns(ctx context.Context) error
 }

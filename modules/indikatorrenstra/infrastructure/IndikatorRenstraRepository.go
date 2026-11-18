@@ -28,6 +28,21 @@ func NewIndikatorRenstraRepository(db *gorm.DB, dbs ...*gorm.DB) domainindikator
 	return repo
 }
 
+func (r *IndikatorRenstraRepository) EnsureTargetColumns(ctx context.Context) error {
+	migrator := r.db.WithContext(ctx).Migrator()
+	if !migrator.HasTable(&domainindikatorrenstra.IndikatorRenstra{}) {
+		return nil
+	}
+	for _, field := range []string{"TargetUnpak", "TargetUnit"} {
+		if !migrator.HasColumn(&domainindikatorrenstra.IndikatorRenstra{}, field) {
+			if err := migrator.AddColumn(&domainindikatorrenstra.IndikatorRenstra{}, field); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (r *IndikatorRenstraRepository) IsUniqueIndikator(
 	ctx context.Context,
 	indikator string,
@@ -94,6 +109,8 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 			"i.tahun AS Tahun",
 			"i.tipe_target AS TipeTarget",
 			"i.operator AS Operator",
+			"i.target_unpak AS TargetUnpak",
+			"i.target_unit AS TargetUnit",
 			"(SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',') FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id) AS IkuList",
 		}).
 		Joins("LEFT JOIN master_standar_renstra AS ms ON i.id_master_standar = ms.id").
@@ -116,11 +133,13 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
-	"indikator":   "i.indikator",
-	"standar":     "ms.nama ",
-	"tahun":       "i.tahun",
-	"tipetarget":  "i.tipe_target",
-	"operator":    "i.operator",
+	"indikator":    "i.indikator",
+	"standar":      "ms.nama ",
+	"tahun":        "i.tahun",
+	"tipetarget":   "i.tipe_target",
+	"operator":     "i.operator",
+	"target_unpak": "i.target_unpak",
+	"target_unit":  "i.target_unit",
 }
 
 
@@ -365,6 +384,8 @@ func (r *IndikatorRenstraRepository) GetAll(
             i.tahun as Tahun,
             i.tipe_target as TipeTarget,
             i.operator as Operator,
+            i.target_unpak as TargetUnpak,
+            i.target_unit as TargetUnit,
             (
                 SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
                 FROM indikator_renstra_iku iri

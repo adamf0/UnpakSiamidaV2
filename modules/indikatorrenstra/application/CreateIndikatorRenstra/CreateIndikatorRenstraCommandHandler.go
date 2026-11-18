@@ -71,6 +71,8 @@ func (h *CreateIndikatorRenstraCommandHandler) Handle(
 		cmd.Tahun,
 		cmd.TipeTarget,
 		operator,
+		cmd.TargetUnpak,
+		cmd.TargetUnit,
 		isUnique,
 	)
 

@@ -19,6 +19,13 @@ func NamaProgramRequired() commondomain.Error {
 	)
 }
 
+func DuplicateProkerUnitTahun() commondomain.Error {
+	return commondomain.ConflictError(
+		"ProkerV3.DuplicateProkerUnitTahun",
+		"Program kerja tersebut sudah pernah diajukan untuk fakultas/unit dan tahun yang sama",
+	)
+}
+
 func TimelineNotFound() commondomain.Error {
 	return commondomain.NotFoundError(
 		"ProkerV3.TimelineNotFound",

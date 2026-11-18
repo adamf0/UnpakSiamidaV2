@@ -37,6 +37,8 @@ import (
 // @Param tahun formData string true "Tahun"
 // @Param tipe_target formData string true "Tipe Target"
 // @Param operator formData string false "Operator"
+// @Param target_unpak formData string false "Target Unpak"
+// @Param target_unit formData string false "Target Unit Kerja"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
@@ -51,6 +53,8 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.FormValue("tahun")
 	tipeTarget := c.FormValue("tipe_target")
 	operator := helper.StrPtr(c.FormValue("operator"))
+	targetUnpak := helper.StrPtr(c.FormValue("target_unpak"))
+	targetUnit := helper.StrPtr(c.FormValue("target_unit"))
 
 	cmd := CreateIndikatorRenstra.CreateIndikatorRenstraCommand{
 		StandarRenstra: standarRenstra,
@@ -59,6 +63,8 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 		Tahun:          tahun,
 		TipeTarget:     tipeTarget,
 		Operator:       operator,
+		TargetUnpak:    targetUnpak,
+		TargetUnit:     targetUnit,
 	}
 
 	uuid, err := mediatr.Send[
@@ -87,6 +93,8 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param tahun formData string true "Tahun"
 // @Param tipe_target formData string true "Tipe Target"
 // @Param operator formData string false "Operator"
+// @Param target_unpak formData string false "Target Unpak"
+// @Param target_unit formData string false "Target Unit Kerja"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
@@ -103,6 +111,8 @@ func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 	tahun := c.FormValue("tahun")
 	tipeTarget := c.FormValue("tipe_target")
 	operator := helper.StrPtr(c.FormValue("operator"))
+	targetUnpak := helper.StrPtr(c.FormValue("target_unpak"))
+	targetUnit := helper.StrPtr(c.FormValue("target_unit"))
 
 	cmd := UpdateIndikatorRenstra.UpdateIndikatorRenstraCommand{
 		Uuid:           uuid,
@@ -112,6 +122,8 @@ func UpdateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 		Tahun:          tahun,
 		TipeTarget:     tipeTarget,
 		Operator:       operator,
+		TargetUnpak:    targetUnpak,
+		TargetUnit:     targetUnit,
 	}
 
 	updatedID, err := mediatr.Send[

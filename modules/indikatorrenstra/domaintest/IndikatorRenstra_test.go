@@ -13,6 +13,8 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 	standar := uint(1)
 	parent := uint(10)
 	operator := "SUM"
+	targetUnpak := "15 % Dosen"
+	targetUnit := "20 % Dosen Prodi"
 
 	res := domain.NewIndikatorRenstra(
 		"Jumlah mahasiswa",
@@ -21,6 +23,8 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 		"2025",
 		"Peningkatan",
 		&operator,
+		&targetUnpak,
+		&targetUnit,
 		true,
 	)
 
@@ -33,6 +37,8 @@ func TestNewIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, "2025", ir.Tahun)
 	assert.Equal(t, "Peningkatan", ir.TipeTarget)
 	assert.Equal(t, &operator, ir.Operator)
+	assert.Equal(t, &targetUnpak, ir.TargetUnpak)
+	assert.Equal(t, &targetUnit, ir.TargetUnit)
 	assert.Equal(t, &standar, ir.StandarRenstra)
 	assert.Equal(t, &parent, ir.Parent)
 }
@@ -69,6 +75,8 @@ func TestNewIndikatorRenstra_Fail(t *testing.T) {
 				"2025",
 				"A",
 				nil,
+				nil,
+				nil,
 				tt.isUnique,
 			)
 			require.False(t, res.IsSuccess)
@@ -90,6 +98,8 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 		"2024",
 		"Target",
 		&operator,
+		nil,
+		nil,
 		true,
 	)
 	require.True(t, prevRes.IsSuccess)
@@ -100,6 +110,8 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 	newStandar := uint(88)
 	newParent := uint(99)
 	newOperator := "SUM"
+	newTargetUnpak := "80%"
+	newTargetUnit := "90%"
 
 	res := domain.UpdateIndikatorRenstra(
 		prev,
@@ -110,6 +122,8 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 		"2026",
 		"Perubahan",
 		&newOperator,
+		&newTargetUnpak,
+		&newTargetUnit,
 	)
 
 	require.True(t, res.IsSuccess)
@@ -118,6 +132,8 @@ func TestUpdateIndikatorRenstra_Success(t *testing.T) {
 	assert.Equal(t, "2026", ir.Tahun)
 	assert.Equal(t, "Perubahan", ir.TipeTarget)
 	assert.Equal(t, &newOperator, ir.Operator)
+	assert.Equal(t, &newTargetUnpak, ir.TargetUnpak)
+	assert.Equal(t, &newTargetUnit, ir.TargetUnit)
 	assert.Equal(t, &newStandar, ir.StandarRenstra)
 	assert.Equal(t, &newParent, ir.Parent)
 }
@@ -131,6 +147,8 @@ func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
 		nil,
 		"2024",
 		"A",
+		nil,
+		nil,
 		nil,
 		true,
 	)
@@ -178,6 +196,8 @@ func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
 				"2025",
 				"X",
 				nil,
+				nil,
+				nil,
 			)
 
 			require.False(t, res.IsSuccess)
@@ -190,7 +210,7 @@ func TestUpdateIndikatorRenstra_Fail(t *testing.T) {
 func TestIndikatorRenstra_EdgeCases(t *testing.T) {
 	standar := uint(1)
 
-	// Create dengan parent dan operator nil
+	// Create dengan parent, operator, target nil
 	res := domain.NewIndikatorRenstra(
 		"Edge Indikator",
 		&standar,
@@ -198,16 +218,23 @@ func TestIndikatorRenstra_EdgeCases(t *testing.T) {
 		"",
 		"",
 		nil,
+		nil,
+		nil,
 		true,
 	)
 	require.True(t, res.IsSuccess)
 	ir := res.Value
 	assert.Nil(t, ir.Parent)
 	assert.Nil(t, ir.Operator)
+	assert.Nil(t, ir.TargetUnpak)
+	assert.Nil(t, ir.TargetUnit)
 	assert.Equal(t, "", ir.Tahun)
 	assert.Equal(t, "", ir.TipeTarget)
 
-	// Update tanpa mengubah operator dan parent
+	// Update tanpa mengubah operator dan parent, dan pastikan target bisa dikosongkan
+	initialTarget := "10%"
+	ir.TargetUnpak = &initialTarget
+	ir.TargetUnit = &initialTarget
 	newTahun := "2030"
 	newTipe := "Edge"
 	resUpdate := domain.UpdateIndikatorRenstra(
@@ -219,10 +246,14 @@ func TestIndikatorRenstra_EdgeCases(t *testing.T) {
 		newTahun,
 		newTipe,
 		nil,
+		nil,
+		nil,
 	)
 	require.True(t, resUpdate.IsSuccess)
 	assert.Nil(t, resUpdate.Value.Operator)
 	assert.Nil(t, resUpdate.Value.Parent)
+	assert.Nil(t, resUpdate.Value.TargetUnpak)
+	assert.Nil(t, resUpdate.Value.TargetUnit)
 	assert.Equal(t, newTahun, resUpdate.Value.Tahun)
 	assert.Equal(t, newTipe, resUpdate.Value.TipeTarget)
 	assert.Equal(t, "Edge Update", resUpdate.Value.Indikator)

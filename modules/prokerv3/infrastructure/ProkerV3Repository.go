@@ -913,7 +913,7 @@ func (r *ProkerV3Repository) GetOptions(ctx context.Context) (*domain.ProkerOpti
 
 	var indikators []domain.ProkerIndikatorOption
 	_ = r.db.WithContext(ctx).Table("master_indikator_renstra").
-		Select("id, uuid, id_master_standar, indikator, tahun").
+		Select("id, uuid, id_master_standar, indikator, tahun, COALESCE(target_unpak, '') AS target_unpak, COALESCE(target_unit, '') AS target_unit").
 		Order("indikator ASC").
 		Scan(&indikators).Error
 
@@ -989,16 +989,37 @@ func (r *ProkerV3Repository) GetTargetUnpak(ctx context.Context, tahun, indikato
 	}
 
 	candidateIDs := []int{indikatorID}
+	var masterTargetUnpak, masterTargetUnit string
 	if indikatorID > 0 {
 		var indRow struct {
-			Indikator string `gorm:"column:indikator"`
+			Indikator   string `gorm:"column:indikator"`
+			TargetUnpak string `gorm:"column:target_unpak"`
+			TargetUnit  string `gorm:"column:target_unit"`
 		}
-		if err := r.db.WithContext(ctx).Table("master_indikator_renstra").Select("indikator").Where("id = ?", indikatorID).First(&indRow).Error; err == nil && indRow.Indikator != "" {
-			var sameIDs []int
-			_ = r.db.WithContext(ctx).Table("master_indikator_renstra").Where("indikator = ?", indRow.Indikator).Pluck("id", &sameIDs).Error
-			for _, sid := range sameIDs {
-				if sid != indikatorID {
-					candidateIDs = append(candidateIDs, sid)
+		if err := r.db.WithContext(ctx).Table("master_indikator_renstra").
+			Select("indikator, COALESCE(target_unpak, '') AS target_unpak, COALESCE(target_unit, '') AS target_unit").
+			Where("id = ?", indikatorID).
+			First(&indRow).Error; err == nil {
+			masterTargetUnpak = strings.TrimSpace(indRow.TargetUnpak)
+			masterTargetUnit = strings.TrimSpace(indRow.TargetUnit)
+			if masterTargetUnpak != "" {
+				return &domain.TargetUnpakResult{
+					Found:       true,
+					Target:      masterTargetUnpak,
+					TargetMin:   "",
+					TargetMax:   "",
+					Satuan:      "",
+					TargetUnpak: masterTargetUnpak,
+					TargetUnit:  masterTargetUnit,
+				}, nil
+			}
+			if indRow.Indikator != "" {
+				var sameIDs []int
+				_ = r.db.WithContext(ctx).Table("master_indikator_renstra").Where("indikator = ?", indRow.Indikator).Pluck("id", &sameIDs).Error
+				for _, sid := range sameIDs {
+					if sid != indikatorID {
+						candidateIDs = append(candidateIDs, sid)
+					}
 				}
 			}
 		}
@@ -1059,6 +1080,7 @@ func (r *ProkerV3Repository) GetTargetUnpak(ctx context.Context, tahun, indikato
 		TargetMax:   tpl.TargetMax,
 		Satuan:      tpl.Satuan,
 		TargetUnpak: formatted,
+		TargetUnit:  masterTargetUnit,
 	}, nil
 }
 
@@ -3279,6 +3301,58 @@ func (r *ProkerV3Repository) GetSankeyData(ctx context.Context, tahun string) (*
 // =======================================================
 // Proker V3 Command Helpers
 // =======================================================
+
+func (r *ProkerV3Repository) ExistsActiveProker(ctx context.Context, fuID int, tahunStr string, mpID *int, namaProg string, excludeProkerID uint) (bool, error) {
+	namaProg = strings.TrimSpace(namaProg)
+	hasMpID := mpID != nil && *mpID > 0
+	if fuID <= 0 || (!hasMpID && namaProg == "") {
+		return false, nil
+	}
+
+	tahunStr = strings.TrimSpace(tahunStr)
+	if tahunStr == "" && hasMpID {
+		var row struct {
+			Tahun string `gorm:"column:tahun"`
+		}
+		_ = r.db.WithContext(ctx).
+			Table("mata_programv2 mprog").
+			Select("mt.tahun AS tahun").
+			Joins("INNER JOIN master_tahun mt ON mt.id = mprog.id_master_tahun").
+			Where("mprog.id = ?", *mpID).
+			Take(&row).Error
+		tahunStr = strings.TrimSpace(row.Tahun)
+	}
+	if tahunStr == "" {
+		return false, nil
+	}
+
+	q := r.db.WithContext(ctx).
+		Table("matrix_proker mp").
+		Joins("INNER JOIN mata_programv2 mprog ON mprog.id = mp.id_mata_program").
+		Joins("INNER JOIN master_tahun mt ON mt.id = mprog.id_master_tahun").
+		Where("mp.deleted_at IS NULL").
+		Where("mp.id_fakultas_unit = ?", fuID).
+		Where("mt.tahun = ?", tahunStr)
+
+	if excludeProkerID > 0 {
+		q = q.Where("mp.id != ?", excludeProkerID)
+	}
+
+	switch {
+	case hasMpID && namaProg != "":
+		q = q.Where("(mp.id_mata_program = ? OR LOWER(TRIM(mprog.mata_program)) = LOWER(TRIM(?)))", *mpID, namaProg)
+	case hasMpID:
+		q = q.Where("mp.id_mata_program = ?", *mpID)
+	default:
+		q = q.Where("LOWER(TRIM(mprog.mata_program)) = LOWER(TRIM(?))", namaProg)
+	}
+
+	var count int64
+	if err := q.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
 
 func (r *ProkerV3Repository) ResolveMasterTahun(ctx context.Context, tahunStr string) (int, error) {
 	tahunStr = strings.TrimSpace(tahunStr)

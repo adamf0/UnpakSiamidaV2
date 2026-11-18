@@ -20,6 +20,8 @@ type IndikatorRenstra struct {
 	Tahun          string    `gorm:"size:255;not null"`
 	TipeTarget     string    `gorm:"size:255;not null"`
 	Operator       *string   `gorm:""`
+	TargetUnpak    *string   `gorm:"column:target_unpak;type:text"`
+	TargetUnit     *string   `gorm:"column:target_unit;type:text"`
 }
 
 func (IndikatorRenstra) TableName() string {
@@ -33,6 +35,8 @@ func NewIndikatorRenstra(
 	tahun string,
 	tipeTarget string,
 	operator *string,
+	targetUnpak *string,
+	targetUnit *string,
 	isUniqueIndikator bool,
 ) common.ResultValue[*IndikatorRenstra] {
 
@@ -52,6 +56,8 @@ func NewIndikatorRenstra(
 		Tahun:          tahun,
 		TipeTarget:     tipeTarget,
 		Operator:       operator,
+		TargetUnpak:    targetUnpak,
+		TargetUnit:     targetUnit,
 	}
 
 	ir.Raise(event.IndikatorRenstraCreatedEvent{
@@ -72,6 +78,8 @@ func UpdateIndikatorRenstra(
 	tahun string,
 	tipeTarget string,
 	operator *string,
+	targetUnpak *string,
+	targetUnit *string,
 	// isUniqueIndikator bool,
 ) common.ResultValue[*IndikatorRenstra] {
 
@@ -106,6 +114,9 @@ func UpdateIndikatorRenstra(
 	if operator != nil {
 		prev.Operator = operator
 	}
+
+	prev.TargetUnpak = targetUnpak
+	prev.TargetUnit = targetUnit
 
 	prev.Raise(event.IndikatorRenstraUpdatedEvent{
 		EventID:              uuid.New(),

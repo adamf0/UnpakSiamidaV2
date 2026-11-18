@@ -87,6 +87,8 @@ func (h *UpdateIndikatorRenstraCommandHandler) Handle(
 		cmd.Tahun,
 		cmd.TipeTarget,
 		cmd.Operator,
+		cmd.TargetUnpak,
+		cmd.TargetUnit,
 		// isUnique,
 	)
 

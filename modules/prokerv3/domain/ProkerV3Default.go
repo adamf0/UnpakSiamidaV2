@@ -118,6 +118,8 @@ type ProkerIndikatorOption struct {
 	IdMasterStandar int    `json:"id_master_standar"`
 	Indikator       string `json:"indikator"`
 	Tahun           int    `json:"tahun"`
+	TargetUnpak     string `json:"target_unpak"`
+	TargetUnit      string `json:"target_unit"`
 }
 
 type ProkerOptionsResult struct {
@@ -134,6 +136,7 @@ type TargetUnpakResult struct {
 	TargetMax   string `json:"target_max"`
 	Satuan      string `json:"satuan"`
 	TargetUnpak string `json:"target_unpak"`
+	TargetUnit  string `json:"target_unit"`
 }
 
 type AktivitasDokumenOption struct {

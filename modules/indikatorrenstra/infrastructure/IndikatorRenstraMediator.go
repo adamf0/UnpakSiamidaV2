@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"context"
 	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	create "UnpakSiamida/modules/indikatorrenstra/application/CreateIndikatorRenstra"
@@ -32,6 +33,7 @@ func RegisterModuleIndikatorRenstra(db *gorm.DB, dbs ...*gorm.DB) error {
 	}
 	repoIndikatorRenstra := NewIndikatorRenstraRepository(db, dbIku)
 	repoStandarRenstra := infraStandarRenstra.NewStandarRenstraRepository(db)
+	_ = repoIndikatorRenstra.EnsureTargetColumns(context.Background())
 	// if err := db.AutoMigrate(&domainindikatorrenstra.IndikatorRenstra{}); err != nil {
 	// 	panic(err)
 	// }

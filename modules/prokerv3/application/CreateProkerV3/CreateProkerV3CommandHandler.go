@@ -53,6 +53,18 @@ func (h *CreateProkerV3CommandHandler) Handle(
 	if tahunStr == "" {
 		tahunStr = "2026"
 	}
+
+	// Block duplicate pengajuan untuk kombinasi (id_mata_program / nama_program, fakultas_unit, tahun)
+	if fuID != nil && *fuID > 0 {
+		exists, err := h.Repo.ExistsActiveProker(ctx, *fuID, tahunStr, mpID, cmd.NamaProgram, 0)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return "", domain.DuplicateProkerUnitTahun()
+		}
+	}
+
 	masterTahunID, _ := h.Repo.ResolveMasterTahun(ctx, tahunStr)
 
 	if mpID == nil || *mpID <= 0 {

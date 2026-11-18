@@ -8,4 +8,6 @@ type UpdateIndikatorRenstraCommand struct {
 	Tahun           string
 	TipeTarget      string
 	Operator        *string //opsional
+	TargetUnpak     *string //opsional
+	TargetUnit      *string //opsional
 }

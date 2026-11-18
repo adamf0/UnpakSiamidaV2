@@ -59,6 +59,17 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 		}
 	}
 
+	// Block duplicate pengajuan untuk kombinasi (id_mata_program / nama_program, fakultas_unit, tahun)
+	if existing.IdFakultasUnit != nil && *existing.IdFakultasUnit > 0 {
+		exists, err := h.Repo.ExistsActiveProker(ctx, *existing.IdFakultasUnit, strings.TrimSpace(cmd.Tahun), existing.IdMataProgram, namaProg, existing.ID)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return "", domain.DuplicateProkerUnitTahun()
+		}
+	}
+
 	updatedMpID, err := h.Repo.SyncMataProgramForUpdate(ctx, existing.ID, existing.IdMataProgram, namaProg, strings.TrimSpace(cmd.Tahun), fuID)
 	if err == nil && updatedMpID != nil {
 		existing.IdMataProgram = updatedMpID
