@@ -43,6 +43,7 @@ import (
 func RegisterModuleProkerV3(db *gorm.DB, dbs ...*gorm.DB) error {
 	repoProker := NewProkerV3Repository(db, dbs...)
 	_ = repoProker.EnsureAppSettingsTable(context.Background())
+	_ = repoProker.EnsureDokumenVerifikasiColumns(context.Background())
 	_ = db.AutoMigrate(&domain.JadwalProkerV3{})
 
 	// 1. Proker Core CRUD

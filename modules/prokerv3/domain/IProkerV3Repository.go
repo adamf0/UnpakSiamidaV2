@@ -48,7 +48,8 @@ type IProkerV3Repository interface {
 	IsUnitUnderAssignedFaculties(ctx context.Context, itemUnitID *int, itemUnitUUID string, assignedUnitIDs []uint) (bool, error)
 	CreateDokumen(ctx context.Context, doc *MatrixProkerDokumen) error
 	DeleteDokumen(ctx context.Context, uid uuid.UUID) error
-	UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, status, catatan, catatanPenolakan string) (*MatrixProkerDokumen, error)
+	EnsureDokumenVerifikasiColumns(ctx context.Context) error
+	UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, update DokumenVerifikasiUpdate) (*MatrixProkerDokumen, error)
 
 	// App Settings & Proker Batal
 	EnsureAppSettingsTable(ctx context.Context) error

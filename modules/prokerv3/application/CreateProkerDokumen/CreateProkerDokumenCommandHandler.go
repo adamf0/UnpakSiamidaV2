@@ -13,6 +13,15 @@ func (h *CreateProkerDokumenCommandHandler) Handle(ctx context.Context, cmd Crea
 	if cmd.Dokumen == nil {
 		return nil, domain.DokumenEmpty()
 	}
+	if cmd.Dokumen.StatusVerifikasi == "" {
+		cmd.Dokumen.StatusVerifikasi = "belum_terverifikasi"
+	}
+	if cmd.Dokumen.StatusVerifikasiFakultas == "" {
+		cmd.Dokumen.StatusVerifikasiFakultas = "belum_terverifikasi"
+	}
+	if cmd.Dokumen.StatusVerifikasiAdmin == "" {
+		cmd.Dokumen.StatusVerifikasiAdmin = "belum_terverifikasi"
+	}
 	if err := h.Repo.CreateDokumen(ctx, cmd.Dokumen); err != nil {
 		return nil, err
 	}

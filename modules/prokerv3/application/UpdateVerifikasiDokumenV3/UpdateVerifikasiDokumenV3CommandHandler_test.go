@@ -15,9 +15,7 @@ type mockVerifikasiDokumenRepo struct {
 	docCtx            *domain.DokumenUnitContext
 	docCtxErr         error
 	underFaculty      bool
-	updatedStatus     string
-	updatedCatatan    string
-	updatedPenolakan  string
+	lastUpdate        domain.DokumenVerifikasiUpdate
 	updateCalledCount int
 }
 
@@ -29,14 +27,25 @@ func (m *mockVerifikasiDokumenRepo) IsUnitUnderAssignedFaculties(ctx context.Con
 	return m.underFaculty, nil
 }
 
-func (m *mockVerifikasiDokumenRepo) UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, status, catatan, catatanPenolakan string) (*domain.MatrixProkerDokumen, error) {
+func (m *mockVerifikasiDokumenRepo) UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, update domain.DokumenVerifikasiUpdate) (*domain.MatrixProkerDokumen, error) {
 	m.updateCalledCount++
-	m.updatedStatus = status
-	m.updatedCatatan = catatan
-	m.updatedPenolakan = catatanPenolakan
+	m.lastUpdate = update
 	doc := m.docCtx.Dokumen
-	doc.StatusVerifikasi = status
-	doc.CatatanPenolakan = catatanPenolakan
+	doc.StatusVerifikasi = update.StatusVerifikasi
+	doc.CatatanPenolakan = update.CatatanPenolakan
+	if update.StatusVerifikasiFakultas != nil {
+		doc.StatusVerifikasiFakultas = *update.StatusVerifikasiFakultas
+	}
+	if update.CatatanTolakFakultas != nil {
+		doc.CatatanTolakFakultas = *update.CatatanTolakFakultas
+	}
+	if update.StatusVerifikasiAdmin != nil {
+		doc.StatusVerifikasiAdmin = *update.StatusVerifikasiAdmin
+	}
+	if update.CatatanTolakAdmin != nil {
+		doc.CatatanTolakAdmin = *update.CatatanTolakAdmin
+	}
+	m.docCtx.Dokumen = doc
 	return &doc, nil
 }
 
@@ -59,10 +68,15 @@ func TestUpdateVerifikasiDokumenV3_Workflow(t *testing.T) {
 	prodiUnitID := 25
 	unitUnitID := 10
 
-	t.Run("prodi: fakultas matching parent verifies to terverifikasi_fakultas", func(t *testing.T) {
+	t.Run("prodi: fakultas reject sets fakultas status & note without touching admin", func(t *testing.T) {
 		repo := &mockVerifikasiDokumenRepo{
 			docCtx: &domain.DokumenUnitContext{
-				Dokumen:          domain.MatrixProkerDokumen{UUID: docID, StatusVerifikasi: "belum_terverifikasi"},
+				Dokumen: domain.MatrixProkerDokumen{
+					UUID:                     docID,
+					StatusVerifikasi:         "belum_terverifikasi",
+					StatusVerifikasiFakultas: "belum_terverifikasi",
+					StatusVerifikasiAdmin:    "belum_terverifikasi",
+				},
 				IdFakultasUnit:   &prodiUnitID,
 				TypeFakultasUnit: "prodi",
 				NamaFakultasUnit: "ILMU KOMPUTER",
@@ -70,17 +84,92 @@ func TestUpdateVerifikasiDokumenV3_Workflow(t *testing.T) {
 			},
 		}
 		h := &UpdateVerifikasiDokumenV3CommandHandler{Repo: repo}
+
 		res, err := h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
 			DocUUID:           docID.String(),
-			StatusVerifikasi:  "terverifikasi",
+			StatusVerifikasi:  "ditolak",
+			CatatanPenolakan:  "SK belum ditandatangani Dekan",
 			ActorLevel:        "fakultas",
 			AssignedUnitNames: []string{"MIPA"},
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if res.StatusVerifikasi != "terverifikasi_fakultas" || repo.updatedStatus != "terverifikasi_fakultas" {
-			t.Fatalf("expected terverifikasi_fakultas, got %s", res.StatusVerifikasi)
+		if res.StatusVerifikasiFakultas != "ditolak" || res.CatatanTolakFakultas != "SK belum ditandatangani Dekan" {
+			t.Fatalf("unexpected faculty state: %+v", res)
+		}
+		if res.StatusVerifikasiAdmin != "belum_terverifikasi" || res.CatatanTolakAdmin != "" {
+			t.Fatalf("admin fields should remain empty: %+v", res)
+		}
+		// Admin still cannot reject or verify while rejected by faculty
+		_, err = h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
+			DocUUID:          docID.String(),
+			StatusVerifikasi: "ditolak",
+			CatatanPenolakan: "coba tolak admin",
+			ActorLevel:       "admin",
+		})
+		assertDomainErrorCode(t, err, "ProkerV3.DokumenProdiRejectRequiresFacultyFirst")
+	})
+
+	t.Run("prodi: fakultas verifies then admin rejects keeping fakultas verified", func(t *testing.T) {
+		repo := &mockVerifikasiDokumenRepo{
+			docCtx: &domain.DokumenUnitContext{
+				Dokumen: domain.MatrixProkerDokumen{
+					UUID:                     docID,
+					StatusVerifikasi:         "belum_terverifikasi",
+					StatusVerifikasiFakultas: "belum_terverifikasi",
+					StatusVerifikasiAdmin:    "belum_terverifikasi",
+				},
+				IdFakultasUnit:   &prodiUnitID,
+				TypeFakultasUnit: "prodi",
+				NamaFakultasUnit: "ILMU KOMPUTER",
+				ParentFakultas:   "MIPA",
+			},
+		}
+		h := &UpdateVerifikasiDokumenV3CommandHandler{Repo: repo}
+
+		// Step 1: Fakultas verifies
+		res, err := h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
+			DocUUID:           docID.String(),
+			StatusVerifikasi:  "terverifikasi_fakultas",
+			ActorLevel:        "fakultas",
+			AssignedUnitNames: []string{"MIPA"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.StatusVerifikasi != "terverifikasi_fakultas" || res.StatusVerifikasiFakultas != "terverifikasi" || res.StatusVerifikasiAdmin != "belum_terverifikasi" {
+			t.Fatalf("unexpected state after faculty verify: %+v", res)
+		}
+
+		// Step 2: Admin rejects with admin-specific note
+		res, err = h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
+			DocUUID:          docID.String(),
+			StatusVerifikasi: "ditolak",
+			CatatanPenolakan: "Lampiran RAB kurang detail",
+			ActorLevel:       "admin",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.StatusVerifikasiFakultas != "terverifikasi" || res.CatatanTolakFakultas != "" {
+			t.Fatalf("faculty verification must stay intact: %+v", res)
+		}
+		if res.StatusVerifikasiAdmin != "ditolak" || res.CatatanTolakAdmin != "Lampiran RAB kurang detail" || res.StatusVerifikasi != "ditolak" {
+			t.Fatalf("admin rejection fields not set properly: %+v", res)
+		}
+
+		// Step 3: Admin can later approve directly because faculty is still verified
+		res, err = h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
+			DocUUID:          docID.String(),
+			StatusVerifikasi: "terverifikasi",
+			ActorLevel:       "admin",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.StatusVerifikasi != "terverifikasi" || res.StatusVerifikasiAdmin != "terverifikasi" || res.CatatanTolakAdmin != "" {
+			t.Fatalf("expected full verified state: %+v", res)
 		}
 	})
 
@@ -104,72 +193,9 @@ func TestUpdateVerifikasiDokumenV3_Workflow(t *testing.T) {
 			AssignedUnitNames: []string{"HUKUM"},
 		})
 		assertDomainErrorCode(t, err, "ProkerV3.VerifikasiDokumenOutsideFaculty")
-		if repo.updateCalledCount != 0 {
-			t.Fatalf("expected no repo update")
-		}
 	})
 
-	t.Run("prodi: admin cannot verify or reject before fakultas verifies", func(t *testing.T) {
-		repo := &mockVerifikasiDokumenRepo{
-			docCtx: &domain.DokumenUnitContext{
-				Dokumen:          domain.MatrixProkerDokumen{UUID: docID, StatusVerifikasi: "belum_terverifikasi"},
-				IdFakultasUnit:   &prodiUnitID,
-				TypeFakultasUnit: "prodi",
-				NamaFakultasUnit: "ILMU KOMPUTER",
-				ParentFakultas:   "MIPA",
-			},
-		}
-		h := &UpdateVerifikasiDokumenV3CommandHandler{Repo: repo}
-
-		_, err := h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
-			DocUUID:          docID.String(),
-			StatusVerifikasi: "terverifikasi",
-			ActorLevel:       "admin",
-		})
-		assertDomainErrorCode(t, err, "ProkerV3.DokumenProdiRequiresFacultyFirst")
-
-		_, err = h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
-			DocUUID:          docID.String(),
-			StatusVerifikasi: "ditolak",
-			CatatanPenolakan: "kurang lengkap",
-			ActorLevel:       "admin",
-		})
-		assertDomainErrorCode(t, err, "ProkerV3.DokumenProdiRejectRequiresFacultyFirst")
-	})
-
-	t.Run("prodi: admin can verify and reject after terverifikasi_fakultas", func(t *testing.T) {
-		repo := &mockVerifikasiDokumenRepo{
-			docCtx: &domain.DokumenUnitContext{
-				Dokumen:          domain.MatrixProkerDokumen{UUID: docID, StatusVerifikasi: "terverifikasi_fakultas"},
-				IdFakultasUnit:   &prodiUnitID,
-				TypeFakultasUnit: "prodi",
-				NamaFakultasUnit: "ILMU KOMPUTER",
-				ParentFakultas:   "MIPA",
-			},
-		}
-		h := &UpdateVerifikasiDokumenV3CommandHandler{Repo: repo}
-
-		res, err := h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
-			DocUUID:          docID.String(),
-			StatusVerifikasi: "terverifikasi",
-			ActorLevel:       "admin",
-		})
-		if err != nil || res.StatusVerifikasi != "terverifikasi" {
-			t.Fatalf("expected terverifikasi, got %v err=%v", res, err)
-		}
-
-		res, err = h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
-			DocUUID:          docID.String(),
-			StatusVerifikasi: "ditolak",
-			CatatanPenolakan: "perbaiki lampiran",
-			ActorLevel:       "admin",
-		})
-		if err != nil || res.StatusVerifikasi != "ditolak" {
-			t.Fatalf("expected ditolak, got %v err=%v", res, err)
-		}
-	})
-
-	t.Run("non-prodi: fakultas blocked, admin verifies directly", func(t *testing.T) {
+	t.Run("non-prodi: fakultas blocked, admin verifies/rejects on admin columns", func(t *testing.T) {
 		repo := &mockVerifikasiDokumenRepo{
 			docCtx: &domain.DokumenUnitContext{
 				Dokumen:          domain.MatrixProkerDokumen{UUID: docID, StatusVerifikasi: "belum_terverifikasi"},
@@ -189,11 +215,12 @@ func TestUpdateVerifikasiDokumenV3_Workflow(t *testing.T) {
 
 		res, err := h.Handle(context.Background(), UpdateVerifikasiDokumenV3Command{
 			DocUUID:          docID.String(),
-			StatusVerifikasi: "terverifikasi",
+			StatusVerifikasi: "ditolak",
+			CatatanPenolakan: "Format file salah",
 			ActorLevel:       "admin",
 		})
-		if err != nil || res.StatusVerifikasi != "terverifikasi" {
-			t.Fatalf("expected terverifikasi, got %v err=%v", res, err)
+		if err != nil || res.StatusVerifikasiAdmin != "ditolak" || res.CatatanTolakAdmin != "Format file salah" {
+			t.Fatalf("unexpected non-prodi admin reject: %+v err=%v", res, err)
 		}
 	})
 }

@@ -42,7 +42,14 @@ func (h *UpdateVerifikasiDokumenV3CommandHandler) Handle(ctx context.Context, cm
 		return nil, domain.DokumenNotFound()
 	}
 
-	finalStatus := status
+	alasan := strings.TrimSpace(cmd.CatatanPenolakan)
+	if alasan == "" {
+		alasan = strings.TrimSpace(cmd.Catatan)
+	}
+
+	strPtr := func(v string) *string { return &v }
+	var update domain.DokumenVerifikasiUpdate
+
 	if docCtx.IsProdi() {
 		// Unit pengusul bertipe PRODI: verifikasi fakultas terlebih dahulu, lalu verifikasi admin
 		if level == "fakultas" || level == "upmf" {
@@ -53,26 +60,50 @@ func (h *UpdateVerifikasiDokumenV3CommandHandler) Handle(ctx context.Context, cm
 			if !allowed {
 				return nil, domain.VerifikasiDokumenOutsideFaculty()
 			}
-			if docCtx.Dokumen.StatusVerifikasi == "terverifikasi" {
+			if docCtx.Dokumen.IsVerifiedByAdmin() {
 				return nil, domain.DokumenAlreadyVerifiedByAdmin()
 			}
 			if isReject {
-				finalStatus = "ditolak"
+				update = domain.DokumenVerifikasiUpdate{
+					StatusVerifikasi:         "ditolak",
+					StatusVerifikasiFakultas: strPtr("ditolak"),
+					CatatanTolakFakultas:     strPtr(alasan),
+					StatusVerifikasiAdmin:    strPtr("belum_terverifikasi"),
+					CatatanTolakAdmin:        strPtr(""),
+					CatatanPenolakan:         alasan,
+				}
 			} else {
-				finalStatus = "terverifikasi_fakultas"
+				update = domain.DokumenVerifikasiUpdate{
+					StatusVerifikasi:         "terverifikasi_fakultas",
+					StatusVerifikasiFakultas: strPtr("terverifikasi"),
+					CatatanTolakFakultas:     strPtr(""),
+					StatusVerifikasiAdmin:    strPtr("belum_terverifikasi"),
+					CatatanTolakAdmin:        strPtr(""),
+					CatatanPenolakan:         "",
+				}
 			}
 		} else {
 			// level == "admin"
 			if isReject {
-				if docCtx.Dokumen.StatusVerifikasi != "terverifikasi_fakultas" && docCtx.Dokumen.StatusVerifikasi != "terverifikasi" {
+				if !docCtx.Dokumen.IsVerifiedByFakultas() && !docCtx.Dokumen.IsVerifiedByAdmin() {
 					return nil, domain.DokumenProdiRejectRequiresFacultyFirst()
 				}
-				finalStatus = "ditolak"
+				update = domain.DokumenVerifikasiUpdate{
+					StatusVerifikasi:      "ditolak",
+					StatusVerifikasiAdmin: strPtr("ditolak"),
+					CatatanTolakAdmin:     strPtr(alasan),
+					CatatanPenolakan:      alasan,
+				}
 			} else {
-				if docCtx.Dokumen.StatusVerifikasi != "terverifikasi_fakultas" {
+				if !docCtx.Dokumen.IsVerifiedByFakultas() {
 					return nil, domain.DokumenProdiRequiresFacultyFirst()
 				}
-				finalStatus = "terverifikasi"
+				update = domain.DokumenVerifikasiUpdate{
+					StatusVerifikasi:      "terverifikasi",
+					StatusVerifikasiAdmin: strPtr("terverifikasi"),
+					CatatanTolakAdmin:     strPtr(""),
+					CatatanPenolakan:      "",
+				}
 			}
 		}
 	} else {
@@ -81,13 +112,23 @@ func (h *UpdateVerifikasiDokumenV3CommandHandler) Handle(ctx context.Context, cm
 			return nil, domain.DokumenNonProdiAdminOnly()
 		}
 		if isReject {
-			finalStatus = "ditolak"
+			update = domain.DokumenVerifikasiUpdate{
+				StatusVerifikasi:      "ditolak",
+				StatusVerifikasiAdmin: strPtr("ditolak"),
+				CatatanTolakAdmin:     strPtr(alasan),
+				CatatanPenolakan:      alasan,
+			}
 		} else {
-			finalStatus = "terverifikasi"
+			update = domain.DokumenVerifikasiUpdate{
+				StatusVerifikasi:      "terverifikasi",
+				StatusVerifikasiAdmin: strPtr("terverifikasi"),
+				CatatanTolakAdmin:     strPtr(""),
+				CatatanPenolakan:      "",
+			}
 		}
 	}
 
-	return h.Repo.UpdateVerifikasiDokumen(ctx, docUUID, finalStatus, cmd.Catatan, cmd.CatatanPenolakan)
+	return h.Repo.UpdateVerifikasiDokumen(ctx, docUUID, update)
 }
 
 func (h *UpdateVerifikasiDokumenV3CommandHandler) canFacultyVerify(

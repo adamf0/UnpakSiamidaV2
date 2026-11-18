@@ -1104,26 +1104,82 @@ func (r *ProkerV3Repository) DeleteDokumen(ctx context.Context, uid uuid.UUID) e
 	return nil
 }
 
-func (r *ProkerV3Repository) UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, status, catatan, catatanPenolakan string) (*domain.MatrixProkerDokumen, error) {
+func (r *ProkerV3Repository) EnsureDokumenVerifikasiColumns(ctx context.Context) error {
+	migrator := r.db.WithContext(ctx).Migrator()
+	if !migrator.HasTable(&domain.MatrixProkerDokumen{}) {
+		return nil
+	}
+
+	addedAny := false
+	for _, field := range []string{
+		"StatusVerifikasiFakultas",
+		"CatatanTolakFakultas",
+		"StatusVerifikasiAdmin",
+		"CatatanTolakAdmin",
+	} {
+		if !migrator.HasColumn(&domain.MatrixProkerDokumen{}, field) {
+			if err := migrator.AddColumn(&domain.MatrixProkerDokumen{}, field); err != nil {
+				return err
+			}
+			addedAny = true
+		}
+	}
+
+	// Backfill status lama ke kolom terpisah agar data historis langsung konsisten
+	if addedAny {
+		_ = r.db.WithContext(ctx).Exec(`
+			UPDATE matrix_proker_dokumen
+			SET status_verifikasi_admin = 'terverifikasi'
+			WHERE status_verifikasi = 'terverifikasi'
+			  AND (status_verifikasi_admin IS NULL OR status_verifikasi_admin = '' OR status_verifikasi_admin = 'belum_terverifikasi')
+		`).Error
+		_ = r.db.WithContext(ctx).Exec(`
+			UPDATE matrix_proker_dokumen
+			SET status_verifikasi_fakultas = 'terverifikasi'
+			WHERE status_verifikasi = 'terverifikasi_fakultas'
+			  AND (status_verifikasi_fakultas IS NULL OR status_verifikasi_fakultas = '' OR status_verifikasi_fakultas = 'belum_terverifikasi')
+		`).Error
+		_ = r.db.WithContext(ctx).Exec(`
+			UPDATE matrix_proker_dokumen mpd
+			JOIN matrix_proker mp ON mp.id = mpd.id_matrik_proker
+			JOIN v_fakultas_unit fu ON fu.id = mp.id_fakultas_unit
+			SET mpd.status_verifikasi_fakultas = 'terverifikasi'
+			WHERE mpd.status_verifikasi = 'terverifikasi'
+			  AND LOWER(TRIM(COALESCE(fu.type, ''))) = 'prodi'
+			  AND (mpd.status_verifikasi_fakultas IS NULL OR mpd.status_verifikasi_fakultas = '' OR mpd.status_verifikasi_fakultas = 'belum_terverifikasi')
+		`).Error
+	}
+
+	return nil
+}
+
+func (r *ProkerV3Repository) UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, update domain.DokumenVerifikasiUpdate) (*domain.MatrixProkerDokumen, error) {
 	var doc domain.MatrixProkerDokumen
 	if err := r.db.WithContext(ctx).Where("uuid = ?", uid).First(&doc).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.DokumenNotFound()
+		}
 		return nil, err
 	}
 
-	status = strings.TrimSpace(status)
+	status := strings.TrimSpace(update.StatusVerifikasi)
 	if status == "" {
 		status = "terverifikasi"
 	}
 	doc.StatusVerifikasi = status
+	doc.CatatanPenolakan = strings.TrimSpace(update.CatatanPenolakan)
 
-	if status == "ditolak" || status == "gagal_terverifikasi" {
-		alasan := strings.TrimSpace(catatanPenolakan)
-		if alasan == "" {
-			alasan = strings.TrimSpace(catatan)
-		}
-		doc.CatatanPenolakan = alasan
-	} else if status == "terverifikasi" || status == "terverifikasi_fakultas" {
-		doc.CatatanPenolakan = ""
+	if update.StatusVerifikasiFakultas != nil {
+		doc.StatusVerifikasiFakultas = strings.TrimSpace(*update.StatusVerifikasiFakultas)
+	}
+	if update.CatatanTolakFakultas != nil {
+		doc.CatatanTolakFakultas = strings.TrimSpace(*update.CatatanTolakFakultas)
+	}
+	if update.StatusVerifikasiAdmin != nil {
+		doc.StatusVerifikasiAdmin = strings.TrimSpace(*update.StatusVerifikasiAdmin)
+	}
+	if update.CatatanTolakAdmin != nil {
+		doc.CatatanTolakAdmin = strings.TrimSpace(*update.CatatanTolakAdmin)
 	}
 	doc.UpdatedAt = time.Now()
 
