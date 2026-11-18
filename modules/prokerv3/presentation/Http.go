@@ -591,24 +591,7 @@ func DeleteProkerV3Handlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
-	type deleteProkerBody struct {
-		Catatan      string `json:"catatan"`
-		Alasan       string `json:"alasan"`
-		CatatanHapus string `json:"catatan_hapus"`
-	}
-	var body deleteProkerBody
-	_ = c.BodyParser(&body)
-
-	catatan := strings.TrimSpace(body.Catatan)
-	if catatan == "" {
-		catatan = strings.TrimSpace(body.Alasan)
-	}
-	if catatan == "" {
-		catatan = strings.TrimSpace(body.CatatanHapus)
-	}
-	if catatan == "" {
-		catatan = strings.TrimSpace(c.FormValue("catatan"))
-	}
+	catatan := strings.TrimSpace(c.FormValue("catatan"))
 	if catatan == "" {
 		catatan = strings.TrimSpace(c.FormValue("alasan"))
 	}
@@ -875,23 +858,12 @@ func UpdateProkerStatusHandler(c *fiber.Ctx) error {
 		rawUuid = c.Query("uuid")
 	}
 
-	var cmd updateStatus.UpdateStatusV3Command
-	_ = c.BodyParser(&cmd)
-
-	if val := c.FormValue("status"); val != "" {
-		cmd.Status = val
-	}
-	if val := c.FormValue("role"); val != "" {
-		cmd.Role = val
-	}
-	if val := c.FormValue("catatan_penolakan"); val != "" {
-		cmd.CatatanPenolakan = val
-	}
-	if val := c.FormValue("alasan"); val != "" {
-		cmd.Alasan = val
-	}
-	if val := c.FormValue("catatan"); val != "" {
-		cmd.Catatan = val
+	cmd := updateStatus.UpdateStatusV3Command{
+		Status:           strings.TrimSpace(c.FormValue("status")),
+		Role:             strings.TrimSpace(c.FormValue("role")),
+		CatatanPenolakan: strings.TrimSpace(c.FormValue("catatan_penolakan")),
+		Alasan:           strings.TrimSpace(c.FormValue("alasan")),
+		Catatan:          strings.TrimSpace(c.FormValue("catatan")),
 	}
 
 	level, userFU := commonpresentation.GetUserInfo(c)
@@ -1497,24 +1469,61 @@ func UpdateProkerBatalSettingHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Hanya admin yang dapat mengubah pengaturan pembatalan proker"})
 	}
 
-	var cmd UpdateProkerBatalSetting.UpdateProkerBatalSettingCommand
-	_ = c.BodyParser(&cmd)
-	cmd.IsAdmin = isAdmin
+	cmd := UpdateProkerBatalSetting.UpdateProkerBatalSettingCommand{
+		Action:  strings.TrimSpace(c.FormValue("action")),
+		IsAdmin: isAdmin,
+	}
 
 	if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
 		cmd.ActorSID = u.NidnUsername
 	}
 
-	if cmd.GlobalDate == nil && c.FormValue("global_date") != "" {
-		val := strings.TrimSpace(c.FormValue("global_date"))
+	if val := strings.TrimSpace(c.FormValue("proker_batal_aktif_tanggal")); val != "" {
+		cmd.ProkerBatalAktifTanggal = &val
+	}
+	if val := strings.TrimSpace(c.FormValue("global_date")); val != "" {
 		cmd.GlobalDate = &val
 	}
-	if cmd.Tanggal == nil && c.FormValue("tanggal") != "" {
-		val := strings.TrimSpace(c.FormValue("tanggal"))
+	if val := strings.TrimSpace(c.FormValue("tanggal")); val != "" {
 		cmd.Tanggal = &val
 	}
-	if cmd.Action == "" && c.FormValue("action") != "" {
-		cmd.Action = strings.TrimSpace(c.FormValue("action"))
+	if val := strings.TrimSpace(c.FormValue("active_date")); val != "" {
+		cmd.ActiveDate = &val
+	}
+	if val := strings.TrimSpace(c.FormValue("unit_id")); val != "" {
+		if id, err := strconv.Atoi(val); err == nil {
+			cmd.UnitID = &id
+		}
+	}
+	if val := strings.TrimSpace(c.FormValue("delete_unit_id")); val != "" {
+		if id, err := strconv.Atoi(val); err == nil {
+			cmd.DeleteUnitID = &id
+		}
+	}
+
+	var rawTargets []string
+	if form, err := c.MultipartForm(); err == nil && form != nil {
+		rawTargets = append(rawTargets, form.Value["target_units[]"]...)
+		rawTargets = append(rawTargets, form.Value["target_units"]...)
+	}
+	if len(rawTargets) == 0 {
+		if csv := strings.TrimSpace(c.FormValue("target_units")); csv != "" {
+			rawTargets = strings.Split(csv, ",")
+		}
+	}
+	for _, rt := range rawTargets {
+		for _, part := range strings.Split(rt, ",") {
+			if id, err := strconv.Atoi(strings.TrimSpace(part)); err == nil && id > 0 {
+				cmd.TargetUnits = append(cmd.TargetUnits, id)
+			}
+		}
+	}
+
+	if unitsRaw := strings.TrimSpace(c.FormValue("units")); unitsRaw != "" {
+		var parsedUnits []domain.UnitBatalSchedule
+		if err := json.Unmarshal([]byte(unitsRaw), &parsedUnits); err == nil {
+			cmd.Units = &parsedUnits
+		}
 	}
 
 	result, err := mediatr.Send[

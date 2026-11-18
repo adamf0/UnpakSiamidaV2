@@ -77,61 +77,21 @@ func UpdateProfileHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	type updateProfileBody struct {
-		Username        string `json:"username" form:"username"`
-		NidnUsername    string `json:"nidn_username" form:"nidn_username"`
-		Name            string `json:"name" form:"name"`
-		Email           string `json:"email" form:"email"`
-		CurrentPassword string `json:"current_password" form:"current_password"`
-		NewPassword     string `json:"new_password" form:"new_password"`
-		Password        string `json:"password" form:"password"`
-		ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
-	}
-
-	var body updateProfileBody
-	_ = c.BodyParser(&body)
-
-	username := body.Username
-	if strings.TrimSpace(username) == "" {
-		username = body.NidnUsername
-	}
-	if strings.TrimSpace(username) == "" {
-		username = c.FormValue("username")
-	}
+	username := c.FormValue("username")
 	if strings.TrimSpace(username) == "" {
 		username = c.FormValue("nidn_username")
 	}
 
-	name := body.Name
-	if strings.TrimSpace(name) == "" {
-		name = c.FormValue("name")
-	}
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+	currentPassword := c.FormValue("current_password")
 
-	email := body.Email
-	if email == "" {
-		email = c.FormValue("email")
-	}
-
-	currentPassword := body.CurrentPassword
-	if currentPassword == "" {
-		currentPassword = c.FormValue("current_password")
-	}
-
-	newPassword := body.NewPassword
-	if strings.TrimSpace(newPassword) == "" {
-		newPassword = body.Password
-	}
-	if strings.TrimSpace(newPassword) == "" {
-		newPassword = c.FormValue("new_password")
-	}
+	newPassword := c.FormValue("new_password")
 	if strings.TrimSpace(newPassword) == "" {
 		newPassword = c.FormValue("password")
 	}
 
-	confirmPassword := body.ConfirmPassword
-	if strings.TrimSpace(confirmPassword) == "" {
-		confirmPassword = c.FormValue("confirm_password")
-	}
+	confirmPassword := c.FormValue("confirm_password")
 
 	cmd := updateprofile.UpdateProfileCommand{
 		SID:             strings.TrimSpace(userID),

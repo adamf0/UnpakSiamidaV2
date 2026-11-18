@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -471,15 +472,16 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 
 // POST /proker_v3/timeline/reorder
 func ReorderTimelineHandler(c *fiber.Ctx) error {
-	type reorderBody struct {
-		Items []domain.ReorderTimelineItem `json:"items"`
+	itemsRaw := strings.TrimSpace(c.FormValue("items"))
+	if itemsRaw == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Field items wajib diisi"})
 	}
-	var body reorderBody
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	var items []domain.ReorderTimelineItem
+	if err := json.Unmarshal([]byte(itemsRaw), &items); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format items tidak valid"})
 	}
 
-	msg, err := mediatr.Send[reorderTimeline.ReorderTimelineV3Command, string](c.Context(), reorderTimeline.ReorderTimelineV3Command{Items: body.Items})
+	msg, err := mediatr.Send[reorderTimeline.ReorderTimelineV3Command, string](c.Context(), reorderTimeline.ReorderTimelineV3Command{Items: items})
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
