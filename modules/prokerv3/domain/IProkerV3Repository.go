@@ -44,6 +44,8 @@ type IProkerV3Repository interface {
 	GetDokumenByMatrikId(ctx context.Context, matrikID uint) ([]MatrixProkerDokumen, error)
 	GetAktivitasOptionsByMatrikId(ctx context.Context, matrikID uint) ([]AktivitasDokumenOption, error)
 	GetDokumenByUuid(ctx context.Context, uid uuid.UUID) (*MatrixProkerDokumen, error)
+	GetDokumenUnitContextByUuid(ctx context.Context, uid uuid.UUID) (*DokumenUnitContext, error)
+	IsUnitUnderAssignedFaculties(ctx context.Context, itemUnitID *int, itemUnitUUID string, assignedUnitIDs []uint) (bool, error)
 	CreateDokumen(ctx context.Context, doc *MatrixProkerDokumen) error
 	DeleteDokumen(ctx context.Context, uid uuid.UUID) error
 	UpdateVerifikasiDokumen(ctx context.Context, uid uuid.UUID, status, catatan, catatanPenolakan string) (*MatrixProkerDokumen, error)

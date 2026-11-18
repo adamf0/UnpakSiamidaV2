@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,4 +29,18 @@ type MatrixProkerDokumen struct {
 
 func (MatrixProkerDokumen) TableName() string {
 	return "matrix_proker_dokumen"
+}
+
+type DokumenUnitContext struct {
+	Dokumen          MatrixProkerDokumen
+	IdFakultasUnit   *int   `gorm:"column:id_fakultas_unit"`
+	TypeFakultasUnit string `gorm:"column:type_fakultas_unit"`
+	ParentFakultas   string `gorm:"column:parent_fakultas"`
+	NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
+	UuidFakultasUnit string `gorm:"column:uuid_fakultas_unit"`
+}
+
+func (d DokumenUnitContext) IsProdi() bool {
+	return strings.EqualFold(strings.TrimSpace(d.TypeFakultasUnit), "prodi") ||
+		strings.Contains(strings.ToLower(d.NamaFakultasUnit), "prodi")
 }

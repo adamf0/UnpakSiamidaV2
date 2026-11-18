@@ -88,34 +88,11 @@ func canAccessAktivitasProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID st
 	if len(assignedUnitIDs) == 0 && userFU != "" {
 		if id, err := strconv.Atoi(userFU); err == nil && id > 0 {
 			assignedUnitIDs = append(assignedUnitIDs, uint(id))
-		} else if _, err := uuid.Parse(userFU); err == nil && aktivitasDb != nil {
-			var fuID uint
-			if err := aktivitasDb.Table("v_fakultas_unit").Where("uuid = ?", userFU).Pluck("id", &fuID).Error; err == nil && fuID > 0 {
-				assignedUnitIDs = append(assignedUnitIDs, fuID)
-			}
 		}
 	}
 	if len(assignedUnitIDs) == 0 && u != nil && u.FakultasUnit != "" {
 		if id, err := strconv.Atoi(u.FakultasUnit); err == nil && id > 0 {
 			assignedUnitIDs = append(assignedUnitIDs, uint(id))
-		} else if _, err := uuid.Parse(u.FakultasUnit); err == nil && aktivitasDb != nil {
-			var fuID uint
-			if err := aktivitasDb.Table("v_fakultas_unit").Where("uuid = ?", u.FakultasUnit).Pluck("id", &fuID).Error; err == nil && fuID > 0 {
-				assignedUnitIDs = append(assignedUnitIDs, fuID)
-			}
-		}
-	}
-	if u != nil && strings.TrimSpace(u.NamaFakultasUnit) != "" {
-		assignedUnitNames = append(assignedUnitNames, strings.TrimSpace(u.NamaFakultasUnit))
-	}
-	if len(assignedUnitNames) == 0 && aktivitasDb != nil && len(assignedUnitIDs) > 0 {
-		var names []string
-		if err := aktivitasDb.Table("v_fakultas_unit").Where("id IN (?)", assignedUnitIDs).Pluck("nama_fak_prod_unit", &names).Error; err == nil {
-			for _, n := range names {
-				if strings.TrimSpace(n) != "" {
-					assignedUnitNames = append(assignedUnitNames, strings.TrimSpace(n))
-				}
-			}
 		}
 	}
 
@@ -143,11 +120,11 @@ func canAccessAktivitasProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID st
 		return false
 	}
 
-	// 3. UPMF & FAKULTAS: Akses 1 tipe fakultas
+	// 3. UPMF / Fakultas: Akses 1 tipe fakultas beserta prodi di bawahnya
 	if level == "upmf" || level == "fakultas" {
 		if pFaculty != "" {
 			for _, aname := range assignedUnitNames {
-				if strings.EqualFold(pFaculty, aname) || strings.Contains(strings.ToLower(aname), strings.ToLower(pFaculty)) || strings.Contains(strings.ToLower(pFaculty), strings.ToLower(aname)) {
+				if strings.EqualFold(pFaculty, aname) {
 					return true
 				}
 			}

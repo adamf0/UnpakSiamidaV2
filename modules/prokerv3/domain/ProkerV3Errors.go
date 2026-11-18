@@ -96,6 +96,62 @@ func DokumenEmpty() commondomain.Error {
 	)
 }
 
+func DokumenNotFound() commondomain.Error {
+	return commondomain.NotFoundError(
+		"ProkerV3.DokumenNotFound",
+		"Dokumen tidak ditemukan",
+	)
+}
+
+func DokumenProkerNotFound() commondomain.Error {
+	return commondomain.NotFoundError(
+		"ProkerV3.DokumenProkerNotFound",
+		"Data program kerja dokumen tidak ditemukan",
+	)
+}
+
+func VerifikasiDokumenForbidden() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.VerifikasiDokumenForbidden",
+		"Hanya level admin atau fakultas yang dapat memverifikasi dokumen",
+	)
+}
+
+func VerifikasiDokumenOutsideFaculty() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.VerifikasiDokumenOutsideFaculty",
+		"Akses ditolak: prodi bukan di bawah fakultas penugasan anda",
+	)
+}
+
+func DokumenAlreadyVerifiedByAdmin() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DokumenAlreadyVerifiedByAdmin",
+		"Dokumen sudah diverifikasi penuh oleh admin",
+	)
+}
+
+func DokumenProdiRequiresFacultyFirst() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DokumenProdiRequiresFacultyFirst",
+		"Dokumen prodi harus diverifikasi oleh fakultas terlebih dahulu sebelum verifikasi admin",
+	)
+}
+
+func DokumenProdiRejectRequiresFacultyFirst() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DokumenProdiRejectRequiresFacultyFirst",
+		"Dokumen prodi harus diverifikasi oleh fakultas terlebih dahulu sebelum ditolak admin",
+	)
+}
+
+func DokumenNonProdiAdminOnly() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.DokumenNonProdiAdminOnly",
+		"Dokumen unit selain prodi hanya dapat diverifikasi oleh admin",
+	)
+}
+
 func JadwalNotFound() commondomain.Error {
 	return commondomain.NotFoundError(
 		"ProkerV3.JadwalNotFound",

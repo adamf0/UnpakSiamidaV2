@@ -1133,6 +1133,73 @@ func (r *ProkerV3Repository) UpdateVerifikasiDokumen(ctx context.Context, uid uu
 	return &doc, nil
 }
 
+func (r *ProkerV3Repository) GetDokumenUnitContextByUuid(ctx context.Context, uid uuid.UUID) (*domain.DokumenUnitContext, error) {
+	var doc domain.MatrixProkerDokumen
+	if err := r.db.WithContext(ctx).Where("uuid = ?", uid).First(&doc).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.DokumenNotFound()
+		}
+		return nil, err
+	}
+
+	var unitInfo struct {
+		IdFakultasUnit   *int   `gorm:"column:id_fakultas_unit"`
+		TypeFakultasUnit string `gorm:"column:type_fakultas_unit"`
+		ParentFakultas   string `gorm:"column:parent_fakultas"`
+		NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
+		UuidFakultasUnit string `gorm:"column:uuid_fakultas_unit"`
+	}
+	if err := r.db.WithContext(ctx).
+		Table("matrix_proker mp").
+		Select(`
+			mp.id_fakultas_unit,
+			COALESCE(fu.type, '') as type_fakultas_unit,
+			COALESCE(fu.fakultas, '') as parent_fakultas,
+			COALESCE(fu.nama_fak_prod_unit, '') as nama_fak_prod_unit,
+			COALESCE(fu.uuid, '') as uuid_fakultas_unit
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON fu.id = mp.id_fakultas_unit").
+		Where("mp.id = ?", doc.IdMatrikProker).
+		First(&unitInfo).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.DokumenProkerNotFound()
+		}
+		return nil, err
+	}
+
+	return &domain.DokumenUnitContext{
+		Dokumen:          doc,
+		IdFakultasUnit:   unitInfo.IdFakultasUnit,
+		TypeFakultasUnit: unitInfo.TypeFakultasUnit,
+		ParentFakultas:   unitInfo.ParentFakultas,
+		NamaFakultasUnit: unitInfo.NamaFakultasUnit,
+		UuidFakultasUnit: unitInfo.UuidFakultasUnit,
+	}, nil
+}
+
+func (r *ProkerV3Repository) IsUnitUnderAssignedFaculties(ctx context.Context, itemUnitID *int, itemUnitUUID string, assignedUnitIDs []uint) (bool, error) {
+	if len(assignedUnitIDs) == 0 {
+		return false, nil
+	}
+
+	var matchCount int64
+	var q *gorm.DB
+	if itemUnitID != nil && *itemUnitID > 0 {
+		q = r.db.WithContext(ctx).Table("v_fakultas_unit fu").
+			Where("fu.id = ? AND (fu.id IN (?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) IN (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id IN (?) AND type = 'fakultas')))", *itemUnitID, assignedUnitIDs, assignedUnitIDs)
+	} else if strings.TrimSpace(itemUnitUUID) != "" {
+		q = r.db.WithContext(ctx).Table("v_fakultas_unit fu").
+			Where("fu.uuid = ? AND (fu.id IN (?) OR (fu.fakultas IS NOT NULL AND fu.fakultas != '' AND LOWER(TRIM(fu.fakultas)) IN (SELECT LOWER(TRIM(COALESCE(nama_fak_prod_unit, ''))) FROM v_fakultas_unit WHERE id IN (?) AND type = 'fakultas')))", strings.TrimSpace(itemUnitUUID), assignedUnitIDs, assignedUnitIDs)
+	}
+	if q == nil {
+		return false, nil
+	}
+	if err := q.Count(&matchCount).Error; err != nil {
+		return false, err
+	}
+	return matchCount > 0, nil
+}
+
 // ------------------------
 // HISTORY STATE & STATUS
 // ------------------------

@@ -57,19 +57,9 @@ import (
 var prokerDb *gorm.DB
 
 // Helper pengecekan hak akses unit
-func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string, parentFakultas ...string) bool {
-	level, userFU := commonpresentation.GetUserInfo(c)
+func extractActorUnitAssignments(c *fiber.Ctx) (level string, userFU string, assignedUnitIDs []uint, assignedUnitNames []string) {
+	level, userFU = commonpresentation.GetUserInfo(c)
 	level = strings.ToLower(strings.TrimSpace(level))
-
-	// Roles dengan hak akses global ke seluruh unit
-	if level == "admin" || level == "anggaran" || level == "keuangan" || level == "evaluator" || level == "lpm" {
-		return true
-	}
-
-	pFaculty := ""
-	if len(parentFakultas) > 0 {
-		pFaculty = strings.TrimSpace(parentFakultas[0])
-	}
 
 	u, _ := c.Locals("user").(*commonpresentation.Account)
 	activeTahun := strings.TrimSpace(c.Get("X-Active-Year"))
@@ -85,10 +75,6 @@ func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, ite
 	if activeTahun == "" {
 		activeTahun = strings.TrimSpace(c.Query("tahun"))
 	}
-
-	// Kumpulkan penugasan unit untuk role aktif dan tahun aktif
-	var assignedUnitIDs []uint
-	var assignedUnitNames []string
 
 	if u != nil {
 		for _, r := range u.ExtraRole {
@@ -107,39 +93,30 @@ func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, ite
 		}
 	}
 
-	// Fallback ke userFU / u.FakultasUnit jika penugasan ExtraRole tidak terdaftar
 	if len(assignedUnitIDs) == 0 && userFU != "" {
 		if id, err := strconv.Atoi(userFU); err == nil && id > 0 {
 			assignedUnitIDs = append(assignedUnitIDs, uint(id))
-		} else if _, err := uuid.Parse(userFU); err == nil && prokerDb != nil {
-			var fuID uint
-			if err := prokerDb.Table("v_fakultas_unit").Where("uuid = ?", userFU).Pluck("id", &fuID).Error; err == nil && fuID > 0 {
-				assignedUnitIDs = append(assignedUnitIDs, fuID)
-			}
 		}
 	}
 	if len(assignedUnitIDs) == 0 && u != nil && u.FakultasUnit != "" {
 		if id, err := strconv.Atoi(u.FakultasUnit); err == nil && id > 0 {
 			assignedUnitIDs = append(assignedUnitIDs, uint(id))
-		} else if _, err := uuid.Parse(u.FakultasUnit); err == nil && prokerDb != nil {
-			var fuID uint
-			if err := prokerDb.Table("v_fakultas_unit").Where("uuid = ?", u.FakultasUnit).Pluck("id", &fuID).Error; err == nil && fuID > 0 {
-				assignedUnitIDs = append(assignedUnitIDs, fuID)
-			}
 		}
 	}
-	if u != nil && strings.TrimSpace(u.NamaFakultasUnit) != "" {
-		assignedUnitNames = append(assignedUnitNames, strings.TrimSpace(u.NamaFakultasUnit))
+	return
+}
+
+func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string, parentFakultas ...string) bool {
+	level, userFU, assignedUnitIDs, assignedUnitNames := extractActorUnitAssignments(c)
+
+	// Roles dengan hak akses global ke seluruh unit
+	if level == "admin" || level == "anggaran" || level == "keuangan" || level == "evaluator" || level == "lpm" {
+		return true
 	}
-	if len(assignedUnitNames) == 0 && prokerDb != nil && len(assignedUnitIDs) > 0 {
-		var names []string
-		if err := prokerDb.Table("v_fakultas_unit").Where("id IN (?)", assignedUnitIDs).Pluck("nama_fak_prod_unit", &names).Error; err == nil {
-			for _, n := range names {
-				if strings.TrimSpace(n) != "" {
-					assignedUnitNames = append(assignedUnitNames, strings.TrimSpace(n))
-				}
-			}
-		}
+
+	pFaculty := ""
+	if len(parentFakultas) > 0 {
+		pFaculty = strings.TrimSpace(parentFakultas[0])
 	}
 
 	// 1. Cek kecocokan langsung (Direct Match) dengan unit penugasan
@@ -167,11 +144,11 @@ func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, ite
 		return false
 	}
 
-	// 3. UPMF: Dapat mengakses seluruh prodi/unit yang berada di bawah fakultas penugasannya (1 tipe fakultas)
+	// 3. UPMF / Fakultas: Dapat mengakses seluruh prodi/unit yang berada di bawah fakultas penugasannya (1 tipe fakultas)
 	if level == "upmf" || level == "fakultas" {
 		if pFaculty != "" {
 			for _, aname := range assignedUnitNames {
-				if strings.EqualFold(pFaculty, aname) || strings.Contains(strings.ToLower(aname), strings.ToLower(pFaculty)) || strings.Contains(strings.ToLower(pFaculty), strings.ToLower(aname)) {
+				if strings.EqualFold(pFaculty, aname) {
 					return true
 				}
 			}
@@ -1093,120 +1070,27 @@ func DeleteProkerDokumenHandler(c *fiber.Ctx) error {
 // =======================================================
 func UpdateVerifikasiDokumenHandler(c *fiber.Ctx) error {
 	rawUuid := c.Params("doc_uuid")
-	parsedDocUUID, err := uuid.Parse(rawUuid)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid dokumen UUID"})
-	}
 
-	var body struct {
-		StatusVerifikasi string `json:"status_verifikasi"`
-		Catatan          string `json:"catatan"`
-		CatatanPenolakan string `json:"catatan_penolakan"`
-	}
-	_ = c.BodyParser(&body)
-
-	status := strings.TrimSpace(body.StatusVerifikasi)
+	status := strings.TrimSpace(c.FormValue("status_verifikasi"))
 	if status == "" {
-		status = strings.TrimSpace(c.FormValue("status_verifikasi"))
+		status = strings.TrimSpace(c.FormValue("status"))
 	}
-	catatan := strings.TrimSpace(body.Catatan)
-	if catatan == "" {
-		catatan = strings.TrimSpace(c.FormValue("catatan"))
-	}
-	catatanPenolakan := strings.TrimSpace(body.CatatanPenolakan)
-	if catatanPenolakan == "" {
-		catatanPenolakan = strings.TrimSpace(c.FormValue("catatan_penolakan"))
-	}
+	catatan := strings.TrimSpace(c.FormValue("catatan"))
+	catatanPenolakan := strings.TrimSpace(c.FormValue("catatan_penolakan"))
 
-	level, _ := commonpresentation.GetUserInfo(c)
-	level = strings.ToLower(strings.TrimSpace(level))
-
-	if level != "admin" && level != "fakultas" && level != "upmf" {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"code":  "FORBIDDEN",
-			"error": "Hanya level admin atau fakultas yang dapat memverifikasi dokumen",
-		})
-	}
-
-	var doc domain.MatrixProkerDokumen
-	if err := prokerDb.WithContext(c.Context()).Where("uuid = ?", parsedDocUUID).First(&doc).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Dokumen tidak ditemukan"})
-	}
-
-	var unitInfo struct {
-		IdFakultasUnit   *int   `gorm:"column:id_fakultas_unit"`
-		TypeFakultasUnit string `gorm:"column:type_fakultas_unit"`
-		ParentFakultas   string `gorm:"column:parent_fakultas"`
-		NamaFakultasUnit string `gorm:"column:nama_fak_prod_unit"`
-		UuidFakultasUnit string `gorm:"column:uuid_fakultas_unit"`
-	}
-	if err := prokerDb.WithContext(c.Context()).
-		Table("matrix_proker mp").
-		Select(`
-			mp.id_fakultas_unit,
-			COALESCE(fu.type, '') as type_fakultas_unit,
-			COALESCE(fu.fakultas, '') as parent_fakultas,
-			COALESCE(fu.nama_fak_prod_unit, '') as nama_fak_prod_unit,
-			COALESCE(fu.uuid, '') as uuid_fakultas_unit
-		`).
-		Joins("LEFT JOIN v_fakultas_unit fu ON fu.id = mp.id_fakultas_unit").
-		Where("mp.id = ?", doc.IdMatrikProker).
-		First(&unitInfo).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Data program kerja dokumen tidak ditemukan"})
-	}
-
-	isProdi := strings.EqualFold(strings.TrimSpace(unitInfo.TypeFakultasUnit), "prodi") ||
-		strings.Contains(strings.ToLower(unitInfo.NamaFakultasUnit), "prodi")
-
-	finalStatus := status
-	if isProdi {
-		// Unit yang mengajukan bertipe PRODI: perlu verifikasi fakultas lalu verifikasi admin
-		if level == "fakultas" || level == "upmf" {
-			if !canAccessProkerUnit(c, unitInfo.IdFakultasUnit, unitInfo.UuidFakultasUnit, unitInfo.NamaFakultasUnit, unitInfo.ParentFakultas) {
-				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-					"code":  "FORBIDDEN",
-					"error": "Akses ditolak: prodi bukan di bawah fakultas penugasan anda",
-				})
-			}
-			if status == "ditolak" || status == "gagal_terverifikasi" {
-				finalStatus = "ditolak"
-			} else {
-				finalStatus = "terverifikasi_fakultas"
-			}
-		} else if level == "admin" {
-			if status == "ditolak" || status == "gagal_terverifikasi" {
-				finalStatus = "ditolak"
-			} else {
-				if doc.StatusVerifikasi != "terverifikasi_fakultas" {
-					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-						"error": "Dokumen prodi harus diverifikasi oleh fakultas terlebih dahulu sebelum verifikasi admin",
-					})
-				}
-				finalStatus = "terverifikasi"
-			}
-		}
-	} else {
-		// Unit yang mengajukan SELAIN PRODI: cukup verifikasi admin
-		if level == "fakultas" || level == "upmf" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"code":  "FORBIDDEN",
-				"error": "Dokumen unit selain prodi hanya dapat diverifikasi oleh admin",
-			})
-		}
-		if status == "ditolak" || status == "gagal_terverifikasi" {
-			finalStatus = "ditolak"
-		} else {
-			finalStatus = "terverifikasi"
-		}
-	}
+	level, userFU, assignedUnitIDs, assignedUnitNames := extractActorUnitAssignments(c)
 
 	res, err := mediatr.Send[updateVerifikasiDokumen.UpdateVerifikasiDokumenV3Command, *domain.MatrixProkerDokumen](
 		c.Context(),
 		updateVerifikasiDokumen.UpdateVerifikasiDokumenV3Command{
-			DocUUID:          rawUuid,
-			StatusVerifikasi: finalStatus,
-			Catatan:          catatan,
-			CatatanPenolakan: catatanPenolakan,
+			DocUUID:           rawUuid,
+			StatusVerifikasi:  status,
+			Catatan:           catatan,
+			CatatanPenolakan:  catatanPenolakan,
+			ActorLevel:        level,
+			ActorUserFU:       userFU,
+			AssignedUnitIDs:   assignedUnitIDs,
+			AssignedUnitNames: assignedUnitNames,
 		},
 	)
 	if err != nil {
