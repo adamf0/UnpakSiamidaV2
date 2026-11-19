@@ -37,8 +37,8 @@ import (
 // @Param tahun formData string true "Tahun"
 // @Param tipe_target formData string true "Tipe Target"
 // @Param operator formData string false "Operator"
-// @Param target_unpak formData string false "Target Unpak"
-// @Param target_unit formData string false "Target Unit Kerja"
+// @Param target_unpak formData string true "Target Unpak"
+// @Param target_unit formData string true "Target Unit Kerja"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of created IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError
@@ -93,8 +93,8 @@ func CreateIndikatorRenstraHandlerfunc(c *fiber.Ctx) error {
 // @Param tahun formData string true "Tahun"
 // @Param tipe_target formData string true "Tipe Target"
 // @Param operator formData string false "Operator"
-// @Param target_unpak formData string false "Target Unpak"
-// @Param target_unit formData string false "Target Unit Kerja"
+// @Param target_unpak formData string true "Target Unpak"
+// @Param target_unit formData string true "Target Unit Kerja"
 // @Produce json
 // @Success 200 {object} map[string]string "uuid of updated IndikatorRenstra"
 // @Failure 400 {object} commoninfra.ResponseError

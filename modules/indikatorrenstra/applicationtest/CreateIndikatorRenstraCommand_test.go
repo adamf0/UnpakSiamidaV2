@@ -14,6 +14,9 @@ import (
 )
 
 func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
+	targetUnpak := "15 % Dosen"
+	targetUnit := "20 % Dosen Prodi"
+
 	// 1. Without parent (nil)
 	validCmdWithoutParent := app.CreateIndikatorRenstraCommand{
 		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
@@ -22,6 +25,8 @@ func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
 		Tahun:          "2080",
 		TipeTarget:     "numerik",
 		Operator:       nil,
+		TargetUnpak:    &targetUnpak,
+		TargetUnit:     &targetUnit,
 	}
 	err := app.CreateIndikatorRenstraCommandValidation(validCmdWithoutParent)
 	assert.NoError(t, err)
@@ -35,6 +40,8 @@ func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
 		Tahun:          "2080",
 		TipeTarget:     "numerik",
 		Operator:       nil,
+		TargetUnpak:    &targetUnpak,
+		TargetUnit:     &targetUnit,
 	}
 	err = app.CreateIndikatorRenstraCommandValidation(validCmdWithParent)
 	assert.NoError(t, err)
@@ -42,6 +49,8 @@ func TestCreateIndikatorRenstraCommandValidation_Success(t *testing.T) {
 
 func TestCreateIndikatorRenstraCommandValidation_InvalidParent(t *testing.T) {
 	invalidParent := "not-a-valid-uuid"
+	targetUnpak := "15 % Dosen"
+	targetUnit := "20 % Dosen Prodi"
 	invalidCmd := app.CreateIndikatorRenstraCommand{
 		StandarRenstra: "5fd713d0-adfe-4086-a000-21c948faf84d",
 		Indikator:      "Lulusan memiliki sertifikat kompetensi atau Bahasa asing",
@@ -49,6 +58,8 @@ func TestCreateIndikatorRenstraCommandValidation_InvalidParent(t *testing.T) {
 		Tahun:          "2080",
 		TipeTarget:     "numerik",
 		Operator:       nil,
+		TargetUnpak:    &targetUnpak,
+		TargetUnit:     &targetUnit,
 	}
 	err := app.CreateIndikatorRenstraCommandValidation(invalidCmd)
 	assert.Error(t, err)
@@ -64,6 +75,8 @@ func TestCreateIndikatorRenstraCommandValidation_Fail(t *testing.T) {
 		Tahun:          "",
 		TipeTarget:     "",
 		Operator:       nil,
+		TargetUnpak:    nil,
+		TargetUnit:     nil,
 	}
 	err := app.CreateIndikatorRenstraCommandValidation(invalidCmd)
 	assert.Error(t, err)
@@ -71,6 +84,8 @@ func TestCreateIndikatorRenstraCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "Indikator cannot be blank")
 	assert.Contains(t, err.Error(), "Tahun cannot be blank")
 	assert.Contains(t, err.Error(), "Tipe Target cannot be blank")
+	assert.Contains(t, err.Error(), "Target Unpak cannot be blank")
+	assert.Contains(t, err.Error(), "Target Unit cannot be blank")
 }
 
 func TestCreateIndikatorRenstraCommand_Success(t *testing.T) {
