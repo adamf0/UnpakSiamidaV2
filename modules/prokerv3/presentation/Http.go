@@ -1104,6 +1104,24 @@ func sanitizeFolderSegment(s string) string {
 	return s
 }
 
+func getDokumenJenisFolder(jenisDok string) string {
+	j := strings.ToLower(strings.TrimSpace(jenisDok))
+	switch {
+	case strings.Contains(j, "sop"):
+		return "sop"
+	case strings.Contains(j, "proposal") || strings.Contains(j, "tor"):
+		return "proposal_tor"
+	case strings.Contains(j, "laporan"):
+		return "laporan"
+	case strings.Contains(j, "pendukung") || strings.Contains(j, "document") || strings.Contains(j, "dokumen"):
+		return "dokumen_pendukung"
+	case strings.Contains(j, "sk"):
+		return "sk"
+	default:
+		return sanitizeFolderSegment(strings.ToLower(jenisDok))
+	}
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -1222,11 +1240,10 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 	if isFinalChunk {
 		namaUnit := sanitizeFolderSegment(proker.DisplayFakultasUnit())
 		tahun := sanitizeFolderSegment(proker.Tahun)
-		standar := sanitizeFolderSegment(proker.StandarSubStandar)
-		indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
-		jenisFolder := sanitizeFolderSegment(jenisDok)
+		namaProker := sanitizeFolderSegment(proker.NamaProgram)
+		jenisFolder := getDokumenJenisFolder(jenisDok)
 
-		targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, standar, indikator, jenisFolder)
+		targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, namaProker, jenisFolder)
 		if err := helper.EnsureDir775(targetDir); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 		}
@@ -1354,11 +1371,10 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 
 	namaUnit := sanitizeFolderSegment(proker.DisplayFakultasUnit())
 	tahun := sanitizeFolderSegment(proker.Tahun)
-	standar := sanitizeFolderSegment(proker.StandarSubStandar)
-	indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
-	jenisFolder := sanitizeFolderSegment(jenisDok)
+	namaProker := sanitizeFolderSegment(proker.NamaProgram)
+	jenisFolder := getDokumenJenisFolder(jenisDok)
 
-	targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, standar, indikator, jenisFolder)
+	targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, namaProker, jenisFolder)
 	if err := helper.EnsureDir775(targetDir); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 	}

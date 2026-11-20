@@ -228,7 +228,6 @@ func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string) st
         <div class="header">
             <div class="header-badge">Universitas Pakuan</div>
             <h1>SIAMIDA V3</h1>
-            <p>Sistem Penjaminan Mutu &amp; Akuntabilitas Kinerja</p>
         </div>
 
         <!-- CONTENT -->

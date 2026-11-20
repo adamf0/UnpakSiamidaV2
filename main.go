@@ -395,7 +395,7 @@ func main() {
 	mataprogramPresentation.ModuleMataProgram(app)
 	jadwalprokerPresentation.ModuleJadwalProker(app)
 	aktivitasprokerPresentation.ModuleAktivitasProker(app)
-	dokumenprokerPresentation.ModuleDokumenProker(app)
+	dokumenprokerPresentation.ModuleDokumenProker(app, db)
 	laporanPresentation.ModuleMonitoringProker(app)
 	swotPresentation.ModuleSwot(app)
 	riskassessmentPresentation.ModuleRiskAssessment(app, db)

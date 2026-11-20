@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
+	"gorm.io/gorm"
 
 	commondomain "UnpakSiamida/common/domain"
 	"UnpakSiamida/common/helper"
@@ -23,6 +24,123 @@ import (
 	SetupUuidDokumenProker "UnpakSiamida/modules/dokumenproker/application/SetupUuidDokumenProker"
 	UpdateDokumenProker "UnpakSiamida/modules/dokumenproker/application/UpdateDokumenProker"
 )
+
+var dokumenProkerDb *gorm.DB
+
+func sanitizeFolderSegment(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "LAINNYA"
+	}
+	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", "\n", "\r", "\t"}
+	for _, char := range invalidChars {
+		s = strings.ReplaceAll(s, char, "_")
+	}
+	for strings.Contains(s, "__") {
+		s = strings.ReplaceAll(s, "__", "_")
+	}
+	s = strings.Trim(s, " ._")
+	if s == "" {
+		return "LAINNYA"
+	}
+	if len(s) > 100 {
+		s = s[:100]
+	}
+	return s
+}
+
+func getDokumenJenisFolder(jenisDok string) string {
+	j := strings.ToLower(strings.TrimSpace(jenisDok))
+	switch {
+	case strings.Contains(j, "sop"):
+		return "sop"
+	case strings.Contains(j, "proposal") || strings.Contains(j, "tor"):
+		return "proposal_tor"
+	case strings.Contains(j, "laporan"):
+		return "laporan"
+	case strings.Contains(j, "pendukung") || strings.Contains(j, "document") || strings.Contains(j, "dokumen"):
+		return "dokumen_pendukung"
+	case strings.Contains(j, "sk"):
+		return "sk"
+	default:
+		return sanitizeFolderSegment(strings.ToLower(jenisDok))
+	}
+}
+
+func getDokumenProkerUploadFolder(fakultasUnitVal, mataProgramVal, jenisDokVal string) string {
+	namaUnit := "unit"
+	tahun := "2027"
+	namaProker := "proker"
+	jenisFolder := getDokumenJenisFolder(jenisDokVal)
+
+	if dokumenProkerDb != nil {
+		mpStr := strings.TrimSpace(mataProgramVal)
+		if mpStr != "" {
+			var row struct {
+				MataProgram  string
+				Tahun        string
+				FakultasUnit string
+			}
+			_ = dokumenProkerDb.Table("matrix_proker mpr").
+				Select("COALESCE(mp.mata_program, '') as mata_program, COALESCE(mt.tahun, '') as tahun, COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit").
+				Joins("LEFT JOIN mata_programv2 mp ON mpr.id_mata_program = mp.id").
+				Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+				Joins("LEFT JOIN v_fakultas_unit vfu ON COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit) = vfu.id").
+				Where("mpr.uuid = ? OR mpr.id = ?", mpStr, mpStr).
+				Take(&row).Error
+
+			if row.MataProgram == "" {
+				_ = dokumenProkerDb.Table("mata_programv2 mp").
+					Select("mp.mata_program, mt.tahun, vfu.nama_fak_prod_unit as fakultas_unit").
+					Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+					Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
+					Where("mp.uuid = ? OR mp.id = ?", mpStr, mpStr).
+					Take(&row).Error
+			}
+
+			if row.MataProgram == "" {
+				_ = dokumenProkerDb.Table("mata_program mp").
+					Select("mp.mata_program, mt.tahun, vfu.nama_fak_prod_unit as fakultas_unit").
+					Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
+					Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
+					Where("mp.uuid = ? OR mp.id = ?", mpStr, mpStr).
+					Take(&row).Error
+			}
+
+			if row.MataProgram != "" {
+				namaProker = row.MataProgram
+			}
+			if row.Tahun != "" {
+				tahun = row.Tahun
+			}
+			if row.FakultasUnit != "" {
+				namaUnit = row.FakultasUnit
+			}
+		}
+
+		fuStr := strings.TrimSpace(fakultasUnitVal)
+		if fuStr != "" && (namaUnit == "unit" || namaUnit == "") {
+			var uRow struct {
+				NamaFakProdUnit string
+			}
+			_ = dokumenProkerDb.Table("v_fakultas_unit").
+				Select("nama_fak_prod_unit").
+				Where("uuid = ? OR id = ?", fuStr, fuStr).
+				Take(&uRow).Error
+			if uRow.NamaFakProdUnit != "" {
+				namaUnit = uRow.NamaFakProdUnit
+			}
+		}
+	}
+
+	return filepath.Join(
+		"./upload/prokerv3",
+		sanitizeFolderSegment(namaUnit),
+		sanitizeFolderSegment(tahun),
+		sanitizeFolderSegment(namaProker),
+		jenisFolder,
+	)
+}
 
 // =======================================================
 // POST /dokumenproker & /pelaporandokumen
@@ -44,7 +162,7 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	fileName := strings.TrimSpace(c.FormValue("file"))
 	fileHeader, errFile := c.FormFile("file")
 	if errFile == nil && fileHeader != nil {
-		uploadDir := "./upload/pelaporan_dokumen"
+		uploadDir := getDokumenProkerUploadFolder(fakultas_unit, mata_program, jenis_dokumen)
 		if err := helper.EnsureDir775(uploadDir); err == nil {
 			ext := filepath.Ext(fileHeader.Filename)
 			if ext == "" {
@@ -54,7 +172,11 @@ func CreateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 			dest := filepath.Join(uploadDir, savedName)
 			if err := c.SaveFile(fileHeader, dest); err == nil {
 				_ = helper.EnsureFile664(dest)
-				fileName = savedName
+				relURL := filepath.ToSlash(dest)
+				if !strings.HasPrefix(relURL, "/") {
+					relURL = "/" + strings.TrimPrefix(relURL, "./")
+				}
+				fileName = relURL
 			}
 		}
 	}
@@ -104,7 +226,7 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 	fileName := strings.TrimSpace(c.FormValue("file"))
 	fileHeader, errFile := c.FormFile("file")
 	if errFile == nil && fileHeader != nil {
-		uploadDir := "./upload/pelaporan_dokumen"
+		uploadDir := getDokumenProkerUploadFolder(fakultas_unit, mata_program, jenis_dokumen)
 		if err := helper.EnsureDir775(uploadDir); err == nil {
 			ext := filepath.Ext(fileHeader.Filename)
 			if ext == "" {
@@ -114,7 +236,11 @@ func UpdateDokumenProkerHandlerfunc(c *fiber.Ctx) error {
 			dest := filepath.Join(uploadDir, savedName)
 			if err := c.SaveFile(fileHeader, dest); err == nil {
 				_ = helper.EnsureFile664(dest)
-				fileName = savedName
+				relURL := filepath.ToSlash(dest)
+				if !strings.HasPrefix(relURL, "/") {
+					relURL = "/" + strings.TrimPrefix(relURL, "./")
+				}
+				fileName = relURL
 			}
 		}
 	}
@@ -403,7 +529,10 @@ func SetupUuidDokumenProkersHandlerfunc(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": message})
 }
 
-func ModuleDokumenProker(app *fiber.App) {
+func ModuleDokumenProker(app *fiber.App, dbs ...*gorm.DB) {
+	if len(dbs) > 0 {
+		dokumenProkerDb = dbs[0]
+	}
 	roles := []string{"admin", "auditee", "auditor1", "auditor2", "fakultas", "unit", "user", "upml", "upmf", "upms"}
 	whoamiURL := "http://localhost:3000/whoami"
 

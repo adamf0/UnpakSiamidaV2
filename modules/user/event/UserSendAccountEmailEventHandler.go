@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/smtp"
 	"os"
 	"strings"
@@ -79,7 +80,7 @@ func sendAccountCredentialEmail(recipient UserAccountEmailRecipient) error {
 		mailFromName = "LPMI Universitas Pakuan"
 	}
 	if mailPort == "" {
-		mailPort = "465"
+		mailPort = "587"
 	}
 	if portalURL == "" {
 		portalURL = "https://siamida.unpak.ac.id"
@@ -123,53 +124,117 @@ func sendAccountCredentialEmail(recipient UserAccountEmailRecipient) error {
 	msgBuilder.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
 
 	rawMsg := []byte(msgBuilder.String())
-	addr := fmt.Sprintf("%s:%s", mailHost, mailPort)
 
-	// Port 465 menggunakan Direct SSL/TLS Handshake
+	// Jika port 465, coba via Direct SSL. Jika gagal/reset/timeout, otomatis fallback ke port 587 (STARTTLS).
 	if mailPort == "465" {
-		tlsConfig := &tls.Config{
-			ServerName:         mailHost,
-			InsecureSkipVerify: false,
+		err := sendViaSSL(mailHost, "465", mailUser, mailPass, mailFrom, recipient.Email, rawMsg)
+		if err == nil {
+			return nil
 		}
-		conn, err := tls.Dial("tcp", addr, tlsConfig)
-		if err != nil {
-			return fmt.Errorf("tls.Dial error to %s: %w", addr, err)
-		}
-		defer conn.Close()
-
-		client, err := smtp.NewClient(conn, mailHost)
-		if err != nil {
-			return fmt.Errorf("smtp.NewClient error: %w", err)
-		}
-		defer client.Close()
-
-		auth := smtp.PlainAuth("", mailUser, mailPass, mailHost)
-		if err := client.Auth(auth); err != nil {
-			return fmt.Errorf("smtp auth error: %w", err)
-		}
-
-		if err := client.Mail(mailFrom); err != nil {
-			return fmt.Errorf("smtp mail from error: %w", err)
-		}
-		if err := client.Rcpt(recipient.Email); err != nil {
-			return fmt.Errorf("smtp rcpt error: %w", err)
-		}
-
-		w, err := client.Data()
-		if err != nil {
-			return fmt.Errorf("smtp data writer error: %w", err)
-		}
-		if _, err := w.Write(rawMsg); err != nil {
-			return fmt.Errorf("smtp write error: %w", err)
-		}
-		if err := w.Close(); err != nil {
-			return fmt.Errorf("smtp close writer error: %w", err)
-		}
-
-		return client.Quit()
+		log.Printf("[Outbox:UserAccountEmail] Port 465 failed (%v), falling back to port 587 (STARTTLS)...\n", err)
+		return sendViaSTARTTLS(mailHost, "587", mailUser, mailPass, mailFrom, recipient.Email, rawMsg)
 	}
 
-	// Port 587 atau port lainnya menggunakan STARTTLS
-	auth := smtp.PlainAuth("", mailUser, mailPass, mailHost)
-	return smtp.SendMail(addr, auth, mailFrom, []string{recipient.Email}, rawMsg)
+	// Port 587 (atau port lainnya) via STARTTLS. Jika gagal, coba fallback ke port 465 (SSL).
+	err := sendViaSTARTTLS(mailHost, mailPort, mailUser, mailPass, mailFrom, recipient.Email, rawMsg)
+	if err == nil {
+		return nil
+	}
+	if mailPort == "587" {
+		log.Printf("[Outbox:UserAccountEmail] Port 587 failed (%v), falling back to port 465 (SSL)...\n", err)
+		return sendViaSSL(mailHost, "465", mailUser, mailPass, mailFrom, recipient.Email, rawMsg)
+	}
+	return err
+}
+
+func sendViaSSL(host, port, user, pass, from, to string, msg []byte) error {
+	addr := fmt.Sprintf("%s:%s", host, port)
+	dialer := &net.Dialer{Timeout: 15 * time.Second}
+	tlsConfig := &tls.Config{
+		ServerName: host,
+	}
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+	if err != nil {
+		return fmt.Errorf("tls.Dial error to %s: %w", addr, err)
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("smtp.NewClient error: %w", err)
+	}
+	defer client.Close()
+
+	auth := smtp.PlainAuth("", user, pass, host)
+	if err := client.Auth(auth); err != nil {
+		return fmt.Errorf("smtp auth error: %w", err)
+	}
+
+	if err := client.Mail(from); err != nil {
+		return fmt.Errorf("smtp mail from error: %w", err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		return fmt.Errorf("smtp rcpt error: %w", err)
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("smtp data writer error: %w", err)
+	}
+	if _, err := w.Write(msg); err != nil {
+		return fmt.Errorf("smtp write error: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("smtp close writer error: %w", err)
+	}
+
+	return client.Quit()
+}
+
+func sendViaSTARTTLS(host, port, user, pass, from, to string, msg []byte) error {
+	addr := fmt.Sprintf("%s:%s", host, port)
+	dialer := &net.Dialer{Timeout: 15 * time.Second}
+	conn, err := dialer.Dial("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("tcp dial error to %s: %w", addr, err)
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("smtp.NewClient error: %w", err)
+	}
+	defer client.Close()
+
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		tlsConfig := &tls.Config{ServerName: host}
+		if err := client.StartTLS(tlsConfig); err != nil {
+			return fmt.Errorf("starttls error: %w", err)
+		}
+	}
+
+	auth := smtp.PlainAuth("", user, pass, host)
+	if err := client.Auth(auth); err != nil {
+		return fmt.Errorf("smtp auth error: %w", err)
+	}
+
+	if err := client.Mail(from); err != nil {
+		return fmt.Errorf("smtp mail from error: %w", err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		return fmt.Errorf("smtp rcpt error: %w", err)
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("smtp data writer error: %w", err)
+	}
+	if _, err := w.Write(msg); err != nil {
+		return fmt.Errorf("smtp write error: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("smtp close writer error: %w", err)
+	}
+
+	return client.Quit()
 }

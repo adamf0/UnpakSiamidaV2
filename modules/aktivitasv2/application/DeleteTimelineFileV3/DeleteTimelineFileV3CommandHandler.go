@@ -4,7 +4,6 @@ import (
 	domain "UnpakSiamida/modules/aktivitasv2/domain"
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -43,7 +42,6 @@ func (h *DeleteTimelineFileV3CommandHandler) Handle(ctx context.Context, cmd Del
 		if fileObj.FileURL != "" {
 			_ = os.Remove("." + fileObj.FileURL)
 		}
-		_ = os.Remove(filepath.Join("./upload/timeline_proker_files", fileObj.File))
 	}
 
 	return cmd.FileUUID, nil

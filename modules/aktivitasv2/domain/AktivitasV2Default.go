@@ -2,6 +2,8 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -149,6 +151,21 @@ type MatrixProkerSummary struct {
 	TotalAnggaran      float64                 `json:"TotalAnggaran"`
 	Scopes             []MatrixProkerScopeItem `gorm:"-" json:"Scopes,omitempty"`
 	DeletedAt          *time.Time              `json:"DeletedAt"`
+}
+
+func (p MatrixProkerSummary) DisplayFakultasUnit() string {
+	nama := strings.TrimSpace(p.NamaFakultasUnit)
+	if nama == "" {
+		return ""
+	}
+	jenjang := strings.ToUpper(strings.TrimSpace(p.JenjangFakultasUnit))
+	if jenjang != "" && strings.EqualFold(strings.TrimSpace(p.TypeFakultasUnit), "prodi") {
+		suffix := fmt.Sprintf("(%s)", jenjang)
+		if !strings.HasSuffix(strings.ToUpper(nama), suffix) {
+			return fmt.Sprintf("%s %s", nama, suffix)
+		}
+	}
+	return nama
 }
 
 func (m MatrixProkerSummary) MarshalJSON() ([]byte, error) {

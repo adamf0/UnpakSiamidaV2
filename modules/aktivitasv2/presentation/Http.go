@@ -168,19 +168,81 @@ func sanitizeFolderSegment(s string) string {
 	if s == "" {
 		return "general"
 	}
-	replacer := strings.NewReplacer(
-		"/", "_", "\\", "_", ":", "_", "*", "_", "?", "_",
-		"\"", "_", "<", "_", ">", "_", "|", "_", " ", "_",
-	)
-	clean := replacer.Replace(s)
-	for strings.Contains(clean, "__") {
-		clean = strings.ReplaceAll(clean, "__", "_")
+	invalid := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", "\n", "\r", "\t"}
+	for _, char := range invalid {
+		s = strings.ReplaceAll(s, char, "_")
 	}
-	clean = strings.Trim(clean, "._")
-	if clean == "" {
+	for strings.Contains(s, "__") {
+		s = strings.ReplaceAll(s, "__", "_")
+	}
+	s = strings.Trim(s, " ._")
+	if s == "" {
 		return "general"
 	}
-	return clean
+	if len(s) > 100 {
+		s = s[:100]
+	}
+	return s
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, helper.UploadFilePerm)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	if err = out.Sync(); err != nil {
+		return err
+	}
+	return helper.EnsureFile664(dst)
+}
+
+func getTimelineUploadFolderInfo(ctx context.Context, timeline *domain.ProkerTimelineV3) (namaUnit, tahun, namaProker, actUuid string) {
+	namaUnit = "unit"
+	tahun = "2027"
+	namaProker = "proker"
+	actUuid = "aktivitas"
+
+	if timeline == nil || repoAktivitas == nil {
+		return
+	}
+
+	act, err := repoAktivitas.GetAktivitasEntityById(ctx, timeline.IdAktivitasV2)
+	if err == nil && act != nil {
+		actUuid = act.UUID.String()
+		if act.IdMatrikProker != nil && *act.IdMatrikProker > 0 {
+			proker, err := repoAktivitas.GetMatrixProkerById(ctx, uint(*act.IdMatrikProker))
+			if err == nil && proker != nil {
+				if dispUnit := proker.DisplayFakultasUnit(); dispUnit != "" {
+					namaUnit = dispUnit
+				} else if proker.NamaFakultasUnit != "" {
+					namaUnit = proker.NamaFakultasUnit
+				}
+				if proker.Tahun != "" {
+					tahun = proker.Tahun
+				}
+				if proker.NamaProgram != "" {
+					namaProker = proker.NamaProgram
+				}
+			}
+		}
+	}
+
+	namaUnit = sanitizeFolderSegment(namaUnit)
+	tahun = sanitizeFolderSegment(tahun)
+	namaProker = sanitizeFolderSegment(namaProker)
+	actUuid = sanitizeFolderSegment(actUuid)
+	return
 }
 
 // GET /proker_v3/:uuid/aktivitas
@@ -626,7 +688,8 @@ func UploadTimelineFilesHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "No files provided"})
 	}
 
-	uploadDir := filepath.Join("upload", "timeline_files", fmt.Sprintf("%d", timeline.IdAktivitasV2))
+	namaUnit, tahun, namaProker, actUuidStr := getTimelineUploadFolderInfo(c.Context(), timeline)
+	uploadDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, namaProker, actUuidStr)
 	_ = helper.EnsureDir775(uploadDir)
 
 	var savedFiles []domain.ProkerTimelineFileV3
@@ -642,13 +705,18 @@ func UploadTimelineFilesHandler(c *fiber.Ctx) error {
 		}
 		_ = helper.EnsureFile664(destPath)
 
+		relURL := filepath.ToSlash(destPath)
+		if !strings.HasPrefix(relURL, "/") {
+			relURL = "/" + strings.TrimPrefix(relURL, "./")
+		}
+
 		savedFiles = append(savedFiles, domain.ProkerTimelineFileV3{
 			UUID:                  fileUid,
 			IdAktivitasV2Timeline: &timeline.ID,
 			IdAktivitasV2:         &timeline.IdAktivitasV2,
 			File:                  destPath,
 			NamaFile:              f.Filename,
-			FileURL:               "/" + filepath.ToSlash(destPath),
+			FileURL:               relURL,
 			FilePath:              destPath,
 			FileSize:              f.Size,
 			FileType:              f.Header.Get("Content-Type"),
@@ -841,7 +909,27 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 		keterangan = "Dokumen Referensi Program"
 	}
 
-	uploadDir := "./upload/timeline_proker_files"
+	var namaUnit, tahun, namaProker, actUuidStr string = "unit", "xxxx", "proker", parsedUuid.String()
+	if act != nil {
+		actUuidStr = act.UUID.String()
+		if act.IdMatrikProker != nil && *act.IdMatrikProker > 0 {
+			proker, err := repoAktivitas.GetMatrixProkerById(c.Context(), uint(*act.IdMatrikProker))
+			if err == nil && proker != nil {
+				if dispUnit := proker.DisplayFakultasUnit(); dispUnit != "" {
+					namaUnit = dispUnit
+				} else if proker.NamaFakultasUnit != "" {
+					namaUnit = proker.NamaFakultasUnit
+				}
+				if proker.Tahun != "" {
+					tahun = proker.Tahun
+				}
+				if proker.NamaProgram != "" {
+					namaProker = proker.NamaProgram
+				}
+			}
+		}
+	}
+	uploadDir := filepath.Join("./upload/prokerv3", sanitizeFolderSegment(namaUnit), sanitizeFolderSegment(tahun), sanitizeFolderSegment(namaProker), sanitizeFolderSegment(actUuidStr))
 	_ = helper.EnsureDir775(uploadDir)
 
 	var filesToInsert []domain.ProkerTimelineFileV3
@@ -856,6 +944,11 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 		}
 		_ = helper.EnsureFile664(destPath)
 
+		relURL := filepath.ToSlash(destPath)
+		if !strings.HasPrefix(relURL, "/") {
+			relURL = "/" + strings.TrimPrefix(relURL, "./")
+		}
+
 		var actIDPtr *uint
 		if act != nil {
 			actIDPtr = &act.ID
@@ -864,9 +957,10 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 		filesToInsert = append(filesToInsert, domain.ProkerTimelineFileV3{
 			UUID:          fileUUID,
 			IdAktivitasV2: actIDPtr,
-			File:          savedName,
+			File:          destPath,
 			NamaFile:      fh.Filename,
-			FileURL:       "/upload/timeline_proker_files/" + savedName,
+			FileURL:       relURL,
+			FilePath:      destPath,
 			FileSize:      fh.Size,
 			FileType:      fh.Header.Get("Content-Type"),
 			Keterangan:    keterangan,
@@ -996,20 +1090,28 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 			}
 		}
 
-		targetDir := "./upload/timeline_proker_files"
+		namaUnit, tahun, namaProker, actUuidStr := getTimelineUploadFolderInfo(c.Context(), timeline)
+		targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, namaProker, actUuidStr)
 		_ = helper.EnsureDir775(targetDir)
 
 		ext := filepath.Ext(effectiveName)
-		savedFileName := fmt.Sprintf("proker-%s%s", fileUUID.String(), ext)
+		savedFileName := fmt.Sprintf("%s%s", fileUUID.String(), ext)
 		destPath := filepath.Join(targetDir, savedFileName)
 
 		if err := os.Rename(partPath, destPath); err != nil {
+			if copyErr := copyFile(partPath, destPath); copyErr != nil {
+				_ = os.Remove(partPath)
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memindahkan file bukti: " + copyErr.Error()})
+			}
 			_ = os.Remove(partPath)
 		} else {
 			_ = helper.EnsureFile664(destPath)
 		}
 
-		relURL := "/upload/timeline_proker_files/" + savedFileName
+		relURL := filepath.ToSlash(destPath)
+		if !strings.HasPrefix(relURL, "/") {
+			relURL = "/" + strings.TrimPrefix(relURL, "./")
+		}
 
 		record := domain.ProkerTimelineFileV3{
 			UUID:                  fileUUID,

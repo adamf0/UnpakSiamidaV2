@@ -48,8 +48,6 @@ ENV TZ=Asia/Jakarta
 # Create required directories for uploads and runtime assets
 RUN mkdir -p /app/upload/tmp \
              /app/upload/prokerv3 \
-             /app/upload/pelaporan_dokumen \
-             /app/upload/timeline_proker_files \
              /app/assets \
              /app/modules
 
