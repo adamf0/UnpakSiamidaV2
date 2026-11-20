@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	commoninfra "UnpakSiamida/common/infrastructure"
 	domain "UnpakSiamida/modules/aktivitasv2/domain"
 
 	"github.com/google/uuid"
@@ -17,6 +18,31 @@ import (
 
 type AktivitasV2Repository struct {
 	db *gorm.DB
+}
+
+type renstraRow struct {
+	TemplateID          uint      `gorm:"column:template_id"`
+	TemplateUUID        uuid.UUID `gorm:"column:template_uuid"`
+	FakultasUnitID      *uint64   `gorm:"column:fakultas_unit"`
+	Satuan              string    `gorm:"column:satuan"`
+	Target              string    `gorm:"column:target"`
+	TargetMin           string    `gorm:"column:target_min"`
+	TargetMax           string    `gorm:"column:target_max"`
+	IndikatorID         *int      `gorm:"column:indikator_id"`
+	IndikatorUUID       string    `gorm:"column:indikator_uuid"`
+	IndikatorKinerja    string    `gorm:"column:indikator_kinerja"`
+	TipeTarget          string    `gorm:"column:tipe_target"`
+	Operator            string    `gorm:"column:operator"`
+	TargetUnpak         string    `gorm:"column:target_unpak"`
+	StandarID           int       `gorm:"column:standar_id"`
+	StandarUUID         string    `gorm:"column:standar_uuid"`
+	StandarNama         string    `gorm:"column:standar_nama"`
+	IkuList             string    `gorm:"column:iku_list"`
+	NamaFakultasUnit    string    `gorm:"column:nama_fakultas_unit"`
+	UuidFakultasUnit    string    `gorm:"column:uuid_fakultas_unit"`
+	TypeFakultasUnit    string    `gorm:"column:type_fakultas_unit"`
+	JenjangFakultasUnit string    `gorm:"column:jenjang_fakultas_unit"`
+	ParentFakultas      string    `gorm:"column:parent_fakultas"`
 }
 
 func NewAktivitasV2Repository(db *gorm.DB) *AktivitasV2Repository {
@@ -33,6 +59,7 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			COALESCE(fu.uuid, '') as UuidFakultasUnit,
 			COALESCE(fu.nama_fak_prod_unit, '') as NamaFakultasUnit,
 			COALESCE(fu.type, '') as TypeFakultasUnit,
+			COALESCE(fu.jenjang, '') as JenjangFakultasUnit,
 			COALESCE(fu.fakultas, '') as ParentFakultas,
 			mp.id_mata_program as IdMataProgram,
 			COALESCE(prog.mata_program, '') as NamaProgram,
@@ -49,8 +76,7 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			COALESCE(NULLIF(mp.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp.status, ''), 'draft') as Status,
 			COALESCE(mp.catatan_penolakan, '') as CatatanPenolakan,
-			COALESCE(NULLIF(mp.status_verifikator, ''), 'draft') as StatusVerifikator,
-			COALESCE(mp.catatan_verifikator, '') as CatatanVerifikator,
+			'' as StatusVerifikator,
 			COALESCE(NULLIF(mp.status_anggaran, ''), 'menunggu_verifikator') as StatusAnggaran,
 			COALESCE(mp.catatan_anggaran, '') as CatatanAnggaran,
 			COALESCE(mp.beban_yayasan, 0) as BebanYayasan,
@@ -58,6 +84,12 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			COALESCE(mp.catatan_batal, '') as CatatanBatal,
 			mp.deleted_at as DeletedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diterima', 'disetujui', 'terima_verifikator')), 0) as TotalAktivitasTerimaVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('ditolak', 'revisi')), 0) as TotalAktivitasTolakVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diajukan', 'menunggu')), 0) as TotalAktivitasDiajukanVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.terima_anggaran_at IS NOT NULL), 0) as TotalAktivitasTerimaAnggaran,
+			0 as TotalAktivitasTolakAnggaran,
+			COALESCE((SELECT GROUP_CONCAT(CONCAT(a.aktivitas, ': ', a.catatan_verifikator) SEPARATOR '\n') FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.catatan_verifikator IS NOT NULL AND a.catatan_verifikator != ''), '') as CatatanVerifikator,
 			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran
 		`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON mp.id_fakultas_unit = fu.id").
@@ -73,6 +105,26 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	mp.StatusVerifikator, mp.StatusAnggaran = commoninfra.ComputeProkerVerificationStatus(
+		mp.TotalAktivitas,
+		mp.TotalAktivitasTerimaVerifikator,
+		mp.TotalAktivitasTolakVerifikator,
+		mp.TotalAktivitasDiajukanVerifikator,
+		mp.TotalAktivitasTerimaAnggaran,
+		mp.TotalAktivitasTolakAnggaran,
+	)
+
+	// Sinkronisasi status matrix_proker ke tabel matrix_proker dan struct summary
+	if mp.ID > 0 {
+		s1, s2, _ := commoninfra.SyncMatrixProkerStatus(ctx, r.db, mp.ID)
+		if s1 != "" {
+			mp.Status = s1
+		}
+		if s2 != "" {
+			mp.StatusAnggaran = s2
+		}
 	}
 
 	// Pagu Unit
@@ -95,37 +147,106 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			Select("COALESCE(SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)), 0) as total").
 			Joins("JOIN mata_programv2 prog2 ON mp2.id_mata_program = prog2.id").
 			Joins("JOIN master_tahun mt2 ON prog2.id_master_tahun = mt2.id").
-			Joins("JOIN aktivitasv2 a ON a.id_matrik_proker = mp2.id AND COALESCE(a.is_batal, 0) = 0").
+			Joins("JOIN aktivitasv2 a ON a.id_matrik_proker = mp2.id AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(a.beban_yayasan, 0) = 0").
 			Joins("JOIN aktivitasv2_rab r ON r.id_aktivitasv2 = a.id").
 			Where("mt2.tahun = ? AND mp2.id_fakultas_unit = ? AND mp2.deleted_at IS NULL", mp.Tahun, *mp.IdFakultasUnit).
 			Take(&totUnitRow).Error
 		mp.TotalAnggaranUnit = totUnitRow.Total
 	}
 
-	// Scopes
+	// Scopes diambil dari mata_programv2_template_renstra x template_renstra x master_indikator_renstra x master_standar_renstra
+	var rRows []renstraRow
+	if mp.IdMataProgram != nil && *mp.IdMataProgram > 0 {
+		qTr := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+			Select(`
+				tr.id as template_id,
+				tr.uuid as template_uuid,
+				tr.fakultas_unit as fakultas_unit,
+				COALESCE(tr.satuan, '') as satuan,
+				COALESCE(tr.target, '') as target,
+				COALESCE(tr.target_min, '') as target_min,
+				COALESCE(tr.target_max, '') as target_max,
+				tr.indikator as indikator_id,
+				COALESCE(mir.uuid, '') as indikator_uuid,
+				COALESCE(mir.indikator, '') as indikator_kinerja,
+				COALESCE(mir.tipe_target, '') as tipe_target,
+				COALESCE(mir.operator, '') as operator,
+				'' as target_unpak,
+				COALESCE(msr.id, 0) as standar_id,
+				COALESCE(msr.uuid, '') as standar_uuid,
+				COALESCE(msr.nama, '') as standar_nama,
+				COALESCE((
+					SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+					FROM indikator_renstra_iku iri
+					WHERE iri.id_indikator_renstra = mir.id
+				), '') as iku_list
+			`).
+			Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
+			Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+			Where("mptr.id_mata_programv2 = ?", *mp.IdMataProgram)
+
+		if mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
+			qTr = qTr.Where("tr.fakultas_unit = ?", *mp.IdFakultasUnit)
+		}
+		_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
+
+		if len(rRows) == 0 && mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
+			_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+				Select(`
+					tr.id as template_id,
+					tr.uuid as template_uuid,
+					tr.fakultas_unit as fakultas_unit,
+					COALESCE(tr.satuan, '') as satuan,
+					COALESCE(tr.target, '') as target,
+					COALESCE(tr.target_min, '') as target_min,
+					COALESCE(tr.target_max, '') as target_max,
+					tr.indikator as indikator_id,
+					COALESCE(mir.uuid, '') as indikator_uuid,
+					COALESCE(mir.indikator, '') as indikator_kinerja,
+					COALESCE(mir.tipe_target, '') as tipe_target,
+					COALESCE(mir.operator, '') as operator,
+					COALESCE(mir.target_unpak, '') as target_unpak,
+					COALESCE(msr.id, 0) as standar_id,
+					COALESCE(msr.uuid, '') as standar_uuid,
+					COALESCE(msr.nama, '') as standar_nama,
+					COALESCE((
+						SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+						FROM indikator_renstra_iku iri
+						WHERE iri.id_indikator_renstra = mir.id
+					), '') as iku_list
+				`).
+				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
+				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+				Where("mptr.id_mata_programv2 = ?", *mp.IdMataProgram).
+				Order("tr.id ASC").
+				Scan(&rRows).Error
+		}
+	}
+
+	ikuMap := commoninfra.GetMasterIkuMap(nil)
 	var scopes []domain.MatrixProkerScopeItem
-	_ = r.db.WithContext(ctx).Table("matrix_proker_scope mps").
-		Select(`
-			mps.id as Id,
-			mps.uuid as UUID,
-			mps.id_indikator as IdIndikator,
-			COALESCE(mir.indikator, '') as IndikatorKinerja,
-			COALESCE(msr.nama, '') as StandarSubStandar,
-			COALESCE(mps.target_unpak, '') as TargetUnpak,
-			COALESCE(mps.target_unit, '') as TargetUnit,
-			COALESCE(mps.capaian_terdahulu, '') as CapaianUnitLalu,
-			COALESCE(mps.output, '') as Output,
-			COALESCE(mps.outcome, '') as Outcome,
-			COALESCE((
-				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
-				FROM indikator_renstra_iku iri
-				WHERE iri.id_indikator_renstra = mps.id_indikator
-			), '') as IkuList
-		`).
-		Joins("LEFT JOIN master_indikator_renstra mir ON mps.id_indikator = mir.id").
-		Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
-		Where("mps.id_matrix_proker = ?", mp.ID).
-		Scan(&scopes).Error
+	for _, rr := range rRows {
+		formattedTargetUnit := commoninfra.FormatRenstraTargetUnit(
+			rr.TipeTarget, rr.Operator, rr.Target, rr.TargetMin, rr.TargetMax, rr.Satuan,
+		)
+		formattedIku := commoninfra.FormatIkuList(rr.IkuList, ikuMap)
+
+		scopes = append(scopes, domain.MatrixProkerScopeItem{
+			Id:                rr.TemplateID,
+			UUID:              rr.TemplateUUID.String(),
+			IdIndikator:       rr.IndikatorID,
+			IndikatorKinerja:  rr.IndikatorKinerja,
+			StandarSubStandar: rr.StandarNama,
+			TargetUnpak:       rr.TargetUnpak,
+			TargetUnit:        formattedTargetUnit,
+			CapaianUnitLalu:   "-",
+			Output:            "",
+			Outcome:           "",
+			IkuList:           formattedIku,
+		})
+	}
 
 	if len(scopes) > 0 {
 		mp.Scopes = scopes
@@ -133,16 +254,327 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 		mp.IndikatorKinerja = scopes[0].IndikatorKinerja
 		mp.TargetUnpak = scopes[0].TargetUnpak
 		mp.TargetUnit = scopes[0].TargetUnit
-		mp.CapaianUnitLalu = scopes[0].CapaianUnitLalu
-		mp.Output = scopes[0].Output
-		mp.Outcome = scopes[0].Outcome
+		mp.CapaianUnitLalu = "-"
+		mp.Output = ""
+		mp.Outcome = ""
 	}
 
 	return &mp, nil
 }
 
 func (r *AktivitasV2Repository) GetMatrixProkerByUuid(ctx context.Context, uid uuid.UUID) (*domain.MatrixProkerSummary, error) {
-	return r.populateProkerSummary(ctx, "mp.uuid = ?", uid)
+	summary, err := r.populateProkerSummary(ctx, "mp.uuid = ?", uid)
+	if err == nil && summary != nil {
+		return summary, nil
+	}
+
+	// Fallback: cek apakah uid merupakan UUID dari mata_programv2
+	var prog struct {
+		ID            uint
+		UUID          string
+		MataProgram   string
+		IdMasterTahun uint
+		Tahun         string
+	}
+	err = r.db.WithContext(ctx).Table("mata_programv2 prog").
+		Select("prog.id, prog.uuid, prog.mata_program, prog.id_master_tahun, COALESCE(mt.tahun, '') as tahun").
+		Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+		Where("prog.uuid = ? AND prog.deleted_at IS NULL", uid.String()).
+		Take(&prog).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	// Cek apakah ada unit yang spesifik dari context (active_unit)
+	var fuFilter *int
+	if activeUnitVal := ctx.Value("active_unit"); activeUnitVal != nil {
+		if fuStr, ok := activeUnitVal.(string); ok && strings.TrimSpace(fuStr) != "" {
+			fuStr = strings.TrimSpace(fuStr)
+			if id, err := strconv.Atoi(fuStr); err == nil && id > 0 {
+				fuFilter = &id
+			} else {
+				var uID int
+				if err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", fuStr).Take(&uID).Error; err == nil && uID > 0 {
+					fuFilter = &uID
+				}
+			}
+		} else if fuInt, ok := activeUnitVal.(int); ok && fuInt > 0 {
+			fuFilter = &fuInt
+		}
+	}
+
+	// Cek apakah matrix_proker untuk mata_program ini sudah pernah dibuat
+	var existingMP struct {
+		ID uint
+	}
+	qExisting := r.db.WithContext(ctx).Table("matrix_proker").
+		Select("id").
+		Where("id_mata_program = ? AND deleted_at IS NULL", prog.ID)
+	if fuFilter != nil {
+		qExisting = qExisting.Where("id_fakultas_unit = ?", *fuFilter)
+	}
+	if err := qExisting.Order("id ASC").Take(&existingMP).Error; err == nil && existingMP.ID > 0 {
+		return r.populateProkerSummary(ctx, "mp.id = ?", existingMP.ID)
+	}
+
+	// Jika belum ada, ambil info unit & indikator dari template renstra yang ditugaskan
+	var rRows []renstraRow
+	qTr := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
+		Select(`
+			tr.id as template_id,
+			tr.uuid as template_uuid,
+			tr.fakultas_unit as fakultas_unit,
+			COALESCE(tr.satuan, '') as satuan,
+			COALESCE(tr.target, '') as target,
+			COALESCE(tr.target_min, '') as target_min,
+			COALESCE(tr.target_max, '') as target_max,
+			tr.indikator as indikator_id,
+			COALESCE(mir.uuid, '') as indikator_uuid,
+			COALESCE(mir.indikator, '') as indikator_kinerja,
+			COALESCE(mir.tipe_target, '') as tipe_target,
+			COALESCE(mir.operator, '') as operator,
+			'' as target_unpak,
+			COALESCE(msr.id, 0) as standar_id,
+			COALESCE(msr.uuid, '') as standar_uuid,
+			COALESCE(msr.nama, '') as standar_nama,
+			COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+			COALESCE(fu.uuid, '') as uuid_fakultas_unit,
+			COALESCE(fu.type, '') as type_fakultas_unit,
+			COALESCE(fu.jenjang, '') as jenjang_fakultas_unit,
+			COALESCE(fu.fakultas, '') as parent_fakultas,
+			COALESCE((
+				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+				FROM indikator_renstra_iku iri
+				WHERE iri.id_indikator_renstra = mir.id
+			), '') as iku_list
+		`).
+		Joins("JOIN template_renstra tr ON mtr.id_template_renstra = tr.id").
+		Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+		Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+		Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
+		Where("mtr.id_mata_programv2 = ?", prog.ID)
+
+	if fuFilter != nil {
+		qTr = qTr.Where("tr.fakultas_unit = ?", *fuFilter)
+	}
+	_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
+
+	if len(rRows) == 0 && fuFilter != nil {
+		_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
+			Select(`
+				tr.id as template_id,
+				tr.uuid as template_uuid,
+				tr.fakultas_unit as fakultas_unit,
+				COALESCE(tr.satuan, '') as satuan,
+				COALESCE(tr.target, '') as target,
+				COALESCE(tr.target_min, '') as target_min,
+				COALESCE(tr.target_max, '') as target_max,
+				tr.indikator as indikator_id,
+				COALESCE(mir.uuid, '') as indikator_uuid,
+				COALESCE(mir.indikator, '') as indikator_kinerja,
+				COALESCE(mir.tipe_target, '') as tipe_target,
+				COALESCE(mir.operator, '') as operator,
+				'' as target_unpak,
+				COALESCE(msr.id, 0) as standar_id,
+				COALESCE(msr.uuid, '') as standar_uuid,
+				COALESCE(msr.nama, '') as standar_nama,
+				COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+				COALESCE(fu.uuid, '') as uuid_fakultas_unit,
+				COALESCE(fu.type, '') as type_fakultas_unit,
+				COALESCE(fu.jenjang, '') as jenjang_fakultas_unit,
+				COALESCE(fu.fakultas, '') as parent_fakultas,
+				COALESCE((
+					SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+					FROM indikator_renstra_iku iri
+					WHERE iri.id_indikator_renstra = mir.id
+				), '') as iku_list
+			`).
+			Joins("JOIN template_renstra tr ON mtr.id_template_renstra = tr.id").
+			Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+			Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
+			Where("mtr.id_mata_programv2 = ?", prog.ID).
+			Order("tr.id ASC").
+			Scan(&rRows).Error
+	}
+
+	if fuFilter == nil && len(rRows) > 0 && rRows[0].FakultasUnitID != nil {
+		firstUnit := *rRows[0].FakultasUnitID
+		var sameUnitRows []renstraRow
+		for _, rr := range rRows {
+			if rr.FakultasUnitID != nil && *rr.FakultasUnitID == firstUnit {
+				sameUnitRows = append(sameUnitRows, rr)
+			}
+		}
+		rRows = sameUnitRows
+	}
+
+	ikuMap := commoninfra.GetMasterIkuMap(nil)
+	var scopes []domain.MatrixProkerScopeItem
+	for _, rr := range rRows {
+		formattedTargetUnit := commoninfra.FormatRenstraTargetUnit(
+			rr.TipeTarget, rr.Operator, rr.Target, rr.TargetMin, rr.TargetMax, rr.Satuan,
+		)
+		formattedIku := commoninfra.FormatIkuList(rr.IkuList, ikuMap)
+
+		scopes = append(scopes, domain.MatrixProkerScopeItem{
+			Id:                rr.TemplateID,
+			UUID:              rr.TemplateUUID.String(),
+			IdIndikator:       rr.IndikatorID,
+			IndikatorKinerja:  rr.IndikatorKinerja,
+			StandarSubStandar: rr.StandarNama,
+			TargetUnpak:       rr.TargetUnpak,
+			TargetUnit:        formattedTargetUnit,
+			CapaianUnitLalu:   "-",
+			Output:            "",
+			Outcome:           "",
+			IkuList:           formattedIku,
+		})
+	}
+
+	var fuIDUint64 *uint64
+	var firstUnitName, firstUnitUUID, firstUnitType, firstUnitJenjang, firstUnitParent string
+	if fuFilter != nil && *fuFilter > 0 {
+		v := uint64(*fuFilter)
+		fuIDUint64 = &v
+		var uRow struct {
+			NamaFakProdUnit string
+			Uuid            string
+			Type            string
+			Jenjang         string
+			Fakultas        string
+		}
+		if err := r.db.WithContext(ctx).Table("v_fakultas_unit").
+			Select("nama_fak_prod_unit, uuid, type, jenjang, fakultas").
+			Where("id = ?", *fuFilter).Take(&uRow).Error; err == nil {
+			firstUnitName = uRow.NamaFakProdUnit
+			firstUnitUUID = uRow.Uuid
+			firstUnitType = uRow.Type
+			firstUnitJenjang = uRow.Jenjang
+			firstUnitParent = uRow.Fakultas
+		}
+	} else if len(rRows) > 0 {
+		first := rRows[0]
+		if first.FakultasUnitID != nil && *first.FakultasUnitID > 0 {
+			fuIDUint64 = first.FakultasUnitID
+		}
+		firstUnitName = first.NamaFakultasUnit
+		firstUnitUUID = first.UuidFakultasUnit
+		firstUnitType = first.TypeFakultasUnit
+		firstUnitJenjang = first.JenjangFakultasUnit
+		firstUnitParent = first.ParentFakultas
+	}
+
+	progIDInt := int(prog.ID)
+	parsedProgUUID, _ := uuid.Parse(prog.UUID)
+
+	virtualSummary := &domain.MatrixProkerSummary{
+		ID:                  0,
+		UUID:                parsedProgUUID,
+		IdMataProgram:       &progIDInt,
+		NamaProgram:         prog.MataProgram,
+		Tahun:               prog.Tahun,
+		NoProker:            1,
+		IdFakultasUnit:      fuIDUint64,
+		UuidFakultasUnit:    firstUnitUUID,
+		NamaFakultasUnit:    firstUnitName,
+		TypeFakultasUnit:    firstUnitType,
+		JenjangFakultasUnit: firstUnitJenjang,
+		ParentFakultas:      firstUnitParent,
+		Status:              "draft",
+		StatusVerifikator:   "draft",
+		StatusAnggaran:      "menunggu_verifikator",
+		TotalAktivitas:      0,
+		TotalAnggaran:       0,
+		Scopes:              scopes,
+	}
+
+	if len(scopes) > 0 {
+		virtualSummary.IdIndikator = scopes[0].IdIndikator
+		virtualSummary.IndikatorKinerja = scopes[0].IndikatorKinerja
+		virtualSummary.StandarSubStandar = scopes[0].StandarSubStandar
+		virtualSummary.TargetUnpak = scopes[0].TargetUnpak
+		virtualSummary.TargetUnit = scopes[0].TargetUnit
+		virtualSummary.CapaianUnitLalu = "-"
+		virtualSummary.Output = ""
+		virtualSummary.Outcome = ""
+	}
+
+	return virtualSummary, nil
+}
+
+func (r *AktivitasV2Repository) EnsureMatrixProker(ctx context.Context, idMataProgram int, idFakultasUnit *uint64, idIndikator *int, pic string) (uint, uuid.UUID, error) {
+	// 1. Cek apakah matrix_proker sudah ada
+	var existing struct {
+		ID   uint
+		UUID string
+	}
+	q := r.db.WithContext(ctx).Table("matrix_proker").
+		Select("id, uuid").
+		Where("id_mata_program = ? AND deleted_at IS NULL", idMataProgram)
+	if idFakultasUnit != nil && *idFakultasUnit > 0 {
+		q = q.Where("id_fakultas_unit = ?", *idFakultasUnit)
+	}
+	if err := q.Order("id ASC").Take(&existing).Error; err == nil && existing.ID > 0 {
+		parsed, _ := uuid.Parse(existing.UUID)
+		return existing.ID, parsed, nil
+	}
+
+	// 2. Jika belum ada idIndikator, cari dari template renstra
+	if idIndikator == nil || *idIndikator == 0 {
+		var trRow struct {
+			Indikator int
+		}
+		trQ := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
+			Select("tr.indikator").
+			Joins("JOIN template_renstra tr ON mtr.id_template_renstra = tr.id").
+			Where("mtr.id_mata_programv2 = ?", idMataProgram)
+		if idFakultasUnit != nil && *idFakultasUnit > 0 {
+			trQ = trQ.Where("tr.fakultas_unit = ?", *idFakultasUnit)
+		}
+		if err := trQ.Order("tr.id ASC").Take(&trRow).Error; err == nil && trRow.Indikator > 0 {
+			idIndikator = &trRow.Indikator
+		}
+	}
+
+	// 3. Insert ke matrix_proker
+	newUUID := uuid.New()
+	var fuIDInt *int
+	if idFakultasUnit != nil && *idFakultasUnit > 0 {
+		v := int(*idFakultasUnit)
+		fuIDInt = &v
+	}
+
+	now := time.Now()
+	insertMap := map[string]interface{}{
+		"uuid":             newUUID.String(),
+		"id_mata_program":  idMataProgram,
+		"id_fakultas_unit": fuIDInt,
+		"id_indikator":     idIndikator,
+		"status":           "draft",
+		"status_anggaran":  "menunggu_verifikator",
+		"pic":              strings.TrimSpace(pic),
+		"beban_yayasan":    0,
+		"is_batal":         0,
+		"created_at":       now,
+		"updated_at":       now,
+	}
+
+	if err := r.db.WithContext(ctx).Table("matrix_proker").Create(insertMap).Error; err != nil {
+		return 0, uuid.Nil, err
+	}
+
+	var created struct {
+		ID uint
+	}
+	if err := r.db.WithContext(ctx).Table("matrix_proker").Select("id").Where("uuid = ?", newUUID.String()).Take(&created).Error; err != nil {
+		return 0, uuid.Nil, err
+	}
+
+	return created.ID, newUUID, nil
 }
 
 func (r *AktivitasV2Repository) GetMatrixProkerById(ctx context.Context, id uint) (*domain.MatrixProkerSummary, error) {
@@ -338,14 +770,25 @@ func (r *AktivitasV2Repository) GetAktivitasByMatrikId(ctx context.Context, matr
 			PIC:                   a.PIC,
 			Capaian:               a.Capaian,
 			Masalah:               a.Masalah,
+			PemecahanMasalah:      a.PemecahanMasalah,
+			Output:                a.Output,
+			Outcome:               a.Outcome,
 			Anggaran:              totalAnggaran,
 			RAB:                   rabJson,
 			RabItems:              rabItems,
 			Realisasi:             a.Realisasi,
 			CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
 			Pencairan:             a.Pencairan,
-			Status:                a.Status,
-			CatatanPenolakan:      a.CatatanPenolakan,
+			Status: func() string {
+				if a.StatusEvaluator != "" {
+					return a.StatusEvaluator
+				}
+				if a.StatusVerifikator != "" {
+					return a.StatusVerifikator
+				}
+				return "diajukan"
+			}(),
+			CatatanPenolakan: a.CatatanPenolakan,
 			StatusVerifikator: func() string {
 				if a.StatusLpm == "disetujui" {
 					return "terima_verifikator"
@@ -353,23 +796,41 @@ func (r *AktivitasV2Repository) GetAktivitasByMatrikId(ctx context.Context, matr
 				if a.StatusLpm == "ditolak" || a.StatusUpml == "ditolak" || a.StatusUpmf == "ditolak" || a.StatusUpms == "ditolak" {
 					return "ditolak"
 				}
-				return a.Status
+				if a.StatusVerifikator != "" {
+					return a.StatusVerifikator
+				}
+				return "menunggu"
 			}(),
 			CatatanVerifikator: a.CatatanPenolakan,
-			StatusAnggaran:     a.StatusAnggaran,
-			CatatanAnggaran:    a.CatatanAnggaran,
-			StatusUpml:         a.StatusUpml,
-			CatatanTolakUpml:   a.CatatanTolakUpml,
-			StatusUpmf:         a.StatusUpmf,
-			CatatanTolakUpmf:   a.CatatanTolakUpmf,
-			StatusUpms:         a.StatusUpms,
-			CatatanTolakUpms:   a.CatatanTolakUpms,
-			StatusLpm:          a.StatusLpm,
-			CatatanTolakLpm:    a.CatatanTolakLpm,
-			IsBatal:            a.IsBatal,
-			CatatanBatal:       a.CatatanBatal,
-			CreatedAt:          a.CreatedAt,
-			UpdatedAt:          a.UpdatedAt,
+			StatusEvaluator: func() string {
+				if a.StatusEvaluator != "" {
+					return a.StatusEvaluator
+				}
+				if a.StatusVerifikator != "" && a.StatusVerifikator != "draft" {
+					return a.StatusVerifikator
+				}
+				return "menunggu"
+			}(),
+			CatatanEvaluator: func() string {
+				if a.CatatanEvaluator != "" {
+					return a.CatatanEvaluator
+				}
+				return a.CatatanVerifikator
+			}(),
+			StatusUpml:       a.StatusUpml,
+			CatatanTolakUpml: a.CatatanTolakUpml,
+			StatusUpmf:       a.StatusUpmf,
+			CatatanTolakUpmf: a.CatatanTolakUpmf,
+			StatusUpms:       a.StatusUpms,
+			CatatanTolakUpms: a.CatatanTolakUpms,
+			StatusLpm:        a.StatusLpm,
+			CatatanTolakLpm:  a.CatatanTolakLpm,
+			IsBatal:          a.IsBatal,
+			BebanYayasan:     a.BebanYayasan,
+			CatatanBatal:     a.CatatanBatal,
+			TerimaAnggaranAt: a.TerimaAnggaranAt,
+			CreatedAt:        a.CreatedAt,
+			UpdatedAt:        a.UpdatedAt,
 		}
 
 		var tls []domain.ProkerTimelineV3
@@ -473,14 +934,25 @@ func (r *AktivitasV2Repository) GetAktivitasByUuid(ctx context.Context, uid uuid
 		PIC:                   a.PIC,
 		Capaian:               a.Capaian,
 		Masalah:               a.Masalah,
+		PemecahanMasalah:      a.PemecahanMasalah,
+		Output:                a.Output,
+		Outcome:               a.Outcome,
 		Anggaran:              totalAnggaran,
 		RAB:                   rabJson,
 		RabItems:              rabItems,
 		Realisasi:             a.Realisasi,
 		CatatanRevisiAnggaran: a.CatatanRevisiAnggaran,
 		Pencairan:             a.Pencairan,
-		Status:                a.Status,
-		CatatanPenolakan:      a.CatatanPenolakan,
+		Status: func() string {
+			if a.StatusEvaluator != "" {
+				return a.StatusEvaluator
+			}
+			if a.StatusVerifikator != "" {
+				return a.StatusVerifikator
+			}
+			return "diajukan"
+		}(),
+		CatatanPenolakan: a.CatatanPenolakan,
 		StatusVerifikator: func() string {
 			if a.StatusLpm == "disetujui" {
 				return "terima_verifikator"
@@ -488,23 +960,41 @@ func (r *AktivitasV2Repository) GetAktivitasByUuid(ctx context.Context, uid uuid
 			if a.StatusLpm == "ditolak" || a.StatusUpml == "ditolak" || a.StatusUpmf == "ditolak" || a.StatusUpms == "ditolak" {
 				return "ditolak"
 			}
-			return a.Status
+			if a.StatusVerifikator != "" {
+				return a.StatusVerifikator
+			}
+			return "menunggu"
 		}(),
 		CatatanVerifikator: a.CatatanPenolakan,
-		StatusAnggaran:     a.StatusAnggaran,
-		CatatanAnggaran:    a.CatatanAnggaran,
-		StatusUpml:         a.StatusUpml,
-		CatatanTolakUpml:   a.CatatanTolakUpml,
-		StatusUpmf:         a.StatusUpmf,
-		CatatanTolakUpmf:   a.CatatanTolakUpmf,
-		StatusUpms:         a.StatusUpms,
-		CatatanTolakUpms:   a.CatatanTolakUpms,
-		StatusLpm:          a.StatusLpm,
-		CatatanTolakLpm:    a.CatatanTolakLpm,
-		IsBatal:            a.IsBatal,
-		CatatanBatal:       a.CatatanBatal,
-		CreatedAt:          a.CreatedAt,
-		UpdatedAt:          a.UpdatedAt,
+		StatusEvaluator: func() string {
+			if a.StatusEvaluator != "" {
+				return a.StatusEvaluator
+			}
+			if a.StatusVerifikator != "" && a.StatusVerifikator != "draft" {
+				return a.StatusVerifikator
+			}
+			return "menunggu"
+		}(),
+		CatatanEvaluator: func() string {
+			if a.CatatanEvaluator != "" {
+				return a.CatatanEvaluator
+			}
+			return a.CatatanVerifikator
+		}(),
+		StatusUpml:       a.StatusUpml,
+		CatatanTolakUpml: a.CatatanTolakUpml,
+		StatusUpmf:       a.StatusUpmf,
+		CatatanTolakUpmf: a.CatatanTolakUpmf,
+		StatusUpms:       a.StatusUpms,
+		CatatanTolakUpms: a.CatatanTolakUpms,
+		StatusLpm:        a.StatusLpm,
+		CatatanTolakLpm:  a.CatatanTolakLpm,
+		IsBatal:          a.IsBatal,
+		BebanYayasan:     a.BebanYayasan,
+		CatatanBatal:     a.CatatanBatal,
+		TerimaAnggaranAt: a.TerimaAnggaranAt,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
 	}
 
 	var tls []domain.ProkerTimelineV3
@@ -631,7 +1121,15 @@ func (r *AktivitasV2Repository) CreateAktivitas(ctx context.Context, data *domai
 		}
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	if data.IdMatrikProker != nil && *data.IdMatrikProker > 0 {
+		_, _, _ = commoninfra.SyncMatrixProkerStatus(ctx, r.db, uint(*data.IdMatrikProker))
+	}
+
+	return nil
 }
 
 func (r *AktivitasV2Repository) UpdateAktivitas(ctx context.Context, data *domain.AktivitasV2) error {
@@ -656,7 +1154,15 @@ func (r *AktivitasV2Repository) UpdateAktivitas(ctx context.Context, data *domai
 		return err
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	if data.IdMatrikProker != nil && *data.IdMatrikProker > 0 {
+		_, _, _ = commoninfra.SyncMatrixProkerStatus(ctx, r.db, uint(*data.IdMatrikProker))
+	}
+
+	return nil
 }
 
 func (r *AktivitasV2Repository) DeleteAktivitas(ctx context.Context, uid uuid.UUID) error {
@@ -688,7 +1194,15 @@ func (r *AktivitasV2Repository) DeleteAktivitas(ctx context.Context, uid uuid.UU
 		return err
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	if act.IdMatrikProker != nil && *act.IdMatrikProker > 0 {
+		_, _, _ = commoninfra.SyncMatrixProkerStatus(ctx, r.db, uint(*act.IdMatrikProker))
+	}
+
+	return nil
 }
 
 func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.UpdateStatusRequest) (*domain.UpdateStatusResult, error) {
@@ -708,69 +1222,139 @@ func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.Upd
 	}
 
 	if status == "draft" {
-		updates["status"] = "draft"
+		updates["status_verifikator"] = "draft"
+		updates["status_evaluator"] = "draft"
 		updates["status_lpm"] = "menunggu"
-		updates["status_anggaran"] = "menunggu_verifikator"
 		updates["catatan_penolakan"] = ""
+		updates["catatan_verifikator"] = ""
+		updates["catatan_evaluator"] = ""
 		updates["catatan_tolak_lpm"] = ""
+	} else if status == "diajukan" {
+		if act.StatusVerifikator != "diterima" && act.StatusVerifikator != "disetujui" {
+			updates["status_verifikator"] = "diajukan"
+		}
+		if act.StatusEvaluator == "draft" || act.StatusEvaluator == "" {
+			updates["status_evaluator"] = "menunggu"
+		}
 	} else {
 		switch role {
+		case "evaluator":
+			curVerif := strings.ToLower(strings.TrimSpace(act.StatusVerifikator))
+			curEval := strings.ToLower(strings.TrimSpace(act.StatusEvaluator))
+			isAlreadyApproved := curEval == "disetujui" || curEval == "diterima" || curEval == "terima_verifikator" || curVerif == "diterima" || curVerif == "disetujui"
+
+			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" || status == "ditolak" || status == "revisi" {
+				if !isAlreadyApproved {
+					if curVerif == "draft" || curEval == "draft" || curEval == "" {
+						return nil, errors.New("Aktivitas belum diajukan oleh unit kerja")
+					}
+					if curEval == "ditolak" || curEval == "revisi" || curVerif == "ditolak" || curVerif == "revisi" {
+						return nil, errors.New("Aktivitas belum diajukan kembali oleh unit kerja")
+					}
+				}
+			}
+
+			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" {
+				updates["status_evaluator"] = "disetujui"
+				updates["catatan_evaluator"] = ""
+				updates["status_verifikator"] = "diterima"
+				updates["catatan_verifikator"] = ""
+			} else if status == "ditolak" || status == "revisi" {
+				updates["status_evaluator"] = "ditolak"
+				updates["catatan_evaluator"] = req.CatatanPenolakan
+				updates["status_verifikator"] = "ditolak"
+				updates["catatan_verifikator"] = req.CatatanPenolakan
+			} else if status == "draft" {
+				updates["status_evaluator"] = "draft"
+				updates["catatan_evaluator"] = ""
+				updates["status_verifikator"] = "draft"
+				updates["catatan_verifikator"] = ""
+			}
+		case "lpm":
+			updates["status_lpm"] = status
+			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" {
+				updates["status_lpm"] = "disetujui"
+				updates["catatan_tolak_lpm"] = ""
+			} else if status == "ditolak" || status == "revisi" {
+				updates["status_lpm"] = "ditolak"
+				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
+			} else if status == "draft" {
+				updates["status_lpm"] = "draft"
+				updates["catatan_tolak_lpm"] = ""
+			}
+		case "admin":
+			updates["status_lpm"] = status
+			updates["status_evaluator"] = status
+			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" {
+				updates["status_verifikator"] = "diterima"
+				updates["status_evaluator"] = "disetujui"
+				updates["status_lpm"] = "disetujui"
+				updates["catatan_evaluator"] = ""
+				updates["catatan_verifikator"] = ""
+				updates["catatan_tolak_lpm"] = ""
+				updates["catatan_penolakan"] = ""
+			} else if status == "ditolak" || status == "revisi" {
+				updates["status_evaluator"] = "ditolak"
+				updates["status_verifikator"] = "ditolak"
+				updates["status_lpm"] = "ditolak"
+				updates["catatan_evaluator"] = req.CatatanPenolakan
+				updates["catatan_verifikator"] = req.CatatanPenolakan
+				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
+				updates["catatan_penolakan"] = req.CatatanPenolakan
+			} else if status == "draft" {
+				updates["status_evaluator"] = "draft"
+				updates["status_verifikator"] = "draft"
+				updates["status_lpm"] = "draft"
+				updates["catatan_evaluator"] = ""
+				updates["catatan_verifikator"] = ""
+				updates["catatan_penolakan"] = ""
+			}
 		case "upms":
 			updates["status_upms"] = status
 			if status == "ditolak" {
 				updates["catatan_tolak_upms"] = req.CatatanPenolakan
-				updates["status"] = "ditolak"
+				updates["status_verifikator"] = "ditolak"
+				updates["catatan_verifikator"] = req.CatatanPenolakan
 				updates["catatan_penolakan"] = req.CatatanPenolakan
 			} else if status == "disetujui" {
 				updates["catatan_tolak_upms"] = ""
-				if act.Status == "ditolak" {
-					updates["status"] = "diajukan"
-				}
 			}
 		case "upmf":
 			updates["status_upmf"] = status
 			if status == "ditolak" {
 				updates["catatan_tolak_upmf"] = req.CatatanPenolakan
-				updates["status"] = "ditolak"
+				updates["status_verifikator"] = "ditolak"
+				updates["catatan_verifikator"] = req.CatatanPenolakan
 				updates["catatan_penolakan"] = req.CatatanPenolakan
 			} else if status == "disetujui" {
 				updates["catatan_tolak_upmf"] = ""
-				if act.Status == "ditolak" {
-					updates["status"] = "diajukan"
-				}
 			}
 		case "upml":
 			updates["status_upml"] = status
 			if status == "ditolak" {
 				updates["catatan_tolak_upml"] = req.CatatanPenolakan
-				updates["status"] = "ditolak"
+				updates["status_verifikator"] = "ditolak"
+				updates["catatan_verifikator"] = req.CatatanPenolakan
 				updates["catatan_penolakan"] = req.CatatanPenolakan
 			} else if status == "disetujui" {
 				updates["catatan_tolak_upml"] = ""
-				if act.Status == "ditolak" {
-					updates["status"] = "diajukan"
-				}
-			}
-		case "admin":
-			updates["status_lpm"] = status
-			updates["status"] = status
-			if status == "ditolak" {
-				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
-				updates["catatan_penolakan"] = req.CatatanPenolakan
-			} else if status == "disetujui" {
-				updates["catatan_tolak_lpm"] = ""
-				updates["catatan_penolakan"] = ""
+				updates["status_verifikator"] = "diterima"
+				updates["catatan_verifikator"] = ""
 			}
 		case "anggaran", "keuangan":
-			updates["status_anggaran"] = status
-			if status == "ditolak" {
-				updates["catatan_anggaran"] = req.CatatanPenolakan
-			} else {
-				updates["catatan_anggaran"] = ""
-			}
+			return nil, errors.New("Verifikasi anggaran dilakukan pada tingkat program kerja, bukan pada aktivitas")
 		default:
-			// generic / admin
-			updates["status"] = status
+			// generic / auditee
+			if status == "disetujui" || status == "diterima" {
+				updates["status_verifikator"] = "diterima"
+				updates["catatan_verifikator"] = ""
+			} else if status == "ditolak" || status == "revisi" {
+				updates["status_verifikator"] = "ditolak"
+				updates["catatan_verifikator"] = req.CatatanPenolakan
+			} else if status == "draft" {
+				updates["status_verifikator"] = "draft"
+				updates["catatan_verifikator"] = ""
+			}
 			if req.CatatanPenolakan != "" {
 				updates["catatan_penolakan"] = req.CatatanPenolakan
 			}
@@ -779,6 +1363,10 @@ func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.Upd
 
 	if err := r.db.WithContext(ctx).Model(&act).Updates(updates).Error; err != nil {
 		return nil, err
+	}
+
+	if act.IdMatrikProker != nil && *act.IdMatrikProker > 0 {
+		_, _, _ = commoninfra.SyncMatrixProkerStatus(ctx, r.db, uint(*act.IdMatrikProker))
 	}
 
 	return &domain.UpdateStatusResult{

@@ -79,6 +79,15 @@ func (h *UpdateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Update
 	if cmd.PemecahanMasalah != "" {
 		act.PemecahanMasalah = strings.TrimSpace(cmd.PemecahanMasalah)
 	}
+	if cmd.Output != "" {
+		act.Output = strings.TrimSpace(cmd.Output)
+	}
+	if cmd.Outcome != "" {
+		act.Outcome = strings.TrimSpace(cmd.Outcome)
+	}
+	if cmd.BebanYayasan != nil {
+		act.BebanYayasan = *cmd.BebanYayasan
+	}
 
 	if !rabModified {
 		act.RAB = ""

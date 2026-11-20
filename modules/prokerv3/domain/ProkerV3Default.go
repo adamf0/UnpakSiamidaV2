@@ -58,8 +58,13 @@ type ProkerV3Default struct {
 	CatatanHapus           string                   `json:"CatatanHapus"`
 	DuplicateDeletedCount  int64                    `gorm:"-" json:"DuplicateDeletedCount"`
 	DuplicateDeletedTitles []DuplicateDeletedProker `gorm:"-" json:"DuplicateDeletedTitles,omitempty"`
-	TotalAktivitas         int64                    `json:"TotalAktivitas"`
-	TotalAnggaran          float64                  `json:"TotalAnggaran"`
+	TotalAktivitas                  int64                    `json:"TotalAktivitas"`
+	TotalAktivitasTerimaVerifikator int64                    `json:"TotalAktivitasTerimaVerifikator"`
+	TotalAktivitasTolakVerifikator  int64                    `json:"TotalAktivitasTolakVerifikator"`
+	TotalAktivitasDiajukanVerifikator int64                  `json:"TotalAktivitasDiajukanVerifikator"`
+	TotalAktivitasTerimaAnggaran    int64                    `json:"TotalAktivitasTerimaAnggaran"`
+	TotalAktivitasTolakAnggaran     int64                    `json:"TotalAktivitasTolakAnggaran"`
+	TotalAnggaran                   float64                  `json:"TotalAnggaran"`
 	TotalRealisasi         float64                  `json:"TotalRealisasi"`
 	HasRealisasi           bool                     `json:"HasRealisasi"`
 	TotalDokumen           int64                    `json:"TotalDokumen"`
@@ -98,6 +103,21 @@ type ProkerUnitOption struct {
 	Fakultas     string `json:"fakultas"`
 	Jenjang      string `json:"jenjang"`
 	KodeFakultas string `json:"kode_fakultas"`
+}
+
+func (u ProkerUnitOption) DisplayNama() string {
+	nama := strings.TrimSpace(u.Nama)
+	if nama == "" {
+		return ""
+	}
+	jenjang := strings.ToUpper(strings.TrimSpace(u.Jenjang))
+	if jenjang != "" && strings.EqualFold(strings.TrimSpace(u.Type), "prodi") {
+		suffix := fmt.Sprintf("(%s)", jenjang)
+		if !strings.HasSuffix(strings.ToUpper(nama), suffix) {
+			return fmt.Sprintf("%s %s", nama, suffix)
+		}
+	}
+	return nama
 }
 
 type ProkerTahunOption struct {

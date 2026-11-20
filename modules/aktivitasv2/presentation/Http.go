@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -106,9 +107,17 @@ func canAccessAktivitasProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID st
 			}
 		}
 	}
+	if itemUnitUUID != "" && len(assignedUnitIDs) > 0 && aktivitasDb != nil {
+		var cnt int64
+		if err := aktivitasDb.Table("v_fakultas_unit").Where("uuid = ? AND id IN (?)", itemUnitUUID, assignedUnitIDs).Count(&cnt).Error; err == nil && cnt > 0 {
+			return true
+		}
+	}
 	if itemUnitName != "" {
 		for _, aname := range assignedUnitNames {
-			if strings.EqualFold(strings.TrimSpace(itemUnitName), strings.TrimSpace(aname)) {
+			if strings.EqualFold(strings.TrimSpace(itemUnitName), strings.TrimSpace(aname)) ||
+				strings.Contains(strings.ToLower(aname), strings.ToLower(itemUnitName)) ||
+				strings.Contains(strings.ToLower(itemUnitName), strings.ToLower(aname)) {
 				return true
 			}
 		}
@@ -182,7 +191,35 @@ func GetAktivitasByMatrixHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid matrix UUID"})
 	}
 
-	result, err := mediatr.Send[getAktivitasByMatrix.GetAktivitasByMatrixQuery, *domain.AktivitasByMatrixResult](c.Context(), getAktivitasByMatrix.GetAktivitasByMatrixQuery{UUID: parsedUuid})
+	targetFU := strings.TrimSpace(c.Query("fakultas_unit"))
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+	if targetFU == "" {
+		_, userFU := commonpresentation.GetUserInfo(c)
+		targetFU = userFU
+	}
+	ctx := c.UserContext()
+	if ctx == nil {
+		ctx = c.Context()
+	}
+	if targetFU != "" {
+		ctx = context.WithValue(ctx, "active_unit", targetFU)
+	}
+
+	result, err := mediatr.Send[getAktivitasByMatrix.GetAktivitasByMatrixQuery, *domain.AktivitasByMatrixResult](ctx, getAktivitasByMatrix.GetAktivitasByMatrixQuery{UUID: parsedUuid})
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -243,7 +280,6 @@ func GetAktivitasDetailHandler(c *fiber.Ctx) error {
 		}
 	}
 
-
 	return c.JSON(fiber.Map{
 		"aktivitas": result.Aktivitas,
 		"proker":    result.Proker,
@@ -280,16 +316,52 @@ func CreateAktivitasHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("pemecahan_masalah"); val != "" {
 		cmd.PemecahanMasalah = strings.TrimSpace(val)
 	}
+	if val := c.FormValue("output"); val != "" {
+		cmd.Output = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("outcome"); val != "" {
+		cmd.Outcome = strings.TrimSpace(val)
+	}
 	if val := c.FormValue("rab"); val != "" {
 		cmd.RAB = strings.TrimSpace(val)
 	}
+	if val := c.FormValue("beban_yayasan"); val != "" {
+		cmd.BebanYayasan = val == "1" || strings.ToLower(val) == "true"
+	}
 	cmd.MatrixUUID = rawUuid
 
-	act, err := mediatr.Send[createAktivitas.CreateAktivitasV3Command, *domain.AktivitasV2](c.Context(), cmd)
+	targetFU := strings.TrimSpace(c.Query("fakultas_unit"))
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+	if targetFU == "" {
+		_, userFU := commonpresentation.GetUserInfo(c)
+		targetFU = userFU
+	}
+	ctx := c.UserContext()
+	if ctx == nil {
+		ctx = c.Context()
+	}
+	if targetFU != "" {
+		ctx = context.WithValue(ctx, "active_unit", targetFU)
+	}
+
+	act, err := mediatr.Send[createAktivitas.CreateAktivitasV3Command, *domain.AktivitasV2](ctx, cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
-
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "Aktivitas berhasil ditambahkan",
@@ -327,6 +399,12 @@ func UpdateAktivitasHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("pemecahan_masalah"); val != "" {
 		cmd.PemecahanMasalah = strings.TrimSpace(val)
 	}
+	if val := c.FormValue("output"); val != "" {
+		cmd.Output = strings.TrimSpace(val)
+	}
+	if val := c.FormValue("outcome"); val != "" {
+		cmd.Outcome = strings.TrimSpace(val)
+	}
 	if val := c.FormValue("rab"); val != "" {
 		cmd.RAB = strings.TrimSpace(val)
 	}
@@ -347,12 +425,15 @@ func UpdateAktivitasHandler(c *fiber.Ctx) error {
 	if val := c.FormValue("status"); val != "" {
 		cmd.Status = strings.TrimSpace(val)
 	}
+	if val := c.FormValue("beban_yayasan"); val != "" {
+		b := val == "1" || strings.ToLower(val) == "true"
+		cmd.BebanYayasan = &b
+	}
 
 	act, err := mediatr.Send[updateAktivitas.UpdateAktivitasV3Command, *domain.AktivitasV2](c.Context(), cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
-
 
 	return c.JSON(fiber.Map{
 		"message": "Aktivitas berhasil diperbarui",
@@ -372,7 +453,6 @@ func DeleteAktivitasHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
-
 
 	return c.JSON(fiber.Map{
 		"message": msg,
@@ -419,7 +499,6 @@ func CreateTimelineHandler(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "Timeline berhasil ditambahkan",
 		"uuid":    tl.UUID.String(),
@@ -463,7 +542,6 @@ func UpdateTimelineHandler(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-
 	return c.JSON(fiber.Map{
 		"message": "Timeline berhasil diperbarui",
 		"uuid":    tl.UUID.String(),
@@ -486,7 +564,6 @@ func ReorderTimelineHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
-
 
 	return c.JSON(fiber.Map{"message": msg})
 }
@@ -640,7 +717,6 @@ func UpdateAktivitasStatusHandler(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, err)
 	}
 
-
 	return c.JSON(res)
 }
 
@@ -687,6 +763,46 @@ func UpdateBatalAktivitasHandler(c *fiber.Ctx) error {
 	})
 }
 
+// UpdateBebanYayasanAktivitasHandler
+func UpdateBebanYayasanAktivitasHandler(c *fiber.Ctx) error {
+	rawActUuid := c.Params("aktivitas_uuid")
+	if rawActUuid == "" {
+		rawActUuid = c.Params("uuid")
+	}
+	parsedUuid, err := uuid.Parse(rawActUuid)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid aktivitas UUID"})
+	}
+
+	if repoAktivitas == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Repository not initialized"})
+	}
+
+	act, err := repoAktivitas.GetAktivitasEntityByUuid(c.Context(), parsedUuid)
+	if err != nil || act == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Aktivitas tidak ditemukan"})
+	}
+
+	var newBeban bool
+	if val := strings.TrimSpace(c.FormValue("beban_yayasan")); val != "" {
+		newBeban = val == "1" || strings.ToLower(val) == "true"
+	} else {
+		newBeban = !act.BebanYayasan
+	}
+
+	act.BebanYayasan = newBeban
+	act.UpdatedAt = time.Now()
+
+	if err := repoAktivitas.UpdateAktivitas(c.Context(), act); err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(fiber.Map{
+		"message":       "Status beban yayasan aktivitas berhasil diperbarui",
+		"beban_yayasan": act.BebanYayasan,
+	})
+}
+
 // UploadDokumenReferensiHandler
 func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 	rawUuid := c.Params("aktivitas_uuid")
@@ -725,7 +841,7 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 		keterangan = "Dokumen Referensi Program"
 	}
 
-	uploadDir := "./upload/proker_v3"
+	uploadDir := "./upload/timeline_proker_files"
 	_ = helper.EnsureDir775(uploadDir)
 
 	var filesToInsert []domain.ProkerTimelineFileV3
@@ -750,7 +866,7 @@ func UploadDokumenReferensiHandler(c *fiber.Ctx) error {
 			IdAktivitasV2: actIDPtr,
 			File:          savedName,
 			NamaFile:      fh.Filename,
-			FileURL:       "/upload/proker_v3/" + savedName,
+			FileURL:       "/upload/timeline_proker_files/" + savedName,
 			FileSize:      fh.Size,
 			FileType:      fh.Header.Get("Content-Type"),
 			Keterangan:    keterangan,
@@ -880,7 +996,7 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 			}
 		}
 
-		targetDir := "./upload/proker_v3"
+		targetDir := "./upload/timeline_proker_files"
 		_ = helper.EnsureDir775(targetDir)
 
 		ext := filepath.Ext(effectiveName)
@@ -893,7 +1009,7 @@ func UploadTimelineFileChunkHandler(c *fiber.Ctx) error {
 			_ = helper.EnsureFile664(destPath)
 		}
 
-		relURL := "/upload/proker_v3/" + savedFileName
+		relURL := "/upload/timeline_proker_files/" + savedFileName
 
 		record := domain.ProkerTimelineFileV3{
 			UUID:                  fileUUID,
@@ -958,6 +1074,10 @@ func ModuleAktivitasV2(app *fiber.App, dbs ...*gorm.DB) {
 	app.Patch("/proker_v3/aktivitas/:aktivitas_uuid/batal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBatalAktivitasHandler)
 	app.Put("/proker_v3/:uuid/aktivitas/:aktivitas_uuid/batal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBatalAktivitasHandler)
 	app.Patch("/proker_v3/:uuid/aktivitas/:aktivitas_uuid/batal", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBatalAktivitasHandler)
+	app.Put("/proker_v3/aktivitas/:aktivitas_uuid/beban_yayasan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBebanYayasanAktivitasHandler)
+	app.Patch("/proker_v3/aktivitas/:aktivitas_uuid/beban_yayasan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBebanYayasanAktivitasHandler)
+	app.Put("/proker_v3/:uuid/aktivitas/:aktivitas_uuid/beban_yayasan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBebanYayasanAktivitasHandler)
+	app.Patch("/proker_v3/:uuid/aktivitas/:aktivitas_uuid/beban_yayasan", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UpdateBebanYayasanAktivitasHandler)
 	app.Post("/proker_v3/aktivitas/:aktivitas_uuid/dokumen_referensi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UploadDokumenReferensiHandler)
 	app.Post("/proker_v3/:uuid/dokumen_referensi", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(roles, whoamiURL), UploadDokumenReferensiHandler)
 

@@ -84,8 +84,6 @@ func TestCreateIndikatorRenstraCommandValidation_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "Indikator cannot be blank")
 	assert.Contains(t, err.Error(), "Tahun cannot be blank")
 	assert.Contains(t, err.Error(), "Tipe Target cannot be blank")
-	assert.Contains(t, err.Error(), "Target Unpak cannot be blank")
-	assert.Contains(t, err.Error(), "Target Unit cannot be blank")
 }
 
 func TestCreateIndikatorRenstraCommand_Success(t *testing.T) {

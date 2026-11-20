@@ -45,15 +45,32 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 		return nil, domain.ProkerDeleted()
 	}
 
+	// Jika proker belum tersimpan di matrix_proker (ID == 0), simpan data dulu ke matrix_proker
+	if proker.ID == 0 {
+		var mpID int
+		if proker.IdMataProgram != nil {
+			mpID = *proker.IdMataProgram
+		}
+		newMatrixID, newMatrixUUID, err := h.Repo.EnsureMatrixProker(ctx, mpID, proker.IdFakultasUnit, proker.IdIndikator, cmd.PIC)
+		if err != nil {
+			return nil, err
+		}
+		proker.ID = newMatrixID
+		proker.UUID = newMatrixUUID
+	}
+
 	namaAktivitas := strings.TrimSpace(cmd.Aktivitas)
 	if namaAktivitas == "" {
 		return nil, domain.NamaAktivitasRequired()
 	}
 
-	statusStr := strings.ToLower(strings.TrimSpace(cmd.Status))
-	if statusStr == "" {
-		statusStr = "draft"
-	}
+	// Setiap aktivitas baru dimulai sebagai draft sampai proker diajukan / diajukan kembali oleh unit kerja.
+	// Jika proker sudah memiliki aktivitas yang diterima evaluator sebelumnya, SyncMatrixProkerStatus
+	// akan otomatis mengubah matrix_proker.status menjadi diterima_parsial.
+	actStatus := "draft"
+	actStatusEval := "draft"
+	actStatusVerif := "draft"
+	actStatusAudit := "draft"
 
 	var fuIDUint64 *uint64
 	if proker.IdFakultasUnit != nil {
@@ -76,6 +93,8 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 		Capaian:          strings.TrimSpace(cmd.Capaian),
 		Masalah:          strings.TrimSpace(cmd.Masalah),
 		PemecahanMasalah: strings.TrimSpace(cmd.PemecahanMasalah),
+		Output:           strings.TrimSpace(cmd.Output),
+		Outcome:          strings.TrimSpace(cmd.Outcome),
 		Anggaran:         cmd.Anggaran,
 		RAB: func() string {
 			if strings.TrimSpace(cmd.RAB) != "" && cmd.RAB != "[]" {
@@ -97,12 +116,14 @@ func (h *CreateAktivitasV3CommandHandler) Handle(ctx context.Context, cmd Create
 			}
 			return ""
 		}(),
-		Status:           statusStr,
-		StatusAnggaran:    "menunggu_verifikator",
-		StatusUpml:       "menunggu",
-		StatusUpmf:       "menunggu",
-		StatusUpms:       "menunggu",
-		StatusLpm:        "menunggu",
+		Status:           actStatus,
+		StatusVerifikator: actStatusVerif,
+		StatusEvaluator:  actStatusEval,
+		StatusUpml:       actStatusAudit,
+		StatusUpmf:       actStatusAudit,
+		StatusUpms:       actStatusAudit,
+		StatusLpm:        actStatusAudit,
+		BebanYayasan:     cmd.BebanYayasan,
 	}
 
 	timelines := make([]domain.ProkerTimelineV3, 0, len(cmd.Timelines))

@@ -78,6 +78,13 @@ func (h *GetAllMataProgramV2QueryHandler) Handle(ctx context.Context, q GetAllMa
 		return nil, err
 	}
 
+	mpIDs := make([]uint, 0, len(groupSummaries))
+	for _, gs := range groupSummaries {
+		mpIDs = append(mpIDs, gs.ID)
+	}
+	templatesMap, _ := h.Repo.GetTemplatesByMataProgramIDs(ctx, mpIDs)
+	prokerUnitsMap, _ := h.Repo.GetProkerUnitsByMataProgramIDs(ctx, mpIDs)
+
 	items := make([]domain.MataProgramV2GroupedRow, 0, len(groupSummaries))
 	for _, gs := range groupSummaries {
 		units, _ := h.Repo.GetGroupUnits(ctx, gs.MataProgram, gs.IdMasterTahun, filter.ShowDeleted)
@@ -91,6 +98,19 @@ func (h *GetAllMataProgramV2QueryHandler) Handle(ctx context.Context, q GetAllMa
 			}
 		}
 
+		tpls := templatesMap[gs.ID]
+		pUnits := prokerUnitsMap[gs.ID]
+
+		var pUnitLabels []string
+		for _, pu := range pUnits {
+			if pu.Label != "" {
+				pUnitLabels = append(pUnitLabels, pu.Label)
+			} else if pu.NamaFakultasUnit != "" {
+				pUnitLabels = append(pUnitLabels, pu.NamaFakultasUnit)
+			}
+		}
+		pUnitText := strings.Join(pUnitLabels, ", ")
+
 		items = append(items, domain.MataProgramV2GroupedRow{
 			Id:               gs.ID,
 			UUID:             gs.UUID,
@@ -102,6 +122,11 @@ func (h *GetAllMataProgramV2QueryHandler) Handle(ctx context.Context, q GetAllMa
 			FakultasUnit:     strings.Join(labelParts, ", "),
 			Units:            units,
 			TotalUnits:       len(units),
+			TemplateRenstras: tpls,
+			TotalTemplates:   len(tpls),
+			ProkerUnits:      pUnits,
+			ProkerUnitText:   pUnitText,
+			TotalProkerUnits: len(pUnits),
 			TotalProkerCount: totalProker,
 			CreatedAt:        gs.CreatedAt,
 			UpdatedAt:        gs.UpdatedAt,

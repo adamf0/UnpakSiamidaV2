@@ -54,14 +54,16 @@ func (h *CreateProkerV3CommandHandler) Handle(
 		tahunStr = "2026"
 	}
 
-	// Block duplicate pengajuan untuk kombinasi (id_mata_program / nama_program, fakultas_unit, tahun)
+	// Jika kombinasi (id_mata_program / nama_program, fakultas_unit, tahun) sudah ada, gunakan referensi proker yang ada
 	if fuID != nil && *fuID > 0 {
 		exists, err := h.Repo.ExistsActiveProker(ctx, *fuID, tahunStr, mpID, cmd.NamaProgram, 0)
 		if err != nil {
 			return "", err
 		}
 		if exists {
-			return "", domain.DuplicateProkerUnitTahun()
+			if existingUUID, err := h.Repo.GetActiveProkerUUID(ctx, *fuID, tahunStr, mpID, cmd.NamaProgram); err == nil && existingUUID != "" {
+				return existingUUID, nil
+			}
 		}
 	}
 
@@ -110,60 +112,7 @@ func (h *CreateProkerV3CommandHandler) Handle(
 		return "", err
 	}
 
-	// 5. Save dynamic scopes into matrix_proker_scope
-	if len(cmd.Scopes) > 0 {
-		scopesToSave := make([]domain.MatrixProkerScope, 0, len(cmd.Scopes))
-		for _, sc := range cmd.Scopes {
-			var scIndID *int = sc.IdIndikator
-			if scIndID == nil || *scIndID <= 0 {
-				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
-				if scIndKinerja != "" {
-					if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, scIndKinerja); err == nil && resolvedInd != nil {
-						scIndID = resolvedInd
-					}
-				}
-			}
-
-			scUUID := uuid.New()
-			if strings.TrimSpace(sc.UUID) != "" {
-				if parsed, err := uuid.Parse(strings.TrimSpace(sc.UUID)); err == nil {
-					scUUID = parsed
-				}
-			}
-
-			scopesToSave = append(scopesToSave, domain.MatrixProkerScope{
-				UUID:             scUUID,
-				IdMatrixProker:   matrixProker.ID,
-				IdMataProgram:    mpID,
-				IdIndikator:      scIndID,
-				TargetUnpak:      strings.TrimSpace(sc.TargetUnpak),
-				CapaianTerdahulu: strings.TrimSpace(sc.CapaianUnitLalu),
-				TargetUnit:       strings.TrimSpace(sc.TargetUnit),
-				Output:           strings.TrimSpace(sc.Output),
-				Outcome:          strings.TrimSpace(sc.Outcome),
-				CreatedAt:        time.Now(),
-				UpdatedAt:        time.Now(),
-			})
-		}
-		_ = h.Repo.SaveMatrixProkerScopes(ctx, scopesToSave)
-	} else {
-		fallbackScope := []domain.MatrixProkerScope{
-			{
-				UUID:             uuid.New(),
-				IdMatrixProker:   matrixProker.ID,
-				IdMataProgram:    mpID,
-				IdIndikator:      indID,
-				TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
-				CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
-				TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
-				Output:           strings.TrimSpace(cmd.Output),
-				Outcome:          strings.TrimSpace(cmd.Outcome),
-				CreatedAt:        time.Now(),
-				UpdatedAt:        time.Now(),
-			},
-		}
-		_ = h.Repo.SaveMatrixProkerScopes(ctx, fallbackScope)
-	}
+	return matrixProker.UUID.String(), nil
 
 	return matrixProker.UUID.String(), nil
 }

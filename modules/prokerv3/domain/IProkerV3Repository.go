@@ -80,6 +80,7 @@ type IProkerV3Repository interface {
 
 	// Proker V3 Command Helpers
 	ExistsActiveProker(ctx context.Context, fuID int, tahunStr string, mpID *int, namaProg string, excludeProkerID uint) (bool, error)
+	GetActiveProkerUUID(ctx context.Context, fuID int, tahunStr string, mpID *int, namaProg string) (string, error)
 	ResolveMasterTahun(ctx context.Context, tahunStr string) (int, error)
 	ResolveOrCreateMataProgram(ctx context.Context, namaProg string, masterTahunID int, fuID *int) (*int, error)
 	UpdateMataProgramTahun(ctx context.Context, mpID int, masterTahunID int) error

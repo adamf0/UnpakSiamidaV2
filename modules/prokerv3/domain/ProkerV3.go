@@ -17,8 +17,8 @@ type ProkerV3 struct {
 	IdIndikator      *int      `gorm:"column:id_indikator" json:"IdIndikator"`
 	Status            string    `gorm:"column:status;type:varchar(50);default:'draft'" json:"Status"`
 	CatatanPenolakan  string    `gorm:"column:catatan_penolakan;type:text" json:"CatatanPenolakan"`
-	StatusVerifikator string    `gorm:"column:status_verifikator;type:varchar(50);default:'draft'" json:"StatusVerifikator"`
-	CatatanVerifikator string   `gorm:"column:catatan_verifikator;type:text" json:"CatatanVerifikator"`
+	StatusVerifikator string    `gorm:"-" json:"StatusVerifikator"`
+	CatatanVerifikator string   `gorm:"-" json:"CatatanVerifikator"`
 	StatusAnggaran    string    `gorm:"column:status_anggaran;type:varchar(50);default:'menunggu_verifikator'" json:"StatusAnggaran"`
 	CatatanAnggaran   string    `gorm:"column:catatan_anggaran;type:text" json:"CatatanAnggaran"`
 	PIC               string    `gorm:"column:pic;type:text" json:"PIC"`

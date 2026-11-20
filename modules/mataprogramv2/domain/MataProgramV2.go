@@ -69,42 +69,93 @@ type MataProgramV2Row struct {
 	DeletedAt        *time.Time `gorm:"column:deleted_at" json:"DeletedAt"`
 }
 
+type MataProgramV2TemplateRenstra struct {
+	ID                uint       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	UUID              string     `gorm:"column:uuid" json:"uuid"`
+	IdMataProgramV2   uint       `gorm:"column:id_mata_programv2" json:"id_mata_programv2"`
+	IdTemplateRenstra uint       `gorm:"column:id_template_renstra" json:"id_template_renstra"`
+	CreatedAt         *time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt         *time.Time `gorm:"column:updated_at" json:"updated_at"`
+}
+
+func (MataProgramV2TemplateRenstra) TableName() string {
+	return "mata_programv2_template_renstra"
+}
+
+type MataProgramV2TemplateItem struct {
+	ID                 uint   `gorm:"column:id" json:"ID"`
+	UUID               string `gorm:"column:uuid" json:"UUID"`
+	IdTemplateRenstra  uint   `gorm:"column:id_template_renstra" json:"IdTemplateRenstra"`
+	IndikatorRenstraID uint   `gorm:"column:indikator_id" json:"IndikatorRenstraID"`
+	Indikator          string `gorm:"column:indikator" json:"Indikator"`
+	StandarRenstra     string `gorm:"column:standar_renstra" json:"StandarRenstra"`
+	FakultasUnitID     uint   `gorm:"column:fakultas_unit_id" json:"FakultasUnitID"`
+	FakultasUnit       string `gorm:"column:fakultas_unit" json:"FakultasUnit"`
+	Kategori           string `gorm:"column:kategori" json:"Kategori"`
+	Target             string `gorm:"column:target" json:"Target"`
+	Satuan             string `gorm:"column:satuan" json:"Satuan"`
+}
+
+type MataProgramV2ProkerUnit struct {
+	Id               uint   `gorm:"column:id" json:"Id"`
+	UUID             string `gorm:"column:uuid" json:"UUID"`
+	IdMataProgram    uint   `gorm:"column:id_mata_program" json:"IdMataProgram"`
+	FakultasUnitID   uint   `gorm:"column:id_fakultas_unit" json:"FakultasUnitID"`
+	FakultasUnitUuid string `gorm:"column:fakultas_unit_uuid" json:"FakultasUnitUuid"`
+	NamaFakultasUnit string `gorm:"column:nama_fakultas_unit" json:"NamaFakultasUnit"`
+	Label            string `gorm:"column:label" json:"Label"`
+	Jenjang          string `gorm:"column:jenjang" json:"Jenjang"`
+	Type             string `gorm:"column:type" json:"Type"`
+	Status           string `gorm:"column:status" json:"Status"`
+}
+
 type MataProgramV2GroupedRow struct {
-	Id               uint                     `json:"Id"`
-	UUID             string                   `json:"UUID"`
-	TahunId          *uint                    `json:"TahunId"`
-	TahunUUID        string                   `json:"TahunUUID"`
-	Tahun            string                   `json:"Tahun"`
-	MataProgram      string                   `json:"MataProgram"`
-	Nama             string                   `json:"nama"`
-	FakultasUnit     string                   `json:"FakultasUnit"`
-	Units            []MataProgramV2UnitBadge `json:"Units"`
-	TotalUnits       int                      `json:"TotalUnits"`
-	TotalProkerCount int64                    `json:"TotalProkerCount"`
-	CreatedAt        *time.Time               `json:"CreatedAt"`
-	UpdatedAt        *time.Time               `json:"UpdatedAt"`
-	DeletedAt        *time.Time               `json:"DeletedAt"`
+	Id               uint                        `json:"Id"`
+	UUID             string                      `json:"UUID"`
+	TahunId          *uint                       `json:"TahunId"`
+	TahunUUID        string                      `json:"TahunUUID"`
+	Tahun            string                      `json:"Tahun"`
+	MataProgram      string                      `json:"MataProgram"`
+	Nama             string                      `json:"nama"`
+	FakultasUnit     string                      `json:"FakultasUnit"`
+	Units            []MataProgramV2UnitBadge    `json:"Units"`
+	TotalUnits       int                         `json:"TotalUnits"`
+	TemplateRenstras []MataProgramV2TemplateItem `json:"TemplateRenstras"`
+	TotalTemplates   int                         `json:"TotalTemplates"`
+	ProkerUnits      []MataProgramV2ProkerUnit   `json:"ProkerUnits"`
+	ProkerUnitText   string                      `json:"ProkerUnitText"`
+	TotalProkerUnits int                         `json:"TotalProkerUnits"`
+	TotalProkerCount int64                       `json:"TotalProkerCount"`
+	CreatedAt        *time.Time                  `json:"CreatedAt"`
+	UpdatedAt        *time.Time                  `json:"UpdatedAt"`
+	DeletedAt        *time.Time                  `json:"DeletedAt"`
 }
 
 type MataProgramV2Detail struct {
-	Id               uint                     `json:"Id"`
-	UUID             string                   `json:"UUID"`
-	TahunId          *uint                    `json:"TahunId"`
-	TahunUUID        string                   `json:"TahunUUID"`
-	Tahun            string                   `json:"Tahun"`
-	MataProgram      string                   `json:"MataProgram"`
-	Nama             string                   `json:"nama"`
-	FakultasUnitId   *uint                    `json:"FakultasUnitId"`
-	FakultasUnitUuid string                   `json:"FakultasUnitUuid"`
-	FakultasUnit     string                   `json:"FakultasUnit"`
-	Jenjang          string                   `json:"Jenjang"`
-	Type             string                   `json:"Type"`
-	Fakultas         string                   `json:"Fakultas"`
-	ProkerCount      int64                    `json:"ProkerCount"`
-	Units            []MataProgramV2UnitBadge `json:"Units"`
-	TotalUnits       int                      `json:"TotalUnits"`
-	CreatedAt        *time.Time               `json:"CreatedAt"`
-	UpdatedAt        *time.Time               `json:"UpdatedAt"`
+	Id                 uint                        `json:"Id"`
+	UUID               string                      `json:"UUID"`
+	TahunId            *uint                       `json:"TahunId"`
+	TahunUUID          string                      `json:"TahunUUID"`
+	Tahun              string                      `json:"Tahun"`
+	MataProgram        string                      `json:"MataProgram"`
+	Nama               string                      `json:"nama"`
+	FakultasUnitId     *uint                       `json:"FakultasUnitId"`
+	FakultasUnitUuid   string                      `json:"FakultasUnitUuid"`
+	FakultasUnit       string                      `json:"FakultasUnit"`
+	Jenjang            string                      `json:"Jenjang"`
+	Type               string                      `json:"Type"`
+	Fakultas           string                      `json:"Fakultas"`
+	ProkerCount        int64                       `json:"ProkerCount"`
+	Units              []MataProgramV2UnitBadge    `json:"Units"`
+	TotalUnits         int                         `json:"TotalUnits"`
+	TemplateRenstras   []MataProgramV2TemplateItem `json:"TemplateRenstras"`
+	TemplateRenstraIDs []uint                      `json:"TemplateRenstraIDs"`
+	TotalTemplates     int                         `json:"TotalTemplates"`
+	ProkerUnits        []MataProgramV2ProkerUnit   `json:"ProkerUnits"`
+	ProkerUnitText     string                      `json:"ProkerUnitText"`
+	TotalProkerUnits   int                         `json:"TotalProkerUnits"`
+	CreatedAt          *time.Time                  `json:"CreatedAt"`
+	UpdatedAt          *time.Time                  `json:"UpdatedAt"`
 }
 
 type MataProgramV2PageResult struct {

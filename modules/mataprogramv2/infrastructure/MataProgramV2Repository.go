@@ -94,6 +94,38 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 		case "fakultasunit", "fakultas_unit", "unit", "stakeholder", "target":
 			like := "%" + val + "%"
 			q = q.Where("(LOWER(vfu.nama_fak_prod_unit) LIKE ? OR LOWER(vfu.jenjang) LIKE ? OR LOWER(vfu.fakultas) LIKE ?)", like, like, like)
+		case "templaterenstrasasaran", "templaterenstra", "template_renstra", "indikator", "standar", "sasaran", "templaterenstraorunit":
+			like := "%" + val + "%"
+			q = q.Where(`EXISTS (
+				SELECT 1 FROM mata_programv2_template_renstra mptr2
+				JOIN template_renstra tr2 ON mptr2.id_template_renstra = tr2.id
+				LEFT JOIN master_indikator_renstra mir2 ON tr2.indikator = mir2.id
+				LEFT JOIN master_standar_renstra msr2 ON mir2.id_master_standar = msr2.id
+				LEFT JOIN v_fakultas_unit vfu2 ON tr2.fakultas_unit = vfu2.id
+				WHERE (mptr2.id_mata_programv2 = mp.id OR mptr2.id_mata_programv2 IN (
+					SELECT mp_sub.id FROM mata_programv2 mp_sub 
+					WHERE mp_sub.mata_program = mp.mata_program 
+					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
+				))
+				  AND (LOWER(mir2.indikator) LIKE ? OR LOWER(msr2.nama) LIKE ? OR LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR LOWER(vfu2.fakultas) LIKE ?)
+			)`, like, like, like, like)
+		case "info", "infounit", "info_unit", "prokerunit", "proker_unit", "matrixproker", "matrix_proker":
+			like := "%" + val + "%"
+			q = q.Where(`EXISTS (
+				SELECT 1 FROM matrix_proker mpk
+				JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
+				JOIN v_fakultas_unit vfu_p ON mpk.id_fakultas_unit = vfu_p.id
+				WHERE (mpk.id_mata_program = mp.id OR (
+					mp_src.mata_program = mp.mata_program
+					AND (mp_src.id_master_tahun = mp.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
+				))
+				  AND mpk.deleted_at IS NULL
+				  AND (
+					LOWER(vfu_p.nama_fak_prod_unit) LIKE ? OR
+					LOWER(COALESCE(vfu_p.jenjang, '')) LIKE ? OR
+					LOWER(CONCAT(vfu_p.nama_fak_prod_unit, ' (', COALESCE(vfu_p.jenjang, ''), ')')) LIKE ?
+				  )
+			)`, like, like, like)
 		default:
 			q = q.Where("LOWER(mp.mata_program) LIKE ?", "%"+val+"%")
 		}
@@ -119,7 +151,40 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 
 	if filter.Search != "" {
 		like := "%" + strings.ToLower(filter.Search) + "%"
-		q = q.Where("(LOWER(mp.mata_program) LIKE ? OR LOWER(vfu.nama_fak_prod_unit) LIKE ? OR LOWER(mt.tahun) LIKE ? OR LOWER(vfu.fakultas) LIKE ?)", like, like, like, like)
+		q = q.Where(`(
+			LOWER(mp.mata_program) LIKE ? OR 
+			LOWER(vfu.nama_fak_prod_unit) LIKE ? OR 
+			LOWER(mt.tahun) LIKE ? OR 
+			LOWER(vfu.fakultas) LIKE ? OR
+			EXISTS (
+				SELECT 1 FROM mata_programv2_template_renstra mptr2
+				JOIN template_renstra tr2 ON mptr2.id_template_renstra = tr2.id
+				LEFT JOIN master_indikator_renstra mir2 ON tr2.indikator = mir2.id
+				LEFT JOIN master_standar_renstra msr2 ON mir2.id_master_standar = msr2.id
+				LEFT JOIN v_fakultas_unit vfu2 ON tr2.fakultas_unit = vfu2.id
+				WHERE (mptr2.id_mata_programv2 = mp.id OR mptr2.id_mata_programv2 IN (
+					SELECT mp_sub.id FROM mata_programv2 mp_sub 
+					WHERE mp_sub.mata_program = mp.mata_program 
+					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
+				))
+				  AND (LOWER(mir2.indikator) LIKE ? OR LOWER(msr2.nama) LIKE ? OR LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR LOWER(vfu2.fakultas) LIKE ?)
+			) OR
+			EXISTS (
+				SELECT 1 FROM matrix_proker mpk
+				JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
+				JOIN v_fakultas_unit vfu_p ON mpk.id_fakultas_unit = vfu_p.id
+				WHERE (mpk.id_mata_program = mp.id OR (
+					mp_src.mata_program = mp.mata_program
+					AND (mp_src.id_master_tahun = mp.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
+				))
+				  AND mpk.deleted_at IS NULL
+				  AND (
+					LOWER(vfu_p.nama_fak_prod_unit) LIKE ? OR
+					LOWER(COALESCE(vfu_p.jenjang, '')) LIKE ? OR
+					LOWER(CONCAT(vfu_p.nama_fak_prod_unit, ' (', COALESCE(vfu_p.jenjang, ''), ')')) LIKE ?
+				  )
+			)
+		)`, like, like, like, like, like, like, like, like, like, like, like)
 	}
 
 	return q
@@ -384,4 +449,293 @@ func (r *MataProgramV2Repository) RestoreGroup(ctx context.Context, mataProgram 
 	}
 	res := q.Update("deleted_at", nil)
 	return res.RowsAffected, res.Error
+}
+
+func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Context, tahunID uint, mataProgram string, templateRenstraIDs []uint) (string, uint, error) {
+	var mp domain.MataProgramV2Record
+	errFind := r.db.WithContext(ctx).Table("mata_programv2").
+		Select("id, uuid, deleted_at").
+		Where("mata_program = ? AND id_master_tahun = ?", mataProgram, tahunID).
+		Order("id DESC").
+		Take(&mp).Error
+
+	var mpID uint
+	var mpUUID string
+
+	if errFind == nil && mp.ID > 0 {
+		mpID = mp.ID
+		mpUUID = mp.UUID
+		if mp.DeletedAt != nil {
+			_ = r.db.WithContext(ctx).Table("mata_programv2").
+				Where("id = ?", mp.ID).
+				Update("deleted_at", nil).Error
+		}
+	} else {
+		newUUID := uuid.New().String()
+		errInsert := r.db.WithContext(ctx).Exec(
+			"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
+			newUUID, tahunID, mataProgram,
+		).Error
+		if errInsert != nil {
+			return "", 0, errInsert
+		}
+		var created domain.MataProgramV2Record
+		if err := r.db.WithContext(ctx).Table("mata_programv2").
+			Select("id, uuid").
+			Where("uuid = ?", newUUID).
+			Take(&created).Error; err != nil {
+			return "", 0, err
+		}
+		mpID = created.ID
+		mpUUID = created.UUID
+	}
+
+	// Hapus relasi lama lalu insert yang baru
+	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mpID).Error
+
+	var insertedCount uint = 0
+	for _, trID := range templateRenstraIDs {
+		if trID == 0 {
+			continue
+		}
+		linkUUID := uuid.New().String()
+		errLink := r.db.WithContext(ctx).Exec(
+			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
+			linkUUID, mpID, trID,
+		).Error
+		if errLink == nil {
+			insertedCount++
+		}
+	}
+
+	return mpUUID, insertedCount, nil
+}
+
+func (r *MataProgramV2Repository) UpdateMataProgramV2WithTemplates(ctx context.Context, rawUuid string, tahunID uint, mataProgram string, templateRenstraIDs []uint) error {
+	var mp domain.MataProgramV2Record
+	if err := r.db.WithContext(ctx).Table("mata_programv2").
+		Select("id, uuid").
+		Where("uuid = ?", rawUuid).
+		Take(&mp).Error; err != nil {
+		return err
+	}
+
+	updates := map[string]interface{}{}
+	if mataProgram != "" {
+		updates["mata_program"] = mataProgram
+	}
+	if tahunID > 0 {
+		updates["id_master_tahun"] = tahunID
+	}
+	if len(updates) > 0 {
+		if err := r.db.WithContext(ctx).Table("mata_programv2").
+			Where("id = ?", mp.ID).
+			Updates(updates).Error; err != nil {
+			return err
+		}
+	}
+
+	// Update relasi template renstra
+	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mp.ID).Error
+
+	for _, trID := range templateRenstraIDs {
+		if trID == 0 {
+			continue
+		}
+		linkUUID := uuid.New().String()
+		_ = r.db.WithContext(ctx).Exec(
+			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
+			linkUUID, mp.ID, trID,
+		).Error
+	}
+
+	return nil
+}
+
+func (r *MataProgramV2Repository) GetTemplatesByMataProgramID(ctx context.Context, mpID uint) ([]domain.MataProgramV2TemplateItem, []uint, error) {
+	var items []domain.MataProgramV2TemplateItem
+	var ids []uint
+
+	sql := `
+		SELECT 
+			tr.id as id,
+			tr.uuid as uuid,
+			tr.id as id_template_renstra,
+			tr.indikator as indikator_id,
+			COALESCE(mir.indikator, '') as indikator,
+			COALESCE(msr.nama, '') as standar_renstra,
+			tr.fakultas_unit as fakultas_unit_id,
+			COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit,
+			COALESCE(tr.kategori, '') as kategori,
+			COALESCE(tr.target, '') as target,
+			COALESCE(tr.satuan, '') as satuan
+		FROM mata_programv2_template_renstra mptr
+		JOIN template_renstra tr ON mptr.id_template_renstra = tr.id
+		LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id
+		LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id
+		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
+		WHERE mptr.id_mata_programv2 = ?
+		ORDER BY msr.nama ASC, mir.indikator ASC, vfu.nama_fak_prod_unit ASC
+	`
+	err := r.db.WithContext(ctx).Raw(sql, mpID).Scan(&items).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, it := range items {
+		ids = append(ids, it.ID)
+	}
+
+	return items, ids, nil
+}
+
+func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Context, mpIDs []uint) (map[uint][]domain.MataProgramV2TemplateItem, error) {
+	result := make(map[uint][]domain.MataProgramV2TemplateItem)
+	if len(mpIDs) == 0 {
+		return result, nil
+	}
+
+	type QueryRow struct {
+		IdMataProgramV2    uint   `gorm:"column:id_mata_programv2"`
+		ID                 uint   `gorm:"column:id"`
+		UUID               string `gorm:"column:uuid"`
+		IdTemplateRenstra  uint   `gorm:"column:id_template_renstra"`
+		IndikatorRenstraID uint   `gorm:"column:indikator_id"`
+		Indikator          string `gorm:"column:indikator"`
+		StandarRenstra     string `gorm:"column:standar_renstra"`
+		FakultasUnitID     uint   `gorm:"column:fakultas_unit_id"`
+		FakultasUnit       string `gorm:"column:fakultas_unit"`
+		Kategori           string `gorm:"column:kategori"`
+		Target             string `gorm:"column:target"`
+		Satuan             string `gorm:"column:satuan"`
+	}
+
+	var rows []QueryRow
+	sql := `
+		SELECT 
+			COALESCE(mp_target.id, mptr.id_mata_programv2) as id_mata_programv2,
+			tr.id as id,
+			tr.uuid as uuid,
+			tr.id as id_template_renstra,
+			tr.indikator as indikator_id,
+			COALESCE(mir.indikator, '') as indikator,
+			COALESCE(msr.nama, '') as standar_renstra,
+			tr.fakultas_unit as fakultas_unit_id,
+			COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit,
+			COALESCE(tr.kategori, '') as kategori,
+			COALESCE(tr.target, '') as target,
+			COALESCE(tr.satuan, '') as satuan
+		FROM mata_programv2_template_renstra mptr
+		JOIN template_renstra tr ON mptr.id_template_renstra = tr.id
+		JOIN mata_programv2 mp_src ON mptr.id_mata_programv2 = mp_src.id
+		JOIN mata_programv2 mp_target ON mp_src.mata_program = mp_target.mata_program 
+		  AND (mp_src.id_master_tahun = mp_target.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp_target.id_master_tahun IS NULL))
+		LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id
+		LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id
+		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
+		WHERE mp_target.id IN (?)
+		GROUP BY mp_target.id, tr.id
+		ORDER BY msr.nama ASC, mir.indikator ASC, vfu.nama_fak_prod_unit ASC
+	`
+	err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error
+	if err != nil {
+		return result, err
+	}
+
+	for _, rw := range rows {
+		item := domain.MataProgramV2TemplateItem{
+			ID:                 rw.ID,
+			UUID:               rw.UUID,
+			IdTemplateRenstra:  rw.IdTemplateRenstra,
+			IndikatorRenstraID: rw.IndikatorRenstraID,
+			Indikator:          rw.Indikator,
+			StandarRenstra:     rw.StandarRenstra,
+			FakultasUnitID:     rw.FakultasUnitID,
+			FakultasUnit:       rw.FakultasUnit,
+			Kategori:           rw.Kategori,
+			Target:             rw.Target,
+			Satuan:             rw.Satuan,
+		}
+		result[rw.IdMataProgramV2] = append(result[rw.IdMataProgramV2], item)
+	}
+
+	return result, nil
+}
+
+func (r *MataProgramV2Repository) GetProkerUnitsByMataProgramIDs(ctx context.Context, mpIDs []uint) (map[uint][]domain.MataProgramV2ProkerUnit, error) {
+	result := make(map[uint][]domain.MataProgramV2ProkerUnit)
+	if len(mpIDs) == 0 {
+		return result, nil
+	}
+
+	type QueryRow struct {
+		IdMataProgram    uint   `gorm:"column:id_mata_program"`
+		Id               uint   `gorm:"column:id"`
+		UUID             string `gorm:"column:uuid"`
+		FakultasUnitID   uint   `gorm:"column:id_fakultas_unit"`
+		FakultasUnitUuid string `gorm:"column:fakultas_unit_uuid"`
+		NamaFakultasUnit string `gorm:"column:nama_fakultas_unit"`
+		Label            string `gorm:"column:label"`
+		Jenjang          string `gorm:"column:jenjang"`
+		Type             string `gorm:"column:type"`
+		Status           string `gorm:"column:status"`
+	}
+
+	var rows []QueryRow
+	sql := `
+		SELECT 
+			COALESCE(mp_target.id, mpk.id_mata_program) as id_mata_program,
+			MIN(mpk.id) as id,
+			MIN(mpk.uuid) as uuid,
+			mpk.id_fakultas_unit as id_fakultas_unit,
+			COALESCE(vfu.uuid, '') as fakultas_unit_uuid,
+			COALESCE(vfu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+			CASE 
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
+				ELSE COALESCE(vfu.nama_fak_prod_unit, '') 
+			END as label,
+			COALESCE(vfu.jenjang, '') as jenjang,
+			COALESCE(vfu.type, '') as type,
+			COALESCE(MIN(mpk.status), 'draft') as status
+		FROM matrix_proker mpk
+		JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
+		JOIN mata_programv2 mp_target ON mp_src.mata_program = mp_target.mata_program 
+		  AND (mp_src.id_master_tahun = mp_target.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp_target.id_master_tahun IS NULL))
+		JOIN v_fakultas_unit vfu ON mpk.id_fakultas_unit = vfu.id
+		WHERE mp_target.id IN (?)
+		  AND mpk.deleted_at IS NULL
+		GROUP BY mp_target.id, mpk.id_fakultas_unit, vfu.uuid, vfu.nama_fak_prod_unit, vfu.jenjang, vfu.type
+		ORDER BY label ASC
+	`
+	err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error
+	if err != nil {
+		return result, err
+	}
+
+	for _, rw := range rows {
+		item := domain.MataProgramV2ProkerUnit{
+			Id:               rw.Id,
+			UUID:             rw.UUID,
+			IdMataProgram:    rw.IdMataProgram,
+			FakultasUnitID:   rw.FakultasUnitID,
+			FakultasUnitUuid: rw.FakultasUnitUuid,
+			NamaFakultasUnit: rw.NamaFakultasUnit,
+			Label:            rw.Label,
+			Jenjang:          rw.Jenjang,
+			Type:             rw.Type,
+			Status:           rw.Status,
+		}
+		result[rw.IdMataProgram] = append(result[rw.IdMataProgram], item)
+	}
+
+	return result, nil
+}
+
+func (r *MataProgramV2Repository) GetProkerUnitsByMataProgramID(ctx context.Context, mpID uint) ([]domain.MataProgramV2ProkerUnit, error) {
+	mpMap, err := r.GetProkerUnitsByMataProgramIDs(ctx, []uint{mpID})
+	if err != nil {
+		return nil, err
+	}
+	return mpMap[mpID], nil
 }

@@ -37,13 +37,5 @@ func UpdateIndikatorRenstraCommandValidation(cmd UpdateIndikatorRenstraCommand) 
 			validation.Required.Error("Tipe Target cannot be blank"),
 			validation.By(helper.NoXSSFullScanWithDecode()),
 		),
-
-		validation.Field(&cmd.TargetUnpak,
-			validation.Required.Error("Target Unpak cannot be blank"),
-		),
-
-		validation.Field(&cmd.TargetUnit,
-			validation.Required.Error("Target Unit cannot be blank"),
-		),
 	)
 }

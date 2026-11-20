@@ -19,6 +19,13 @@ type IMataProgramV2Repository interface {
 	ResolveFakultasUnitID(ctx context.Context, rawTarget string) (uint, error)
 
 	UpsertOrRestoreAssignment(ctx context.Context, tahunID uint, unitID uint, mataProgram string) (string, bool, error)
+	SaveMataProgramV2WithTemplates(ctx context.Context, tahunID uint, mataProgram string, templateRenstraIDs []uint) (string, uint, error)
+	UpdateMataProgramV2WithTemplates(ctx context.Context, rawUuid string, tahunID uint, mataProgram string, templateRenstraIDs []uint) error
+	GetTemplatesByMataProgramID(ctx context.Context, mpID uint) ([]MataProgramV2TemplateItem, []uint, error)
+	GetTemplatesByMataProgramIDs(ctx context.Context, mpIDs []uint) (map[uint][]MataProgramV2TemplateItem, error)
+	GetProkerUnitsByMataProgramIDs(ctx context.Context, mpIDs []uint) (map[uint][]MataProgramV2ProkerUnit, error)
+	GetProkerUnitsByMataProgramID(ctx context.Context, mpID uint) ([]MataProgramV2ProkerUnit, error)
+
 	UpdateGroupFields(ctx context.Context, originalMataProgram string, originalTahunID *uint, updates map[string]interface{}) error
 	SoftDeleteGroupUnitsNotIn(ctx context.Context, mataProgram string, tahunID uint, keepUnitIDs []uint, deletedAt time.Time) error
 	UpdateSingleByUuid(ctx context.Context, rawUuid string, updates map[string]interface{}) error

@@ -20,7 +20,7 @@ func (h *CreateMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Crea
 	if mataProgram == "" {
 		return nil, domain.MataProgramRequired()
 	}
-	if len(cmd.Targets) == 0 {
+	if len(cmd.Targets) == 0 && len(cmd.TemplateRenstraIDs) == 0 {
 		return nil, domain.TargetsRequired()
 	}
 
@@ -35,6 +35,20 @@ func (h *CreateMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Crea
 	}
 	if tahunID == 0 {
 		tahunID = 1
+	}
+
+	// Mode V3: Simpan relasi ke mata_programv2 dan mata_programv2_template_renstra
+	if len(cmd.TemplateRenstraIDs) > 0 {
+		savedUUID, savedCount, err := h.Repo.SaveMataProgramV2WithTemplates(ctx, tahunID, mataProgram, cmd.TemplateRenstraIDs)
+		if err != nil {
+			return nil, err
+		}
+		return &CreateMataProgramV2Result{
+			Status:  "success",
+			Message: fmt.Sprintf("Berhasil menyimpan mata program dengan %d template renstra", savedCount),
+			UUID:    savedUUID,
+			Count:   int(savedCount),
+		}, nil
 	}
 
 	savedCount := 0

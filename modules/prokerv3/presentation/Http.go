@@ -703,6 +703,9 @@ func GetAllProkerV3Handlerfunc(c *fiber.Ctx) error {
 
 	tab := strings.TrimSpace(c.Query("tab"))
 	if tab == "" {
+		tab = strings.TrimSpace(c.Query("filter_tab"))
+	}
+	if tab == "" {
 		tab = strings.TrimSpace(c.Query("status_tab"))
 	}
 	if tab != "" && tab != "all" && tab != "semua" {

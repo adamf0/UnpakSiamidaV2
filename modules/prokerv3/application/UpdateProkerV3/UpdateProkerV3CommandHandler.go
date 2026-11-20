@@ -5,7 +5,6 @@ import (
 	"context"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -92,62 +91,11 @@ func (h *UpdateProkerV3CommandHandler) Handle(
 		existing.BebanYayasan = *cmd.BebanYayasan
 	}
 
-	// 5. Save and sync dynamic scopes in matrix_proker_scope
 	if len(cmd.Scopes) > 0 {
 		firstScope := cmd.Scopes[0]
 		if firstScope.IdIndikator != nil && *firstScope.IdIndikator > 0 {
 			existing.IdIndikator = firstScope.IdIndikator
 		}
-
-		scopesToSync := make([]domain.MatrixProkerScope, 0, len(cmd.Scopes))
-		for _, sc := range cmd.Scopes {
-			var scIndID *int = sc.IdIndikator
-			if scIndID == nil || *scIndID <= 0 {
-				scIndKinerja := strings.TrimSpace(sc.IndikatorKinerja)
-				if scIndKinerja != "" {
-					if resolvedInd, err := h.Repo.ResolveIndikatorID(ctx, scIndKinerja); err == nil && resolvedInd != nil {
-						scIndID = resolvedInd
-					}
-				}
-			}
-
-			scUUID := uuid.New()
-			if strings.TrimSpace(sc.UUID) != "" {
-				if parsed, err := uuid.Parse(strings.TrimSpace(sc.UUID)); err == nil {
-					scUUID = parsed
-				}
-			}
-
-			scopesToSync = append(scopesToSync, domain.MatrixProkerScope{
-				UUID:             scUUID,
-				IdMatrixProker:   existing.ID,
-				IdMataProgram:    existing.IdMataProgram,
-				IdIndikator:      scIndID,
-				TargetUnpak:      strings.TrimSpace(sc.TargetUnpak),
-				CapaianTerdahulu: strings.TrimSpace(sc.CapaianUnitLalu),
-				TargetUnit:       strings.TrimSpace(sc.TargetUnit),
-				Output:           strings.TrimSpace(sc.Output),
-				Outcome:          strings.TrimSpace(sc.Outcome),
-				CreatedAt:        time.Now(),
-				UpdatedAt:        time.Now(),
-			})
-		}
-		_ = h.Repo.SyncScopesForUpdate(ctx, existing.ID, scopesToSync, nil)
-	} else {
-		fallbackScope := &domain.MatrixProkerScope{
-			UUID:             uuid.New(),
-			IdMatrixProker:   existing.ID,
-			IdMataProgram:    existing.IdMataProgram,
-			IdIndikator:      existing.IdIndikator,
-			TargetUnpak:      strings.TrimSpace(cmd.TargetUnpak),
-			CapaianTerdahulu: strings.TrimSpace(cmd.CapaianUnitLalu),
-			TargetUnit:       strings.TrimSpace(cmd.TargetUnit),
-			Output:           strings.TrimSpace(cmd.Output),
-			Outcome:          strings.TrimSpace(cmd.Outcome),
-			CreatedAt:        time.Now(),
-			UpdatedAt:        time.Now(),
-		}
-		_ = h.Repo.SyncScopesForUpdate(ctx, existing.ID, nil, fallbackScope)
 	}
 
 	if err := h.Repo.Update(ctx, existing); err != nil {

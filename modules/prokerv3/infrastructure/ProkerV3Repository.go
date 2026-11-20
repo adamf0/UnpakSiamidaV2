@@ -101,12 +101,12 @@ func (r *ProkerV3Repository) populatePaguInfo(ctx context.Context, item *domain.
 			Joins("JOIN matrix_proker mp ON mp.id = a.id_matrik_proker").
 			Joins("LEFT JOIN mata_programv2 p ON p.id = mp.id_mata_program").
 			Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-			Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(mp.is_batal, 0) = 0 AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(mp.beban_yayasan, 0) = 0", fuId, fuName, tahun).
+			Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '2026') = ? AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(a.beban_yayasan, 0) = 0", fuId, fuName, tahun).
 			Select("COALESCE(SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END), 0)").
 			Scan(&totalUnitAnggaran).Error
 
 		item.TotalAnggaranUnit = totalUnitAnggaran
-		if totalUnitAnggaran > nomPagu && !item.BebanYayasan && !item.IsBatal {
+		if totalUnitAnggaran > nomPagu && !item.IsBatal {
 			item.IsMelebihiPagu = true
 		} else {
 			item.IsMelebihiPagu = false
@@ -153,8 +153,7 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
-			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
-			COALESCE(mp_t.catatan_verifikator, '') as CatatanVerifikator,
+			'' as StatusVerifikator,
 			COALESCE(NULLIF(mp_t.status_anggaran, ''), 'menunggu_verifikator') as StatusAnggaran,
 			COALESCE(mp_t.catatan_anggaran, '') as CatatanAnggaran,
 			COALESCE(mp_t.beban_yayasan, 0) as BebanYayasan,
@@ -167,6 +166,12 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diterima', 'disetujui', 'terima_verifikator')), 0) as TotalAktivitasTerimaVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('ditolak', 'revisi')), 0) as TotalAktivitasTolakVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diajukan', 'menunggu')), 0) as TotalAktivitasDiajukanVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.terima_anggaran_at IS NOT NULL), 0) as TotalAktivitasTerimaAnggaran,
+			0 as TotalAktivitasTolakAnggaran,
+			COALESCE((SELECT GROUP_CONCAT(CONCAT(a.aktivitas, ': ', a.catatan_verifikator) SEPARATOR '\n') FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.catatan_verifikator IS NOT NULL AND a.catatan_verifikator != ''), '') as CatatanVerifikator,
 			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran,
 			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
@@ -188,60 +193,300 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 		First(&row).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		// Fallback: cek apakah uid merupakan UUID dari mata_programv2
+		var prog struct {
+			ID            uint
+			UUID          string
+			MataProgram   string
+			IdMasterTahun uint
+			Tahun         string
+		}
+		pErr := r.db.WithContext(ctx).Table("mata_programv2 prog").
+			Select("prog.id, prog.uuid, prog.mata_program, prog.id_master_tahun, COALESCE(mt.tahun, '') as tahun").
+			Joins("LEFT JOIN master_tahun mt ON prog.id_master_tahun = mt.id").
+			Where("prog.uuid = ? AND prog.deleted_at IS NULL", uid.String()).
+			Take(&prog).Error
+		if pErr != nil {
 			return nil, nil
 		}
-		return nil, err
+
+		var fuFilter *int
+		if activeUnitVal := ctx.Value("active_unit"); activeUnitVal != nil {
+			if fuStr, ok := activeUnitVal.(string); ok && strings.TrimSpace(fuStr) != "" {
+				fuStr = strings.TrimSpace(fuStr)
+				if id, err := strconv.Atoi(fuStr); err == nil && id > 0 {
+					fuFilter = &id
+				} else {
+					var uID int
+					if err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", fuStr).Take(&uID).Error; err == nil && uID > 0 {
+						fuFilter = &uID
+					}
+				}
+			} else if fuInt, ok := activeUnitVal.(int); ok && fuInt > 0 {
+				fuFilter = &fuInt
+			}
+		}
+
+		var trInfo struct {
+			TemplateID          uint
+			TemplateUUID        uuid.UUID
+			FakultasUnitID      uint
+			Satuan              string
+			Target              string
+			TargetMin           string
+			TargetMax           string
+			IndikatorID         int
+			IndikatorKinerja    string
+			TipeTarget          string
+			Operator            string
+			TargetUnpak         string
+			StandarSubStandar   string
+			NamaFakultasUnit    string
+			UuidFakultasUnit    string
+			TypeFakultasUnit    string
+			JenjangFakultasUnit string
+			ParentFakultas      string
+		}
+		qTr := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
+			Select(`
+				tr.id as template_id,
+				tr.uuid as template_uuid,
+				tr.fakultas_unit as fakultas_unit_id,
+				COALESCE(tr.satuan, '') as satuan,
+				COALESCE(tr.target, '') as target,
+				COALESCE(tr.target_min, '') as target_min,
+				COALESCE(tr.target_max, '') as target_max,
+				tr.indikator as indikator_id,
+				COALESCE(mir.indikator, '') as indikator_kinerja,
+				COALESCE(mir.tipe_target, '') as tipe_target,
+				COALESCE(mir.operator, '') as operator,
+				'' as target_unpak,
+				COALESCE(msr.nama, '') as standar_sub_standar,
+				COALESCE(fu.nama_fak_prod_unit, '') as nama_fakultas_unit,
+				COALESCE(fu.uuid, '') as uuid_fakultas_unit,
+				COALESCE(fu.type, '') as type_fakultas_unit,
+				COALESCE(fu.jenjang, '') as jenjang_fakultas_unit,
+				COALESCE(fu.fakultas, '') as parent_fakultas
+			`).
+			Joins("JOIN template_renstra tr ON mtr.id_template_renstra = tr.id").
+			Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+			Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
+			Where("mtr.id_mata_programv2 = ?", prog.ID)
+		if fuFilter != nil {
+			qTr = qTr.Where("tr.fakultas_unit = ?", *fuFilter)
+		}
+		_ = qTr.Order("tr.id ASC").Take(&trInfo).Error
+
+		var fuIDInt *int
+		if trInfo.FakultasUnitID > 0 {
+			v := int(trInfo.FakultasUnitID)
+			fuIDInt = &v
+		}
+		var indIDInt *int
+		if trInfo.IndikatorID > 0 {
+			indIDInt = &trInfo.IndikatorID
+		}
+		progIDInt := int(prog.ID)
+		parsedProgUUID, _ := uuid.Parse(prog.UUID)
+
+		formattedTargetUnit := commoninfra.FormatRenstraTargetUnit(
+			trInfo.TipeTarget, trInfo.Operator, trInfo.Target, trInfo.TargetMin, trInfo.TargetMax, trInfo.Satuan,
+		)
+
+		row = domain.ProkerV3Default{
+			ID:                  0,
+			UUID:                parsedProgUUID,
+			IdMataProgram:       &progIDInt,
+			NamaProgram:         prog.MataProgram,
+			Tahun:               prog.Tahun,
+			NoProker:            1,
+			IdFakultasUnit:      fuIDInt,
+			UuidFakultasUnit:    trInfo.UuidFakultasUnit,
+			NamaFakultasUnit:    trInfo.NamaFakultasUnit,
+			TypeFakultasUnit:    trInfo.TypeFakultasUnit,
+			JenjangFakultasUnit: trInfo.JenjangFakultasUnit,
+			ParentFakultas:      trInfo.ParentFakultas,
+			IdIndikator:         indIDInt,
+			IndikatorKinerja:    trInfo.IndikatorKinerja,
+			StandarSubStandar:   trInfo.StandarSubStandar,
+			TargetUnpak:         trInfo.TargetUnpak,
+			TargetUnit:          formattedTargetUnit,
+			CapaianUnitLalu:     "-",
+			Output:              "",
+			Outcome:             "",
+			Status:              "draft",
+			StatusVerifikator:   "draft",
+			StatusAnggaran:      "menunggu_verifikator",
+			TotalAktivitas:      0,
+			TotalAnggaran:       0,
+		}
+		return &row, nil
+	}
+
+	row.StatusVerifikator, row.StatusAnggaran = commoninfra.ComputeProkerVerificationStatus(
+		row.TotalAktivitas,
+		row.TotalAktivitasTerimaVerifikator,
+		row.TotalAktivitasTolakVerifikator,
+		row.TotalAktivitasDiajukanVerifikator,
+		row.TotalAktivitasTerimaAnggaran,
+		row.TotalAktivitasTolakAnggaran,
+	)
+
+	if row.ID > 0 {
+		s1, s2, _ := commoninfra.SyncMatrixProkerStatus(ctx, r.db, row.ID)
+		if s1 != "" {
+			row.Status = s1
+		}
+		if s2 != "" {
+			row.StatusAnggaran = s2
+		}
 	}
 
 	r.populatePaguInfo(ctx, &row)
 
+	// Scopes diambil dari mata_programv2_template_renstra x template_renstra x master_indikator_renstra x master_standar_renstra
 	var scopes []domain.ProkerScopeDefault
-	_ = r.db.WithContext(ctx).Table("matrix_proker_scope mps").
-		Select(`
-			mps.id as id,
-			mps.uuid as uuid,
-			mps.id_matrix_proker as id_matrix_proker,
-			mps.id_mata_program as id_mata_program,
-			mps.id_indikator as id_indikator,
-			COALESCE(mir.indikator, '') as indikator_kinerja,
-			COALESCE(mir.uuid, '') as indikator_uuid,
-			COALESCE(mir.id_master_standar, msr.id, 0) as id_master_standar,
-			COALESCE(msr.nama, '') as standar_sub_standar,
-			COALESCE(msr.uuid, '') as standar_uuid,
-			COALESCE(mps.target_unpak, '') as target_unpak,
-			COALESCE(mps.capaian_terdahulu, '') as capaian_unit_lalu,
-			COALESCE(mps.target_unit, '') as target_unit,
-			COALESCE(mps.output, '') as output,
-			COALESCE(mps.outcome, '') as outcome,
-			COALESCE((
-				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
-				FROM indikator_renstra_iku iri
-				WHERE iri.id_indikator_renstra = mps.id_indikator
-			), '') as iku_list
-		`).
-		Joins("LEFT JOIN master_indikator_renstra mir ON mps.id_indikator = mir.id").
-		Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
-		Where("mps.id_matrix_proker = ?", row.ID).
-		Order("mps.id ASC").
-		Scan(&scopes).Error
+	if row.IdMataProgram != nil && *row.IdMataProgram > 0 {
+		type renstraRow struct {
+			TemplateID       uint      `gorm:"column:template_id"`
+			TemplateUUID     uuid.UUID `gorm:"column:template_uuid"`
+			FakultasUnitID   *uint64   `gorm:"column:fakultas_unit"`
+			Satuan           string    `gorm:"column:satuan"`
+			Target           string    `gorm:"column:target"`
+			TargetMin        string    `gorm:"column:target_min"`
+			TargetMax        string    `gorm:"column:target_max"`
+			IndikatorID      *int      `gorm:"column:indikator_id"`
+			IndikatorUUID    string    `gorm:"column:indikator_uuid"`
+			IndikatorKinerja string    `gorm:"column:indikator_kinerja"`
+			TipeTarget       string    `gorm:"column:tipe_target"`
+			Operator         string    `gorm:"column:operator"`
+			TargetUnpak      string    `gorm:"column:target_unpak"`
+			StandarID        int       `gorm:"column:standar_id"`
+			StandarUUID      string    `gorm:"column:standar_uuid"`
+			StandarNama      string    `gorm:"column:standar_nama"`
+			IkuList          string    `gorm:"column:iku_list"`
+		}
+
+		var rRows []renstraRow
+		qTr := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+			Select(`
+				tr.id as template_id,
+				tr.uuid as template_uuid,
+				tr.fakultas_unit as fakultas_unit,
+				COALESCE(tr.satuan, '') as satuan,
+				COALESCE(tr.target, '') as target,
+				COALESCE(tr.target_min, '') as target_min,
+				COALESCE(tr.target_max, '') as target_max,
+				tr.indikator as indikator_id,
+				COALESCE(mir.uuid, '') as indikator_uuid,
+				COALESCE(mir.indikator, '') as indikator_kinerja,
+				COALESCE(mir.tipe_target, '') as tipe_target,
+				COALESCE(mir.operator, '') as operator,
+				'' as target_unpak,
+				COALESCE(msr.id, 0) as standar_id,
+				COALESCE(msr.uuid, '') as standar_uuid,
+				COALESCE(msr.nama, '') as standar_nama,
+				COALESCE((
+					SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+					FROM indikator_renstra_iku iri
+					WHERE iri.id_indikator_renstra = mir.id
+				), '') as iku_list
+			`).
+			Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
+			Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+			Where("mptr.id_mata_programv2 = ?", *row.IdMataProgram)
+
+		if row.IdFakultasUnit != nil && *row.IdFakultasUnit > 0 {
+			qTr = qTr.Where("tr.fakultas_unit = ?", *row.IdFakultasUnit)
+		}
+		_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
+
+		if len(rRows) == 0 && row.IdFakultasUnit != nil && *row.IdFakultasUnit > 0 {
+			_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+				Select(`
+					tr.id as template_id,
+					tr.uuid as template_uuid,
+					tr.fakultas_unit as fakultas_unit,
+					COALESCE(tr.satuan, '') as satuan,
+					COALESCE(tr.target, '') as target,
+					COALESCE(tr.target_min, '') as target_min,
+					COALESCE(tr.target_max, '') as target_max,
+					tr.indikator as indikator_id,
+					COALESCE(mir.uuid, '') as indikator_uuid,
+					COALESCE(mir.indikator, '') as indikator_kinerja,
+					COALESCE(mir.tipe_target, '') as tipe_target,
+					COALESCE(mir.operator, '') as operator,
+					'' as target_unpak,
+					COALESCE(msr.id, 0) as standar_id,
+					COALESCE(msr.uuid, '') as standar_uuid,
+					COALESCE(msr.nama, '') as standar_nama,
+					COALESCE((
+						SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+						FROM indikator_renstra_iku iri
+						WHERE iri.id_indikator_renstra = mir.id
+					), '') as iku_list
+				`).
+				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
+				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+				Where("mptr.id_mata_programv2 = ?", *row.IdMataProgram).
+				Order("tr.id ASC").
+				Scan(&rRows).Error
+		}
+
+		ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
+		for _, rr := range rRows {
+			formattedTargetUnit := commoninfra.FormatRenstraTargetUnit(
+				rr.TipeTarget, rr.Operator, rr.Target, rr.TargetMin, rr.TargetMax, rr.Satuan,
+			)
+			formattedIku := commoninfra.FormatIkuList(rr.IkuList, ikuMap)
+
+			var stdID *int
+			if rr.StandarID > 0 {
+				sID := rr.StandarID
+				stdID = &sID
+			}
+
+			scopes = append(scopes, domain.ProkerScopeDefault{
+				ID:                rr.TemplateID,
+				UUID:              rr.TemplateUUID,
+				IdMatrixProker:    row.ID,
+				IdMataProgram:     row.IdMataProgram,
+				IdIndikator:       rr.IndikatorID,
+				IndikatorKinerja:  rr.IndikatorKinerja,
+				IndikatorUUID:     rr.IndikatorUUID,
+				IdMasterStandar:   stdID,
+				StandarSubStandar: rr.StandarNama,
+				StandarUUID:       rr.StandarUUID,
+				TargetUnpak:       rr.TargetUnpak,
+				TargetUnit:        formattedTargetUnit,
+				CapaianUnitLalu:   "-",
+				Output:            "",
+				Outcome:           "",
+				IkuList:           formattedIku,
+			})
+		}
+	}
 
 	if scopes == nil {
 		scopes = []domain.ProkerScopeDefault{}
 	}
 
-	ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
-	row.IkuList = commoninfra.FormatIkuList(row.IkuList, ikuMap)
-	for i := range scopes {
-		scopes[i].IkuList = commoninfra.FormatIkuList(scopes[i].IkuList, ikuMap)
-	}
 	row.Scopes = scopes
 	if len(scopes) > 0 {
+		row.StandarSubStandar = scopes[0].StandarSubStandar
+		row.IndikatorKinerja = scopes[0].IndikatorKinerja
 		row.TargetUnpak = scopes[0].TargetUnpak
-		row.CapaianUnitLalu = scopes[0].CapaianUnitLalu
+		row.CapaianUnitLalu = "-"
 		row.TargetUnit = scopes[0].TargetUnit
-		row.Output = scopes[0].Output
-		row.Outcome = scopes[0].Outcome
+		row.Output = ""
+		row.Outcome = ""
 	}
 
 	return &row, nil
@@ -259,8 +504,8 @@ var allowedSearchColumns = map[string]string{
 	"standar":              "msr.nama",
 	"indikator_kinerja":    "mir.indikator",
 	"indikator":            "mir.indikator",
-	"output":               "(SELECT mps.output FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
-	"outcome":              "(SELECT mps.outcome FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"output":               "(SELECT a.output FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.output IS NOT NULL AND a.output != '' ORDER BY a.id ASC LIMIT 1)",
+	"outcome":              "(SELECT a.outcome FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.outcome IS NOT NULL AND a.outcome != '' ORDER BY a.id ASC LIMIT 1)",
 	"id_fakultas_unit":     "mp_t.id_fakultas_unit",
 	"fakultas_unit":        "fu.nama_fak_prod_unit",
 	"nama_fakultas_unit":   "fu.nama_fak_prod_unit",
@@ -272,10 +517,10 @@ var allowedSearchColumns = map[string]string{
 	"filter_prodi":         "fu.id",
 	"id_prodi":             "fu.id",
 	"prodi":                "fu.nama_fak_prod_unit",
-	"target_unpak":         "(SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
-	"target_capaian":       "(SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
-	"capaian_unit_lalu":    "(SELECT mps.capaian_terdahulu FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
-	"capaian_terdahulu":    "(SELECT mps.capaian_terdahulu FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id ORDER BY mps.id ASC LIMIT 1)",
+	"target_unpak":         "''",
+	"target_capaian":       "''",
+	"capaian_unit_lalu":    "''",
+	"capaian_terdahulu":    "''",
 	"filter_tab":           "filter_tab",
 	"tab":                  "tab",
 }
@@ -302,8 +547,65 @@ func (r *ProkerV3Repository) GetAll(
 	}
 	_ = r.db.WithContext(ctx).Exec("UPDATE mata_program SET id_master_tahun = (SELECT id FROM master_tahun WHERE tahun = '2027' LIMIT 1) WHERE id = 15048").Error
 
+	const prokerBaseTable = `(
+		SELECT 
+			mp.id,
+			mp.uuid,
+			mp.id_mata_program,
+			mp.id_fakultas_unit,
+			mp.id_indikator,
+			mp.pic,
+			mp.status,
+			mp.catatan_penolakan,
+			mp.status_anggaran,
+			mp.catatan_anggaran,
+			mp.beban_yayasan,
+			mp.is_batal,
+			mp.catatan_batal,
+			mp.deleted_at,
+			mp.deleted_by,
+			mp.deleted_by_name,
+			mp.catatan_hapus,
+			mp.created_at,
+			mp.updated_at
+		FROM matrix_proker mp
+
+		UNION ALL
+
+		SELECT
+			0 as id,
+			prog.uuid as uuid,
+			prog.id as id_mata_program,
+			tr.fakultas_unit as id_fakultas_unit,
+			MIN(tr.indikator) as id_indikator,
+			'' as pic,
+			'draft' as status,
+			'' as catatan_penolakan,
+			'menunggu_verifikator' as status_anggaran,
+			'' as catatan_anggaran,
+			0 as beban_yayasan,
+			0 as is_batal,
+			'' as catatan_batal,
+			NULL as deleted_at,
+			NULL as deleted_by,
+			'' as deleted_by_name,
+			'' as catatan_hapus,
+			prog.created_at as created_at,
+			prog.updated_at as updated_at
+		FROM mata_programv2 prog
+		JOIN mata_programv2_template_renstra mtr ON mtr.id_mata_programv2 = prog.id
+		JOIN template_renstra tr ON mtr.id_template_renstra = tr.id
+		WHERE prog.deleted_at IS NULL
+		  AND NOT EXISTS (
+			  SELECT 1 FROM matrix_proker mp2 
+			  WHERE mp2.id_mata_program = prog.id 
+			    AND mp2.id_fakultas_unit = tr.fakultas_unit
+		  )
+		GROUP BY prog.id, tr.fakultas_unit
+	) mp_t`
+
 	db := r.db.WithContext(ctx).
-		Table("matrix_proker mp_t").
+		Table(prokerBaseTable).
 		Select(`
 			mp_t.id as Id,
 			mp_t.uuid as UUID,
@@ -331,8 +633,7 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE(NULLIF(mp_t.pic, ''), (SELECT a.pic FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id ORDER BY a.id ASC LIMIT 1), '') as PIC,
 			COALESCE(NULLIF(mp_t.status, ''), 'draft') as Status,
 			COALESCE(mp_t.catatan_penolakan, '') as CatatanPenolakan,
-			COALESCE(NULLIF(mp_t.status_verifikator, ''), 'draft') as StatusVerifikator,
-			COALESCE(mp_t.catatan_verifikator, '') as CatatanVerifikator,
+			'' as StatusVerifikator,
 			COALESCE(NULLIF(mp_t.status_anggaran, ''), 'menunggu_verifikator') as StatusAnggaran,
 			COALESCE(mp_t.catatan_anggaran, '') as CatatanAnggaran,
 			COALESCE(mp_t.beban_yayasan, 0) as BebanYayasan,
@@ -345,6 +646,12 @@ func (r *ProkerV3Repository) GetAll(
 			mp_t.created_at as CreatedAt,
 			mp_t.updated_at as UpdatedAt,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAktivitas,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diterima', 'disetujui', 'terima_verifikator')), 0) as TotalAktivitasTerimaVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('ditolak', 'revisi')), 0) as TotalAktivitasTolakVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diajukan', 'menunggu')), 0) as TotalAktivitasDiajukanVerifikator,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.terima_anggaran_at IS NOT NULL), 0) as TotalAktivitasTerimaAnggaran,
+			0 as TotalAktivitasTolakAnggaran,
+			COALESCE((SELECT GROUP_CONCAT(CONCAT(a.aktivitas, ': ', a.catatan_verifikator) SEPARATOR '\n') FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND a.catatan_verifikator IS NOT NULL AND a.catatan_verifikator != ''), '') as CatatanVerifikator,
 			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalAnggaran,
 			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
@@ -395,15 +702,15 @@ func (r *ProkerV3Repository) GetAll(
 					continue
 				}
 
-				if field == "target_capaian" || field == "target_unpak" || field == "capaian_unit_lalu" || field == "capaian_terdahulu" {
+				if field == "target_capaian" || field == "target_unpak" || field == "target_unit" {
 					likeVal := "%" + strings.ToLower(val) + "%"
-					db = db.Where("EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (LOWER(COALESCE(mps.target_unpak, '')) LIKE ? OR LOWER(COALESCE(mps.target_unit, '')) LIKE ? OR LOWER(COALESCE(mps.capaian_terdahulu, '')) LIKE ?))", likeVal, likeVal, likeVal)
+					db = db.Where("EXISTS (SELECT 1 FROM mata_programv2_template_renstra mtr2 JOIN template_renstra tr2 ON mtr2.id_template_renstra = tr2.id LEFT JOIN master_indikator_renstra mir2 ON tr2.indikator = mir2.id WHERE mtr2.id_mata_programv2 = mp_t.id_mata_program AND LOWER(COALESCE(tr2.target, '')) LIKE ?)", likeVal)
 					continue
 				}
 
 				if field == "output" || field == "outcome" {
 					likeVal := "%" + strings.ToLower(val) + "%"
-					db = db.Where("EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (LOWER(COALESCE(mps.output, '')) LIKE ? OR LOWER(COALESCE(mps.outcome, '')) LIKE ?))", likeVal, likeVal)
+					db = db.Where("EXISTS (SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND (LOWER(COALESCE(a.output, '')) LIKE ? OR LOWER(COALESCE(a.outcome, '')) LIKE ?))", likeVal, likeVal)
 					continue
 				}
 
@@ -497,25 +804,48 @@ func (r *ProkerV3Repository) GetAll(
 					if role == "anggaran" || role == "keuangan" {
 						switch tab {
 						case "terima":
-							db = db.Where("(mp_t.status_anggaran = 'terima_anggaran' OR LOWER(mp_t.status) IN ('terima_anggaran', 'terima anggaran'))")
+							db = db.Where(`mp_t.status_anggaran IN ('diterima', 'terima_anggaran')`)
+						case "terima_parsial", "parsial":
+							db = db.Where(`mp_t.status_anggaran IN ('diterima_parsial', 'parsial')`)
 						case "tolak":
-							db = db.Where("mp_t.status_anggaran = 'ditolak'")
+							db = db.Where(`mp_t.status_anggaran = 'ditolak'`)
 						case "revisi":
-							db = db.Where("(mp_t.status = 'revisi' OR mp_t.status_anggaran = 'revisi' OR mp_t.status_verifikator = 'revisi')")
+							db = db.Where(`mp_t.status_anggaran = 'revisi'`)
 						case "menunggu":
-							db = db.Where("COALESCE(mp_t.status, '') NOT IN ('draft', 'draf', 'revisi') AND COALESCE(mp_t.status_anggaran, '') != 'terima_anggaran' AND LOWER(COALESCE(mp_t.status, '')) NOT IN ('terima_anggaran', 'terima anggaran') AND COALESCE(mp_t.status_anggaran, '') != 'ditolak' AND COALESCE(mp_t.status_verifikator, '') != 'ditolak' AND COALESCE(mp_t.status_anggaran, '') != 'dibatalkan' AND COALESCE(mp_t.status_anggaran, '') != 'revisi' AND COALESCE(mp_t.status_verifikator, '') != 'revisi'")
+							db = db.Where(`mp_t.status_anggaran IN ('menunggu_anggaran', 'menunggu_verifikator')`)
+						default:
+							// Menampilkan proker yang memiliki aktivitas diterima evaluator (lengkap atau parsial)
+							db = db.Where(`mp_t.status IN ('diterima', 'diterima_parsial') OR EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator IN ('disetujui', 'diterima') OR a.status_verifikator IN ('diterima', 'disetujui'))
+							)`)
 						}
 					} else {
 						// Verifikator (upml, upmf, upms, evaluator, admin, user)
 						switch tab {
 						case "terima":
-							db = db.Where("(mp_t.status_verifikator IN ('terima_verifikator', 'disetujui') OR mp_t.status IN ('disetujui', 'terima_anggaran', 'terima anggaran') OR mp_t.status_verifikator LIKE '%diverifikasi%' OR mp_t.status LIKE '%diverifikasi%')")
+							db = db.Where(`mp_t.status = 'diterima' OR (EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0
+							) AND NOT EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator NOT IN ('disetujui', 'diterima') AND a.status_verifikator NOT IN ('diterima', 'disetujui'))
+							))`)
+						case "terima_parsial", "parsial":
+							db = db.Where(`mp_t.status = 'diterima_parsial' OR (EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator IN ('disetujui', 'diterima') OR a.status_verifikator IN ('diterima', 'disetujui'))
+							) AND EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator NOT IN ('disetujui', 'diterima') AND a.status_verifikator NOT IN ('diterima', 'disetujui'))
+							))`)
 						case "tolak":
-							db = db.Where("(mp_t.status_verifikator = 'ditolak' OR (mp_t.status LIKE '%ditolak%' AND (mp_t.status_verifikator = 'ditolak' OR (mp_t.catatan_verifikator IS NOT NULL AND mp_t.catatan_verifikator != '') OR (mp_t.catatan_penolakan IS NOT NULL AND mp_t.catatan_penolakan != ''))))")
+							db = db.Where(`mp_t.status = 'ditolak' OR EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator = 'ditolak' OR a.status_verifikator = 'ditolak')
+							)`)
 						case "revisi":
-							db = db.Where("(mp_t.status = 'revisi' OR mp_t.status_verifikator = 'revisi' OR mp_t.status_anggaran = 'revisi')")
+							db = db.Where(`mp_t.status = 'revisi' OR EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator = 'revisi' OR a.status_verifikator = 'revisi')
+							)`)
 						case "menunggu":
-							db = db.Where("(mp_t.status = 'diajukan' OR mp_t.status_verifikator = 'diajukan' OR mp_t.status_verifikator = 'menunggu') AND COALESCE(mp_t.status_verifikator, '') NOT IN ('terima_verifikator', 'disetujui', 'ditolak', 'revisi') AND COALESCE(mp_t.status, '') NOT IN ('disetujui', 'terima_anggaran', 'terima anggaran', 'draft', 'revisi') AND COALESCE(mp_t.status_verifikator, '') NOT LIKE '%diverifikasi%' AND COALESCE(mp_t.status, '') NOT LIKE '%diverifikasi%'")
+							db = db.Where(`mp_t.status IN ('diajukan', 'draft') AND mp_t.status NOT IN ('diterima', 'diterima_parsial') AND NOT EXISTS (
+								SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0 AND (a.status_evaluator IN ('disetujui', 'diterima') OR a.status_verifikator IN ('diterima', 'disetujui'))
+							)`)
 						}
 					}
 					continue
@@ -541,7 +871,7 @@ func (r *ProkerV3Repository) GetAll(
 			mir.indikator LIKE ? OR
 			msr.nama LIKE ? OR
 			fu.nama_fak_prod_unit LIKE ? OR
-			EXISTS (SELECT 1 FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp_t.id AND (mps.output LIKE ? OR mps.outcome LIKE ?))
+			EXISTS (SELECT 1 FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND (a.output LIKE ? OR a.outcome LIKE ?))
 		)`, like, like, like, like, like, like)
 	}
 
@@ -578,63 +908,163 @@ func (r *ProkerV3Repository) GetAll(
 	}
 
 	if len(list) > 0 {
-		var pIDs []uint
+		var mpIDs []int
 		for _, item := range list {
-			pIDs = append(pIDs, item.ID)
+			if item.IdMataProgram != nil && *item.IdMataProgram > 0 {
+				mpIDs = append(mpIDs, *item.IdMataProgram)
+			}
 		}
-		var allScopes []domain.ProkerScopeDefault
-		_ = r.db.WithContext(ctx).Table("matrix_proker_scope mps").
-			Select(`
-				mps.id as id,
-				mps.uuid as uuid,
-				mps.id_matrix_proker as id_matrix_proker,
-				mps.id_mata_program as id_mata_program,
-				mps.id_indikator as id_indikator,
-				COALESCE(mir.indikator, '') as indikator_kinerja,
-				COALESCE(mir.uuid, '') as indikator_uuid,
-				COALESCE(mir.id_master_standar, msr.id, 0) as id_master_standar,
-				COALESCE(msr.nama, '') as standar_sub_standar,
-				COALESCE(msr.uuid, '') as standar_uuid,
-				COALESCE(mps.target_unpak, '') as target_unpak,
-				COALESCE(mps.capaian_terdahulu, '') as capaian_unit_lalu,
-				COALESCE(mps.target_unit, '') as target_unit,
-				COALESCE(mps.output, '') as output,
-				COALESCE(mps.outcome, '') as outcome,
-				COALESCE((
-					SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
-					FROM indikator_renstra_iku iri
-					WHERE iri.id_indikator_renstra = mps.id_indikator
-				), '') as iku_list
-			`).
-			Joins("LEFT JOIN master_indikator_renstra mir ON mps.id_indikator = mir.id").
-			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
-			Where("mps.id_matrix_proker IN ?", pIDs).
-			Order("mps.id ASC").
-			Scan(&allScopes).Error
 
-		scopeMap := make(map[uint][]domain.ProkerScopeDefault)
-		for _, sc := range allScopes {
-			scopeMap[sc.IdMatrixProker] = append(scopeMap[sc.IdMatrixProker], sc)
+		type renstraRow struct {
+			IdMataProgramV2  int       `gorm:"column:id_mata_programv2"`
+			TemplateID       uint      `gorm:"column:template_id"`
+			TemplateUUID     uuid.UUID `gorm:"column:template_uuid"`
+			FakultasUnitID   *uint64   `gorm:"column:fakultas_unit"`
+			Satuan           string    `gorm:"column:satuan"`
+			Target           string    `gorm:"column:target"`
+			TargetMin        string    `gorm:"column:target_min"`
+			TargetMax        string    `gorm:"column:target_max"`
+			IndikatorID      *int      `gorm:"column:indikator_id"`
+			IndikatorUUID    string    `gorm:"column:indikator_uuid"`
+			IndikatorKinerja string    `gorm:"column:indikator_kinerja"`
+			TipeTarget       string    `gorm:"column:tipe_target"`
+			Operator         string    `gorm:"column:operator"`
+			TargetUnpak      string    `gorm:"column:target_unpak"`
+			StandarID        int       `gorm:"column:standar_id"`
+			StandarUUID      string    `gorm:"column:standar_uuid"`
+			StandarNama      string    `gorm:"column:standar_nama"`
+			IkuList          string    `gorm:"column:iku_list"`
 		}
+
+		var allRRows []renstraRow
+		if len(mpIDs) > 0 {
+			_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+				Select(`
+					mptr.id_mata_programv2 as id_mata_programv2,
+					tr.id as template_id,
+					tr.uuid as template_uuid,
+					tr.fakultas_unit as fakultas_unit,
+					COALESCE(tr.satuan, '') as satuan,
+					COALESCE(tr.target, '') as target,
+					COALESCE(tr.target_min, '') as target_min,
+					COALESCE(tr.target_max, '') as target_max,
+					tr.indikator as indikator_id,
+					COALESCE(mir.uuid, '') as indikator_uuid,
+					COALESCE(mir.indikator, '') as indikator_kinerja,
+					COALESCE(mir.tipe_target, '') as tipe_target,
+					COALESCE(mir.operator, '') as operator,
+					'' as target_unpak,
+					COALESCE(msr.id, 0) as standar_id,
+					COALESCE(msr.uuid, '') as standar_uuid,
+					COALESCE(msr.nama, '') as standar_nama,
+					COALESCE((
+						SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
+						FROM indikator_renstra_iku iri
+						WHERE iri.id_indikator_renstra = mir.id
+					), '') as iku_list
+				`).
+				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
+				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
+				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
+				Where("mptr.id_mata_programv2 IN ?", mpIDs).
+				Order("tr.id ASC").
+				Scan(&allRRows).Error
+		}
+
+		type scopeKey struct {
+			mpID uint
+			fuID uint64
+		}
+		scopesByUnitMap := make(map[scopeKey][]domain.ProkerScopeDefault)
+		scopesByProgMap := make(map[uint][]domain.ProkerScopeDefault)
 
 		ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
+		for _, rr := range allRRows {
+			formattedTargetUnit := commoninfra.FormatRenstraTargetUnit(
+				rr.TipeTarget, rr.Operator, rr.Target, rr.TargetMin, rr.TargetMax, rr.Satuan,
+			)
+			formattedIku := commoninfra.FormatIkuList(rr.IkuList, ikuMap)
+
+			var stdID *int
+			if rr.StandarID > 0 {
+				sID := rr.StandarID
+				stdID = &sID
+			}
+
+			sc := domain.ProkerScopeDefault{
+				ID:                rr.TemplateID,
+				UUID:              rr.TemplateUUID,
+				IdMataProgram:     &rr.IdMataProgramV2,
+				IdIndikator:       rr.IndikatorID,
+				IndikatorKinerja:  rr.IndikatorKinerja,
+				IndikatorUUID:     rr.IndikatorUUID,
+				IdMasterStandar:   stdID,
+				StandarSubStandar: rr.StandarNama,
+				StandarUUID:       rr.StandarUUID,
+				TargetUnpak:       rr.TargetUnpak,
+				TargetUnit:        formattedTargetUnit,
+				CapaianUnitLalu:   "-",
+				Output:            "",
+				Outcome:           "",
+				IkuList:           formattedIku,
+			}
+
+			progIDUint := uint(rr.IdMataProgramV2)
+			scopesByProgMap[progIDUint] = append(scopesByProgMap[progIDUint], sc)
+			if rr.FakultasUnitID != nil {
+				k := scopeKey{mpID: progIDUint, fuID: *rr.FakultasUnitID}
+				scopesByUnitMap[k] = append(scopesByUnitMap[k], sc)
+			}
+		}
+
 		for i := range list {
 			list[i].NoProker = int64(i + 1)
 			list[i].IkuList = commoninfra.FormatIkuList(list[i].IkuList, ikuMap)
-			if scs, ok := scopeMap[list[i].ID]; ok {
-				for j := range scs {
-					scs[j].IkuList = commoninfra.FormatIkuList(scs[j].IkuList, ikuMap)
+
+			var matchedScopes []domain.ProkerScopeDefault
+			if list[i].IdMataProgram != nil && *list[i].IdMataProgram > 0 {
+				progIDUint := uint(*list[i].IdMataProgram)
+				if list[i].IdFakultasUnit != nil && *list[i].IdFakultasUnit > 0 {
+					k := scopeKey{mpID: progIDUint, fuID: uint64(*list[i].IdFakultasUnit)}
+					if scs, ok := scopesByUnitMap[k]; ok && len(scs) > 0 {
+						matchedScopes = scs
+					}
 				}
-				list[i].Scopes = scs
-				if len(scs) > 0 {
-					list[i].TargetUnpak = scs[0].TargetUnpak
-					list[i].CapaianUnitLalu = scs[0].CapaianUnitLalu
-					list[i].TargetUnit = scs[0].TargetUnit
-					list[i].Output = scs[0].Output
-					list[i].Outcome = scs[0].Outcome
+				if len(matchedScopes) == 0 {
+					if scs, ok := scopesByProgMap[progIDUint]; ok && len(scs) > 0 {
+						matchedScopes = scs
+					}
 				}
+			}
+
+			list[i].Scopes = matchedScopes
+			if len(matchedScopes) > 0 {
+				list[i].StandarSubStandar = matchedScopes[0].StandarSubStandar
+				list[i].IndikatorKinerja = matchedScopes[0].IndikatorKinerja
+				list[i].TargetUnpak = matchedScopes[0].TargetUnpak
+				list[i].CapaianUnitLalu = "-"
+				list[i].TargetUnit = matchedScopes[0].TargetUnit
+				list[i].Output = ""
+				list[i].Outcome = ""
 			} else {
 				list[i].Scopes = []domain.ProkerScopeDefault{}
+			}
+			list[i].StatusVerifikator, list[i].StatusAnggaran = commoninfra.ComputeProkerVerificationStatus(
+				list[i].TotalAktivitas,
+				list[i].TotalAktivitasTerimaVerifikator,
+				list[i].TotalAktivitasTolakVerifikator,
+				list[i].TotalAktivitasDiajukanVerifikator,
+				list[i].TotalAktivitasTerimaAnggaran,
+				list[i].TotalAktivitasTolakAnggaran,
+			)
+			if list[i].ID > 0 {
+				s1, s2, _ := commoninfra.SyncMatrixProkerStatus(ctx, r.db, list[i].ID)
+				if s1 != "" {
+					list[i].Status = s1
+				}
+				if s2 != "" {
+					list[i].StatusAnggaran = s2
+				}
 			}
 			r.populatePaguInfo(ctx, &list[i])
 		}
@@ -894,10 +1324,26 @@ func (r *ProkerV3Repository) GetAktivitasOptionsByMatrikId(ctx context.Context, 
 func (r *ProkerV3Repository) GetOptions(ctx context.Context) (*domain.ProkerOptionsResult, error) {
 	var units []domain.ProkerUnitOption
 	_ = r.db.WithContext(ctx).Table("v_fakultas_unit fu").
-		Select("fu.id, fu.uuid, fu.nama_fak_prod_unit as nama, COALESCE(fu.type, '') as type, COALESCE(fu.fakultas, '') as fakultas, COALESCE(fu.jenjang, '') as jenjang, COALESCE(sfu.kode_fakultas, '') as kode_fakultas").
+		Select(`
+			fu.id,
+			fu.uuid,
+			CASE 
+				WHEN LOWER(fu.type) = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama,
+			COALESCE(fu.type, '') as type,
+			COALESCE(fu.fakultas, '') as fakultas,
+			COALESCE(fu.jenjang, '') as jenjang,
+			COALESCE(sfu.kode_fakultas, '') as kode_fakultas
+		`).
 		Joins("LEFT JOIN sijamu_fakultas_unit sfu ON fu.id = sfu.id").
 		Order("fu.nama_fak_prod_unit ASC").
 		Scan(&units).Error
+
+	for i := range units {
+		units[i].Nama = units[i].DisplayNama()
+	}
 
 	var tahuns []domain.ProkerTahunOption
 	_ = r.db.WithContext(ctx).Table("master_tahun").
@@ -913,7 +1359,7 @@ func (r *ProkerV3Repository) GetOptions(ctx context.Context) (*domain.ProkerOpti
 
 	var indikators []domain.ProkerIndikatorOption
 	_ = r.db.WithContext(ctx).Table("master_indikator_renstra").
-		Select("id, uuid, id_master_standar, indikator, tahun, COALESCE(target_unpak, '') AS target_unpak, COALESCE(target_unit, '') AS target_unit").
+		Select("id, uuid, id_master_standar, indikator, tahun, '' AS target_unpak, '' AS target_unit").
 		Order("indikator ASC").
 		Scan(&indikators).Error
 
@@ -989,30 +1435,15 @@ func (r *ProkerV3Repository) GetTargetUnpak(ctx context.Context, tahun, indikato
 	}
 
 	candidateIDs := []int{indikatorID}
-	var masterTargetUnpak, masterTargetUnit string
+	var masterTargetUnit string
 	if indikatorID > 0 {
 		var indRow struct {
-			Indikator   string `gorm:"column:indikator"`
-			TargetUnpak string `gorm:"column:target_unpak"`
-			TargetUnit  string `gorm:"column:target_unit"`
+			Indikator string `gorm:"column:indikator"`
 		}
 		if err := r.db.WithContext(ctx).Table("master_indikator_renstra").
-			Select("indikator, COALESCE(target_unpak, '') AS target_unpak, COALESCE(target_unit, '') AS target_unit").
+			Select("indikator").
 			Where("id = ?", indikatorID).
 			First(&indRow).Error; err == nil {
-			masterTargetUnpak = strings.TrimSpace(indRow.TargetUnpak)
-			masterTargetUnit = strings.TrimSpace(indRow.TargetUnit)
-			if masterTargetUnpak != "" {
-				return &domain.TargetUnpakResult{
-					Found:       true,
-					Target:      masterTargetUnpak,
-					TargetMin:   "",
-					TargetMax:   "",
-					Satuan:      "",
-					TargetUnpak: masterTargetUnpak,
-					TargetUnit:  masterTargetUnit,
-				}, nil
-			}
 			if indRow.Indikator != "" {
 				var sameIDs []int
 				_ = r.db.WithContext(ctx).Table("master_indikator_renstra").Where("indikator = ?", indRow.Indikator).Pluck("id", &sameIDs).Error
@@ -1308,10 +1739,8 @@ func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string
 		StatusUpml       string    `gorm:"column:status_upml"`
 		StatusUpmf       string    `gorm:"column:status_upmf"`
 		StatusUpms       string    `gorm:"column:status_upms"`
-		StatusAnggaran   string    `gorm:"column:status_anggaran"`
 		CreatedAt        time.Time `gorm:"column:created_at"`
 		CatatanPenolakan string    `gorm:"column:catatan_penolakan"`
-		CatatanAnggaran  string    `gorm:"column:catatan_anggaran"`
 	}
 	if mp.ID == 0 {
 		_ = r.db.WithContext(ctx).Table("aktivitasv2").Where("uuid = ?", rawUuid).First(&act).Error
@@ -1360,11 +1789,18 @@ func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string
 			} else {
 				currentStatusVerifikator = "menunggu"
 			}
-			currentStatusAnggaran = act.StatusAnggaran
+			if act.IdMatrikProker != nil {
+				var parentMp struct {
+					StatusAnggaran  string `gorm:"column:status_anggaran"`
+					CatatanAnggaran string `gorm:"column:catatan_anggaran"`
+				}
+				_ = r.db.WithContext(ctx).Table("matrix_proker").Where("id = ?", *act.IdMatrikProker).Select("status_anggaran, catatan_anggaran").Scan(&parentMp).Error
+				currentStatusAnggaran = parentMp.StatusAnggaran
+				catatan = parentMp.CatatanAnggaran
+			}
 			createdAt = act.CreatedAt
-			catatan = act.CatatanPenolakan
-			if catatan == "" {
-				catatan = act.CatatanAnggaran
+			if act.CatatanPenolakan != "" {
+				catatan = act.CatatanPenolakan
 			}
 		}
 
@@ -1556,7 +1992,21 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 
 	var mp domain.ProkerV3
 	if errMp := r.db.WithContext(ctx).Where("uuid = ?", parsedUuid).First(&mp).Error; errMp != nil {
-		return nil, errors.New("Data program kerja tidak ditemukan")
+		// Fallback: jika parsedUuid adalah UUID mata_programv2, cari matrix_proker terkait
+		var prog struct {
+			ID int `gorm:"column:id"`
+		}
+		if errProg := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("uuid = ?", parsedUuid).First(&prog).Error; errProg == nil && prog.ID > 0 {
+			q := r.db.WithContext(ctx).Where("id_mata_program = ?", prog.ID)
+			if fuID, errConv := strconv.Atoi(strings.TrimSpace(req.UserFU)); errConv == nil && fuID > 0 {
+				q = q.Where("id_fakultas_unit = ?", fuID)
+			}
+			if errMp2 := q.Order("id DESC").First(&mp).Error; errMp2 != nil {
+				return nil, errors.New("Data program kerja tidak ditemukan")
+			}
+		} else {
+			return nil, errors.New("Data program kerja tidak ditemukan")
+		}
 	}
 
 	if !isVerifier && !isAnggaran && level != "admin" {
@@ -1640,21 +2090,16 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 	}
 
 	if isAnggaran && !isVerifier && level != "admin" {
-		verifOk := mp.StatusVerifikator == "terima_verifikator" ||
-			mp.StatusVerifikator == "disetujui" ||
-			strings.Contains(mp.StatusVerifikator, "diverifikasi") ||
-			strings.Contains(mp.Status, "diverifikasi") ||
-			mp.Status == "disetujui" ||
-			mp.Status == "terima_anggaran"
-		if !verifOk && newStatus != "draft" && newStatus != "draf" && newStatus != "revisi" {
-			return nil, errors.New("Program kerja belum diverifikasi oleh verifikator")
+		var terimaCount int64
+		_ = r.db.WithContext(ctx).Table("aktivitasv2").
+			Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND status_verifikator IN ('diterima', 'disetujui')", mp.ID).
+			Count(&terimaCount).Error
+		if terimaCount == 0 && newStatus != "draft" && newStatus != "draf" && newStatus != "revisi" {
+			return nil, errors.New("Program kerja belum memiliki aktivitas yang disetujui oleh evaluator")
 		}
 	}
 
 	updatesMp := map[string]interface{}{
-		"updated_at": time.Now(),
-	}
-	updatesAct := map[string]interface{}{
 		"updated_at": time.Now(),
 	}
 	var toStateHistory string
@@ -1664,8 +2109,6 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		if newStatus == "draft" || newStatus == "draf" {
 			updatesMp["status_anggaran"] = "draft"
 			updatesMp["status"] = "draft"
-			updatesAct["status_anggaran"] = "draft"
-			updatesAct["status"] = "draft"
 			fromStateHistory = "terima verifikator"
 			toStateHistory = "draf anggaran"
 		} else if newStatus == "revisi" || strings.Contains(newStatus, "tolak") {
@@ -1675,21 +2118,22 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 				updatesMp["catatan_anggaran"] = catatanPenolakan
 				updatesMp["catatan_penolakan"] = catatanPenolakan
 			}
-			updatesAct["status_anggaran"] = "ditolak"
-			updatesAct["status"] = "revisi"
-			if catatanPenolakan != "" {
-				updatesAct["catatan_penolakan"] = catatanPenolakan
-			}
 			fromStateHistory = "terima verifikator"
 			toStateHistory = "revisi anggaran"
 		} else {
 			updatesMp["status_anggaran"] = "terima_anggaran"
 			updatesMp["catatan_anggaran"] = ""
 			updatesMp["status"] = "terima_anggaran"
-			updatesAct["status_anggaran"] = "terima_anggaran"
-			updatesAct["status"] = "terima_anggaran"
 			fromStateHistory = "terima verifikator"
 			toStateHistory = "terima anggaran"
+
+			now := time.Now()
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND terima_anggaran_at IS NULL AND (status_verifikator IN ('diterima', 'disetujui') OR status_evaluator IN ('disetujui', 'diterima'))", mp.ID).
+				Updates(map[string]interface{}{
+					"terima_anggaran_at": now,
+					"updated_at":         now,
+				}).Error
 		}
 	} else if isVerifier && level != "admin" {
 		fromStateHistory = mp.Status
@@ -1697,46 +2141,57 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			fromStateHistory = "diajukan"
 		}
 		if strings.Contains(newStatus, "tolak") {
-			updatesMp["status_verifikator"] = "ditolak"
-			updatesMp["catatan_verifikator"] = catatanPenolakan
 			updatesMp["status_anggaran"] = "dibatalkan"
 			updatesMp["status"] = "ditolak"
 			updatesMp["catatan_penolakan"] = catatanPenolakan
 
-			updatesAct["status_anggaran"] = "dibatalkan"
-			updatesAct["status"] = "ditolak"
-			updatesAct["catatan_penolakan"] = catatanPenolakan
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0", mp.ID).
+				Updates(map[string]interface{}{
+					"status_verifikator":  "ditolak",
+					"catatan_verifikator": catatanPenolakan,
+					"catatan_penolakan":   catatanPenolakan,
+					"updated_at":          time.Now(),
+				}).Error
 			toStateHistory = "ditolak verifikator"
 		} else if newStatus == "revisi" || strings.Contains(newStatus, "revisi") {
-			updatesMp["status_verifikator"] = "revisi"
-			updatesMp["catatan_verifikator"] = catatanPenolakan
 			updatesMp["status_anggaran"] = "menunggu_verifikator"
 			updatesMp["status"] = "revisi"
 			updatesMp["catatan_penolakan"] = catatanPenolakan
 
-			updatesAct["status_anggaran"] = "menunggu_verifikator"
-			updatesAct["status"] = "revisi"
-			updatesAct["catatan_penolakan"] = catatanPenolakan
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND COALESCE(status_verifikator, '') NOT IN ('diterima', 'disetujui')", mp.ID).
+				Updates(map[string]interface{}{
+					"status_verifikator":  "ditolak",
+					"catatan_verifikator": catatanPenolakan,
+					"catatan_penolakan":   catatanPenolakan,
+					"updated_at":          time.Now(),
+				}).Error
 			toStateHistory = "revisi verifikator"
 		} else if newStatus == "draft" || newStatus == "draf" {
-			updatesMp["status_verifikator"] = "draft"
-			updatesMp["catatan_verifikator"] = catatanPenolakan
 			updatesMp["status_anggaran"] = "menunggu_verifikator"
 			updatesMp["status"] = "draft"
 			updatesMp["catatan_penolakan"] = catatanPenolakan
 
-			updatesAct["status_anggaran"] = "menunggu_verifikator"
-			updatesAct["status"] = "draft"
-			updatesAct["catatan_penolakan"] = catatanPenolakan
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND COALESCE(status_verifikator, '') NOT IN ('diterima', 'disetujui')", mp.ID).
+				Updates(map[string]interface{}{
+					"status_verifikator": "draft",
+					"updated_at":         time.Now(),
+				}).Error
 			toStateHistory = "draf verifikator"
 		} else {
-			updatesMp["status_verifikator"] = "terima_verifikator"
-			updatesMp["catatan_verifikator"] = ""
 			updatesMp["status_anggaran"] = "menunggu_anggaran"
 			updatesMp["status"] = newStatus
 
-			updatesAct["status_anggaran"] = "menunggu_anggaran"
-			updatesAct["status"] = newStatus
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0", mp.ID).
+				Updates(map[string]interface{}{
+					"status_evaluator":    "disetujui",
+					"status_verifikator":  "diterima",
+					"catatan_verifikator": "",
+					"updated_at":          time.Now(),
+				}).Error
 			toStateHistory = "terima verifikator"
 
 			if level == "upml" {
@@ -1749,22 +2204,38 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 		}
 	} else {
 		if newStatus == "diajukan" {
-			updatesMp["status_verifikator"] = "diajukan"
 			updatesMp["status_anggaran"] = "menunggu_verifikator"
 			updatesMp["status"] = "diajukan"
-			updatesAct["status_anggaran"] = "menunggu_verifikator"
-			updatesAct["status"] = "diajukan"
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND COALESCE(status_verifikator, '') NOT IN ('diterima', 'disetujui')", mp.ID).
+				Updates(map[string]interface{}{
+					"status_evaluator":   "menunggu",
+					"status_verifikator": "diajukan",
+					"status_upms":        "menunggu",
+					"status_upmf":        "menunggu",
+					"status_upml":        "menunggu",
+					"status_lpm":         "menunggu",
+					"updated_at":         time.Now(),
+				}).Error
 			fromStateHistory = mp.Status
 			if fromStateHistory == "" {
 				fromStateHistory = "draf"
 			}
 			toStateHistory = "diajukan"
 		} else if newStatus == "draft" {
-			updatesMp["status_verifikator"] = "draft"
 			updatesMp["status_anggaran"] = "menunggu_verifikator"
 			updatesMp["status"] = "draft"
-			updatesAct["status_anggaran"] = "menunggu_verifikator"
-			updatesAct["status"] = "draft"
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND COALESCE(status_verifikator, '') NOT IN ('diterima', 'disetujui')", mp.ID).
+				Updates(map[string]interface{}{
+					"status_evaluator":   "draft",
+					"status_verifikator": "draft",
+					"status_upms":        "draft",
+					"status_upmf":        "draft",
+					"status_upml":        "draft",
+					"status_lpm":         "draft",
+					"updated_at":         time.Now(),
+				}).Error
 			fromStateHistory = "diajukan"
 			toStateHistory = "draf"
 		} else if newStatus == "revisi" {
@@ -1772,37 +2243,47 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 			if fromStateHistory == "" {
 				fromStateHistory = "diajukan"
 			}
-			updatesMp["status_verifikator"] = "revisi"
 			updatesMp["status_anggaran"] = "menunggu_verifikator"
 			updatesMp["status"] = "revisi"
 			if catatanPenolakan != "" {
-				updatesMp["catatan_verifikator"] = catatanPenolakan
 				updatesMp["catatan_penolakan"] = catatanPenolakan
 			}
-			updatesAct["status_anggaran"] = "menunggu_verifikator"
-			updatesAct["status"] = "revisi"
-			if catatanPenolakan != "" {
-				updatesAct["catatan_penolakan"] = catatanPenolakan
-			}
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND COALESCE(status_verifikator, '') NOT IN ('diterima', 'disetujui')", mp.ID).
+				Updates(map[string]interface{}{
+					"status_verifikator":  "ditolak",
+					"catatan_verifikator": catatanPenolakan,
+					"catatan_penolakan":   catatanPenolakan,
+					"updated_at":          time.Now(),
+				}).Error
 			toStateHistory = "revisi"
 		} else if newStatus == "terima_anggaran" {
 			updatesMp["status_anggaran"] = "terima_anggaran"
 			updatesMp["status"] = "terima_anggaran"
-			updatesAct["status_anggaran"] = "terima_anggaran"
-			updatesAct["status"] = "terima_anggaran"
 			fromStateHistory = "terima verifikator"
 			toStateHistory = "terima anggaran"
+
+			now := time.Now()
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0 AND terima_anggaran_at IS NULL AND (status_verifikator IN ('diterima', 'disetujui') OR status_evaluator IN ('disetujui', 'diterima'))", mp.ID).
+				Updates(map[string]interface{}{
+					"terima_anggaran_at": now,
+					"updated_at":         now,
+				}).Error
 		} else if strings.Contains(newStatus, "diverifikasi") || newStatus == "disetujui" {
-			updatesMp["status_verifikator"] = "terima_verifikator"
 			updatesMp["status_anggaran"] = "menunggu_anggaran"
 			updatesMp["status"] = newStatus
-			updatesAct["status_anggaran"] = "menunggu_anggaran"
-			updatesAct["status"] = newStatus
+			_ = r.db.WithContext(ctx).Table("aktivitasv2").
+				Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0", mp.ID).
+				Updates(map[string]interface{}{
+					"status_verifikator":  "diterima",
+					"catatan_verifikator": "",
+					"updated_at":          time.Now(),
+				}).Error
 			fromStateHistory = "diajukan"
 			toStateHistory = "terima verifikator"
 		} else {
 			updatesMp["status"] = newStatus
-			updatesAct["status"] = newStatus
 			toStateHistory = newStatus
 		}
 	}
@@ -1810,8 +2291,11 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 	if err := r.db.WithContext(ctx).Model(&domain.ProkerV3{}).Where("id = ?", mp.ID).Updates(updatesMp).Error; err != nil {
 		return nil, err
 	}
-	if len(updatesAct) > 1 {
-		_ = r.db.WithContext(ctx).Table("aktivitasv2").Where("id_matrik_proker = ?", mp.ID).Updates(updatesAct).Error
+
+	if newStatus == "diajukan" || newStatus == "draft" {
+		if syncedStatus, _, errSync := commoninfra.SyncMatrixProkerStatus(ctx, r.db, mp.ID); errSync == nil && syncedStatus != "" {
+			newStatus = syncedStatus
+		}
 	}
 
 	mpIDInt := int(mp.ID)
@@ -2531,13 +3015,13 @@ func (r *ProkerV3Repository) GetUnitPaguSummary(ctx context.Context, tahun strin
 	_ = r.db.WithContext(ctx).Table("matrix_proker mp").
 		Select(`
 			mp.id,
-			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_anggaran,
-			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0), 0) as tot_realisasi,
-			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) as count_realisasi
+			COALESCE((SELECT SUM(COALESCE(r.total, r.qty_satuan * r.qty_paket * r.sbu, 0)) FROM aktivitasv2_rab r JOIN aktivitasv2 a ON a.id = r.id_aktivitasv2 WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(a.beban_yayasan, 0) = 0), 0) as tot_anggaran,
+			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(a.beban_yayasan, 0) = 0), 0) as tot_realisasi,
+			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0 AND COALESCE(a.beban_yayasan, 0) = 0), 0) as count_realisasi
 		`).
 		Joins("LEFT JOIN mata_programv2 p ON p.id = mp.id_mata_program").
 		Joins("LEFT JOIN master_tahun mt ON mt.id = p.id_master_tahun").
-		Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ? AND COALESCE(mp.beban_yayasan, 0) = 0 AND COALESCE(mp.is_batal, 0) = 0", fuId, fuName, tahun).
+		Where("mp.deleted_at IS NULL AND (mp.id_fakultas_unit = ? OR (SELECT fu2.nama_fak_prod_unit FROM v_fakultas_unit fu2 WHERE fu2.id = mp.id_fakultas_unit) = ?) AND COALESCE(mt.tahun, '') = ?", fuId, fuName, tahun).
 		Scan(&prokers).Error
 
 	totalAnggaran := float64(0)
@@ -2734,13 +3218,21 @@ func (r *ProkerV3Repository) GetDashboardProkerMonitoring(ctx context.Context, f
 			COALESCE(prog.mata_program, '') as nama_program,
 			COALESCE(mt.tahun, '') as tahun,
 			COALESCE(mir.indikator, '') as indikator_kinerja,
-			COALESCE((SELECT mps.target_unpak FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unpak,
-			COALESCE((SELECT mps.target_unit FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as target_unit,
-			COALESCE((SELECT mps.output FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as output,
-			COALESCE((SELECT mps.outcome FROM matrix_proker_scope mps WHERE mps.id_matrix_proker = mp.id ORDER BY mps.id ASC LIMIT 1), '') as outcome,
+			COALESCE((SELECT tr2.target FROM mata_programv2_template_renstra mtr2 JOIN template_renstra tr2 ON mtr2.id_template_renstra = tr2.id WHERE mtr2.id_mata_programv2 = mp.id_mata_program ORDER BY tr2.id ASC LIMIT 1), '') as target_unpak,
+			COALESCE((SELECT tr2.target FROM mata_programv2_template_renstra mtr2 JOIN template_renstra tr2 ON mtr2.id_template_renstra = tr2.id WHERE mtr2.id_mata_programv2 = mp.id_mata_program AND (tr2.fakultas_unit = mp.id_fakultas_unit OR tr2.fakultas_unit IS NULL) ORDER BY tr2.id ASC LIMIT 1), '') as target_unit,
+			COALESCE((SELECT a.output FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.output IS NOT NULL AND a.output != '' ORDER BY a.id ASC LIMIT 1), '') as output,
+			COALESCE((SELECT a.outcome FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND a.outcome IS NOT NULL AND a.outcome != '' ORDER BY a.id ASC LIMIT 1), '') as outcome,
 			COALESCE(NULLIF(mp.pic, ''), '') as pic,
 			COALESCE(NULLIF(mp.status, ''), 'draft') as status,
-			COALESCE(NULLIF(mp.status_verifikator, ''), 'draft') as status_verifikator,
+			COALESCE((
+				CASE 
+					WHEN (SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0) = 0 THEN 'draf evaluator'
+					WHEN (SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diterima', 'disetujui')) = (SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0) THEN 'diterima evaluator'
+					WHEN (SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('diterima', 'disetujui')) > 0 THEN 'diterima evaluator (parsial)'
+					WHEN (SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp.id AND COALESCE(a.is_batal, 0) = 0 AND a.status_verifikator IN ('ditolak', 'revisi')) > 0 THEN 'ditolak evaluator'
+					ELSE 'draf evaluator'
+				END
+			), 'draf evaluator') as status_verifikator,
 			COALESCE(NULLIF(mp.status_anggaran, ''), 'menunggu_verifikator') as status_anggaran,
 			COALESCE(mp.beban_yayasan, 0) as beban_yayasan,
 			COALESCE(mp.is_batal, 0) as is_batal,
@@ -2796,29 +3288,30 @@ func (r *ProkerV3Repository) GetDashboardProkerMonitoring(ctx context.Context, f
 	}
 
 	var rawAktivitas []struct {
-		Id                    uint     `gorm:"column:id"`
-		UUID                  string   `gorm:"column:uuid"`
-		IdMatrikProker        uint     `gorm:"column:id_matrik_proker"`
-		Aktivitas             string   `gorm:"column:aktivitas"`
-		PIC                   string   `gorm:"column:pic"`
-		Capaian               string   `gorm:"column:capaian"`
-		Realisasi             *float64 `gorm:"column:realisasi"`
-		CatatanRevisiAnggaran string   `gorm:"column:catatan_revisi_anggaran"`
-		Pencairan             *float64 `gorm:"column:pencairan"`
-		Status                string   `gorm:"column:status"`
-		StatusAnggaran        string   `gorm:"column:status_anggaran"`
-		StatusUpml            string   `gorm:"column:status_upml"`
-		StatusUpmf            string   `gorm:"column:status_upmf"`
-		StatusUpms            string   `gorm:"column:status_upms"`
-		StatusLpm             string   `gorm:"column:status_lpm"`
-		IsBatal               int      `gorm:"column:is_batal"`
-		CatatanBatal          string   `gorm:"column:catatan_batal"`
+		Id                    uint       `gorm:"column:id"`
+		UUID                  string     `gorm:"column:uuid"`
+		IdMatrikProker        uint       `gorm:"column:id_matrik_proker"`
+		Aktivitas             string     `gorm:"column:aktivitas"`
+		PIC                   string     `gorm:"column:pic"`
+		Capaian               string     `gorm:"column:capaian"`
+		Realisasi             *float64   `gorm:"column:realisasi"`
+		CatatanRevisiAnggaran string     `gorm:"column:catatan_revisi_anggaran"`
+		TerimaAnggaranAt      *time.Time `gorm:"column:terima_anggaran_at"`
+		Pencairan             *float64   `gorm:"column:pencairan"`
+		Status                string     `gorm:"column:status"`
+		StatusAnggaran        string     `gorm:"column:status_anggaran"`
+		StatusUpml            string     `gorm:"column:status_upml"`
+		StatusUpmf            string     `gorm:"column:status_upmf"`
+		StatusUpms            string     `gorm:"column:status_upms"`
+		StatusLpm             string     `gorm:"column:status_lpm"`
+		IsBatal               int        `gorm:"column:is_batal"`
+		CatatanBatal          string     `gorm:"column:catatan_batal"`
 	}
 
 	var aktivitasIDs []uint
 	if len(prokerIDs) > 0 {
 		_ = r.db.WithContext(ctx).Table("aktivitasv2").
-			Select("id, uuid, id_matrik_proker, aktivitas, pic, capaian, realisasi, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, pencairan, status, status_anggaran, status_upml, status_upmf, status_upms, status_lpm, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, capaian, realisasi, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, terima_anggaran_at, pencairan, COALESCE(status_evaluator, status_verifikator, 'diajukan') as status, '' as status_anggaran, status_upml, status_upmf, status_upms, status_lpm, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
 			Where("id_matrik_proker IN (?)", prokerIDs).
 			Order("id ASC").
 			Scan(&rawAktivitas).Error
@@ -3002,6 +3495,7 @@ func (r *ProkerV3Repository) GetDashboardProkerMonitoring(ctx context.Context, f
 			StatusLpm:             a.StatusLpm,
 			IsBatal:               a.IsBatal == 1,
 			CatatanBatal:          a.CatatanBatal,
+			TerimaAnggaranAt:      a.TerimaAnggaranAt,
 			TotalRab:              totRab,
 			StatusPencairan:       statusPencairan,
 			Rab:                   rabItems,
@@ -3174,7 +3668,7 @@ func (r *ProkerV3Repository) GetSankeyData(ctx context.Context, tahun string) (*
 	var aktivitasIDs []uint
 	if len(prokerIDs) > 0 {
 		_ = r.db.WithContext(ctx).Table("aktivitasv2").
-			Select("id, uuid, id_matrik_proker, aktivitas, pic, realisasi, pencairan, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, status, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
+			Select("id, uuid, id_matrik_proker, aktivitas, pic, realisasi, pencairan, COALESCE(catatan_revisi_anggaran, '') as catatan_revisi_anggaran, COALESCE(status_evaluator, status_verifikator, 'diajukan') as status, is_batal, COALESCE(catatan_batal, '') as catatan_batal").
 			Where("id_matrik_proker IN (?)", prokerIDs).
 			Order("id ASC").
 			Scan(&rawAktivitas).Error
@@ -3352,6 +3846,57 @@ func (r *ProkerV3Repository) ExistsActiveProker(ctx context.Context, fuID int, t
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *ProkerV3Repository) GetActiveProkerUUID(ctx context.Context, fuID int, tahunStr string, mpID *int, namaProg string) (string, error) {
+	namaProg = strings.TrimSpace(namaProg)
+	hasMpID := mpID != nil && *mpID > 0
+	if fuID <= 0 || (!hasMpID && namaProg == "") {
+		return "", nil
+	}
+
+	tahunStr = strings.TrimSpace(tahunStr)
+	if tahunStr == "" && hasMpID {
+		var row struct {
+			Tahun string `gorm:"column:tahun"`
+		}
+		_ = r.db.WithContext(ctx).
+			Table("mata_programv2 mprog").
+			Select("mt.tahun AS tahun").
+			Joins("INNER JOIN master_tahun mt ON mt.id = mprog.id_master_tahun").
+			Where("mprog.id = ?", *mpID).
+			Take(&row).Error
+		tahunStr = strings.TrimSpace(row.Tahun)
+	}
+	if tahunStr == "" {
+		return "", nil
+	}
+
+	q := r.db.WithContext(ctx).
+		Table("matrix_proker mp").
+		Select("mp.uuid").
+		Joins("INNER JOIN mata_programv2 mprog ON mprog.id = mp.id_mata_program").
+		Joins("INNER JOIN master_tahun mt ON mt.id = mprog.id_master_tahun").
+		Where("mp.deleted_at IS NULL").
+		Where("mp.id_fakultas_unit = ?", fuID).
+		Where("mt.tahun = ?", tahunStr)
+
+	switch {
+	case hasMpID && namaProg != "":
+		q = q.Where("(mp.id_mata_program = ? OR LOWER(TRIM(mprog.mata_program)) = LOWER(TRIM(?)))", *mpID, namaProg)
+	case hasMpID:
+		q = q.Where("mp.id_mata_program = ?", *mpID)
+	default:
+		q = q.Where("LOWER(TRIM(mprog.mata_program)) = LOWER(TRIM(?))", namaProg)
+	}
+
+	var res struct {
+		UUID string `gorm:"column:uuid"`
+	}
+	if err := q.Take(&res).Error; err != nil {
+		return "", err
+	}
+	return res.UUID, nil
 }
 
 func (r *ProkerV3Repository) ResolveMasterTahun(ctx context.Context, tahunStr string) (int, error) {
@@ -3612,4 +4157,3 @@ func (r *ProkerV3Repository) SyncScopesForUpdate(ctx context.Context, prokerID u
 	}
 	return nil
 }
-

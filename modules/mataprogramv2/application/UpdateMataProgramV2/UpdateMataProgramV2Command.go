@@ -1,12 +1,13 @@
 package UpdateMataProgramV2
 
 type UpdateMataProgramV2Command struct {
-	UUID           string
-	Scope          string // "group" (default) or "single"
-	MataProgram    string
-	Tahun          string
-	Targets        []string
-	IdFakultasUnit string
+	UUID               string
+	Scope              string // "group" (default) or "single"
+	MataProgram        string
+	Tahun              string
+	Targets            []string
+	TemplateRenstraIDs []uint
+	IdFakultasUnit     string
 }
 
 type UpdateMataProgramV2Result struct {

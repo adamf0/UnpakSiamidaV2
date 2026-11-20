@@ -237,6 +237,14 @@ func GetAllTemplateRenstrasHandlerfunc(c *fiber.Ctx) error {
 	// Parse filters
 	filtersRaw := c.Query("filters", "")
 	var filters []commondomain.SearchFilter
+	if tahun := strings.TrimSpace(c.Query("tahun", c.Query("filter_tahun", ""))); tahun != "" {
+		val := tahun
+		filters = append(filters, commondomain.SearchFilter{
+			Field:    "tahun",
+			Operator: "eq",
+			Value:    &val,
+		})
+	}
 	if filtersRaw != "" {
 		parts := strings.Split(filtersRaw, ";")
 		for _, p := range parts {

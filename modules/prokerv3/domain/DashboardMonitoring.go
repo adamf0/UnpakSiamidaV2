@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 type DashboardMonitoringUnitOption struct {
 	ID   interface{} `json:"id"`
 	Nama string      `json:"nama"`
@@ -53,6 +55,7 @@ type DashboardMonitoringAktivitas struct {
 	StatusLpm             string                            `json:"status_lpm"`
 	IsBatal               bool                              `json:"is_batal"`
 	CatatanBatal          string                            `json:"catatan_batal"`
+	TerimaAnggaranAt      *time.Time                        `json:"terima_anggaran_at"`
 	TotalRab              float64                           `json:"total_rab"`
 	StatusPencairan       string                            `json:"status_pencairan"`
 	Rab                   []DashboardMonitoringRabItem      `json:"rab"`

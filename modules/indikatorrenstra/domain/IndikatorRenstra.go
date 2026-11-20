@@ -20,8 +20,8 @@ type IndikatorRenstra struct {
 	Tahun          string    `gorm:"size:255;not null"`
 	TipeTarget     string    `gorm:"size:255;not null"`
 	Operator       *string   `gorm:""`
-	TargetUnpak    *string   `gorm:"column:target_unpak;type:text"`
-	TargetUnit     *string   `gorm:"column:target_unit;type:text"`
+	TargetUnpak    *string   `gorm:"-"`
+	TargetUnit     *string   `gorm:"-"`
 }
 
 func (IndikatorRenstra) TableName() string {

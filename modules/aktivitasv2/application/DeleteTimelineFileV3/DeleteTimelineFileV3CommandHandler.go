@@ -43,7 +43,7 @@ func (h *DeleteTimelineFileV3CommandHandler) Handle(ctx context.Context, cmd Del
 		if fileObj.FileURL != "" {
 			_ = os.Remove("." + fileObj.FileURL)
 		}
-		_ = os.Remove(filepath.Join("./upload/proker_v3", fileObj.File))
+		_ = os.Remove(filepath.Join("./upload/timeline_proker_files", fileObj.File))
 	}
 
 	return cmd.FileUUID, nil

@@ -33,11 +33,9 @@ func (r *IndikatorRenstraRepository) EnsureTargetColumns(ctx context.Context) er
 	if !migrator.HasTable(&domainindikatorrenstra.IndikatorRenstra{}) {
 		return nil
 	}
-	for _, field := range []string{"TargetUnpak", "TargetUnit"} {
-		if !migrator.HasColumn(&domainindikatorrenstra.IndikatorRenstra{}, field) {
-			if err := migrator.AddColumn(&domainindikatorrenstra.IndikatorRenstra{}, field); err != nil {
-				return err
-			}
+	for _, field := range []string{"target_unpak", "target_unit"} {
+		if migrator.HasColumn("master_indikator_renstra", field) {
+			_ = migrator.DropColumn("master_indikator_renstra", field)
 		}
 	}
 	return nil
@@ -109,8 +107,8 @@ func (r *IndikatorRenstraRepository) GetDefaultByUuid(
 			"i.tahun AS Tahun",
 			"i.tipe_target AS TipeTarget",
 			"i.operator AS Operator",
-			"i.target_unpak AS TargetUnpak",
-			"i.target_unit AS TargetUnit",
+			"'' AS TargetUnpak",
+			"'' AS TargetUnit",
 			"(SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',') FROM indikator_renstra_iku iri WHERE iri.id_indikator_renstra = i.id) AS IkuList",
 		}).
 		Joins("LEFT JOIN master_standar_renstra AS ms ON i.id_master_standar = ms.id").
@@ -138,8 +136,8 @@ var allowedSearchColumns = map[string]string{
 	"tahun":        "i.tahun",
 	"tipetarget":   "i.tipe_target",
 	"operator":     "i.operator",
-	"target_unpak": "i.target_unpak",
-	"target_unit":  "i.target_unit",
+	"target_unpak": "''",
+	"target_unit":  "''",
 }
 
 
@@ -384,8 +382,8 @@ func (r *IndikatorRenstraRepository) GetAll(
             i.tahun as Tahun,
             i.tipe_target as TipeTarget,
             i.operator as Operator,
-            i.target_unpak as TargetUnpak,
-            i.target_unit as TargetUnit,
+            '' as TargetUnpak,
+            '' as TargetUnit,
             (
                 SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
                 FROM indikator_renstra_iku iri

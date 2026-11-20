@@ -15,4 +15,7 @@ type UpdateAktivitasV3Command struct {
 	Capaian          string   `json:"capaian" form:"capaian"`
 	Masalah          string   `json:"masalah" form:"masalah"`
 	PemecahanMasalah string   `json:"pemecahan_masalah" form:"pemecahan_masalah"`
+	Output           string   `json:"output" form:"output"`
+	Outcome          string   `json:"outcome" form:"outcome"`
+	BebanYayasan     *bool    `json:"beban_yayasan" form:"beban_yayasan"`
 }

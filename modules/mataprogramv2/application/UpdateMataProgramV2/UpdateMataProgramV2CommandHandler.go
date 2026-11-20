@@ -50,6 +50,22 @@ func (h *UpdateMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Upda
 	}
 
 	if scope == "group" {
+		var finalTahunID uint = 1
+		if newTahunID != nil {
+			finalTahunID = *newTahunID
+		}
+
+		if len(cmd.TemplateRenstraIDs) > 0 {
+			if err := h.Repo.UpdateMataProgramV2WithTemplates(ctx, rawUuid, finalTahunID, newMataProg, cmd.TemplateRenstraIDs); err != nil {
+				return nil, err
+			}
+			return &UpdateMataProgramV2Result{
+				Status:  "success",
+				Message: "Berhasil memperbarui mata program dan template renstra",
+				UUID:    rawUuid,
+			}, nil
+		}
+
 		updateMap := map[string]interface{}{}
 		if newMataProg != original.MataProgram {
 			updateMap["mata_program"] = newMataProg

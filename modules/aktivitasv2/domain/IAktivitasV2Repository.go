@@ -9,6 +9,7 @@ import (
 type IAktivitasV2Repository interface {
 	GetMatrixProkerByUuid(ctx context.Context, uid uuid.UUID) (*MatrixProkerSummary, error)
 	GetMatrixProkerById(ctx context.Context, id uint) (*MatrixProkerSummary, error)
+	EnsureMatrixProker(ctx context.Context, idMataProgram int, idFakultasUnit *uint64, idIndikator *int, pic string) (uint, uuid.UUID, error)
 	GetAktivitasByMatrikId(ctx context.Context, matrikID uint) ([]AktivitasV2Default, error)
 	GetAktivitasByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2Default, error)
 	GetAktivitasEntityByUuid(ctx context.Context, uid uuid.UUID) (*AktivitasV2, error)

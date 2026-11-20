@@ -58,18 +58,22 @@ type AktivitasV2Default struct {
 	PIC                   string                      `json:"PIC"`
 	Capaian               string                      `json:"Capaian"`
 	Masalah               string                      `json:"Masalah"`
+	PemecahanMasalah      string                      `json:"PemecahanMasalah"`
+	Output                string                      `json:"Output"`
+	Outcome               string                      `json:"Outcome"`
 	Anggaran              float64                     `json:"Anggaran"`
 	RAB                   string                      `json:"RAB"`
 	RabItems              []AktivitasV2Rab            `json:"RabItems,omitempty"`
 	Realisasi             *float64                    `json:"Realisasi"`
 	CatatanRevisiAnggaran string                      `json:"CatatanRevisiAnggaran"`
+	TerimaAnggaranAt      *time.Time                  `json:"TerimaAnggaranAt"`
 	Pencairan             *float64                    `json:"Pencairan"`
 	Status                string                      `json:"Status"`
 	CatatanPenolakan      string                      `json:"CatatanPenolakan"`
 	StatusVerifikator     string                      `json:"StatusVerifikator"`
 	CatatanVerifikator    string                      `json:"CatatanVerifikator"`
-	StatusAnggaran        string                      `json:"StatusAnggaran"`
-	CatatanAnggaran       string                      `json:"CatatanAnggaran"`
+	StatusEvaluator       string                      `json:"StatusEvaluator"`
+	CatatanEvaluator      string                      `json:"CatatanEvaluator"`
 	StatusUpml            string                      `json:"StatusUpml"`
 	CatatanTolakUpml      string                      `json:"CatatanTolakUpml"`
 	StatusUpmf            string                      `json:"StatusUpmf"`
@@ -79,6 +83,7 @@ type AktivitasV2Default struct {
 	StatusLpm             string                      `json:"StatusLpm"`
 	CatatanTolakLpm       string                      `json:"CatatanTolakLpm"`
 	IsBatal               bool                        `json:"IsBatal"`
+	BebanYayasan          bool                        `json:"BebanYayasan"`
 	CatatanBatal          string                      `json:"CatatanBatal"`
 	CreatedAt             time.Time                   `json:"CreatedAt"`
 	UpdatedAt             time.Time                   `json:"UpdatedAt"`
@@ -108,6 +113,7 @@ type MatrixProkerSummary struct {
 	UuidFakultasUnit   string                  `json:"UuidFakultasUnit"`
 	NamaFakultasUnit   string                  `json:"NamaFakultasUnit"`
 	TypeFakultasUnit   string                  `json:"TypeFakultasUnit"`
+	JenjangFakultasUnit string                 `json:"JenjangFakultasUnit"`
 	ParentFakultas     string                  `json:"ParentFakultas"`
 	IdMataProgram      *int                    `json:"IdMataProgram"`
 	NamaProgram        string                  `json:"NamaProgram"`
@@ -135,6 +141,11 @@ type MatrixProkerSummary struct {
 	PaguUnit           float64                 `json:"PaguUnit"`
 	TotalAnggaranUnit  float64                 `json:"TotalAnggaranUnit"`
 	TotalAktivitas     int64                   `json:"TotalAktivitas"`
+	TotalAktivitasTerimaVerifikator int64      `json:"TotalAktivitasTerimaVerifikator"`
+	TotalAktivitasTolakVerifikator  int64      `json:"TotalAktivitasTolakVerifikator"`
+	TotalAktivitasDiajukanVerifikator int64    `json:"TotalAktivitasDiajukanVerifikator"`
+	TotalAktivitasTerimaAnggaran    int64      `json:"TotalAktivitasTerimaAnggaran"`
+	TotalAktivitasTolakAnggaran     int64      `json:"TotalAktivitasTolakAnggaran"`
 	TotalAnggaran      float64                 `json:"TotalAnggaran"`
 	Scopes             []MatrixProkerScopeItem `gorm:"-" json:"Scopes,omitempty"`
 	DeletedAt          *time.Time              `json:"DeletedAt"`
@@ -149,6 +160,8 @@ func (m MatrixProkerSummary) MarshalJSON() ([]byte, error) {
 		IdFakultasUnitLower *uint64    `json:"id_fakultas_unit"`
 		UuidFuLower         string     `json:"uuid_fakultas_unit"`
 		NamaFuLower         string     `json:"nama_fakultas_unit"`
+		TypeFuLower         string     `json:"type_fakultas_unit"`
+		JenjangFuLower      string     `json:"jenjang_fakultas_unit"`
 		PicLower            string     `json:"pic"`
 		TahunLower          string     `json:"tahun"`
 		DeletedAtLower      *time.Time `json:"deleted_at"`
@@ -161,6 +174,8 @@ func (m MatrixProkerSummary) MarshalJSON() ([]byte, error) {
 		IdFakultasUnitLower: m.IdFakultasUnit,
 		UuidFuLower:         m.UuidFakultasUnit,
 		NamaFuLower:         m.NamaFakultasUnit,
+		TypeFuLower:         m.TypeFakultasUnit,
+		JenjangFuLower:      m.JenjangFakultasUnit,
 		PicLower:            m.PIC,
 		TahunLower:          m.Tahun,
 		DeletedAtLower:      m.DeletedAt,
