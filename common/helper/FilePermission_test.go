@@ -8,17 +8,17 @@ import (
 
 func TestEnsureDir775AndFile664(t *testing.T) {
 	base := t.TempDir()
-	nested := filepath.Join(base, "prokerv2", "ILMU KOMPUTER (S1)", "2027", "SK")
+	nested := filepath.Join(base, "prokerv3", "ILMU KOMPUTER (S1)", "2027", "SK")
 
 	if err := EnsureDir775(nested); err != nil {
 		t.Fatalf("EnsureDir775 failed: %v", err)
 	}
 
 	for _, rel := range []string{
-		"prokerv2",
-		filepath.Join("prokerv2", "ILMU KOMPUTER (S1)"),
-		filepath.Join("prokerv2", "ILMU KOMPUTER (S1)", "2027"),
-		filepath.Join("prokerv2", "ILMU KOMPUTER (S1)", "2027", "SK"),
+		"prokerv3",
+		filepath.Join("prokerv3", "ILMU KOMPUTER (S1)"),
+		filepath.Join("prokerv3", "ILMU KOMPUTER (S1)", "2027"),
+		filepath.Join("prokerv3", "ILMU KOMPUTER (S1)", "2027", "SK"),
 	} {
 		info, err := os.Stat(filepath.Join(base, rel))
 		if err != nil {

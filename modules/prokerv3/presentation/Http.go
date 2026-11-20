@@ -1226,7 +1226,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 		indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
 		jenisFolder := sanitizeFolderSegment(jenisDok)
 
-		targetDir := filepath.Join("./upload/prokerv2", namaUnit, tahun, standar, indikator, jenisFolder)
+		targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, standar, indikator, jenisFolder)
 		if err := helper.EnsureDir775(targetDir); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 		}
@@ -1358,7 +1358,7 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 	indikator := sanitizeFolderSegment(proker.IndikatorKinerja)
 	jenisFolder := sanitizeFolderSegment(jenisDok)
 
-	targetDir := filepath.Join("./upload/prokerv2", namaUnit, tahun, standar, indikator, jenisFolder)
+	targetDir := filepath.Join("./upload/prokerv3", namaUnit, tahun, standar, indikator, jenisFolder)
 	if err := helper.EnsureDir775(targetDir); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat direktori upload: " + err.Error()})
 	}

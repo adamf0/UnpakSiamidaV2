@@ -39,11 +39,11 @@ func TestValidateTimelineLinkURL(t *testing.T) {
 	tooLongURL := "https://drive.google.com/file/d/" + strings.Repeat("a", 500)
 
 	tests := []struct {
-		name        string
-		rawURL      string
-		wantName    string
-		wantScheme  string
-		wantErr     bool
+		name       string
+		rawURL     string
+		wantName   string
+		wantScheme string
+		wantErr    bool
 	}{
 		{
 			name:       "valid https google drive link",
@@ -107,7 +107,7 @@ func TestClampRunesAndLinkDetection(t *testing.T) {
 	if !IsTimelineLinkRecord(&domain.ProkerTimelineFileV3{FileURL: "https://unpak.ac.id"}) {
 		t.Fatal("expected https FileURL to be recognized as link record")
 	}
-	if IsTimelineLinkRecord(&domain.ProkerTimelineFileV3{File: "./upload/prokerv2/a.pdf", FileURL: "/upload/prokerv2/a.pdf", FileType: "application/pdf"}) {
+	if IsTimelineLinkRecord(&domain.ProkerTimelineFileV3{File: "./upload/prokerv3/a.pdf", FileURL: "/upload/prokerv3/a.pdf", FileType: "application/pdf"}) {
 		t.Fatal("did not expect local PDF file to be recognized as link record")
 	}
 }
