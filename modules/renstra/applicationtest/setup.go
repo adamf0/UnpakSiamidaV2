@@ -98,6 +98,12 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
 			updated_at timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 		);
 
+		DROP TABLE IF EXISTS usersv3;
+		CREATE TABLE usersv3 LIKE users;
+
+		DROP TABLE IF EXISTS userv3_abac;
+		CREATE TABLE userv3_abac LIKE user_abac;
+
         DROP TABLE IF EXISTS m_fakultas;
         CREATE TABLE m_fakultas (
             kode_fakultas char(9) NOT NULL,
@@ -225,6 +231,7 @@ func setupRenstraMySQL(t *testing.T) (*gorm.DB, func()) {
         SELECT
             sfu.id AS id,
             sfu.uuid AS uuid,
+            sfu.kode_fakultas AS kode_fakultas,
             CASE
                 WHEN sfu.standalone THEN fak.nama_fakultas
                 WHEN sfu.kode_fakultas IS NOT NULL
@@ -306,6 +313,9 @@ func resetDBDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 		"m_program_studi",
 		"sijamu_fakultas_unit",
 		"users",
+		"usersv3",
+		"user_abac",
+		"userv3_abac",
 		"renstra",
 		"renstra_nilai",
 		"dokumen_tambahan",
@@ -328,6 +338,9 @@ func resetDBOnlyDokumenTambahan(t *testing.T, gdb *gorm.DB) {
 		"m_program_studi",
 		"sijamu_fakultas_unit",
 		"users",
+		"usersv3",
+		"user_abac",
+		"userv3_abac",
 		"renstra",
 		"renstra_nilai",
 		"dokumen_tambahan",
@@ -521,6 +534,9 @@ func seedAllDokumenTambahan(t *testing.T, gdb *gorm.DB) {
         (514, '061a3606-5ae9-4de1-ac75-8c306d1fe75e', 'May Mulyaningsih', '$2y$10$QsJBJO72hiuH1RSRh/xLn.93krIkX/e4tEEpZBauWH.5BfbTMr9dO', 'auditor2', 'May Mulyaningsih, S.E., M.Ak', 'dummy@gmail.com', NULL, NULL, NULL, NULL, 0, '2025-11-18 04:17:18', '2025-11-18 04:17:18'),
         (515, '0e340ca2-eb94-4880-a33b-0eac6fc86b37', 'Sata Yoshida Srie Rahayu', '$2y$10$BtXCae0raD2waLa987JayeYxCJRm6I0Lq95vARNaWiJhka/C/.9R2', 'auditor2', 'Prof. Dr. Sata Yoshida Srie Rahayu, M.Si', 'dummy@gmail.com', NULL, NULL, NULL, NULL, 0, '2025-11-18 04:18:12', '2025-11-18 04:18:12'),
         (516, 'f03ba8b3-918d-4fd2-867d-6943dc14a5ac', 'beta', '123', '', 'beta', 'a@unpak.ac.id', 6, NULL, NULL, NULL, 0, NULL, NULL);
+
+        INSERT INTO usersv3 SELECT * FROM users;
+        INSERT INTO userv3_abac SELECT * FROM user_abac;
 
         INSERT INTO m_fakultas (kode_fakultas, kode_pt, nama_fakultas, pejabat, jabatan, wakil_pejabat, wakil_pejabat_adm, logo) VALUES
         ('01', '041004', 'HUKUM', '0410067306', 'H', '0417086801', '0414106202', ''),
