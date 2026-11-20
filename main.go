@@ -370,6 +370,7 @@ func main() {
 	commoninfra.RegisterEvent[eventKts.KtsUpdatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserCreatedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventUser.UserUpdatedEvent](dispatcher)
+	commoninfra.RegisterEvent[eventUser.UserSendAccountEmailEvent](dispatcher)
 	commoninfra.RegisterEvent[eventBeritaAcara.BeritaAcaraPdfRequestedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventKts.KtsPdfRequestedEvent](dispatcher)
 	commoninfra.RegisterEvent[eventRenstra.RenstraSendEmailEvent](dispatcher)

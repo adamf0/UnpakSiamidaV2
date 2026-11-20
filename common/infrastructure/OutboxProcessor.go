@@ -36,7 +36,10 @@ func (p *OutboxProcessor) Process(ctx context.Context) error {
 
 	for _, msg := range messages {
 		if err := p.processMessage(ctx, &msg); err != nil {
-			p.DB.Model(&msg).Update("error", err.Error())
+			p.DB.Model(&msg).Updates(map[string]interface{}{
+				"error":  err.Error(),
+				"status": "FAILED",
+			})
 		}
 	}
 
@@ -74,5 +77,8 @@ func (p *OutboxProcessor) processMessage(
 
 	now := time.Now().UTC()
 	return p.DB.Model(msg).
-		Update("processed_at", &now).Error
+		Updates(map[string]interface{}{
+			"processed_at": &now,
+			"status":       "PROCESSED",
+		}).Error
 }

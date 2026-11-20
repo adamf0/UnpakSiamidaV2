@@ -20,6 +20,7 @@ import (
 	GetAllUsers "UnpakSiamida/modules/user/application/GetAllUsers"
 	GetUser "UnpakSiamida/modules/user/application/GetUser"
 	MergeUser "UnpakSiamida/modules/user/application/MergeUser"
+	SendAccountEmail "UnpakSiamida/modules/user/application/SendAccountEmail"
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
@@ -388,6 +389,91 @@ func MergeUserHandler(c *fiber.Ctx) error {
 	})
 }
 
+// =======================================================
+// POST /user/:uuid/send-email & POST /users/send-email
+// =======================================================
+
+// SendAccountEmailHandler godoc
+// @Summary Send account credentials email via Outbox Pattern
+// @Tags User
+// @Param uuid path string false "User UUID"
+// @Param user_uuids formData []string false "List of User UUIDs for batch"
+// @Produce json
+// @Success 200 {object} SendAccountEmail.SendAccountEmailResult
+// @Router /user/{uuid}/send-email [post]
+// @Router /users/send-email [post]
+func SendAccountEmailHandler(c *fiber.Ctx) error {
+	var userUUIDs []string
+
+	// Ambil dari path param jika ada (/user/:uuid/send-email)
+	if paramUuid := strings.TrimSpace(c.Params("uuid")); paramUuid != "" {
+		userUUIDs = append(userUUIDs, paramUuid)
+	}
+
+	// Ambil dari JSON body jika ada
+	if len(c.Body()) > 0 {
+		var body struct {
+			UserUUIDs []string `json:"user_uuids"`
+			UUIDs     []string `json:"uuids"`
+			UUID      string   `json:"uuid"`
+		}
+		if err := json.Unmarshal(c.Body(), &body); err == nil {
+			if len(body.UserUUIDs) > 0 {
+				userUUIDs = append(userUUIDs, body.UserUUIDs...)
+			}
+			if len(body.UUIDs) > 0 {
+				userUUIDs = append(userUUIDs, body.UUIDs...)
+			}
+			if body.UUID != "" {
+				userUUIDs = append(userUUIDs, body.UUID)
+			}
+		}
+	}
+
+	// Ambil dari Form value jika ada
+	if val := c.FormValue("user_uuids"); val != "" {
+		var formArr []string
+		if err := json.Unmarshal([]byte(val), &formArr); err == nil {
+			userUUIDs = append(userUUIDs, formArr...)
+		} else {
+			for _, s := range strings.Split(val, ",") {
+				if trimmed := strings.TrimSpace(s); trimmed != "" {
+					userUUIDs = append(userUUIDs, trimmed)
+				}
+			}
+		}
+	}
+	if val := c.FormValue("uuid"); val != "" {
+		userUUIDs = append(userUUIDs, strings.TrimSpace(val))
+	}
+
+	// Deduplikasi UUID
+	seen := make(map[string]bool)
+	var uniqueUUIDs []string
+	for _, u := range userUUIDs {
+		uClean := strings.TrimSpace(u)
+		if uClean != "" && !seen[uClean] {
+			seen[uClean] = true
+			uniqueUUIDs = append(uniqueUUIDs, uClean)
+		}
+	}
+
+	if len(uniqueUUIDs) == 0 {
+		return commoninfra.HandleError(c, userdomain.EmptyData())
+	}
+
+	cmd := SendAccountEmail.SendAccountEmailCommand{
+		UserUUIDs: uniqueUUIDs,
+	}
+
+	res, err := mediatr.Send[SendAccountEmail.SendAccountEmailCommand, *SendAccountEmail.SendAccountEmailResult](c.Context(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
+}
+
 func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
@@ -404,6 +490,9 @@ func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 
 	app.Post("/users/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
 	app.Post("/user/merge", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), MergeUserHandler)
+
+	app.Post("/user/:uuid/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendAccountEmailHandler)
+	app.Post("/users/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendAccountEmailHandler)
 
 	ModuleUserAbac(app)
 }

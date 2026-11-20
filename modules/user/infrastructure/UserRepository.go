@@ -93,6 +93,88 @@ func (r *UserRepository) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainu
 	return &user, nil
 }
 
+// ------------------------
+// GET BY UUIDS (BATCH)
+// ------------------------
+func (r *UserRepository) GetByUuids(ctx context.Context, uids []uuid.UUID) ([]*domainuser.User, error) {
+	if len(uids) == 0 {
+		return nil, nil
+	}
+
+	var users []*domainuser.User
+	err := r.db.WithContext(ctx).Table("usersv3").
+		Select(`
+			usersv3.id,
+			usersv3.uuid,
+			usersv3.nidn_username,
+			usersv3.password,
+			usersv3.name,
+			usersv3.email,
+			usersv3.level,
+			usersv3.id_user_merge,
+			mu.name as nama_user_merge
+		`).
+		Joins("LEFT JOIN usersv3 mu ON usersv3.id_user_merge = mu.id").
+		Where("usersv3.uuid IN ?", uids).
+		Find(&users).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return users, nil
+	}
+
+	var userIDs []uint
+	for _, u := range users {
+		userIDs = append(userIDs, u.ID)
+	}
+
+	var abacSummaries []domainuser.UserAbacSummary
+	_ = r.db.WithContext(ctx).Table("userv3_abac").
+		Select(`
+			userv3_abac.id,
+			userv3_abac.uuid,
+			userv3_abac.id_user,
+			userv3_abac.tahun,
+			userv3_abac.id_fakultas_unit,
+			userv3_abac.role,
+			userv3_abac.status,
+			CASE 
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Tingkat Universitas'
+				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
+				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
+				ELSE fu.nama_fak_prod_unit 
+			END as nama_fakultas_unit,
+			CASE
+				WHEN userv3_abac.role IS NOT NULL AND userv3_abac.role != '' THEN LOWER(userv3_abac.role)
+				WHEN fu.type = 'unit' THEN 'upml'
+				WHEN LOWER(fu.nama_fak_prod_unit) LIKE '%pascasarjana%' OR LOWER(fu.nama_fak_prod_unit) LIKE '%sekolah%' THEN 'upms'
+				WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'upms'
+				ELSE 'upmf'
+			END AS computed_role
+		`).
+		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
+		Where("userv3_abac.id_user IN ? AND userv3_abac.status = 'active'", userIDs).
+		Order("userv3_abac.tahun DESC, userv3_abac.id DESC").
+		Find(&abacSummaries).Error
+
+	abacMap := make(map[uint][]domainuser.UserAbacSummary)
+	for _, a := range abacSummaries {
+		abacMap[a.IdUser] = append(abacMap[a.IdUser], a)
+	}
+
+	for _, u := range users {
+		u.UserAbac = abacMap[u.ID]
+		if u.Level == "" {
+			u.Level = "user"
+		}
+	}
+
+	return users, nil
+}
+
 var allowedSearchColumns = map[string]string{
 	// key:param -> db column
 	"name":          "usersv3.name",

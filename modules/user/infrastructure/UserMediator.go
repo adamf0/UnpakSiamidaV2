@@ -15,6 +15,7 @@ import (
 	createAbac "UnpakSiamida/modules/user/application/CreateUserAbac"
 	deleteAbac "UnpakSiamida/modules/user/application/DeleteUserAbac"
 	getAllAbac "UnpakSiamida/modules/user/application/GetAllUserAbac"
+	sendAccountEmail "UnpakSiamida/modules/user/application/SendAccountEmail"
 	updateAbac "UnpakSiamida/modules/user/application/UpdateUserAbac"
 
 	"github.com/mehdihadeli/go-mediatr"
@@ -132,6 +133,13 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		Repo: repoUser,
 	})
 
+	mediatr.RegisterRequestHandler[
+		sendAccountEmail.SendAccountEmailCommand,
+		*sendAccountEmail.SendAccountEmailResult,
+	](&sendAccountEmail.SendAccountEmailCommandHandler{
+		Repo: repoUser,
+	})
+
 	// =========================
 	// Domain Event Handler
 	// =========================
@@ -147,9 +155,16 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		eventUser.NewUserCreatedEventHandler(tg),
 	)
 
+	commoninfra.RegisterDomainEvent(&eventUser.UserSendAccountEmailEvent{})
+
+	mediatr.RegisterNotificationHandler[eventUser.UserSendAccountEmailEvent](
+		eventUser.NewUserSendAccountEmailEventHandler(tg),
+	)
+
 	commoninfra.RegisterValidation(create.CreateUserCommandValidation, "UserCreate.Validation")
 	commoninfra.RegisterValidation(update.UpdateUserCommandValidation, "UserUpdate.Validation")
 	commoninfra.RegisterValidation(delete.DeleteUserCommandValidation, "UserDelete.Validation")
+	commoninfra.RegisterValidation(sendAccountEmail.SendAccountEmailCommandValidation, "UserSendAccountEmail.Validation")
 
 	return nil
 }
