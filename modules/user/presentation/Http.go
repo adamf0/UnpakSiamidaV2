@@ -397,7 +397,7 @@ func MergeUserHandler(c *fiber.Ctx) error {
 // @Summary Send account credentials email via Outbox Pattern
 // @Tags User
 // @Param uuid path string false "User UUID"
-// @Param user_uuids formData []string false "List of User UUIDs for batch"
+// @Param user_uuids formData string false "JSON string or comma-separated list of User UUIDs for batch"
 // @Produce json
 // @Success 200 {object} SendAccountEmail.SendAccountEmailResult
 // @Router /user/{uuid}/send-email [post]
@@ -410,27 +410,7 @@ func SendAccountEmailHandler(c *fiber.Ctx) error {
 		userUUIDs = append(userUUIDs, paramUuid)
 	}
 
-	// Ambil dari JSON body jika ada
-	if len(c.Body()) > 0 {
-		var body struct {
-			UserUUIDs []string `json:"user_uuids"`
-			UUIDs     []string `json:"uuids"`
-			UUID      string   `json:"uuid"`
-		}
-		if err := json.Unmarshal(c.Body(), &body); err == nil {
-			if len(body.UserUUIDs) > 0 {
-				userUUIDs = append(userUUIDs, body.UserUUIDs...)
-			}
-			if len(body.UUIDs) > 0 {
-				userUUIDs = append(userUUIDs, body.UUIDs...)
-			}
-			if body.UUID != "" {
-				userUUIDs = append(userUUIDs, body.UUID)
-			}
-		}
-	}
-
-	// Ambil dari Form value jika ada
+	// Ambil dari FormValue ("user_uuids" atau "uuids" atau "uuid")
 	if val := c.FormValue("user_uuids"); val != "" {
 		var formArr []string
 		if err := json.Unmarshal([]byte(val), &formArr); err == nil {
@@ -443,8 +423,23 @@ func SendAccountEmailHandler(c *fiber.Ctx) error {
 			}
 		}
 	}
-	if val := c.FormValue("uuid"); val != "" {
-		userUUIDs = append(userUUIDs, strings.TrimSpace(val))
+
+	if val := c.FormValue("uuids"); val != "" {
+		var extraUUIDs []string
+		if err := json.Unmarshal([]byte(val), &extraUUIDs); err == nil {
+			userUUIDs = append(userUUIDs, extraUUIDs...)
+		} else {
+			for _, s := range strings.Split(val, ",") {
+				if trimmed := strings.TrimSpace(s); trimmed != "" {
+					extraUUIDs = append(extraUUIDs, trimmed)
+				}
+			}
+		}
+		userUUIDs = append(userUUIDs, extraUUIDs...)
+	}
+
+	if val := strings.TrimSpace(c.FormValue("uuid")); val != "" {
+		userUUIDs = append(userUUIDs, val)
 	}
 
 	// Deduplikasi UUID
