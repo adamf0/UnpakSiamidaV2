@@ -226,6 +226,53 @@ func setupAccountMySQL(t *testing.T) (*gorm.DB, func()) {
 		DROP TABLE IF EXISTS userv3_abac;
 		CREATE TABLE userv3_abac LIKE user_abac;
 
+		DROP TABLE IF EXISTS v_fakultas_unit;
+		CREATE TABLE v_fakultas_unit (
+			id int(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+			uuid varchar(36) DEFAULT NULL,
+			kode_fakultas char(9) DEFAULT NULL,
+			nama_fak_prod_unit varchar(100) DEFAULT NULL,
+			kode_jenjang char(10) DEFAULT NULL,
+			jenjang varchar(50) DEFAULT NULL,
+			jenjang_int varchar(10) DEFAULT NULL,
+			type varchar(50) DEFAULT NULL,
+			fakultas varchar(100) DEFAULT NULL
+		);
+
+		INSERT INTO v_fakultas_unit (id, uuid, kode_fakultas, nama_fak_prod_unit, kode_jenjang, jenjang, jenjang_int, type, fakultas) VALUES
+		(1, '83fa6a6f-bd1a-4669-9520-22c6085a6a02', '01', 'HUKUM', 'C', 's1', '1', 'prodi', 'HUKUM'),
+		(2, 'e74fa09e-7117-4e08-9df2-474d2843ef46', '02', 'MANAJEMEN', 'C', 's1', '1', 'prodi', 'EKONOMI DAN BISNIS'),
+		(3, '64197c36-7013-4da2-8be0-b1dca5e0c524', '02', 'AKUNTANSI', 'C', 's1', '1', 'prodi', 'EKONOMI DAN BISNIS'),
+		(4, '05fb4fe8-f916-43b2-b13d-55ec3798bb03', '03', 'PENDIDIKAN BIOLOGI', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(5, '4fa35ecf-c7c4-42b7-a36c-d102e3b97621', '03', 'PENDIDIKAN EKONOMI', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(6, '916da6eb-8e9c-4aa7-b50a-f1d7d24a9d70', '03', 'PENDIDIKAN BAHASA DAN SASTRA INDONESIA', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(7, 'ee3d45ef-5883-4903-a4e9-11ba1f1b203a', '03', 'PENDIDIKAN BAHASA INGGRIS', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(9, '26a978f1-6785-48b4-9ce5-17180bcbf623', '03', 'PENDIDIKAN GURU SEKOLAH DASAR', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(10, '01cfa9e3-2e0e-436c-9c7f-9ce0a66d01d4', '03', 'PENDIDIKAN ILMU PENGETAHUAN ALAM', 'C', 's1', '1', 'prodi', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(11, 'fefabf3e-3f53-48b5-bc44-59e519c72e29', '04', 'ILMU KOMUNIKASI', 'C', 's1', '1', 'prodi', 'ILMU SOSIAL DAN ILMU BUDAYA'),
+		(12, '1dca8817-5735-42a1-9494-df071d184457', '05', 'TEKNIK SIPIL', 'C', 's1', '1', 'prodi', 'TEKNIK'),
+		(13, '6e44b829-0524-4f05-8e70-a36e9ff344dc', '05', 'TEKNIK GEODESI', 'C', 's1', '1', 'prodi', 'TEKNIK'),
+		(14, '51965b20-c2d1-4191-81ee-bbd93b3bb641', '06', 'BIOLOGI', 'C', 's1', '1', 'prodi', 'MATEMATIKA DAN ILMU PENGETAHUAN ALAM'),
+		(15, 'bf90cb94-8461-42cb-b1b7-4cbbe3cb4e4b', '06', 'KIMIA', 'C', 's1', '1', 'prodi', 'MATEMATIKA DAN ILMU PENGETAHUAN ALAM'),
+		(76, '83fa6a6f-bd1a-4669-9520-22c6085a6a76', '03', 'KKN FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(78, '83fa6a6f-bd1a-4669-9520-22c6085a6a78', '03', 'E-JOURNAL FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(87, '83fa6a6f-bd1a-4669-9520-22c6085a6a87', '03', 'BIMBINGAN KONSELING FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(91, '83fa6a6f-bd1a-4669-9520-22c6085a6a91', '01', 'HUKUM', NULL, NULL, '7', 'fakultas', 'HUKUM'),
+		(94, '83fa6a6f-bd1a-4669-9520-22c6085a6a94', '02', 'EKONOMI DAN BISNIS', NULL, NULL, '7', 'fakultas', 'EKONOMI DAN BISNIS'),
+		(97, '83fa6a6f-bd1a-4669-9520-22c6085a6a97', '03', 'KEGURUAN DAN ILMU PENDIDIKAN', NULL, NULL, '7', 'fakultas', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(100, '83fa6a6f-bd1a-4669-9520-22c6085a6100', '04', 'ILMU SOSIAL DAN ILMU BUDAYA', NULL, NULL, '7', 'fakultas', 'ILMU SOSIAL DAN ILMU BUDAYA'),
+		(103, '83fa6a6f-bd1a-4669-9520-22c6085a6103', '05', 'TEKNIK', NULL, NULL, '7', 'fakultas', 'TEKNIK'),
+		(106, '83fa6a6f-bd1a-4669-9520-22c6085a6106', '06', 'MATEMATIKA DAN ILMU PENGETAHUAN ALAM', NULL, NULL, '7', 'fakultas', 'MATEMATIKA DAN ILMU PENGETAHUAN ALAM'),
+		(109, '83fa6a6f-bd1a-4669-9520-22c6085a6109', '07', 'SEKOLAH PASCASARJANA', NULL, NULL, '7', 'fakultas', 'SEKOLAH PASCASARJANA'),
+		(112, '83fa6a6f-bd1a-4669-9520-22c6085a6112', '08', 'SEKOLAH VOKASI', NULL, NULL, '7', 'fakultas', 'SEKOLAH VOKASI'),
+		(121, '83fa6a6f-bd1a-4669-9520-22c6085a6121', '05', 'KECERDASAN BUATAN DAN ROBOTIKA', 'C', 's1', '1', 'prodi', 'TEKNIK'),
+		(126, '83fa6a6f-bd1a-4669-9520-22c6085a6126', '07', 'ILMU KOMPUTER S2', 'B', 's2', '2', 'prodi', 'SEKOLAH PASCASARJANA'),
+		(127, '83fa6a6f-bd1a-4669-9520-22c6085a6127', '06', 'PPA', NULL, NULL, '7', 'unit', 'MATEMATIKA DAN ILMU PENGETAHUAN ALAM'),
+		(128, '83fa6a6f-bd1a-4669-9520-22c6085a6128', '03', 'LABORATORIUM SENI FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(129, '83fa6a6f-bd1a-4669-9520-22c6085a6129', '03', 'LABORATORIUM BAHASA INGGRIS FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(130, '83fa6a6f-bd1a-4669-9520-22c6085a6130', '03', 'LABORATORIUM MICROTEACHING FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN'),
+		(131, '83fa6a6f-bd1a-4669-9520-22c6085a6131', '03', 'LABORATORIUM KOMPUTER FKIP', NULL, NULL, '7', 'unit', 'KEGURUAN DAN ILMU PENDIDIKAN');
+
         INSERT INTO users (id, uuid, nidn_username, password, level, name, email, fakultas_unit, foto, email_verified_at, remember_token, reset_password, created_at, updated_at) VALUES
         (2, 'f524cbfd-b5aa-41d9-9a94-d9d5065918b4', 'admin', '123', 'admin', 'Admin', NULL, NULL, 'Tangkapan Layar 2025-10-17 pukul 09.48.28.png', NULL, '$2y$10$OKzK1M/XuKAuUCtfQ6FvBeZpyxjQYkMQnj8QcySVzY/cQ7Xk8s1hW', 0, '2023-05-18 18:45:52', '2025-10-22 06:02:49'),
         (40, '495fe283-3e42-4323-a172-c110036b0c60', 'Didik NotoSudjono', '$2y$10$uPFePuHtBrbp0FGwz82O/u.imhEDzr6C6ndQPHzSOfYyWo/e9d37u', 'auditor1', 'Prof. Dr. Ir. rer. pol. Didik NotoSudjono, M.Sc', 'didiknotosudjono@unpak.ac.id', NULL, NULL, NULL, NULL, NULL, '2023-10-02 02:45:45', '2024-11-30 08:45:29'),
