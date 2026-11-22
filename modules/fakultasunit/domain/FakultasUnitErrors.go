@@ -20,3 +20,11 @@ func InvalidData() domain.Error {
 func NotFound(id string) domain.Error {
 	return domain.NotFoundError("FakultasUnit.NotFound", fmt.Sprintf("FakultasUnit with identifier %s not found", id))
 }
+
+func EmptyUpdatePayload() domain.Error {
+	return domain.ProblemError("FakultasUnit.EmptyUpdatePayload", "nama or is_active must be provided")
+}
+
+func InvalidNama() domain.Error {
+	return domain.ProblemError("FakultasUnit.InvalidNama", "nama cannot be blank and must be at most 100 characters")
+}

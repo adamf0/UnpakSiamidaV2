@@ -24,6 +24,7 @@ func (h *GetAllFakultasUnitsQueryHandler) Handle(
 		q.SearchFilters,
 		q.Page,
 		q.Limit,
+		q.IncludeHidden,
 	)
 	if err != nil {
 		return commondomain.Paged[domainfakultasunit.FakultasUnit]{}, err

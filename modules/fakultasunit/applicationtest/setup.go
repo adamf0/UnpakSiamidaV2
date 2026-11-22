@@ -174,7 +174,8 @@ func setupFakultasUnitMySQL(t *testing.T) (*gorm.DB, func()) {
             kode_prodi char(10) DEFAULT NULL,
             nama varchar(100) DEFAULT NULL,
             id_m_prodi int(11) DEFAULT NULL,
-            standalone tinyint(4) DEFAULT 0
+            standalone tinyint(4) DEFAULT 0,
+            is_active tinyint(1) NOT NULL DEFAULT 1
         );
 
         INSERT INTO sijamu_fakultas_unit (id, uuid, kode_fakultas, kode_prodi, nama, id_m_prodi, standalone) VALUES
@@ -270,11 +271,13 @@ func setupFakultasUnitMySQL(t *testing.T) (*gorm.DB, func()) {
         SELECT
             sfu.id AS id,
             sfu.uuid AS uuid,
+            sfu.kode_fakultas AS kode_fakultas,
             CASE
+                WHEN sfu.standalone AND sfu.nama IS NOT NULL AND TRIM(sfu.nama) <> '' THEN sfu.nama
                 WHEN sfu.standalone THEN fak.nama_fakultas
                 WHEN sfu.kode_fakultas IS NOT NULL
                     AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NULL THEN prod.nama_prodi
+                    AND (sfu.nama IS NULL OR TRIM(sfu.nama) = '') THEN prod.nama_prodi
                 WHEN sfu.kode_fakultas IS NOT NULL
                     AND sfu.kode_prodi IS NOT NULL
                     AND sfu.nama IS NOT NULL THEN sfu.nama
@@ -305,22 +308,20 @@ func setupFakultasUnitMySQL(t *testing.T) (*gorm.DB, func()) {
             CASE
                 WHEN sfu.standalone THEN 'fakultas'
                 WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NULL THEN 'prodi'
-                WHEN sfu.kode_fakultas IS NOT NULL
-                    AND sfu.kode_prodi IS NOT NULL
-                    AND sfu.nama IS NOT NULL THEN 'prodi'
+                    AND sfu.kode_prodi IS NOT NULL THEN 'prodi'
                 WHEN sfu.kode_fakultas IS NOT NULL
                     AND sfu.kode_prodi IS NULL
                     AND sfu.nama IS NOT NULL THEN 'unit'
                 ELSE NULL
             END AS type,
             CASE
+                WHEN sfu.standalone AND sfu.nama IS NOT NULL AND TRIM(sfu.nama) <> '' THEN sfu.nama
                 WHEN sfu.standalone THEN fak.nama_fakultas
                 WHEN sfu.kode_fakultas IS NOT NULL
                     AND sfu.kode_prodi IS NOT NULL THEN fak.nama_fakultas
                 ELSE NULL
-            END AS fakultas
+            END AS fakultas,
+            sfu.is_active AS is_active
         FROM sijamu_fakultas_unit sfu
         LEFT JOIN m_fakultas fak
             ON sfu.kode_fakultas = fak.kode_fakultas

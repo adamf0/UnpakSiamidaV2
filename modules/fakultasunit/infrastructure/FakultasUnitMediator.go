@@ -2,36 +2,25 @@ package infrastructure
 
 import (
 	commondomain "UnpakSiamida/common/domain"
+	commoninfra "UnpakSiamida/common/infrastructure"
 	getAll "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
 	get "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
 	setupUuid "UnpakSiamida/modules/fakultasunit/application/SetupUuidFakultasUnit"
+	update "UnpakSiamida/modules/fakultasunit/application/UpdateFakultasUnit"
 	domainfakultasunit "UnpakSiamida/modules/fakultasunit/domain"
+	"context"
 
 	"github.com/mehdihadeli/go-mediatr"
-
-	// "gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	// "fmt"
 )
 
 func RegisterModuleFakultasUnit(db *gorm.DB) error {
-	// dsn := "root:@tcp(127.0.0.1:3306)/unpak_sijamu_server?charset=utf8mb4&parseTime=true&loc=Local"
-
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	// if err != nil {
-	// 	return fmt.Errorf("Standar Renstra DB connection failed: %w", err)
-	// 	// panic(err)
-	// }
-
 	repoFakultasUnit := NewFakultasUnitRepository(db)
-	// if err := db.AutoMigrate(&domainfakultasunit.FakultasUnit{}); err != nil {
-	// 	panic(err)
-	// }
 
-	// Pipeline behavior
-	// mediatr.RegisterRequestPipelineBehaviors(NewValidationBehaviorFakultasUnit())
+	if err := repoFakultasUnit.EnsureSchema(context.Background()); err != nil {
+		return err
+	}
 
-	// Register request handler
 	mediatr.RegisterRequestHandler[
 		get.GetFakultasUnitByUuidQuery,
 		*domainfakultasunit.FakultasUnit,
@@ -47,11 +36,20 @@ func RegisterModuleFakultasUnit(db *gorm.DB) error {
 	})
 
 	mediatr.RegisterRequestHandler[
+		update.UpdateFakultasUnitCommand,
+		*domainfakultasunit.FakultasUnit,
+	](&update.UpdateFakultasUnitCommandHandler{
+		Repo: repoFakultasUnit,
+	})
+
+	mediatr.RegisterRequestHandler[
 		setupUuid.SetupUuidFakultasUnitCommand,
 		string,
 	](&setupUuid.SetupUuidFakultasUnitCommandHandler{
 		Repo: repoFakultasUnit,
 	})
+
+	commoninfra.RegisterValidation(update.UpdateFakultasUnitCommandValidation, "FakultasUnitUpdate.Validation")
 
 	return nil
 }

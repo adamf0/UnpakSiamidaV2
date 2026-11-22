@@ -14,8 +14,111 @@ import (
 	GetAllFakultasUnits "UnpakSiamida/modules/fakultasunit/application/GetAllFakultasUnits"
 	GetFakultasUnit "UnpakSiamida/modules/fakultasunit/application/GetFakultasUnit"
 	SetupUuidFakultasUnit "UnpakSiamida/modules/fakultasunit/application/SetupUuidFakultasUnit"
+	UpdateFakultasUnit "UnpakSiamida/modules/fakultasunit/application/UpdateFakultasUnit"
 	fakultasunitdomain "UnpakSiamida/modules/fakultasunit/domain"
 )
+
+// =======================================================
+// PUT /fakultasunit/{uuid}
+// =======================================================
+
+type updateFakultasUnitRequest struct {
+	Nama     *string `json:"nama"`
+	IsActive *bool   `json:"is_active"`
+}
+
+func parseOptionalBool(raw string) (*bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true":
+		v := true
+		return &v, true
+	case "0", "false":
+		v := false
+		return &v, true
+	default:
+		return nil, false
+	}
+}
+
+// UpdateFakultasUnitHandler godoc
+// @Summary Rename or show/hide existing FakultasUnit target (no delete supported)
+// @Tags FakultasUnit
+// @Param uuid path string true "FakultasUnit UUID" format(uuid)
+// @Param nama formData string false "Nama baru target"
+// @Param is_active formData bool false "Visibilitas target (true=tampil, false=sembunyi)"
+// @Produce json
+// @Success 200 {object} fakultasunitdomain.FakultasUnit
+// @Failure 400 {object} commoninfra.ResponseError
+// @Failure 404 {object} commoninfra.ResponseError
+// @Failure 500 {object} commoninfra.ResponseError
+// @Router /fakultasunit/{uuid} [put]
+func UpdateFakultasUnitHandler(c *fiber.Ctx) error {
+	targetUuid := c.Params("uuid")
+
+	var namaPtr *string
+	var isActivePtr *bool
+
+	contentType := strings.ToLower(c.Get("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		var body updateFakultasUnitRequest
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"Code":    "FakultasUnit.InvalidPayload",
+				"Message": "Invalid JSON body",
+			})
+		}
+		namaPtr = body.Nama
+		isActivePtr = body.IsActive
+	} else {
+		if form, err := c.MultipartForm(); err == nil && form != nil {
+			if vals, ok := form.Value["nama"]; ok && len(vals) > 0 {
+				v := vals[0]
+				namaPtr = &v
+			}
+			if vals, ok := form.Value["is_active"]; ok && len(vals) > 0 {
+				parsed, valid := parseOptionalBool(vals[0])
+				if !valid {
+					return c.Status(400).JSON(fiber.Map{
+						"Code":    "FakultasUnit.InvalidIsActive",
+						"Message": "is_active must be true/false or 1/0",
+					})
+				}
+				isActivePtr = parsed
+			}
+		} else {
+			if c.Request().PostArgs().Has("nama") {
+				v := c.FormValue("nama")
+				namaPtr = &v
+			}
+			if c.Request().PostArgs().Has("is_active") {
+				parsed, valid := parseOptionalBool(c.FormValue("is_active"))
+				if !valid {
+					return c.Status(400).JSON(fiber.Map{
+						"Code":    "FakultasUnit.InvalidIsActive",
+						"Message": "is_active must be true/false or 1/0",
+					})
+				}
+				isActivePtr = parsed
+			}
+		}
+	}
+
+	cmd := UpdateFakultasUnit.UpdateFakultasUnitCommand{
+		Uuid:     targetUuid,
+		Nama:     namaPtr,
+		IsActive: isActivePtr,
+	}
+
+	updated, err := mediatr.Send[
+		UpdateFakultasUnit.UpdateFakultasUnitCommand,
+		*fakultasunitdomain.FakultasUnit,
+	](context.Background(), cmd)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(updated)
+}
 
 // =======================================================
 // GET /fakultasunit/{uuid}
@@ -68,6 +171,7 @@ func GetFakultasUnitHandler(c *fiber.Ctx) error {
 // @Param page query int false "Page"
 // @Param limit query int false "Limit"
 // @Param search query string false "Search keyword"
+// @Param include_hidden query bool false "Include hidden (is_active=0) targets"
 // @Produce json
 // @Success 200 {object} commondomain.Paged[fakultasunitdomain.FakultasUnit]
 // @Router /fakultasunits [get]
@@ -76,6 +180,8 @@ func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 	search := c.Query("search", "")
+	includeHiddenRaw := strings.ToLower(strings.TrimSpace(c.Query("include_hidden", c.Query("include_inactive", ""))))
+	includeHidden := includeHiddenRaw == "true" || includeHiddenRaw == "1"
 
 	// Parse filters
 	filtersRaw := c.Query("filters", "")
@@ -109,6 +215,7 @@ func GetAllFakultasUnitsHandler(c *fiber.Ctx) error {
 	query := GetAllFakultasUnits.GetAllFakultasUnitsQuery{
 		Search:        search,
 		SearchFilters: filters,
+		IncludeHidden: includeHidden,
 	}
 
 	var adapter commonpresentation.OutputAdapter[fakultasunitdomain.FakultasUnit]
@@ -149,11 +256,12 @@ func SetupUuidFakultasUnitsHandlerfunc(c *fiber.Ctx) error {
 }
 
 func ModuleFakultasUnit(app *fiber.App) {
-	// admin := []string{"admin"}
-	// whoamiURL := "http://localhost:3000/whoami"
+	admin := []string{"admin"}
+	whoamiURL := "http://localhost:3000/whoami"
 
 	app.Get("/fakultasunit/setupuuid", SetupUuidFakultasUnitsHandlerfunc)
 
+	app.Put("/fakultasunit/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateFakultasUnitHandler)
 	app.Get("/fakultasunit/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetFakultasUnitHandler)
 	app.Get("/fakultasunits", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllFakultasUnitsHandler)
 }
