@@ -48,6 +48,10 @@ func NewIndikatorRenstra(
 		return common.FailureValue[*IndikatorRenstra](NotUniqueIndikator())
 	}
 
+	if tipeTarget == "kategori" || tipeTarget == "text" {
+		operator = nil
+	}
+
 	ir := &IndikatorRenstra{
 		UUID:           uuid.New(),
 		Indikator:      indikator,
@@ -111,7 +115,9 @@ func UpdateIndikatorRenstra(
 		prev.Parent = parent
 	}
 
-	if operator != nil {
+	if tipeTarget == "kategori" || tipeTarget == "text" {
+		prev.Operator = nil
+	} else if operator != nil {
 		prev.Operator = operator
 	}
 

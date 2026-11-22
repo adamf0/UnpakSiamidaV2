@@ -47,7 +47,9 @@ func (r *PreviewTemplateRepository) GetByTahunFakultasUnit(
 					ELSE 'ada yg salah pada datanya'
 				END
 			) AS Target,
-			tr.kategori AS Kategori
+			tr.kategori AS Kategori,
+			i.tipe_target AS TipeTarget,
+			i.operator AS Operator
 		FROM template_renstra tr
 		INNER JOIN master_indikator_renstra i
 			ON i.id = tr.indikator
@@ -103,7 +105,9 @@ func (r *PreviewTemplateRepository) GetByTahunTag(
 				dt.klasifikasi AS Klasifikasi,
 				NULL AS Satuan,
 				'ya' AS Target,
-				NULL AS Kategori
+				NULL AS Kategori,
+				'text' AS TipeTarget,
+				NULL AS Operator
 			FROM template_dokumen_tambahan dt
 			INNER JOIN jenis_file_renstra jf ON jf.id = dt.jenis_file
 			WHERE

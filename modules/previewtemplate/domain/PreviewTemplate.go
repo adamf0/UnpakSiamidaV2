@@ -22,6 +22,8 @@ type PreviewTemplate struct {
 	Satuan              *string
 	Target              string
 	Kategori            string
+	TipeTarget          string
+	Operator            *string
 
 	Pointing            string
 }
