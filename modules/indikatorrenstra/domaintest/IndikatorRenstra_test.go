@@ -258,3 +258,73 @@ func TestIndikatorRenstra_EdgeCases(t *testing.T) {
 	assert.Equal(t, newTipe, resUpdate.Value.TipeTarget)
 	assert.Equal(t, "Edge Update", resUpdate.Value.Indikator)
 }
+
+func TestIndikatorRenstra_NumerikOperatorDefaultAndCustom(t *testing.T) {
+	standar := uint(1)
+
+	// Create numerik tanpa operator -> default ">="
+	resDefault := domain.NewIndikatorRenstra(
+		"Indikator Numerik Default",
+		&standar,
+		nil,
+		"2027",
+		"numerik",
+		nil,
+		nil,
+		nil,
+		true,
+	)
+	require.True(t, resDefault.IsSuccess)
+	require.NotNil(t, resDefault.Value.Operator)
+	assert.Equal(t, ">=", *resDefault.Value.Operator)
+
+	// Update numerik dengan operator kustom "<="
+	customOp := "<="
+	resCustom := domain.UpdateIndikatorRenstra(
+		resDefault.Value,
+		resDefault.Value.UUID,
+		"Indikator Numerik Custom",
+		&standar,
+		nil,
+		"2027",
+		"numerik",
+		&customOp,
+		nil,
+		nil,
+	)
+	require.True(t, resCustom.IsSuccess)
+	require.NotNil(t, resCustom.Value.Operator)
+	assert.Equal(t, "<=", *resCustom.Value.Operator)
+
+	// Ubah ke kategori -> operator menjadi nil, lalu balik ke numerik tanpa operator -> default ">="
+	resKat := domain.UpdateIndikatorRenstra(
+		resCustom.Value,
+		resCustom.Value.UUID,
+		"Indikator Kategori",
+		&standar,
+		nil,
+		"2027",
+		"kategori",
+		&customOp,
+		nil,
+		nil,
+	)
+	require.True(t, resKat.IsSuccess)
+	assert.Nil(t, resKat.Value.Operator)
+
+	resBackNumerik := domain.UpdateIndikatorRenstra(
+		resKat.Value,
+		resKat.Value.UUID,
+		"Indikator Numerik Lagi",
+		&standar,
+		nil,
+		"2027",
+		"numerik",
+		nil,
+		nil,
+		nil,
+	)
+	require.True(t, resBackNumerik.IsSuccess)
+	require.NotNil(t, resBackNumerik.Value.Operator)
+	assert.Equal(t, ">=", *resBackNumerik.Value.Operator)
+}

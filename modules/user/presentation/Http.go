@@ -3,10 +3,18 @@ package presentation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
@@ -24,6 +32,7 @@ import (
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
 	userdomain "UnpakSiamida/modules/user/domain"
+	eventUser "UnpakSiamida/modules/user/event"
 
 	"gorm.io/gorm"
 )
@@ -389,6 +398,157 @@ func MergeUserHandler(c *fiber.Ctx) error {
 	})
 }
 
+const (
+	maxEmailAttachments     = 5
+	maxEmailAttachmentSize  = 10 << 20 // 10 MB per file
+	maxEmailAttachmentTotal = 15 << 20 // 15 MB total (safe under Gmail 25 MB MIME limit)
+)
+
+var allowedEmailAttachmentExts = map[string]bool{
+	".pdf":  true,
+	".doc":  true,
+	".docx": true,
+	".xls":  true,
+	".xlsx": true,
+	".ppt":  true,
+	".pptx": true,
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".webp": true,
+	".txt":  true,
+	".csv":  true,
+	".zip":  true,
+}
+
+func sanitizeUploadFilename(name string) string {
+	base := filepath.Base(strings.ReplaceAll(strings.TrimSpace(name), "\\", "/"))
+	var b strings.Builder
+	for _, r := range base {
+		switch {
+		case r < 32 || r == 127 || r == '"' || r == '/' || r == '\\':
+			continue
+		default:
+			b.WriteRune(r)
+		}
+	}
+	cleaned := strings.TrimSpace(b.String())
+	if cleaned == "" || cleaned == "." || cleaned == ".." {
+		return "lampiran"
+	}
+	return cleaned
+}
+
+func stageEmailAttachments(c *fiber.Ctx) ([]eventUser.UserAccountEmailAttachment, string, error) {
+	form, err := c.MultipartForm()
+	if err != nil || form == nil || len(form.File) == 0 {
+		return nil, "", nil
+	}
+
+	var fileHeaders []*multipart.FileHeader
+	for _, fieldName := range []string{"attachments", "attachments[]", "files", "files[]", "file"} {
+		if list, ok := form.File[fieldName]; ok && len(list) > 0 {
+			fileHeaders = append(fileHeaders, list...)
+		}
+	}
+	if len(fileHeaders) == 0 {
+		return nil, "", nil
+	}
+	if len(fileHeaders) > maxEmailAttachments {
+		return nil, "", fmt.Errorf("maksimal %d file lampiran per pengiriman email", maxEmailAttachments)
+	}
+
+	var totalSize int64
+	for _, fh := range fileHeaders {
+		ext := strings.ToLower(filepath.Ext(fh.Filename))
+		if !allowedEmailAttachmentExts[ext] {
+			return nil, "", fmt.Errorf("tipe file %q tidak diizinkan untuk lampiran email", fh.Filename)
+		}
+		if fh.Size > maxEmailAttachmentSize {
+			return nil, "", fmt.Errorf("ukuran file %q melebihi batas maksimal 10 MB", fh.Filename)
+		}
+		totalSize += fh.Size
+	}
+	if totalSize > maxEmailAttachmentTotal {
+		return nil, "", fmt.Errorf("total ukuran seluruh lampiran melebihi batas maksimal 15 MB")
+	}
+
+	batchDir := filepath.Join(eventUser.EmailAttachmentBaseDir, uuid.NewString())
+	if err := os.MkdirAll(batchDir, 0o755); err != nil {
+		return nil, "", fmt.Errorf("gagal membuat direktori lampiran: %w", err)
+	}
+
+	attachments := make([]eventUser.UserAccountEmailAttachment, 0, len(fileHeaders))
+	for i, fh := range fileHeaders {
+		safeName := sanitizeUploadFilename(fh.Filename)
+		ext := strings.ToLower(filepath.Ext(safeName))
+		diskName := fmt.Sprintf("%d_%s", i+1, safeName)
+		destPath := filepath.Join(batchDir, diskName)
+
+		src, err := fh.Open()
+		if err != nil {
+			_ = os.RemoveAll(batchDir)
+			return nil, "", fmt.Errorf("gagal membaca file %q: %w", safeName, err)
+		}
+
+		sniffBuf := make([]byte, 512)
+		n, readErr := src.Read(sniffBuf)
+		if readErr != nil && readErr != io.EOF {
+			_ = src.Close()
+			_ = os.RemoveAll(batchDir)
+			return nil, "", fmt.Errorf("gagal membaca isi file %q: %w", safeName, readErr)
+		}
+
+		dst, err := os.Create(destPath)
+		if err != nil {
+			_ = src.Close()
+			_ = os.RemoveAll(batchDir)
+			return nil, "", fmt.Errorf("gagal menyimpan file %q: %w", safeName, err)
+		}
+
+		written := int64(0)
+		if n > 0 {
+			w1, err := dst.Write(sniffBuf[:n])
+			if err != nil {
+				_ = dst.Close()
+				_ = src.Close()
+				_ = os.RemoveAll(batchDir)
+				return nil, "", fmt.Errorf("gagal menulis file %q: %w", safeName, err)
+			}
+			written += int64(w1)
+		}
+		w2, err := io.Copy(dst, src)
+		_ = dst.Close()
+		_ = src.Close()
+		if err != nil {
+			_ = os.RemoveAll(batchDir)
+			return nil, "", fmt.Errorf("gagal menyalin file %q: %w", safeName, err)
+		}
+		written += w2
+
+		contentType := mime.TypeByExtension(ext)
+		if contentType == "" && n > 0 {
+			contentType = http.DetectContentType(sniffBuf[:n])
+		}
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		// Ambil hanya MIME type utama tanpa parameter charset tambahan
+		if semi := strings.Index(contentType, ";"); semi != -1 {
+			contentType = strings.TrimSpace(contentType[:semi])
+		}
+
+		attachments = append(attachments, eventUser.UserAccountEmailAttachment{
+			FileName:    safeName,
+			ContentType: contentType,
+			FilePath:    destPath,
+			Size:        written,
+		})
+	}
+
+	return attachments, batchDir, nil
+}
+
 // =======================================================
 // POST /user/:uuid/send-email & POST /users/send-email
 // =======================================================
@@ -398,6 +558,7 @@ func MergeUserHandler(c *fiber.Ctx) error {
 // @Tags User
 // @Param uuid path string false "User UUID"
 // @Param user_uuids formData string false "JSON string or comma-separated list of User UUIDs for batch"
+// @Param attachments formData file false "Optional attachment files (max 5 files, 10MB/file, 15MB total)"
 // @Produce json
 // @Success 200 {object} SendAccountEmail.SendAccountEmailResult
 // @Router /user/{uuid}/send-email [post]
@@ -457,12 +618,25 @@ func SendAccountEmailHandler(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, userdomain.EmptyData())
 	}
 
+	attachments, batchDir, attErr := stageEmailAttachments(c)
+	if attErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"Code":    "UserSendEmail.InvalidAttachment",
+			"Message": attErr.Error(),
+			"message": attErr.Error(),
+		})
+	}
+
 	cmd := SendAccountEmail.SendAccountEmailCommand{
-		UserUUIDs: uniqueUUIDs,
+		UserUUIDs:   uniqueUUIDs,
+		Attachments: attachments,
 	}
 
 	res, err := mediatr.Send[SendAccountEmail.SendAccountEmailCommand, *SendAccountEmail.SendAccountEmailResult](c.Context(), cmd)
 	if err != nil {
+		if batchDir != "" {
+			_ = os.RemoveAll(batchDir)
+		}
 		return commoninfra.HandleError(c, err)
 	}
 

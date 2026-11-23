@@ -107,8 +107,15 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 					WHERE mp_sub.mata_program = mp.mata_program 
 					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
 				))
-				  AND (LOWER(mir2.indikator) LIKE ? OR LOWER(msr2.nama) LIKE ? OR LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR LOWER(vfu2.fakultas) LIKE ?)
-			)`, like, like, like, like)
+				  AND (
+					LOWER(mir2.indikator) LIKE ? OR
+					LOWER(msr2.nama) LIKE ? OR
+					LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR
+					LOWER(COALESCE(vfu2.jenjang, '')) LIKE ? OR
+					LOWER(CONCAT(vfu2.nama_fak_prod_unit, ' (', COALESCE(vfu2.jenjang, ''), ')')) LIKE ? OR
+					LOWER(vfu2.fakultas) LIKE ?
+				  )
+			)`, like, like, like, like, like, like)
 		case "info", "infounit", "info_unit", "prokerunit", "proker_unit", "matrixproker", "matrix_proker":
 			like := "%" + val + "%"
 			q = q.Where(`EXISTS (
@@ -167,7 +174,14 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 					WHERE mp_sub.mata_program = mp.mata_program 
 					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
 				))
-				  AND (LOWER(mir2.indikator) LIKE ? OR LOWER(msr2.nama) LIKE ? OR LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR LOWER(vfu2.fakultas) LIKE ?)
+				  AND (
+					LOWER(mir2.indikator) LIKE ? OR
+					LOWER(msr2.nama) LIKE ? OR
+					LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR
+					LOWER(COALESCE(vfu2.jenjang, '')) LIKE ? OR
+					LOWER(CONCAT(vfu2.nama_fak_prod_unit, ' (', COALESCE(vfu2.jenjang, ''), ')')) LIKE ? OR
+					LOWER(vfu2.fakultas) LIKE ?
+				  )
 			) OR
 			EXISTS (
 				SELECT 1 FROM matrix_proker mpk
@@ -184,7 +198,7 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 					LOWER(CONCAT(vfu_p.nama_fak_prod_unit, ' (', COALESCE(vfu_p.jenjang, ''), ')')) LIKE ?
 				  )
 			)
-		)`, like, like, like, like, like, like, like, like, like, like, like)
+		)`, like, like, like, like, like, like, like, like, like, like, like, like, like)
 	}
 
 	return q
@@ -565,7 +579,13 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramID(ctx context.Contex
 			COALESCE(mir.indikator, '') as indikator,
 			COALESCE(msr.nama, '') as standar_renstra,
 			tr.fakultas_unit as fakultas_unit_id,
-			COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit,
+			CASE
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != ''
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')')
+				ELSE COALESCE(vfu.nama_fak_prod_unit, '')
+			END as fakultas_unit,
+			COALESCE(vfu.jenjang, '') as jenjang,
+			COALESCE(vfu.type, '') as type,
 			COALESCE(tr.kategori, '') as kategori,
 			COALESCE(tr.target, '') as target,
 			COALESCE(tr.satuan, '') as satuan
@@ -575,7 +595,7 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramID(ctx context.Contex
 		LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id
 		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
 		WHERE mptr.id_mata_programv2 = ?
-		ORDER BY msr.nama ASC, mir.indikator ASC, vfu.nama_fak_prod_unit ASC
+		ORDER BY msr.nama ASC, mir.indikator ASC, fakultas_unit ASC
 	`
 	err := r.db.WithContext(ctx).Raw(sql, mpID).Scan(&items).Error
 	if err != nil {
@@ -605,6 +625,8 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 		StandarRenstra     string `gorm:"column:standar_renstra"`
 		FakultasUnitID     uint   `gorm:"column:fakultas_unit_id"`
 		FakultasUnit       string `gorm:"column:fakultas_unit"`
+		Jenjang            string `gorm:"column:jenjang"`
+		Type               string `gorm:"column:type"`
 		Kategori           string `gorm:"column:kategori"`
 		Target             string `gorm:"column:target"`
 		Satuan             string `gorm:"column:satuan"`
@@ -621,7 +643,13 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 			COALESCE(mir.indikator, '') as indikator,
 			COALESCE(msr.nama, '') as standar_renstra,
 			tr.fakultas_unit as fakultas_unit_id,
-			COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit,
+			CASE
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != ''
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')')
+				ELSE COALESCE(vfu.nama_fak_prod_unit, '')
+			END as fakultas_unit,
+			COALESCE(vfu.jenjang, '') as jenjang,
+			COALESCE(vfu.type, '') as type,
 			COALESCE(tr.kategori, '') as kategori,
 			COALESCE(tr.target, '') as target,
 			COALESCE(tr.satuan, '') as satuan
@@ -635,7 +663,7 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
 		WHERE mp_target.id IN (?)
 		GROUP BY mp_target.id, tr.id
-		ORDER BY msr.nama ASC, mir.indikator ASC, vfu.nama_fak_prod_unit ASC
+		ORDER BY msr.nama ASC, mir.indikator ASC, fakultas_unit ASC
 	`
 	err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error
 	if err != nil {
@@ -652,6 +680,8 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 			StandarRenstra:     rw.StandarRenstra,
 			FakultasUnitID:     rw.FakultasUnitID,
 			FakultasUnit:       rw.FakultasUnit,
+			Jenjang:            rw.Jenjang,
+			Type:               rw.Type,
 			Kategori:           rw.Kategori,
 			Target:             rw.Target,
 			Satuan:             rw.Satuan,

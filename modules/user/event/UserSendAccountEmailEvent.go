@@ -16,10 +16,18 @@ type UserAccountEmailRecipient struct {
 	AbacRoles string    `json:"abac_roles"`
 }
 
+type UserAccountEmailAttachment struct {
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	FilePath    string `json:"file_path"`
+	Size        int64  `json:"size"`
+}
+
 type UserSendAccountEmailEvent struct {
-	EventID    uuid.UUID                   `json:"event_id"`
-	OccurredOn time.Time                   `json:"occurred_on"`
-	Users      []UserAccountEmailRecipient `json:"users"`
+	EventID     uuid.UUID                    `json:"event_id"`
+	OccurredOn  time.Time                    `json:"occurred_on"`
+	Users       []UserAccountEmailRecipient  `json:"users"`
+	Attachments []UserAccountEmailAttachment `json:"attachments,omitempty"`
 }
 
 func (e UserSendAccountEmailEvent) ID() string {

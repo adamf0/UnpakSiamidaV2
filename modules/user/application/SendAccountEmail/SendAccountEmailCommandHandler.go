@@ -97,9 +97,10 @@ func (h *SendAccountEmailCommandHandler) Handle(
 	}
 
 	evt := eventUser.UserSendAccountEmailEvent{
-		EventID:    uuid.New(),
-		OccurredOn: time.Now().UTC(),
-		Users:      recipients,
+		EventID:     uuid.New(),
+		OccurredOn:  time.Now().UTC(),
+		Users:       recipients,
+		Attachments: cmd.Attachments,
 	}
 
 	payload, err := json.Marshal(evt)

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	common "UnpakSiamida/common/domain"
@@ -48,8 +49,12 @@ func NewIndikatorRenstra(
 		return common.FailureValue[*IndikatorRenstra](NotUniqueIndikator())
 	}
 
-	if tipeTarget == "kategori" || tipeTarget == "text" {
+	normalizedTipe := strings.ToLower(strings.TrimSpace(tipeTarget))
+	if normalizedTipe == "kategori" || normalizedTipe == "text" {
 		operator = nil
+	} else if normalizedTipe == "numerik" && (operator == nil || strings.TrimSpace(*operator) == "") {
+		defaultOp := ">="
+		operator = &defaultOp
 	}
 
 	ir := &IndikatorRenstra{
@@ -115,10 +120,14 @@ func UpdateIndikatorRenstra(
 		prev.Parent = parent
 	}
 
-	if tipeTarget == "kategori" || tipeTarget == "text" {
+	normalizedTipe := strings.ToLower(strings.TrimSpace(tipeTarget))
+	if normalizedTipe == "kategori" || normalizedTipe == "text" {
 		prev.Operator = nil
-	} else if operator != nil {
+	} else if operator != nil && strings.TrimSpace(*operator) != "" {
 		prev.Operator = operator
+	} else if normalizedTipe == "numerik" && (prev.Operator == nil || strings.TrimSpace(*prev.Operator) == "") {
+		defaultOp := ">="
+		prev.Operator = &defaultOp
 	}
 
 	prev.TargetUnpak = targetUnpak

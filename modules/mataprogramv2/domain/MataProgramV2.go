@@ -91,6 +91,8 @@ type MataProgramV2TemplateItem struct {
 	StandarRenstra     string `gorm:"column:standar_renstra" json:"StandarRenstra"`
 	FakultasUnitID     uint   `gorm:"column:fakultas_unit_id" json:"FakultasUnitID"`
 	FakultasUnit       string `gorm:"column:fakultas_unit" json:"FakultasUnit"`
+	Jenjang            string `gorm:"column:jenjang" json:"Jenjang"`
+	Type               string `gorm:"column:type" json:"Type"`
 	Kategori           string `gorm:"column:kategori" json:"Kategori"`
 	Target             string `gorm:"column:target" json:"Target"`
 	Satuan             string `gorm:"column:satuan" json:"Satuan"`

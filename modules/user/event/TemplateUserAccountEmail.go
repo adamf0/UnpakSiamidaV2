@@ -7,7 +7,7 @@ import (
 )
 
 // RenderUserAccountEmailPlainText menghasilkan format teks sesuai spesifikasi
-func RenderUserAccountEmailPlainText(r UserAccountEmailRecipient) string {
+func RenderUserAccountEmailPlainText(r UserAccountEmailRecipient, attachments ...UserAccountEmailAttachment) string {
 	roleDisplay := strings.TrimSpace(r.AbacRoles)
 	if roleDisplay == "" {
 		roleDisplay = r.Level
@@ -16,23 +16,37 @@ func RenderUserAccountEmailPlainText(r UserAccountEmailRecipient) string {
 		roleDisplay = "user"
 	}
 
+	attachmentNote := ""
+	if len(attachments) > 0 {
+		names := make([]string, 0, len(attachments))
+		for _, att := range attachments {
+			if n := strings.TrimSpace(att.FileName); n != "" {
+				names = append(names, n)
+			}
+		}
+		if len(names) > 0 {
+			attachmentNote = fmt.Sprintf("\n\nLampiran (%d file): %s", len(names), strings.Join(names, ", "))
+		}
+	}
+
 	return fmt.Sprintf(`kami sampaikan akun SIAMIDA V3 sebagai berikut :
 
 username : %s
 password : %s
 level : %s
 
-buka siamida.unpak.ac.id dan pilih SIAMIDA V3.
+buka siamida.unpak.ac.id dan pilih SIAMIDA V3.%s
 
 Terimakasih`,
 		r.Username,
 		r.Password,
 		roleDisplay,
+		attachmentNote,
 	)
 }
 
 // RenderUserAccountEmailHTML merender template email profesional dengan layout modern responsif
-func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string) string {
+func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string, attachments ...UserAccountEmailAttachment) string {
 	if loginURL == "" {
 		loginURL = "https://siamida.unpak.ac.id"
 	}
@@ -48,6 +62,24 @@ func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string) st
 	nameDisplay := r.Name
 	if strings.TrimSpace(nameDisplay) == "" {
 		nameDisplay = r.Username
+	}
+
+	attachmentHTML := ""
+	if len(attachments) > 0 {
+		var items strings.Builder
+		for _, att := range attachments {
+			if n := strings.TrimSpace(att.FileName); n != "" {
+				items.WriteString(fmt.Sprintf(`<li style="margin:4px 0; color:#334155;">%s</li>`, html.EscapeString(n)))
+			}
+		}
+		if items.Len() > 0 {
+			attachmentHTML = fmt.Sprintf(`
+            <!-- ATTACHMENTS NOTICE -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:13px; color:#334155;">
+                <div style="font-weight:700; color:#0f172a; margin-bottom:6px;">Lampiran Dokumen (%d file):</div>
+                <ul style="margin:0; padding-left:18px;">%s</ul>
+            </div>`, len(attachments), items.String())
+		}
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
@@ -277,7 +309,7 @@ func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string) st
             <div style="background:#eff6ff; border-left:4px solid #3b82f6; padding:14px 18px; border-radius:0 8px 8px 0; margin-bottom:24px; font-size:13.5px; color:#1e40af;">
                 Silakan buka <strong>siamida.unpak.ac.id</strong> dan pilih <strong>SIAMIDA V3</strong> untuk masuk ke dalam sistem.
             </div>
-
+%s
             <!-- BUTTON CTA -->
             <div style="text-align:center; margin:28px 0;">
                 <a href="%s" target="_blank" style="display:inline-block; background:linear-gradient(135deg, #4f46e5 0%%, #4338ca 100%%); color:#ffffff; text-decoration:none; font-weight:700; font-size:14px; padding:14px 32px; border-radius:10px; box-shadow:0 4px 14px rgba(79, 70, 229, 0.35);">
@@ -306,6 +338,7 @@ func RenderUserAccountEmailHTML(r UserAccountEmailRecipient, loginURL string) st
 		html.EscapeString(r.Username),
 		html.EscapeString(r.Password),
 		html.EscapeString(roleDisplay),
+		attachmentHTML,
 		html.EscapeString(loginURL),
 	)
 }
@@ -325,9 +358,19 @@ func RenderUserAccountEmailTelegram(event UserSendAccountEmailEvent) string {
 		))
 	}
 
+	attInfo := ""
+	if len(event.Attachments) > 0 {
+		attNames := make([]string, 0, len(event.Attachments))
+		for _, a := range event.Attachments {
+			attNames = append(attNames, html.EscapeString(a.FileName))
+		}
+		attInfo = fmt.Sprintf("\nLampiran (%d): <code>%s</code>", len(attNames), strings.Join(attNames, ", "))
+	}
+
 	return fmt.Sprintf(
-		"<b>[OUTBOX EMAIL AKUN SIAMIDA V3]</b>\nTotal Terkirim: <b>%d akun</b>\nDaftar Penerima:\n%s",
+		"<b>[OUTBOX EMAIL AKUN SIAMIDA V3]</b>\nTotal Terkirim: <b>%d akun</b>%s\nDaftar Penerima:\n%s",
 		len(event.Users),
+		attInfo,
 		strings.Join(recLines, "\n"),
 	)
 }
