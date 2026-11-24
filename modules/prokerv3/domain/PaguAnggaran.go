@@ -37,5 +37,6 @@ type UnitPaguSummaryResult struct {
 	SisaPagu         float64 `json:"sisa_pagu"`
 	NamaFakultasUnit string  `json:"nama_fakultas_unit"`
 	IdFakultasUnit   int     `json:"id_fakultas_unit"`
+	UuidFakultasUnit string  `json:"uuid_fakultas_unit,omitempty"`
 	Tahun            string  `json:"tahun"`
 }

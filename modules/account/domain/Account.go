@@ -9,6 +9,7 @@ type Account struct {
 	Name         string       `json:"Name"`
 	Email            string       `json:"Email"`
 	FakultasUnit     string       `json:"FakultasUnit"`
+	UuidFakultasUnit string       `gorm:"column:uuid_fakultas_unit" json:"UuidFakultasUnit,omitempty"`
 	NamaFakultasUnit string       `gorm:"column:nama_fakultas_unit" json:"NamaFakultasUnit,omitempty"`
 	ExtraRole        []ExtraRole  `gorm:"-" json:"ExtraRole,omitempty"`
 }

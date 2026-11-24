@@ -55,6 +55,7 @@ func (r *AccountRepository) Auth(ctx context.Context, username string, password 
 		rLow := strings.ToLower(strings.TrimSpace(er.Role))
 		if (rLow == "user" || rLow == "auditee") && er.IdFakultasUnit > 0 {
 			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
+			user.UuidFakultasUnit = er.UuidFakultasUnit
 			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break
 		}
@@ -96,6 +97,7 @@ func (r *AccountRepository) Get(ctx context.Context, userUUID string) (*domain.A
 		rLow := strings.ToLower(strings.TrimSpace(er.Role))
 		if (rLow == "user" || rLow == "auditee") && er.IdFakultasUnit > 0 {
 			user.FakultasUnit = fmt.Sprint(er.IdFakultasUnit)
+			user.UuidFakultasUnit = er.UuidFakultasUnit
 			user.NamaFakultasUnit = er.NamaFakultasUnit
 			break
 		}
@@ -154,6 +156,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 			r.tahun,
 			'auditee' AS role,
 			r.fakultas_unit AS id_fakultas_unit,
+			COALESCE(fu.uuid, '') AS uuid_fakultas_unit,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
@@ -167,6 +170,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 			r.tahun,
 			'auditor1' AS role,
 			r.fakultas_unit AS id_fakultas_unit,
+			COALESCE(fu.uuid, '') AS uuid_fakultas_unit,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
@@ -180,6 +184,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 			r.tahun,
 			'auditor2' AS role,
 			r.fakultas_unit AS id_fakultas_unit,
+			COALESCE(fu.uuid, '') AS uuid_fakultas_unit,
 			CASE 
 				WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != '' 
 				THEN CONCAT(fu.nama_fak_prod_unit, ' (', UPPER(fu.jenjang), ')') 
@@ -209,6 +214,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 			ELSE 'upmf'
 		END AS role,
 		COALESCE(userv3_abac.id_fakultas_unit, 0) as id_fakultas_unit,
+		COALESCE(fu.uuid, '') as uuid_fakultas_unit,
 		CASE
 			WHEN userv3_abac.id_fakultas_unit IS NULL OR userv3_abac.id_fakultas_unit = 0 THEN 'Seluruh Unit (Tingkat Universitas)'
 			WHEN fu.type = 'prodi' AND fu.jenjang IS NOT NULL AND fu.jenjang != ''
@@ -218,7 +224,7 @@ func (r *AccountRepository) getExtraRole(ctx context.Context, idUser any) ([]dom
 	`).
 		Joins("LEFT JOIN v_fakultas_unit fu ON userv3_abac.id_fakultas_unit = fu.id").
 		Where("userv3_abac.id_user IN (?) AND (LOWER(userv3_abac.status) IN ('active', 'aktif') OR userv3_abac.status IS NULL OR userv3_abac.status = '')", userIDs).
-		Group("userv3_abac.tahun, role, userv3_abac.id_fakultas_unit, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
+		Group("userv3_abac.tahun, role, userv3_abac.id_fakultas_unit, fu.uuid, fu.nama_fak_prod_unit, fu.type, fu.jenjang").
 		Scan(&abacRoles).Error
 
 	extraRoles = append(extraRoles, abacRoles...)

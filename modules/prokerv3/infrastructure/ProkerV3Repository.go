@@ -726,7 +726,7 @@ func (r *ProkerV3Repository) GetAll(
 				}
 
 				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" || field == "nama_fakultas_unit" || field == "namafakultasunit" || field == "target_unit" || field == "target" {
-					isStrictScoped := activeRole == "upml" || activeRole == "upms"
+					isStrictScoped := activeRole != "upmf" && activeRole != "admin" && activeRole != "anggaran" && activeRole != "keuangan" && activeRole != "evaluator" && activeRole != "lpm"
 					if strings.Contains(val, ",") {
 						parts := strings.Split(val, ",")
 						var ids []int
@@ -2705,24 +2705,29 @@ func (r *ProkerV3Repository) CheckJadwalProkerV3(ctx context.Context, req domain
 
 	var targetUnitID uint64
 	var targetUnitName string
+	var targetUnitUUID string
 	var parentFakultasID uint64
 
 	if unitParam != "" && unitParam != "all" && unitParam != "0" {
 		var fu struct {
 			ID       uint64 `gorm:"column:id"`
 			Nama     string `gorm:"column:nama_fak_prod_unit"`
+			Uuid     string `gorm:"column:uuid"`
 			Type     string `gorm:"column:type"`
 			Fakultas string `gorm:"column:fakultas"`
 		}
 		var qFu *gorm.DB
 		if _, errU := uuid.Parse(unitParam); errU == nil {
 			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("uuid = ?", unitParam)
+		} else if parsedId, errI := strconv.Atoi(unitParam); errI == nil {
+			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("id = ?", parsedId)
 		} else {
-			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("id = ?", unitParam)
+			qFu = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("nama_fak_prod_unit = ?", unitParam)
 		}
 		if errTake := qFu.Take(&fu).Error; errTake == nil {
 			targetUnitID = fu.ID
 			targetUnitName = fu.Nama
+			targetUnitUUID = fu.Uuid
 
 			if strings.EqualFold(fu.Type, "prodi") && fu.Fakultas != "" {
 				var parentFu struct {
@@ -2817,6 +2822,7 @@ func (r *ProkerV3Repository) CheckJadwalProkerV3(ctx context.Context, req domain
 		TanggalMulai:     item.TanggalMulai.Format("2006-01-02"),
 		TanggalAkhir:     item.TanggalAkhir.Format("2006-01-02"),
 		IdFakultasUnit:   item.IdFakultasUnit,
+		UuidFakultasUnit: targetUnitUUID,
 		IsUnitSpecific:   isUnitSpecific,
 		NamaFakultasUnit: targetUnitName,
 		Message:          message,
@@ -2965,28 +2971,40 @@ func (r *ProkerV3Repository) GetUnitPaguSummary(ctx context.Context, tahun strin
 
 	var fuId int
 	var fuName string
+	var fuUuid string
 
-	if reqFu != "" {
+	lookupFU := func(val string) (int, string, string) {
+		val = strings.TrimSpace(val)
+		if val == "" || val == "0" || val == "all" {
+			return 0, "", ""
+		}
 		var fuRow struct {
 			ID              int    `gorm:"column:id"`
 			NamaFakProdUnit string `gorm:"column:nama_fak_prod_unit"`
+			Uuid            string `gorm:"column:uuid"`
 		}
-		_ = r.db.WithContext(ctx).Table("v_fakultas_unit").
-			Where("id = ? OR nama_fak_prod_unit = ?", reqFu, reqFu).
-			First(&fuRow).Error
-
-		if fuRow.ID > 0 {
-			fuId = fuRow.ID
-			fuName = fuRow.NamaFakProdUnit
-		} else if parsed, err := strconv.Atoi(reqFu); err == nil {
-			fuId = parsed
+		var q *gorm.DB
+		if _, errU := uuid.Parse(val); errU == nil {
+			q = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("uuid = ?", val)
+		} else if parsedId, errI := strconv.Atoi(val); errI == nil {
+			q = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("id = ?", parsedId)
+		} else {
+			q = r.db.WithContext(ctx).Table("v_fakultas_unit").Where("nama_fak_prod_unit = ?", val)
 		}
+		if err := q.First(&fuRow).Error; err == nil && fuRow.ID > 0 {
+			return fuRow.ID, fuRow.NamaFakProdUnit, fuRow.Uuid
+		}
+		if parsedId, errI := strconv.Atoi(val); errI == nil {
+			return parsedId, "", ""
+		}
+		return 0, "", ""
 	}
 
+	if reqFu != "" {
+		fuId, fuName, fuUuid = lookupFU(reqFu)
+	}
 	if fuId == 0 && userFu != "" {
-		if parsed, err := strconv.Atoi(userFu); err == nil {
-			fuId = parsed
-		}
+		fuId, fuName, fuUuid = lookupFU(userFu)
 	}
 
 	var paguRow struct {
@@ -3058,6 +3076,7 @@ func (r *ProkerV3Repository) GetUnitPaguSummary(ctx context.Context, tahun strin
 		SisaPagu:         sisaPagu,
 		NamaFakultasUnit: fuName,
 		IdFakultasUnit:   fuId,
+		UuidFakultasUnit: fuUuid,
 		Tahun:            tahun,
 	}, nil
 }

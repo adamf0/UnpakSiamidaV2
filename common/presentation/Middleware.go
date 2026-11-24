@@ -98,6 +98,7 @@ type Account struct {
 	Name             string      `json:"Name"`
 	Email            string      `json:"Email"`
 	FakultasUnit     string      `json:"FakultasUnit"`
+	UuidFakultasUnit string      `json:"UuidFakultasUnit,omitempty"`
 	NamaFakultasUnit string      `json:"NamaFakultasUnit,omitempty"`
 	ExtraRole        []ExtraRole `gorm:"-" json:"ExtraRole,omitempty"`
 }
@@ -105,6 +106,7 @@ type ExtraRole struct {
 	Tahun            string `json:"tahun"`
 	Role             string `json:"role"`
 	IdFakultasUnit   uint   `json:"id_fakultas_unit,omitempty"`
+	UuidFakultasUnit string `json:"uuid_fakultas_unit,omitempty"`
 	NamaFakultasUnit string `json:"nama_fakultas_unit,omitempty"`
 }
 
@@ -118,6 +120,7 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 		NameLower             *string     `json:"name"`
 		EmailLower            *string     `json:"email"`
 		FakultasUnitLower     *string     `json:"fakultas_unit"`
+		UuidFakultasUnitLower *string     `json:"uuid_fakultas_unit"`
 		NamaFakultasUnitLower *string     `json:"nama_fakultas_unit"`
 		ExtraRoleLower        []ExtraRole `json:"extrarole,omitempty"`
 		ExtraRoleSnake        []ExtraRole `json:"extra_role,omitempty"`
@@ -145,6 +148,9 @@ func (a *Account) UnmarshalJSON(data []byte) error {
 	}
 	if a.FakultasUnit == "" && aux.FakultasUnitLower != nil {
 		a.FakultasUnit = *aux.FakultasUnitLower
+	}
+	if a.UuidFakultasUnit == "" && aux.UuidFakultasUnitLower != nil {
+		a.UuidFakultasUnit = *aux.UuidFakultasUnitLower
 	}
 	if a.NamaFakultasUnit == "" && aux.NamaFakultasUnitLower != nil {
 		a.NamaFakultasUnit = *aux.NamaFakultasUnitLower

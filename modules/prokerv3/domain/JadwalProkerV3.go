@@ -62,6 +62,7 @@ type CheckJadwalResult struct {
 	TanggalMulai     string  `json:"tanggal_mulai,omitempty"`
 	TanggalAkhir     string  `json:"tanggal_akhir,omitempty"`
 	IdFakultasUnit   *uint64 `json:"id_fakultas_unit,omitempty"`
+	UuidFakultasUnit string  `json:"uuid_fakultas_unit,omitempty"`
 	IsUnitSpecific   bool    `json:"is_unit_specific"`
 	NamaFakultasUnit string  `json:"nama_fakultas_unit,omitempty"`
 	Message          string  `json:"message"`
