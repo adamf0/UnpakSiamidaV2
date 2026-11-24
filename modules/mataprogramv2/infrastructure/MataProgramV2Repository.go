@@ -4,6 +4,7 @@ import (
 	domain "UnpakSiamida/modules/mataprogramv2/domain"
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -504,21 +505,41 @@ func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Con
 		mpUUID = created.UUID
 	}
 
-	// Hapus relasi lama lalu insert yang baru
+	// Hapus relasi lama lalu insert yang baru (batch per 250 rows agar cepat & hemat memori)
 	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mpID).Error
 
-	var insertedCount uint = 0
+	var validIDs []uint
 	for _, trID := range templateRenstraIDs {
-		if trID == 0 {
-			continue
+		if trID > 0 {
+			validIDs = append(validIDs, trID)
 		}
-		linkUUID := uuid.New().String()
-		errLink := r.db.WithContext(ctx).Exec(
-			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
-			linkUUID, mpID, trID,
-		).Error
-		if errLink == nil {
-			insertedCount++
+	}
+
+	var insertedCount uint = 0
+	const chunkSize = 250
+
+	for i := 0; i < len(validIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(validIDs) {
+			end = len(validIDs)
+		}
+		chunk := validIDs[i:end]
+
+		placeholders := make([]string, 0, len(chunk))
+		args := make([]interface{}, 0, len(chunk)*3)
+
+		for _, trID := range chunk {
+			placeholders = append(placeholders, "(?, ?, ?)")
+			args = append(args, uuid.New().String(), mpID, trID)
+		}
+
+		query := fmt.Sprintf(
+			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES %s ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
+			strings.Join(placeholders, ", "),
+		)
+
+		if err := r.db.WithContext(ctx).Exec(query, args...).Error; err == nil {
+			insertedCount += uint(len(chunk))
 		}
 	}
 
@@ -549,18 +570,38 @@ func (r *MataProgramV2Repository) UpdateMataProgramV2WithTemplates(ctx context.C
 		}
 	}
 
-	// Update relasi template renstra
+	// Update relasi template renstra (batch per 250 rows)
 	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mp.ID).Error
 
+	var validIDs []uint
 	for _, trID := range templateRenstraIDs {
-		if trID == 0 {
-			continue
+		if trID > 0 {
+			validIDs = append(validIDs, trID)
 		}
-		linkUUID := uuid.New().String()
-		_ = r.db.WithContext(ctx).Exec(
-			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
-			linkUUID, mp.ID, trID,
-		).Error
+	}
+
+	const chunkSize = 250
+	for i := 0; i < len(validIDs); i += chunkSize {
+		end := i + chunkSize
+		if end > len(validIDs) {
+			end = len(validIDs)
+		}
+		chunk := validIDs[i:end]
+
+		placeholders := make([]string, 0, len(chunk))
+		args := make([]interface{}, 0, len(chunk)*3)
+
+		for _, trID := range chunk {
+			placeholders = append(placeholders, "(?, ?, ?)")
+			args = append(args, uuid.New().String(), mp.ID, trID)
+		}
+
+		query := fmt.Sprintf(
+			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES %s ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
+			strings.Join(placeholders, ", "),
+		)
+
+		_ = r.db.WithContext(ctx).Exec(query, args...).Error
 	}
 
 	return nil

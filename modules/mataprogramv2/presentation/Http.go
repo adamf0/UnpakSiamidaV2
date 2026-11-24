@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -27,41 +28,139 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func extractMultipartTargets(c *fiber.Ctx) []string {
-	var targets []string
+type mataProgramV2RequestPayload struct {
+	MataProgram        string `json:"mata_program"`
+	NamaProgram        string `json:"nama_program"`
+	Mataprogram        string `json:"mataprogram"`
+	Tahun              any    `json:"tahun"`
+	IdMasterTahun      any    `json:"id_master_tahun"`
+	Targets            []any  `json:"targets"`
+	FakultasUnits      []any  `json:"fakultas_units"`
+	IdFakultasUnit     any    `json:"id_fakultas_unit"`
+	FakultasUnit       any    `json:"fakultas_unit"`
+	Target             any    `json:"target"`
+	TemplateRenstras   []any  `json:"template_renstras"`
+	TemplateRenstraIDs []any  `json:"template_renstra_ids"`
+	Templates          []any  `json:"templates"`
+}
+
+func parseMataProgramV2Input(c *fiber.Ctx) (mataProgram string, tahun string, targets []string, templateIDs []uint, idFakultasUnit string) {
+	seenTemplates := make(map[uint]bool)
+
+	addTemplateID := func(raw any) {
+		if raw == nil {
+			return
+		}
+		switch v := raw.(type) {
+		case uint:
+			if v > 0 && !seenTemplates[v] {
+				seenTemplates[v] = true
+				templateIDs = append(templateIDs, v)
+			}
+		case int:
+			if v > 0 && !seenTemplates[uint(v)] {
+				seenTemplates[uint(v)] = true
+				templateIDs = append(templateIDs, uint(v))
+			}
+		case int64:
+			if v > 0 && !seenTemplates[uint(v)] {
+				seenTemplates[uint(v)] = true
+				templateIDs = append(templateIDs, uint(v))
+			}
+		case float64:
+			if v > 0 && !seenTemplates[uint(v)] {
+				seenTemplates[uint(v)] = true
+				templateIDs = append(templateIDs, uint(v))
+			}
+		case string:
+			trimmed := strings.TrimSpace(v)
+			if trimmed == "" {
+				return
+			}
+			for _, part := range strings.Split(trimmed, ",") {
+				val := strings.TrimSpace(part)
+				if n, err := strconv.Atoi(val); err == nil && n > 0 {
+					u := uint(n)
+					if !seenTemplates[u] {
+						seenTemplates[u] = true
+						templateIDs = append(templateIDs, u)
+					}
+				}
+			}
+		}
+	}
+
+	// 1. Cek JSON body payload jika ada
+	var payload mataProgramV2RequestPayload
+	if err := c.BodyParser(&payload); err == nil {
+		mataProgram = firstNonEmpty(payload.MataProgram, payload.NamaProgram, payload.Mataprogram)
+		if payload.Tahun != nil {
+			tahun = strings.TrimSpace(fmt.Sprintf("%v", payload.Tahun))
+		}
+		if tahun == "" && payload.IdMasterTahun != nil {
+			tahun = strings.TrimSpace(fmt.Sprintf("%v", payload.IdMasterTahun))
+		}
+
+		if payload.IdFakultasUnit != nil {
+			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.IdFakultasUnit))
+		} else if payload.FakultasUnit != nil {
+			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.FakultasUnit))
+		} else if payload.Target != nil {
+			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.Target))
+		}
+
+		for _, item := range payload.Targets {
+			tStr := strings.TrimSpace(fmt.Sprintf("%v", item))
+			if tStr != "" && tStr != "<nil>" {
+				targets = append(targets, tStr)
+			}
+		}
+		for _, item := range payload.FakultasUnits {
+			tStr := strings.TrimSpace(fmt.Sprintf("%v", item))
+			if tStr != "" && tStr != "<nil>" {
+				targets = append(targets, tStr)
+			}
+		}
+
+		for _, t := range payload.TemplateRenstras {
+			addTemplateID(t)
+		}
+		for _, t := range payload.TemplateRenstraIDs {
+			addTemplateID(t)
+		}
+		for _, t := range payload.Templates {
+			addTemplateID(t)
+		}
+	}
+
+	// 2. Fallback baca dari form-urlencoded / multipart jika mataProgram atau templateIDs masih kosong
+	if mataProgram == "" {
+		mataProgram = firstNonEmpty(
+			c.FormValue("mata_program"),
+			c.FormValue("mataprogram"),
+			c.FormValue("nama_program"),
+		)
+	}
+	if tahun == "" {
+		tahun = firstNonEmpty(c.FormValue("tahun"), c.FormValue("id_master_tahun"))
+	}
+	if idFakultasUnit == "" {
+		idFakultasUnit = firstNonEmpty(c.FormValue("id_fakultas_unit"), c.FormValue("fakultas_unit"), c.FormValue("target"))
+	}
+
+	for _, key := range []string{"template_renstras", "template_renstra_ids", "template_renstra_id", "templates"} {
+		if v := c.FormValue(key); v != "" {
+			addTemplateID(v)
+		}
+	}
+
+	// 3. Fallback jika dikirim via multipart/form-data
 	if form, err := c.MultipartForm(); err == nil && form != nil {
 		for _, key := range []string{"targets[]", "targets", "fakultas_units[]", "fakultas_units"} {
 			if vals, ok := form.Value[key]; ok {
 				targets = append(targets, vals...)
 			}
 		}
-	}
-	return targets
-}
-
-func extractTemplateRenstraIDs(c *fiber.Ctx) []uint {
-	var ids []uint
-	seen := make(map[uint]bool)
-
-	addID := func(raw string) {
-		trimmed := strings.TrimSpace(raw)
-		if trimmed == "" {
-			return
-		}
-		for _, part := range strings.Split(trimmed, ",") {
-			val := strings.TrimSpace(part)
-			if n, err := strconv.Atoi(val); err == nil && n > 0 {
-				u := uint(n)
-				if !seen[u] {
-					seen[u] = true
-					ids = append(ids, u)
-				}
-			}
-		}
-	}
-
-	// 1. Check multipart form
-	if form, err := c.MultipartForm(); err == nil && form != nil {
 		for _, key := range []string{
 			"template_renstras[]", "template_renstras",
 			"template_renstra_ids[]", "template_renstra_ids",
@@ -69,45 +168,17 @@ func extractTemplateRenstraIDs(c *fiber.Ctx) []uint {
 		} {
 			if vals, ok := form.Value[key]; ok {
 				for _, v := range vals {
-					addID(v)
+					addTemplateID(v)
 				}
 			}
 		}
 	}
 
-	// 2. Check form values
-	for _, key := range []string{"template_renstras", "template_renstra_ids", "template_renstra_id"} {
-		if v := c.FormValue(key); v != "" {
-			addID(v)
-		}
+	if idFakultasUnit != "" && len(targets) == 0 {
+		targets = append(targets, idFakultasUnit)
 	}
 
-	// 3. Check JSON payload if applicable
-	type jsonPayload struct {
-		TemplateRenstraIDs []uint   `json:"template_renstra_ids"`
-		TemplateRenstras   []uint   `json:"template_renstras"`
-		TemplateIDsStr     []string `json:"template_ids"`
-	}
-	var payload jsonPayload
-	if err := c.BodyParser(&payload); err == nil {
-		for _, id := range payload.TemplateRenstraIDs {
-			if id > 0 && !seen[id] {
-				seen[id] = true
-				ids = append(ids, id)
-			}
-		}
-		for _, id := range payload.TemplateRenstras {
-			if id > 0 && !seen[id] {
-				seen[id] = true
-				ids = append(ids, id)
-			}
-		}
-		for _, str := range payload.TemplateIDsStr {
-			addID(str)
-		}
-	}
-
-	return ids
+	return
 }
 
 func GetAllMataProgramV2Handler(c *fiber.Ctx) error {
@@ -152,18 +223,7 @@ func GetMataProgramV2ByUuidHandler(c *fiber.Ctx) error {
 }
 
 func CreateMataProgramV2Handler(c *fiber.Ctx) error {
-	mataProgram := firstNonEmpty(
-		c.FormValue("mata_program"),
-		c.FormValue("mataprogram"),
-		c.FormValue("nama_program"),
-	)
-	tahunStr := firstNonEmpty(c.FormValue("tahun"), c.FormValue("id_master_tahun"))
-
-	templateIDs := extractTemplateRenstraIDs(c)
-	targets := extractMultipartTargets(c)
-	if single := firstNonEmpty(c.FormValue("id_fakultas_unit"), c.FormValue("fakultas_unit"), c.FormValue("target")); single != "" {
-		targets = append(targets, single)
-	}
+	mataProgram, tahunStr, targets, templateIDs, _ := parseMataProgramV2Input(c)
 
 	res, err := mediatr.Send[createCmd.CreateMataProgramV2Command, *createCmd.CreateMataProgramV2Result](
 		c.Context(),
@@ -181,17 +241,18 @@ func CreateMataProgramV2Handler(c *fiber.Ctx) error {
 }
 
 func UpdateMataProgramV2Handler(c *fiber.Ctx) error {
-	templateIDs := extractTemplateRenstraIDs(c)
+	mataProgram, tahunStr, targets, templateIDs, idFakultasUnit := parseMataProgramV2Input(c)
+
 	res, err := mediatr.Send[updateCmd.UpdateMataProgramV2Command, *updateCmd.UpdateMataProgramV2Result](
 		c.Context(),
 		updateCmd.UpdateMataProgramV2Command{
 			UUID:               strings.TrimSpace(c.Params("uuid")),
 			Scope:              strings.TrimSpace(c.Query("scope")),
-			MataProgram:        firstNonEmpty(c.FormValue("mata_program"), c.FormValue("mataprogram"), c.FormValue("nama_program")),
-			Tahun:              strings.TrimSpace(c.FormValue("tahun")),
-			Targets:            extractMultipartTargets(c),
+			MataProgram:        mataProgram,
+			Tahun:              tahunStr,
+			Targets:            targets,
 			TemplateRenstraIDs: templateIDs,
-			IdFakultasUnit:     strings.TrimSpace(c.FormValue("id_fakultas_unit")),
+			IdFakultasUnit:     idFakultasUnit,
 		},
 	)
 	if err != nil {
