@@ -2,6 +2,7 @@ package application
 
 import (
 	commoninfra "UnpakSiamida/common/infrastructure"
+	"UnpakSiamida/common/infrastructure/emailhub"
 	domainuser "UnpakSiamida/modules/user/domain"
 	eventUser "UnpakSiamida/modules/user/event"
 	"context"
@@ -96,8 +97,9 @@ func (h *SendAccountEmailCommandHandler) Handle(
 		return nil, fmt.Errorf("tidak ada pengguna terpilih yang memiliki alamat email valid")
 	}
 
+	eventID := uuid.New()
 	evt := eventUser.UserSendAccountEmailEvent{
-		EventID:     uuid.New(),
+		EventID:     eventID,
 		OccurredOn:  time.Now().UTC(),
 		Users:       recipients,
 		Attachments: cmd.Attachments,
@@ -109,17 +111,56 @@ func (h *SendAccountEmailCommandHandler) Handle(
 	}
 
 	outbox := commoninfra.OutboxMessage{
-		ID:            uuid.New().String(),
+		ID:            eventID.String(),
 		Type:          commoninfra.CanonicalTypeName(&evt),
 		Payload:       string(payload),
 		OccurredOnUTC: time.Now().UTC(),
 	}
 
+	now := time.Now().UTC()
+	var histories []domainuser.HistoryEmail
+	for _, rec := range recipients {
+		histories = append(histories, domainuser.HistoryEmail{
+			OutboxID:       outbox.ID,
+			UserUUID:       rec.UserUUID.String(),
+			Username:       rec.Username,
+			RecipientEmail: rec.Email,
+			Subject:        "Informasi Akun SIAMIDA V3 - Universitas Pakuan",
+			Status:         "PENDING",
+			Provider:       "GOOGLE_SMTP",
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		})
+	}
+
 	err = h.Repo.WithTx(ctx, func(txRepo domainuser.IUserRepositoryTx) error {
-		return txRepo.InsertOutbox(ctx, &outbox)
+		if err := txRepo.InsertOutbox(ctx, &outbox); err != nil {
+			return err
+		}
+		if len(histories) > 0 {
+			if err := txRepo.InsertHistoryEmails(ctx, histories); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("gagal menyimpan outbox message: %w", err)
+		return nil, fmt.Errorf("gagal menyimpan outbox & history email: %w", err)
+	}
+
+	// Broadcast live status ke WebSocket & SSE bahwa ada email antrean baru
+	for _, hItem := range histories {
+		emailhub.GetHub().Broadcast(emailhub.EmailStatusEvent{
+			Type:           "EMAIL_INSERTED",
+			OutboxID:       hItem.OutboxID,
+			UserUUID:       hItem.UserUUID,
+			RecipientEmail: hItem.RecipientEmail,
+			Username:       hItem.Username,
+			Subject:        hItem.Subject,
+			Status:         "PENDING",
+			Provider:       hItem.Provider,
+			UpdatedAt:      hItem.UpdatedAt,
+		})
 	}
 
 	return &SendAccountEmailResult{

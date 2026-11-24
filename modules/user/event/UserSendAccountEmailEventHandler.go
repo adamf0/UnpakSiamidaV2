@@ -2,6 +2,7 @@ package event
 
 import (
 	commoninfra "UnpakSiamida/common/infrastructure"
+	"UnpakSiamida/common/infrastructure/emailhub"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -13,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 const EmailAttachmentBaseDir = "./upload/email_attachments"
@@ -24,13 +27,16 @@ type loadedEmailAttachment struct {
 }
 
 type UserSendAccountEmailEventHandler struct {
+	DB       *gorm.DB
 	Telegram commoninfra.TelegramSender
 }
 
 func NewUserSendAccountEmailEventHandler(
+	db *gorm.DB,
 	tg commoninfra.TelegramSender,
 ) *UserSendAccountEmailEventHandler {
 	return &UserSendAccountEmailEventHandler{
+		DB:       db,
 		Telegram: tg,
 	}
 }
@@ -48,6 +54,29 @@ func (h UserSendAccountEmailEventHandler) Handle(
 	successCount := 0
 	var failedList []string
 
+	mailHost := strings.TrimSpace(os.Getenv("MAIL_HOST"))
+	mailPort := strings.TrimSpace(os.Getenv("MAIL_PORT"))
+	mailUser := strings.TrimSpace(os.Getenv("MAIL_USERNAME"))
+	mailPass := strings.TrimSpace(os.Getenv("MAIL_PASSWORD"))
+	mailFrom := strings.TrimSpace(os.Getenv("MAIL_FROM_ADDRESS"))
+	mailFromName := strings.TrimSpace(os.Getenv("MAIL_FROM_NAME"))
+	portalURL := strings.TrimSpace(os.Getenv("SIAMIDA_V3_URL"))
+
+	if mailFrom == "" {
+		mailFrom = mailUser
+	}
+	if mailFromName == "" {
+		mailFromName = "LPMI Universitas Pakuan"
+	}
+	if mailPort == "" {
+		mailPort = "587"
+	}
+	if portalURL == "" {
+		portalURL = "https://siamida.unpak.ac.id"
+	}
+
+	subject := "Informasi Akun SIAMIDA V3 - Universitas Pakuan"
+
 	for _, user := range event.Users {
 		email := strings.TrimSpace(user.Email)
 		if email == "" {
@@ -55,12 +84,52 @@ func (h UserSendAccountEmailEventHandler) Handle(
 			continue
 		}
 
-		if err := sendAccountCredentialEmail(user, event.Attachments, loadedAttachments); err != nil {
-			log.Printf("[Outbox:UserAccountEmail] Error sending to %s (%s): %v\n", user.Username, email, err)
-			failedList = append(failedList, fmt.Sprintf("%s (%v)", user.Username, err))
+		plainText := RenderUserAccountEmailPlainText(user, event.Attachments...)
+		htmlText := RenderUserAccountEmailHTML(user, portalURL, event.Attachments...)
+		rawMsg := buildAccountEmailMIME(mailFromName, mailFrom, email, subject, plainText, htmlText, loadedAttachments)
+
+		outboxID := event.EventID.String()
+		userUUIDStr := user.UserUUID.String()
+
+		// Tandai status history_email menjadi SENDING
+		if h.DB != nil {
+			h.updateHistoryEmailStatus(ctx, outboxID, userUUIDStr, "SENDING", "GOOGLE_SMTP", "", "", nil)
+		}
+
+		var sendErr error
+		var providerUsed string
+		var googleMessageID string
+		var googleThreadID string
+
+		// Google SMTP via App Password (Jalur Utama - 100% Headless tanpa OAuth/Token)
+		if mailHost != "" && mailUser != "" && mailPass != "" {
+			smtpErr := sendViaSMTPFallback(mailHost, mailPort, mailUser, mailPass, mailFrom, email, rawMsg)
+			if smtpErr == nil {
+				providerUsed = "GOOGLE_SMTP"
+				googleMessageID = fmt.Sprintf("<%d.%s@%s>", time.Now().UnixNano(), userUUIDStr[:8], mailHost)
+				log.Printf("[Outbox:UserAccountEmail] Email sent successfully via Google SMTP to %s <%s>\n", user.Username, email)
+			} else {
+				log.Printf("[Outbox:UserAccountEmail] Google SMTP gagal: %v\n", smtpErr)
+				sendErr = fmt.Errorf("Google SMTP error: %v", smtpErr)
+			}
+		} else {
+			sendErr = fmt.Errorf("kredensial Google SMTP belum dikonfigurasi di .env")
+		}
+
+		now := time.Now().UTC()
+		if sendErr != nil {
+			log.Printf("[Outbox:UserAccountEmail] Error sending to %s (%s): %v\n", user.Username, email, sendErr)
+			failedList = append(failedList, fmt.Sprintf("%s (%v)", user.Username, sendErr))
+
+			errMsg := sendErr.Error()
+			if h.DB != nil {
+				h.updateHistoryEmailStatus(ctx, outboxID, userUUIDStr, "FAILED", "", "", "", &errMsg)
+			}
 		} else {
 			successCount++
-			log.Printf("[Outbox:UserAccountEmail] Email sent successfully to %s <%s>\n", user.Username, email)
+			if h.DB != nil {
+				h.updateHistoryEmailStatus(ctx, outboxID, userUUIDStr, "SENT", providerUsed, googleMessageID, googleThreadID, nil, &now)
+			}
 		}
 	}
 
@@ -86,6 +155,98 @@ func (h UserSendAccountEmailEventHandler) Handle(
 		successCount, len(failedList), len(event.Users))
 
 	return nil
+}
+
+func (h *UserSendAccountEmailEventHandler) updateHistoryEmailStatus(
+	ctx context.Context,
+	outboxID, userUUID, status, provider, messageID, threadID string,
+	errMsg *string,
+	sentAt ...*time.Time,
+) {
+	if h.DB == nil {
+		return
+	}
+	now := time.Now().UTC()
+	updates := map[string]interface{}{
+		"status":     status,
+		"updated_at": now,
+	}
+	if provider != "" {
+		updates["provider"] = provider
+	}
+	if messageID != "" {
+		updates["message_id"] = messageID
+	}
+	if threadID != "" {
+		updates["thread_id"] = threadID
+	}
+	if errMsg != nil {
+		updates["error_message"] = *errMsg
+	}
+	var actualSentAt *time.Time
+	if len(sentAt) > 0 && sentAt[0] != nil {
+		actualSentAt = sentAt[0]
+		updates["sent_at"] = actualSentAt
+	}
+
+	_ = h.DB.WithContext(ctx).Table("history_email").
+		Where("outbox_id = ? AND user_uuid = ?", outboxID, userUUID).
+		Updates(updates).Error
+
+	// Ambil detail data untuk siaran live broadcast (WebSocket & SSE)
+	var row struct {
+		ID             uint   `gorm:"column:id"`
+		RecipientEmail string `gorm:"column:recipient_email"`
+		Username       string `gorm:"column:username"`
+		Subject        string `gorm:"column:subject"`
+		Provider       string `gorm:"column:provider"`
+		MessageID      string `gorm:"column:message_id"`
+	}
+	_ = h.DB.WithContext(ctx).Table("history_email").
+		Select("id, recipient_email, username, subject, provider, message_id").
+		Where("outbox_id = ? AND user_uuid = ?", outboxID, userUUID).
+		Limit(1).Scan(&row).Error
+
+	emailhub.GetHub().Broadcast(emailhub.EmailStatusEvent{
+		Type:           "EMAIL_STATUS_UPDATE",
+		ID:             row.ID,
+		OutboxID:       outboxID,
+		UserUUID:       userUUID,
+		RecipientEmail: row.RecipientEmail,
+		Username:       row.Username,
+		Subject:        row.Subject,
+		Status:         status,
+		Provider:       row.Provider,
+		MessageID:      row.MessageID,
+		ErrorMessage:   errMsg,
+		SentAt:         actualSentAt,
+		UpdatedAt:      now,
+	})
+}
+
+func sendViaSMTPFallback(host, port, user, pass, from, to string, rawMsg []byte) error {
+	if host == "" || user == "" || pass == "" {
+		return fmt.Errorf("SMTP configuration missing in environment")
+	}
+
+	if port == "465" {
+		err := sendViaSSL(host, "465", user, pass, from, to, rawMsg)
+		if err == nil {
+			return nil
+		}
+		log.Printf("[Outbox:UserAccountEmail] SMTP Port 465 failed (%v), fallback to 587...\n", err)
+		return sendViaSTARTTLS(host, "587", user, pass, from, to, rawMsg)
+	}
+
+	err := sendViaSTARTTLS(host, port, user, pass, from, to, rawMsg)
+	if err == nil {
+		return nil
+	}
+	if port == "587" {
+		log.Printf("[Outbox:UserAccountEmail] SMTP Port 587 failed (%v), fallback to 465...\n", err)
+		return sendViaSSL(host, "465", user, pass, from, to, rawMsg)
+	}
+	return err
 }
 
 func sanitizeMIMEHeaderValue(v string) string {

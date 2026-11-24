@@ -726,3 +726,68 @@ func (r *UserRepository) GetFakultasUnitInfo(ctx context.Context, id *uint, uidS
 	}
 	return row.ID, row.Type, row.Nama, nil
 }
+
+// ------------------------
+// EMAIL HISTORY METHODS
+// ------------------------
+
+func (r *UserRepository) InsertHistoryEmails(ctx context.Context, histories []domainuser.HistoryEmail) error {
+	if len(histories) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Create(&histories).Error
+}
+
+func (r *UserRepository) GetEmailStatusByOutboxID(ctx context.Context, outboxID string) ([]domainuser.HistoryEmail, error) {
+	var list []domainuser.HistoryEmail
+	err := r.db.WithContext(ctx).
+		Where("outbox_id = ?", strings.TrimSpace(outboxID)).
+		Order("id ASC").
+		Find(&list).Error
+	return list, err
+}
+
+func (r *UserRepository) GetEmailHistories(ctx context.Context, search, status string, page, limit int) ([]domainuser.HistoryEmail, int64, error) {
+	var list []domainuser.HistoryEmail
+	var total int64
+
+	q := r.db.WithContext(ctx).Model(&domainuser.HistoryEmail{})
+
+	if s := strings.TrimSpace(search); s != "" {
+		like := "%" + s + "%"
+		q = q.Where("recipient_email LIKE ? OR username LIKE ? OR subject LIKE ? OR outbox_id LIKE ? OR message_id LIKE ?",
+			like, like, like, like, like)
+	}
+
+	if st := strings.TrimSpace(status); st != "" && st != "all" {
+		q = q.Where("status = ?", strings.ToUpper(st))
+	}
+
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	err := q.Order("id DESC").Offset(offset).Limit(limit).Find(&list).Error
+	return list, total, err
+}
+
+func (r *UserRepository) GetEmailHistoryByID(ctx context.Context, id uint) (*domainuser.HistoryEmail, error) {
+	var h domainuser.HistoryEmail
+	err := r.db.WithContext(ctx).First(&h, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &h, nil
+}
+
+func (r *UserRepository) UpdateEmailHistory(ctx context.Context, id uint, updates map[string]interface{}) error {
+	return r.db.WithContext(ctx).Model(&domainuser.HistoryEmail{}).Where("id = ?", id).Updates(updates).Error
+}

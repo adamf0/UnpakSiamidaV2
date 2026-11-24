@@ -33,4 +33,11 @@ type IUserRepository interface {
 	DeleteUserAbac(ctx context.Context, uid uuid.UUID) error
 	CheckUserAbacExists(ctx context.Context, userID uint, tahun string, fuID *uint, role string) (bool, error)
 	GetFakultasUnitInfo(ctx context.Context, id *uint, uidStr string) (idRes uint, typeRes string, namaRes string, err error)
+
+	// Email History & Outbox Tracking
+	InsertHistoryEmails(ctx context.Context, histories []HistoryEmail) error
+	GetEmailStatusByOutboxID(ctx context.Context, outboxID string) ([]HistoryEmail, error)
+	GetEmailHistories(ctx context.Context, search, status string, page, limit int) ([]HistoryEmail, int64, error)
+	GetEmailHistoryByID(ctx context.Context, id uint) (*HistoryEmail, error)
+	UpdateEmailHistory(ctx context.Context, id uint, updates map[string]interface{}) error
 }

@@ -14,16 +14,21 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
 	"github.com/mehdihadeli/go-mediatr"
 
 	commondomain "UnpakSiamida/common/domain"
 	"UnpakSiamida/common/helper"
 	commoninfra "UnpakSiamida/common/infrastructure"
+	"UnpakSiamida/common/infrastructure/emailhub"
 	commonpresentation "UnpakSiamida/common/presentation"
 
 	CreateUser "UnpakSiamida/modules/user/application/CreateUser"
 	DeleteUser "UnpakSiamida/modules/user/application/DeleteUser"
+	getEmailHistories "UnpakSiamida/modules/user/application/GetEmailHistories"
+	getEmailStatus "UnpakSiamida/modules/user/application/GetEmailStatus"
+	getGoogleAuthStatus "UnpakSiamida/modules/user/application/GetGoogleAuthStatus"
 	GetAllUserOptions "UnpakSiamida/modules/user/application/GetAllUserOptions"
 	GetAllUsers "UnpakSiamida/modules/user/application/GetAllUsers"
 	GetUser "UnpakSiamida/modules/user/application/GetUser"
@@ -31,10 +36,9 @@ import (
 	SendAccountEmail "UnpakSiamida/modules/user/application/SendAccountEmail"
 	SetupUuidUser "UnpakSiamida/modules/user/application/SetupUuidUser"
 	UpdateUser "UnpakSiamida/modules/user/application/UpdateUser"
+	verifyEmailHistory "UnpakSiamida/modules/user/application/VerifyEmailHistory"
 	userdomain "UnpakSiamida/modules/user/domain"
 	eventUser "UnpakSiamida/modules/user/event"
-
-	"gorm.io/gorm"
 )
 
 // =======================================================
@@ -643,7 +647,92 @@ func SendAccountEmailHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
+// =======================================================
+// EMAIL HISTORY & REALTIME CHECK HANDLERS
+// =======================================================
+
+func GetEmailStatusHandler(c *fiber.Ctx) error {
+	outboxID := strings.TrimSpace(c.Query("outbox_id"))
+	if outboxID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "InvalidParam",
+			"message": "Parameter outbox_id wajib diisi",
+		})
+	}
+	verifyLive := c.Query("verify") == "true"
+
+	res, err := mediatr.Send[getEmailStatus.GetEmailStatusQuery, *getEmailStatus.GetEmailStatusResult](
+		c.Context(),
+		getEmailStatus.GetEmailStatusQuery{
+			OutboxID:   outboxID,
+			VerifyLive: verifyLive,
+		},
+	)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
+}
+
+func GetEmailHistoriesHandler(c *fiber.Ctx) error {
+	search := strings.TrimSpace(c.Query("search"))
+	status := strings.TrimSpace(c.Query("status"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+
+	res, err := mediatr.Send[getEmailHistories.GetEmailHistoriesQuery, *getEmailHistories.GetEmailHistoriesResult](
+		c.Context(),
+		getEmailHistories.GetEmailHistoriesQuery{
+			Search: search,
+			Status: status,
+			Page:   page,
+			Limit:  limit,
+		},
+	)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
+}
+
+func VerifyEmailHistoryHandler(c *fiber.Ctx) error {
+	idParam := c.Params("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "InvalidID",
+			"message": "ID riwayat email tidak valid",
+		})
+	}
+
+	res, err := mediatr.Send[verifyEmailHistory.VerifyEmailHistoryCommand, *verifyEmailHistory.VerifyEmailHistoryResult](
+		c.Context(),
+		verifyEmailHistory.VerifyEmailHistoryCommand{
+			ID: uint(id),
+		},
+	)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
+}
+
+func GetGoogleAuthStatusHandler(c *fiber.Ctx) error {
+	res, err := mediatr.Send[getGoogleAuthStatus.GetGoogleAuthStatusQuery, *getGoogleAuthStatus.GetGoogleAuthStatusResult](
+		c.Context(),
+		getGoogleAuthStatus.GetGoogleAuthStatusQuery{},
+	)
+	if err != nil {
+		return commoninfra.HandleError(c, err)
+	}
+
+	return c.JSON(res)
+}
+
+func ModuleUser(app *fiber.App) {
 	admin := []string{"admin"}
 	whoamiURL := "http://localhost:3000/whoami"
 
@@ -662,6 +751,39 @@ func ModuleUser(app *fiber.App, dbs ...*gorm.DB) {
 
 	app.Post("/user/:uuid/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendAccountEmailHandler)
 	app.Post("/users/send-email", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), SendAccountEmailHandler)
+
+	// Status pengiriman email & Realtime check
+	app.Get("/users/email-status", commonpresentation.JWTMiddleware(), GetEmailStatusHandler)
+	app.Get("/users/email-history", commonpresentation.JWTMiddleware(), GetEmailHistoriesHandler)
+	app.Post("/users/email-history/:id/verify", commonpresentation.JWTMiddleware(), VerifyEmailHistoryHandler)
+
+	// Live Streaming Realtime Email Status (WebSocket & SSE)
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/ws/email-status", websocket.New(func(conn *websocket.Conn) {
+		hub := emailhub.GetHub()
+		client := hub.RegisterWS(conn)
+		defer hub.UnregisterWS(client)
+
+		_ = conn.WriteJSON(fiber.Map{
+			"type":    "connected",
+			"message": "Connected to Email Status Live Stream",
+		})
+
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				break
+			}
+		}
+	}))
+	app.Get("/users/email-history/live", emailhub.HandleSSE)
+
+	app.Get("/auth/google/status", commonpresentation.JWTMiddleware(), GetGoogleAuthStatusHandler)
 
 	ModuleUserAbac(app)
 }

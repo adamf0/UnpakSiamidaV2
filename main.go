@@ -376,7 +376,7 @@ func main() {
 	commoninfra.RegisterEvent[eventRenstra.RenstraSendEmailEvent](dispatcher)
 
 	beritaacaraPresentation.ModuleBeritaAcara(app)
-	userPresentation.ModuleUser(app, db)
+	userPresentation.ModuleUser(app)
 	standarrenstraPresentation.ModuleStandarRenstra(app)
 	indikatorrenstraPresentation.ModuleIndikatorRenstra(app, db, dbIku)
 	tahunrenstraPresentation.ModuleTahunRenstra(app)

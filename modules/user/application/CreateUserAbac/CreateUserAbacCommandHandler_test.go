@@ -25,6 +25,9 @@ type mockUserRepo struct {
 func (m *mockUserRepo) GetByUuid(ctx context.Context, uid uuid.UUID) (*domainuser.User, error) {
 	return nil, nil
 }
+func (m *mockUserRepo) GetByUuids(ctx context.Context, uids []uuid.UUID) ([]*domainuser.User, error) {
+	return nil, nil
+}
 func (m *mockUserRepo) GetAllStrict(ctx context.Context) ([]domainuser.UserOptions, error) {
 	return nil, nil
 }
@@ -77,6 +80,21 @@ func (m *mockUserRepo) CheckUserAbacExists(ctx context.Context, userID uint, tah
 }
 func (m *mockUserRepo) GetFakultasUnitInfo(ctx context.Context, id *uint, uidStr string) (uint, string, string, error) {
 	return 0, "", "", nil
+}
+func (m *mockUserRepo) InsertHistoryEmails(ctx context.Context, histories []domainuser.HistoryEmail) error {
+	return nil
+}
+func (m *mockUserRepo) GetEmailStatusByOutboxID(ctx context.Context, outboxID string) ([]domainuser.HistoryEmail, error) {
+	return nil, nil
+}
+func (m *mockUserRepo) GetEmailHistories(ctx context.Context, search, status string, page, limit int) ([]domainuser.HistoryEmail, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockUserRepo) GetEmailHistoryByID(ctx context.Context, id uint) (*domainuser.HistoryEmail, error) {
+	return nil, nil
+}
+func (m *mockUserRepo) UpdateEmailHistory(ctx context.Context, id uint, updates map[string]interface{}) error {
+	return nil
 }
 
 func TestCreateUserAbac_CheckRoleInDuplicateCheck(t *testing.T) {

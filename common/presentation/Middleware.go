@@ -60,11 +60,20 @@ func DefaultBlacklistedHeaderNames() map[string]bool {
 func DefaultHeaderSecurityConfig() *HeaderSecurityConfig {
 	return &HeaderSecurityConfig{
 		BlacklistedHeaderNames: DefaultBlacklistedHeaderNames(),
-		AllowDomains:           []string{"siamida.unpak.ac.id", "localhost", "localhost:3000", "thunderclient.com"},
-		MaxHeaderLen:           8192,
-		ResolveAndCheck:        false,
-		LookupTimeout:          1 * time.Second,
-		BlockedCIDRs:           []string{},
+		AllowDomains: []string{
+			"siamida.unpak.ac.id",
+			"v3siamida.unpak.ac.id",
+			"unpak.ac.id",
+			"localhost",
+			"localhost:3000",
+			"localhost:5173",
+			"127.0.0.1",
+			"thunderclient.com",
+		},
+		MaxHeaderLen:    8192,
+		ResolveAndCheck: false,
+		LookupTimeout:   1 * time.Second,
+		BlockedCIDRs:    []string{},
 	}
 }
 
@@ -162,6 +171,7 @@ func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 	blocked := parseBlockedCIDRs(cfg.BlockedCIDRs)
 
 	return func(c *fiber.Ctx) error {
+		isWS := strings.HasPrefix(c.Path(), "/ws")
 
 		for name, vals := range c.GetReqHeaders() {
 			for _, val := range vals {
@@ -188,8 +198,10 @@ func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 					return badRequest(c, err)
 				}
 
-				if err := validateURLDomain(decoded, cfg, blocked); err != nil {
-					return badRequest(c, err)
+				if !isWS {
+					if err := validateURLDomain(decoded, cfg, blocked); err != nil {
+						return badRequest(c, err)
+					}
 				}
 
 				if err := validateHostHeader(name, decoded, cfg); err != nil {
@@ -198,8 +210,10 @@ func HeaderSecurityMiddleware(cfg *HeaderSecurityConfig) fiber.Handler {
 			}
 		}
 
-		if err := validateEmbeddedDomains(c, cfg); err != nil {
-			return badRequest(c, err)
+		if !isWS {
+			if err := validateEmbeddedDomains(c, cfg); err != nil {
+				return badRequest(c, err)
+			}
 		}
 
 		return c.Next()

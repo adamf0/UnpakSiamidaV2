@@ -15,8 +15,12 @@ import (
 	createAbac "UnpakSiamida/modules/user/application/CreateUserAbac"
 	deleteAbac "UnpakSiamida/modules/user/application/DeleteUserAbac"
 	getAllAbac "UnpakSiamida/modules/user/application/GetAllUserAbac"
+	getEmailHistories "UnpakSiamida/modules/user/application/GetEmailHistories"
+	getEmailStatus "UnpakSiamida/modules/user/application/GetEmailStatus"
+	getGoogleAuthStatus "UnpakSiamida/modules/user/application/GetGoogleAuthStatus"
 	sendAccountEmail "UnpakSiamida/modules/user/application/SendAccountEmail"
 	updateAbac "UnpakSiamida/modules/user/application/UpdateUserAbac"
+	verifyEmailHistory "UnpakSiamida/modules/user/application/VerifyEmailHistory"
 
 	"github.com/mehdihadeli/go-mediatr"
 
@@ -140,6 +144,33 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		Repo: repoUser,
 	})
 
+	// Email Status, History & Verification Handlers
+	mediatr.RegisterRequestHandler[
+		getEmailStatus.GetEmailStatusQuery,
+		*getEmailStatus.GetEmailStatusResult,
+	](&getEmailStatus.GetEmailStatusQueryHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getEmailHistories.GetEmailHistoriesQuery,
+		*getEmailHistories.GetEmailHistoriesResult,
+	](&getEmailHistories.GetEmailHistoriesQueryHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		verifyEmailHistory.VerifyEmailHistoryCommand,
+		*verifyEmailHistory.VerifyEmailHistoryResult,
+	](&verifyEmailHistory.VerifyEmailHistoryCommandHandler{
+		Repo: repoUser,
+	})
+
+	mediatr.RegisterRequestHandler[
+		getGoogleAuthStatus.GetGoogleAuthStatusQuery,
+		*getGoogleAuthStatus.GetGoogleAuthStatusResult,
+	](&getGoogleAuthStatus.GetGoogleAuthStatusQueryHandler{})
+
 	// =========================
 	// Domain Event Handler
 	// =========================
@@ -155,10 +186,12 @@ func RegisterModuleUser(db *gorm.DB, tg commoninfra.TelegramSender) error {
 		eventUser.NewUserCreatedEventHandler(tg),
 	)
 
+	_ = db.AutoMigrate(&domainuser.HistoryEmail{})
+
 	commoninfra.RegisterDomainEvent(&eventUser.UserSendAccountEmailEvent{})
 
 	mediatr.RegisterNotificationHandler[eventUser.UserSendAccountEmailEvent](
-		eventUser.NewUserSendAccountEmailEventHandler(tg),
+		eventUser.NewUserSendAccountEmailEventHandler(db, tg),
 	)
 
 	commoninfra.RegisterValidation(create.CreateUserCommandValidation, "UserCreate.Validation")
