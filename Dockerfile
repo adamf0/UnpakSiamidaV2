@@ -43,7 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set default timezone to Western Indonesia Time (WIB)
-ENV TZ=Asia/Jakarta
+ENV TZ=Asia/Jakarta \
+    GODEBUG="multipartmaxparts=50000"
 
 # Create required directories for uploads and runtime assets
 RUN mkdir -p /app/upload/tmp \
