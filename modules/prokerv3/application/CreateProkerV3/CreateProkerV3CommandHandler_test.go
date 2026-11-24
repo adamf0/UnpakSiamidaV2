@@ -1,8 +1,10 @@
 package CreateProkerV3
 
 import (
+	commondomain "UnpakSiamida/common/domain"
 	domain "UnpakSiamida/modules/prokerv3/domain"
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -25,10 +27,6 @@ func (s *stubCreateProkerRepo) ExistsActiveProker(_ context.Context, fuID int, t
 	s.checkedMpID = mpID
 	s.checkedNama = namaProg
 	return s.existsResult, s.existsErr
-}
-
-func (s *stubCreateProkerRepo) GetActiveProkerUUID(_ context.Context, _ int, _ string, _ *int, _ string) (string, error) {
-	return "00000000-0000-0000-0000-000000000001", nil
 }
 
 func (s *stubCreateProkerRepo) ResolveMasterTahun(_ context.Context, _ string) (int, error) {
@@ -62,17 +60,18 @@ func TestCreateProkerV3CommandHandler_Uniqueness(t *testing.T) {
 		repo := &stubCreateProkerRepo{existsResult: true}
 		h := &CreateProkerV3CommandHandler{Repo: repo}
 
-		res, err := h.Handle(context.Background(), CreateProkerV3Command{
+		_, err := h.Handle(context.Background(), CreateProkerV3Command{
 			IdFakultasUnit: &fuID,
 			IdMataProgram:  &mpID,
 			NamaProgram:    "Program Uji Coba",
 			Tahun:          "2027",
 		})
-		if err != nil {
-			t.Fatalf("expected existing UUID, got error: %v", err)
+		if err == nil {
+			t.Fatalf("expected conflict error, got nil")
 		}
-		if res != "00000000-0000-0000-0000-000000000001" {
-			t.Fatalf("expected 00000000-0000-0000-0000-000000000001, got %q", res)
+		var domErr commondomain.Error
+		if !errors.As(err, &domErr) || domErr.Code != "ProkerV3.DuplicateProkerUnitTahun" {
+			t.Fatalf("expected ProkerV3.DuplicateProkerUnitTahun, got %v", err)
 		}
 		if repo.createCalled || repo.resolveMpCalls > 0 {
 			t.Fatalf("expected no DB writes on duplicate, create=%v resolveMpCalls=%d", repo.createCalled, repo.resolveMpCalls)

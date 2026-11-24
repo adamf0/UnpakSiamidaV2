@@ -1,7 +1,6 @@
 package presentation
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -105,39 +104,6 @@ func extractActorUnitAssignments(c *fiber.Ctx) (level string, userFU string, ass
 		}
 	}
 	return
-}
-
-func getContextWithActiveUnit(c *fiber.Ctx) context.Context {
-	targetFU := strings.TrimSpace(c.Query("fakultas_unit"))
-	if targetFU == "" {
-		targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
-	}
-	if targetFU == "" {
-		targetFU = strings.TrimSpace(c.Query("id_fakultas_unit"))
-	}
-	if targetFU == "" {
-		targetFU = strings.TrimSpace(c.Get("X-Active-Unit"))
-	}
-	if targetFU == "" {
-		targetFU = strings.TrimSpace(c.Get("X-Position-Unit"))
-	}
-	if targetFU == "" {
-		_, userFU, assignedUnitIDs, _ := extractActorUnitAssignments(c)
-		if len(assignedUnitIDs) > 0 {
-			targetFU = strconv.Itoa(int(assignedUnitIDs[0]))
-		} else if userFU != "" {
-			targetFU = userFU
-		}
-	}
-
-	ctx := c.UserContext()
-	if ctx == nil {
-		ctx = c.Context()
-	}
-	if targetFU != "" {
-		ctx = context.WithValue(ctx, "active_unit", targetFU)
-	}
-	return ctx
 }
 
 func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string, parentFakultas ...string) bool {
@@ -462,7 +428,7 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err == nil {
 			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query)
+			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 			if err == nil && existing != nil {
 				if existing.DeletedAt != nil {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah dihapus dan tidak dapat diubah"})
@@ -498,7 +464,7 @@ func UpdateBebanYayasanHandler(c *fiber.Ctx) error {
 	level, _ := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query)
+		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 		if err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit anda"})
@@ -542,7 +508,7 @@ func UpdateBatalProkerHandler(c *fiber.Ctx) error {
 	level, _ := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query)
+		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 		if err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit anda"})
@@ -605,7 +571,7 @@ func DeleteProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 
 	query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-	existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query)
+	existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -680,7 +646,7 @@ func GetProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 
 	query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-	res, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query)
+	res, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -910,7 +876,7 @@ func UpdateProkerStatusHandler(c *fiber.Ctx) error {
 
 	if parsedUuid, err := uuid.Parse(strings.TrimSpace(rawUuid)); err == nil && level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		if existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](getContextWithActiveUnit(c), query); err == nil && existing != nil {
+		if existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query); err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit penugasan anda"})
 			}
@@ -1186,7 +1152,7 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 	}
 
 	proker, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](
-		getContextWithActiveUnit(c),
+		c.Context(),
 		getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid},
 	)
 	if err != nil {
@@ -1358,7 +1324,7 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 	}
 
 	proker, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](
-		getContextWithActiveUnit(c),
+		c.Context(),
 		getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid},
 	)
 	if err != nil {
@@ -1640,12 +1606,6 @@ func CheckJadwalProkerV3Handler(c *fiber.Ctx) error {
 	if unitParam == "" {
 		unitParam = strings.TrimSpace(c.Query("fakultas_unit"))
 	}
-	if unitParam == "" {
-		unitParam = strings.TrimSpace(c.Query("unit_uuid"))
-	}
-	if unitParam == "" {
-		unitParam = strings.TrimSpace(c.Query("filter_fakultas_unit"))
-	}
 
 	result, err := mediatr.Send[
 		checkJadwal.CheckJadwalProkerV3Query,
@@ -1854,15 +1814,6 @@ func GetUnitPaguSummaryHandler(c *fiber.Ctx) error {
 
 	_, userFU := commonpresentation.GetUserInfo(c)
 	reqFu := strings.TrimSpace(c.Query("id_fakultas_unit"))
-	if reqFu == "" {
-		reqFu = strings.TrimSpace(c.Query("fakultas_unit"))
-	}
-	if reqFu == "" {
-		reqFu = strings.TrimSpace(c.Query("unit_uuid"))
-	}
-	if reqFu == "" {
-		reqFu = strings.TrimSpace(c.Query("filter_fakultas_unit"))
-	}
 
 	result, err := mediatr.Send[
 		getUnitPagu.GetUnitPaguSummaryQuery,
