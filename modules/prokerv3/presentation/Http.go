@@ -1,6 +1,7 @@
 package presentation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -104,6 +105,43 @@ func extractActorUnitAssignments(c *fiber.Ctx) (level string, userFU string, ass
 		}
 	}
 	return
+}
+
+func prokerContextWithActiveUnit(c *fiber.Ctx) (context.Context, string) {
+	targetFU := strings.TrimSpace(c.Query("fakultas_unit"))
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.FormValue("id_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Query("filter_fakultas_unit"))
+	}
+	if targetFU == "" {
+		targetFU = strings.TrimSpace(c.Get("X-Active-Unit"))
+	}
+	if targetFU == "" {
+		_, userFU, assignedUnitIDs, _ := extractActorUnitAssignments(c)
+		if len(assignedUnitIDs) > 0 {
+			targetFU = strconv.Itoa(int(assignedUnitIDs[0]))
+		} else {
+			targetFU = strings.TrimSpace(userFU)
+		}
+	}
+
+	ctx := c.UserContext()
+	if ctx == nil {
+		ctx = c.Context()
+	}
+	if targetFU != "" && targetFU != "all" && targetFU != "semua" && targetFU != "-1" && targetFU != "0" {
+		ctx = context.WithValue(ctx, "active_unit", targetFU)
+		return ctx, targetFU
+	}
+	return ctx, ""
 }
 
 func canAccessProkerUnit(c *fiber.Ctx, itemUnitID *int, itemUnitUUID string, itemUnitName string, parentFakultas ...string) bool {
@@ -423,12 +461,13 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 	}
 	cmd.UUID = rawUuid
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	level, _ := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
 		parsedUuid, err := uuid.Parse(rawUuid)
 		if err == nil {
 			query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+			existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query)
 			if err == nil && existing != nil {
 				if existing.DeletedAt != nil {
 					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Program kerja sudah dihapus dan tidak dapat diubah"})
@@ -440,7 +479,7 @@ func UpdateProkerV3Handlerfunc(c *fiber.Ctx) error {
 		}
 	}
 
-	uuidResult, err := mediatr.Send[updateProker.UpdateProkerV3Command, string](c.Context(), cmd)
+	uuidResult, err := mediatr.Send[updateProker.UpdateProkerV3Command, string](ctx, cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -461,10 +500,11 @@ func UpdateBebanYayasanHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid proker UUID"})
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	level, _ := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query)
 		if err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit anda"})
@@ -479,7 +519,7 @@ func UpdateBebanYayasanHandler(c *fiber.Ctx) error {
 	}
 
 	result, err := mediatr.Send[updateBeban.UpdateBebanYayasanCommand, *updateBeban.UpdateBebanYayasanResult](
-		c.Context(),
+		ctx,
 		updateBeban.UpdateBebanYayasanCommand{
 			UUID:         parsedUuid,
 			BebanYayasan: newBebanPtr,
@@ -505,10 +545,11 @@ func UpdateBatalProkerHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid proker UUID"})
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	level, _ := commonpresentation.GetUserInfo(c)
 	if level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+		existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query)
 		if err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit anda"})
@@ -570,8 +611,9 @@ func DeleteProkerV3Handlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, domain.ProkerNotFound())
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-	existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+	existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -645,8 +687,9 @@ func GetProkerV3Handlerfunc(c *fiber.Ctx) error {
 		return commoninfra.HandleError(c, domain.ProkerNotFound())
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-	res, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query)
+	res, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -869,14 +912,18 @@ func UpdateProkerStatusHandler(c *fiber.Ctx) error {
 		Catatan:          strings.TrimSpace(c.FormValue("catatan")),
 	}
 
+	ctx, activeUnit := prokerContextWithActiveUnit(c)
 	level, userFU := commonpresentation.GetUserInfo(c)
+	if activeUnit != "" {
+		userFU = activeUnit
+	}
 	cmd.UUID = strings.TrimSpace(rawUuid)
 	cmd.Level = level
 	cmd.UserFU = userFU
 
 	if parsedUuid, err := uuid.Parse(strings.TrimSpace(rawUuid)); err == nil && level != "admin" {
 		query := getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid}
-		if existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](c.Context(), query); err == nil && existing != nil {
+		if existing, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](ctx, query); err == nil && existing != nil {
 			if !canAccessProkerUnit(c, existing.IdFakultasUnit, existing.UuidFakultasUnit, existing.NamaFakultasUnit, existing.ParentFakultas) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "FORBIDDEN", "error": "Akses ditolak: bukan unit penugasan anda"})
 			}
@@ -893,7 +940,7 @@ func UpdateProkerStatusHandler(c *fiber.Ctx) error {
 		cmd.UserID = &uid
 	}
 
-	res, err := mediatr.Send[updateStatus.UpdateStatusV3Command, *domain.UpdateStatusResult](c.Context(), cmd)
+	res, err := mediatr.Send[updateStatus.UpdateStatusV3Command, *domain.UpdateStatusResult](ctx, cmd)
 	if err != nil {
 		return commoninfra.HandleError(c, err)
 	}
@@ -1151,8 +1198,9 @@ func UploadProkerDokumenChunkHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid matrix UUID"})
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	proker, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](
-		c.Context(),
+		ctx,
 		getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid},
 	)
 	if err != nil {
@@ -1323,8 +1371,9 @@ func UploadProkerDokumenHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid matrix UUID"})
 	}
 
+	ctx, _ := prokerContextWithActiveUnit(c)
 	proker, err := mediatr.Send[getProker.GetProkerV3ByUuidQuery, *domain.ProkerV3Default](
-		c.Context(),
+		ctx,
 		getProker.GetProkerV3ByUuidQuery{UUID: parsedUuid},
 	)
 	if err != nil {

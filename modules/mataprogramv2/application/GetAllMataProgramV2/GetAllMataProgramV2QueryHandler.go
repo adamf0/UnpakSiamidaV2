@@ -67,13 +67,13 @@ func (h *GetAllMataProgramV2QueryHandler) Handle(ctx context.Context, q GetAllMa
 		limit = 10
 	}
 
-	total, err := h.Repo.CountGroups(ctx, filter)
+	total, err := h.Repo.Count(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	offset := (page - 1) * limit
-	groupSummaries, err := h.Repo.GetGroupSummaries(ctx, filter, offset, limit)
+	groupSummaries, err := h.Repo.GetPaged(ctx, filter, offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -82,12 +82,13 @@ func (h *GetAllMataProgramV2QueryHandler) Handle(ctx context.Context, q GetAllMa
 	for _, gs := range groupSummaries {
 		mpIDs = append(mpIDs, gs.ID)
 	}
+	unitsMap, _ := h.Repo.GetTargetUnitsByMataProgramIDs(ctx, mpIDs)
 	templatesMap, _ := h.Repo.GetTemplatesByMataProgramIDs(ctx, mpIDs)
 	prokerUnitsMap, _ := h.Repo.GetProkerUnitsByMataProgramIDs(ctx, mpIDs)
 
 	items := make([]domain.MataProgramV2GroupedRow, 0, len(groupSummaries))
 	for _, gs := range groupSummaries {
-		units, _ := h.Repo.GetGroupUnits(ctx, gs.MataProgram, gs.IdMasterTahun, filter.ShowDeleted)
+		units := unitsMap[gs.ID]
 
 		var totalProker int64
 		var labelParts []string

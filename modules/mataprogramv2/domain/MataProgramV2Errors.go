@@ -19,14 +19,21 @@ func MataProgramRequired() commondomain.Error {
 func TargetsRequired() commondomain.Error {
 	return commondomain.FailureError(
 		"MataProgramV2.TargetsRequired",
-		"Minimal satu Fakultas / Prodi / Unit (target) wajib dipilih",
+		"Minimal satu Template IKU sasaran wajib dipilih",
 	)
 }
 
-func InvalidTargets() commondomain.Error {
+func DuplicateMataProgram() commondomain.Error {
+	return commondomain.ConflictError(
+		"MataProgramV2.DuplicateMataProgram",
+		"Mata program dengan nama dan tahun yang sama sudah ada",
+	)
+}
+
+func InvalidTemplates() commondomain.Error {
 	return commondomain.FailureError(
-		"MataProgramV2.InvalidTargets",
-		"Gagal menyimpan data mata program v2. Pastikan target unit valid.",
+		"MataProgramV2.InvalidTemplates",
+		"Template IKU sasaran yang dipilih tidak valid atau tidak sesuai dengan tahun mata program",
 	)
 }
 

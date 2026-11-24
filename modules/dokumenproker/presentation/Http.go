@@ -85,15 +85,14 @@ func getDokumenProkerUploadFolder(fakultasUnitVal, mataProgramVal, jenisDokVal s
 				Select("COALESCE(mp.mata_program, '') as mata_program, COALESCE(mt.tahun, '') as tahun, COALESCE(vfu.nama_fak_prod_unit, '') as fakultas_unit").
 				Joins("LEFT JOIN mata_programv2 mp ON mpr.id_mata_program = mp.id").
 				Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-				Joins("LEFT JOIN v_fakultas_unit vfu ON COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit) = vfu.id").
+				Joins("LEFT JOIN v_fakultas_unit vfu ON mpr.id_fakultas_unit = vfu.id").
 				Where("mpr.uuid = ? OR mpr.id = ?", mpStr, mpStr).
 				Take(&row).Error
 
 			if row.MataProgram == "" {
 				_ = dokumenProkerDb.Table("mata_programv2 mp").
-					Select("mp.mata_program, mt.tahun, vfu.nama_fak_prod_unit as fakultas_unit").
+					Select("mp.mata_program, COALESCE(mt.tahun, '') as tahun").
 					Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-					Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
 					Where("mp.uuid = ? OR mp.id = ?", mpStr, mpStr).
 					Take(&row).Error
 			}

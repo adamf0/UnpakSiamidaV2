@@ -29,36 +29,9 @@ const flatSelectSQL = `
 	COALESCE(mt.tahun, '') as tahun,
 	mp.mata_program,
 	mp.mata_program as nama,
-	mp.id_fakultas_unit,
-	COALESCE(vfu.uuid, '') as fakultas_unit_uuid,
-	CASE 
-		WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
-		THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
-		ELSE COALESCE(vfu.nama_fak_prod_unit, '') 
-	END as fakultas_unit_label,
-	COALESCE(vfu.jenjang, '') as jenjang,
-	COALESCE(vfu.type, '') as type,
-	COALESCE(vfu.fakultas, '') as fakultas,
 	COALESCE((SELECT COUNT(*) FROM matrix_proker mpk WHERE mpk.id_mata_program = mp.id AND mpk.deleted_at IS NULL), 0) AS proker_count,
 	mp.created_at,
 	mp.updated_at,
-	mp.deleted_at
-`
-
-const unitBadgeSelectSQL = `
-	mp.id,
-	mp.uuid,
-	mp.id_fakultas_unit,
-	COALESCE(vfu.uuid, '') as fakultas_unit_uuid,
-	CASE 
-		WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
-		THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
-		ELSE COALESCE(vfu.nama_fak_prod_unit, '') 
-	END as fakultas_unit_label,
-	COALESCE(vfu.jenjang, '') as jenjang,
-	COALESCE(vfu.type, '') as type,
-	COALESCE(vfu.fakultas, '') as fakultas,
-	COALESCE((SELECT COUNT(*) FROM matrix_proker mpk WHERE mpk.id_mata_program = mp.id AND mpk.deleted_at IS NULL), 0) AS proker_count,
 	mp.deleted_at
 `
 
@@ -94,7 +67,19 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 			}
 		case "fakultasunit", "fakultas_unit", "unit", "stakeholder", "target":
 			like := "%" + val + "%"
-			q = q.Where("(LOWER(vfu.nama_fak_prod_unit) LIKE ? OR LOWER(vfu.jenjang) LIKE ? OR LOWER(vfu.fakultas) LIKE ?)", like, like, like)
+			q = q.Where(`EXISTS (
+				SELECT 1 FROM mata_programv2_template_renstra mptr_u
+				JOIN template_renstra tr_u ON mptr_u.id_template_renstra = tr_u.id
+				JOIN v_fakultas_unit vfu_u ON tr_u.fakultas_unit = vfu_u.id
+				WHERE mptr_u.id_mata_programv2 = mp.id
+				  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr_u.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+				  AND (
+					LOWER(vfu_u.nama_fak_prod_unit) LIKE ? OR
+					LOWER(COALESCE(vfu_u.jenjang, '')) LIKE ? OR
+					LOWER(CONCAT(vfu_u.nama_fak_prod_unit, ' (', COALESCE(vfu_u.jenjang, ''), ')')) LIKE ? OR
+					LOWER(COALESCE(vfu_u.fakultas, '')) LIKE ?
+				  )
+			)`, like, like, like, like)
 		case "templaterenstrasasaran", "templaterenstra", "template_renstra", "indikator", "standar", "sasaran", "templaterenstraorunit":
 			like := "%" + val + "%"
 			q = q.Where(`EXISTS (
@@ -103,30 +88,23 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 				LEFT JOIN master_indikator_renstra mir2 ON tr2.indikator = mir2.id
 				LEFT JOIN master_standar_renstra msr2 ON mir2.id_master_standar = msr2.id
 				LEFT JOIN v_fakultas_unit vfu2 ON tr2.fakultas_unit = vfu2.id
-				WHERE (mptr2.id_mata_programv2 = mp.id OR mptr2.id_mata_programv2 IN (
-					SELECT mp_sub.id FROM mata_programv2 mp_sub 
-					WHERE mp_sub.mata_program = mp.mata_program 
-					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
-				))
+				WHERE mptr2.id_mata_programv2 = mp.id
+				  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr2.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
 				  AND (
 					LOWER(mir2.indikator) LIKE ? OR
 					LOWER(msr2.nama) LIKE ? OR
 					LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR
 					LOWER(COALESCE(vfu2.jenjang, '')) LIKE ? OR
 					LOWER(CONCAT(vfu2.nama_fak_prod_unit, ' (', COALESCE(vfu2.jenjang, ''), ')')) LIKE ? OR
-					LOWER(vfu2.fakultas) LIKE ?
+					LOWER(COALESCE(vfu2.fakultas, '')) LIKE ?
 				  )
 			)`, like, like, like, like, like, like)
-		case "info", "infounit", "info_unit", "prokerunit", "proker_unit", "matrixproker", "matrix_proker":
+		case "informasi", "info", "infounit", "info_unit", "prokerunit", "proker_unit", "matrixproker", "matrix_proker":
 			like := "%" + val + "%"
 			q = q.Where(`EXISTS (
 				SELECT 1 FROM matrix_proker mpk
-				JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
 				JOIN v_fakultas_unit vfu_p ON mpk.id_fakultas_unit = vfu_p.id
-				WHERE (mpk.id_mata_program = mp.id OR (
-					mp_src.mata_program = mp.mata_program
-					AND (mp_src.id_master_tahun = mp.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
-				))
+				WHERE mpk.id_mata_program = mp.id
 				  AND mpk.deleted_at IS NULL
 				  AND (
 					LOWER(vfu_p.nama_fak_prod_unit) LIKE ? OR
@@ -151,47 +129,51 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 
 	if filter.Unit != "" && filter.Unit != "all" {
 		if _, err := uuid.Parse(filter.Unit); err == nil {
-			q = q.Where("vfu.uuid = ?", filter.Unit)
+			q = q.Where(`EXISTS (
+				SELECT 1 FROM mata_programv2_template_renstra mptr_u
+				JOIN template_renstra tr_u ON mptr_u.id_template_renstra = tr_u.id
+				JOIN v_fakultas_unit vfu_u ON tr_u.fakultas_unit = vfu_u.id
+				WHERE mptr_u.id_mata_programv2 = mp.id
+				  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr_u.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+				  AND vfu_u.uuid = ?
+			)`, filter.Unit)
 		} else if id, err := strconv.Atoi(filter.Unit); err == nil && id > 0 {
-			q = q.Where("mp.id_fakultas_unit = ?", id)
+			q = q.Where(`EXISTS (
+				SELECT 1 FROM mata_programv2_template_renstra mptr_u
+				JOIN template_renstra tr_u ON mptr_u.id_template_renstra = tr_u.id
+				WHERE mptr_u.id_mata_programv2 = mp.id
+				  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr_u.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+				  AND tr_u.fakultas_unit = ?
+			)`, id)
 		}
 	}
 
 	if filter.Search != "" {
 		like := "%" + strings.ToLower(filter.Search) + "%"
 		q = q.Where(`(
-			LOWER(mp.mata_program) LIKE ? OR 
-			LOWER(vfu.nama_fak_prod_unit) LIKE ? OR 
-			LOWER(mt.tahun) LIKE ? OR 
-			LOWER(vfu.fakultas) LIKE ? OR
+			LOWER(mp.mata_program) LIKE ? OR
+			LOWER(COALESCE(mt.tahun, '')) LIKE ? OR
 			EXISTS (
 				SELECT 1 FROM mata_programv2_template_renstra mptr2
 				JOIN template_renstra tr2 ON mptr2.id_template_renstra = tr2.id
 				LEFT JOIN master_indikator_renstra mir2 ON tr2.indikator = mir2.id
 				LEFT JOIN master_standar_renstra msr2 ON mir2.id_master_standar = msr2.id
 				LEFT JOIN v_fakultas_unit vfu2 ON tr2.fakultas_unit = vfu2.id
-				WHERE (mptr2.id_mata_programv2 = mp.id OR mptr2.id_mata_programv2 IN (
-					SELECT mp_sub.id FROM mata_programv2 mp_sub 
-					WHERE mp_sub.mata_program = mp.mata_program 
-					  AND (mp_sub.id_master_tahun = mp.id_master_tahun OR (mp_sub.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
-				))
+				WHERE mptr2.id_mata_programv2 = mp.id
+				  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr2.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
 				  AND (
 					LOWER(mir2.indikator) LIKE ? OR
 					LOWER(msr2.nama) LIKE ? OR
 					LOWER(vfu2.nama_fak_prod_unit) LIKE ? OR
 					LOWER(COALESCE(vfu2.jenjang, '')) LIKE ? OR
 					LOWER(CONCAT(vfu2.nama_fak_prod_unit, ' (', COALESCE(vfu2.jenjang, ''), ')')) LIKE ? OR
-					LOWER(vfu2.fakultas) LIKE ?
+					LOWER(COALESCE(vfu2.fakultas, '')) LIKE ?
 				  )
 			) OR
 			EXISTS (
 				SELECT 1 FROM matrix_proker mpk
-				JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
 				JOIN v_fakultas_unit vfu_p ON mpk.id_fakultas_unit = vfu_p.id
-				WHERE (mpk.id_mata_program = mp.id OR (
-					mp_src.mata_program = mp.mata_program
-					AND (mp_src.id_master_tahun = mp.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp.id_master_tahun IS NULL))
-				))
+				WHERE mpk.id_mata_program = mp.id
 				  AND mpk.deleted_at IS NULL
 				  AND (
 					LOWER(vfu_p.nama_fak_prod_unit) LIKE ? OR
@@ -199,7 +181,7 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 					LOWER(CONCAT(vfu_p.nama_fak_prod_unit, ' (', COALESCE(vfu_p.jenjang, ''), ')')) LIKE ?
 				  )
 			)
-		)`, like, like, like, like, like, like, like, like, like, like, like, like, like)
+		)`, like, like, like, like, like, like, like, like, like, like, like)
 	}
 
 	return q
@@ -208,8 +190,7 @@ func (r *MataProgramV2Repository) applyBaseFilters(q *gorm.DB, filter domain.Mat
 func (r *MataProgramV2Repository) baseJoinedQuery(ctx context.Context, filter domain.MataProgramV2Filter) *gorm.DB {
 	q := r.db.WithContext(ctx).
 		Table("mata_programv2 mp").
-		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id")
+		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id")
 	return r.applyBaseFilters(q, filter)
 }
 
@@ -222,34 +203,73 @@ func (r *MataProgramV2Repository) GetAllFlat(ctx context.Context, filter domain.
 	if err != nil {
 		return nil, err
 	}
+
+	// Jika difilter untuk satu unit tertentu, isi metadata unit dari v_fakultas_unit
+	// agar dropdown konsumen (seperti Risk Assessment / Proker V3) mendapat info unitnya.
+	if len(list) > 0 && filter.Unit != "" && filter.Unit != "all" {
+		var fu struct {
+			ID       uint   `gorm:"column:id"`
+			UUID     string `gorm:"column:uuid"`
+			Label    string `gorm:"column:fakultas_unit_label"`
+			Jenjang  string `gorm:"column:jenjang"`
+			Type     string `gorm:"column:type"`
+			Fakultas string `gorm:"column:fakultas"`
+		}
+		fuQ := r.db.WithContext(ctx).Table("v_fakultas_unit vfu").
+			Select(`
+				vfu.id,
+				COALESCE(vfu.uuid, '') as uuid,
+				CASE
+					WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != ''
+					THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')')
+					ELSE COALESCE(vfu.nama_fak_prod_unit, '')
+				END as fakultas_unit_label,
+				COALESCE(vfu.jenjang, '') as jenjang,
+				COALESCE(vfu.type, '') as type,
+				COALESCE(vfu.fakultas, '') as fakultas
+			`)
+		if _, parseErr := uuid.Parse(filter.Unit); parseErr == nil {
+			fuQ = fuQ.Where("vfu.uuid = ?", filter.Unit)
+		} else if id, convErr := strconv.Atoi(filter.Unit); convErr == nil && id > 0 {
+			fuQ = fuQ.Where("vfu.id = ?", id)
+		}
+		if errFu := fuQ.Take(&fu).Error; errFu == nil && fu.ID > 0 {
+			for i := range list {
+				uidVal := fu.ID
+				list[i].FakultasUnitId = &uidVal
+				list[i].FakultasUnitUuid = fu.UUID
+				list[i].FakultasUnit = fu.Label
+				list[i].Jenjang = fu.Jenjang
+				list[i].Type = fu.Type
+				list[i].Fakultas = fu.Fakultas
+			}
+		}
+	}
+
 	return list, nil
 }
 
-func (r *MataProgramV2Repository) CountGroups(ctx context.Context, filter domain.MataProgramV2Filter) (int64, error) {
+func (r *MataProgramV2Repository) Count(ctx context.Context, filter domain.MataProgramV2Filter) (int64, error) {
 	var total int64
-	sub := r.baseJoinedQuery(ctx, filter).
-		Select("mp.id_master_tahun, mp.mata_program").
-		Group("mp.id_master_tahun, mp.mata_program")
-	err := r.db.WithContext(ctx).Table("(?) as grps", sub).Count(&total).Error
+	err := r.baseJoinedQuery(ctx, filter).Count(&total).Error
 	return total, err
 }
 
-func (r *MataProgramV2Repository) GetGroupSummaries(ctx context.Context, filter domain.MataProgramV2Filter, offset, limit int) ([]domain.GroupSummary, error) {
+func (r *MataProgramV2Repository) GetPaged(ctx context.Context, filter domain.MataProgramV2Filter, offset, limit int) ([]domain.GroupSummary, error) {
 	var summaries []domain.GroupSummary
 	err := r.baseJoinedQuery(ctx, filter).
 		Select(`
-			MIN(mp.id) as id,
-			MIN(mp.uuid) as uuid,
+			mp.id,
+			mp.uuid,
 			mp.id_master_tahun,
 			mp.mata_program,
 			COALESCE(mt.uuid, '') as tahun_uuid,
 			COALESCE(mt.tahun, '') as tahun,
-			MAX(mp.created_at) as created_at,
-			MAX(mp.updated_at) as updated_at,
-			MAX(mp.deleted_at) as deleted_at
+			mp.created_at,
+			mp.updated_at,
+			mp.deleted_at
 		`).
-		Group("mp.id_master_tahun, mp.mata_program").
-		Order("id DESC").
+		Order("mp.id DESC").
 		Offset(offset).
 		Limit(limit).
 		Scan(&summaries).Error
@@ -259,37 +279,12 @@ func (r *MataProgramV2Repository) GetGroupSummaries(ctx context.Context, filter 
 	return summaries, nil
 }
 
-func (r *MataProgramV2Repository) GetGroupUnits(ctx context.Context, mataProgram string, tahunID *uint, showDeleted bool) ([]domain.MataProgramV2UnitBadge, error) {
-	var units []domain.MataProgramV2UnitBadge
-	q := r.db.WithContext(ctx).
-		Table("mata_programv2 mp").
-		Select(unitBadgeSelectSQL).
-		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
-		Where("mp.mata_program = ?", mataProgram)
-
-	if showDeleted {
-		q = q.Where("mp.deleted_at IS NOT NULL")
-	} else {
-		q = q.Where("mp.deleted_at IS NULL")
-	}
-
-	if tahunID != nil {
-		q = q.Where("mp.id_master_tahun = ?", *tahunID)
-	} else {
-		q = q.Where("mp.id_master_tahun IS NULL")
-	}
-
-	err := q.Order("vfu.type ASC, fakultas_unit_label ASC").Scan(&units).Error
-	return units, err
-}
-
 func (r *MataProgramV2Repository) GetRowByUuid(ctx context.Context, rawUuid string) (*domain.MataProgramV2Row, error) {
 	var row domain.MataProgramV2Row
 	err := r.db.WithContext(ctx).
 		Table("mata_programv2 mp").
 		Select(flatSelectSQL).
 		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
 		Where("mp.uuid = ? AND mp.deleted_at IS NULL", rawUuid).
 		Take(&row).Error
 	if err != nil {
@@ -351,173 +346,91 @@ func (r *MataProgramV2Repository) ResolveOrCreateTahunID(ctx context.Context, ta
 	}
 
 	newUUID := uuid.New().String()
-	_ = r.db.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error
+	if err := r.db.WithContext(ctx).Exec("INSERT INTO master_tahun (uuid, tahun, status) VALUES (?, ?, 'aktif')", newUUID, tahunStr).Error; err != nil {
+		return 0, err
+	}
 
 	var mt struct {
 		ID uint
 	}
-	_ = r.db.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error
+	if err := r.db.WithContext(ctx).Table("master_tahun").Select("id").Where("tahun = ?", tahunStr).Take(&mt).Error; err != nil {
+		return 0, err
+	}
 	return mt.ID, nil
 }
 
-func (r *MataProgramV2Repository) ResolveFakultasUnitID(ctx context.Context, rawTarget string) (uint, error) {
-	if id, err := strconv.Atoi(rawTarget); err == nil && id > 0 {
-		return uint(id), nil
-	}
-	if parsed, err := uuid.Parse(rawTarget); err == nil {
-		var fu struct {
-			ID uint
-		}
-		if err := r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", parsed).Take(&fu).Error; err == nil {
-			return fu.ID, nil
+func (r *MataProgramV2Repository) filterValidTemplateIDsForYear(tx *gorm.DB, tahunID uint, templateRenstraIDs []uint) ([]uint, error) {
+	seen := make(map[uint]bool, len(templateRenstraIDs))
+	candidateIDs := make([]uint, 0, len(templateRenstraIDs))
+	for _, id := range templateRenstraIDs {
+		if id > 0 && !seen[id] {
+			seen[id] = true
+			candidateIDs = append(candidateIDs, id)
 		}
 	}
-	return 0, nil
-}
-
-func (r *MataProgramV2Repository) UpsertOrRestoreAssignment(ctx context.Context, tahunID uint, unitID uint, mataProgram string) (string, bool, error) {
-	var existingAny struct {
-		ID        uint
-		UUID      string
-		DeletedAt *time.Time
+	if len(candidateIDs) == 0 {
+		return nil, nil
 	}
-	errFind := r.db.WithContext(ctx).Table("mata_programv2").
-		Select("id, uuid, deleted_at").
-		Where("mata_program = ? AND id_fakultas_unit = ? AND id_master_tahun = ?", mataProgram, unitID, tahunID).
-		Order("id DESC").
-		Take(&existingAny).Error
 
-	if errFind == nil && existingAny.ID > 0 {
-		if existingAny.DeletedAt != nil {
-			_ = r.db.WithContext(ctx).Table("mata_programv2").
-				Where("id = ?", existingAny.ID).
-				Update("deleted_at", nil).Error
+	var tahunStr string
+	if tahunID > 0 {
+		_ = tx.Table("master_tahun").Select("COALESCE(tahun, '')").Where("id = ?", tahunID).Take(&tahunStr).Error
+		tahunStr = strings.TrimSpace(tahunStr)
+	}
+
+	type templateCandidateRow struct {
+		ID           uint `gorm:"column:id"`
+		Indikator    uint `gorm:"column:indikator"`
+		FakultasUnit uint `gorm:"column:fakultas_unit"`
+	}
+	type comboKey struct {
+		Indikator    uint
+		FakultasUnit uint
+	}
+
+	// Deduplikasi berdasarkan (indikator, fakultas_unit) dengan mengambil ID template_renstra terbaru (MAX id)
+	bestByCombo := make(map[comboKey]uint, len(candidateIDs))
+	const checkChunk = 1000
+	for i := 0; i < len(candidateIDs); i += checkChunk {
+		end := i + checkChunk
+		if end > len(candidateIDs) {
+			end = len(candidateIDs)
 		}
-		return existingAny.UUID, true, nil
-	}
-
-	newUUID := uuid.New().String()
-	errInsert := r.db.WithContext(ctx).Exec(
-		"INSERT INTO mata_programv2 (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-		newUUID, tahunID, unitID, mataProgram,
-	).Error
-	if errInsert != nil {
-		return "", false, errInsert
-	}
-	return newUUID, true, nil
-}
-
-func (r *MataProgramV2Repository) UpdateGroupFields(ctx context.Context, originalMataProgram string, originalTahunID *uint, updates map[string]interface{}) error {
-	q := r.db.WithContext(ctx).Table("mata_programv2").
-		Where("mata_program = ? AND deleted_at IS NULL", originalMataProgram)
-	if originalTahunID != nil {
-		q = q.Where("id_master_tahun = ?", *originalTahunID)
-	}
-	return q.Updates(updates).Error
-}
-
-func (r *MataProgramV2Repository) SoftDeleteGroupUnitsNotIn(ctx context.Context, mataProgram string, tahunID uint, keepUnitIDs []uint, deletedAt time.Time) error {
-	return r.db.WithContext(ctx).Table("mata_programv2").
-		Where("mata_program = ? AND id_master_tahun = ? AND id_fakultas_unit NOT IN (?) AND deleted_at IS NULL", mataProgram, tahunID, keepUnitIDs).
-		Update("deleted_at", deletedAt).Error
-}
-
-func (r *MataProgramV2Repository) UpdateSingleByUuid(ctx context.Context, rawUuid string, updates map[string]interface{}) error {
-	return r.db.WithContext(ctx).Table("mata_programv2").
-		Where("uuid = ? AND deleted_at IS NULL", rawUuid).
-		Updates(updates).Error
-}
-
-func (r *MataProgramV2Repository) SoftDeleteSingleByUuid(ctx context.Context, rawUuid string, deletedAt time.Time) (int64, error) {
-	res := r.db.WithContext(ctx).Table("mata_programv2").
-		Where("uuid = ? AND deleted_at IS NULL", rawUuid).
-		Update("deleted_at", deletedAt)
-	return res.RowsAffected, res.Error
-}
-
-func (r *MataProgramV2Repository) SoftDeleteGroup(ctx context.Context, mataProgram string, tahunID *uint, deletedAt time.Time) (int64, error) {
-	q := r.db.WithContext(ctx).Table("mata_programv2").
-		Where("mata_program = ? AND deleted_at IS NULL", mataProgram)
-	if tahunID != nil {
-		q = q.Where("id_master_tahun = ?", *tahunID)
-	} else {
-		q = q.Where("id_master_tahun IS NULL")
-	}
-	res := q.Update("deleted_at", deletedAt)
-	return res.RowsAffected, res.Error
-}
-
-func (r *MataProgramV2Repository) RestoreSingleByUuid(ctx context.Context, rawUuid string) (int64, error) {
-	res := r.db.WithContext(ctx).Table("mata_programv2").
-		Where("uuid = ?", rawUuid).
-		Update("deleted_at", nil)
-	return res.RowsAffected, res.Error
-}
-
-func (r *MataProgramV2Repository) RestoreGroup(ctx context.Context, mataProgram string, tahunID *uint) (int64, error) {
-	q := r.db.WithContext(ctx).Table("mata_programv2").
-		Where("mata_program = ?", mataProgram)
-	if tahunID != nil {
-		q = q.Where("id_master_tahun = ?", *tahunID)
-	} else {
-		q = q.Where("id_master_tahun IS NULL")
-	}
-	res := q.Update("deleted_at", nil)
-	return res.RowsAffected, res.Error
-}
-
-func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Context, tahunID uint, mataProgram string, templateRenstraIDs []uint) (string, uint, error) {
-	var mp domain.MataProgramV2Record
-	errFind := r.db.WithContext(ctx).Table("mata_programv2").
-		Select("id, uuid, deleted_at").
-		Where("mata_program = ? AND id_master_tahun = ?", mataProgram, tahunID).
-		Order("id DESC").
-		Take(&mp).Error
-
-	var mpID uint
-	var mpUUID string
-
-	if errFind == nil && mp.ID > 0 {
-		mpID = mp.ID
-		mpUUID = mp.UUID
-		if mp.DeletedAt != nil {
-			_ = r.db.WithContext(ctx).Table("mata_programv2").
-				Where("id = ?", mp.ID).
-				Update("deleted_at", nil).Error
+		var rows []templateCandidateRow
+		q := tx.Table("template_renstra").
+			Select("id, indikator, fakultas_unit").
+			Where("id IN ?", candidateIDs[i:end])
+		if tahunStr != "" {
+			q = q.Where("CAST(tahun AS CHAR) = ?", tahunStr)
 		}
-	} else {
-		newUUID := uuid.New().String()
-		errInsert := r.db.WithContext(ctx).Exec(
-			"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
-			newUUID, tahunID, mataProgram,
-		).Error
-		if errInsert != nil {
-			return "", 0, errInsert
+		if err := q.Scan(&rows).Error; err != nil {
+			return nil, err
 		}
-		var created domain.MataProgramV2Record
-		if err := r.db.WithContext(ctx).Table("mata_programv2").
-			Select("id, uuid").
-			Where("uuid = ?", newUUID).
-			Take(&created).Error; err != nil {
-			return "", 0, err
-		}
-		mpID = created.ID
-		mpUUID = created.UUID
-	}
-
-	// Hapus relasi lama lalu insert yang baru (batch per 250 rows agar cepat & hemat memori)
-	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mpID).Error
-
-	var validIDs []uint
-	for _, trID := range templateRenstraIDs {
-		if trID > 0 {
-			validIDs = append(validIDs, trID)
+		for _, rw := range rows {
+			if rw.ID == 0 || rw.FakultasUnit == 0 {
+				continue
+			}
+			key := comboKey{Indikator: rw.Indikator, FakultasUnit: rw.FakultasUnit}
+			if prev, exists := bestByCombo[key]; !exists || rw.ID > prev {
+				bestByCombo[key] = rw.ID
+			}
 		}
 	}
 
-	var insertedCount uint = 0
+	validIDs := make([]uint, 0, len(bestByCombo))
+	for _, id := range bestByCombo {
+		validIDs = append(validIDs, id)
+	}
+	return validIDs, nil
+}
+
+func insertTemplateRenstraMappings(tx *gorm.DB, mpID uint, validIDs []uint) (uint, error) {
+	if err := tx.Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mpID).Error; err != nil {
+		return 0, err
+	}
+
+	var insertedCount uint
 	const chunkSize = 250
-
 	for i := 0; i < len(validIDs); i += chunkSize {
 		end := i + chunkSize
 		if end > len(validIDs) {
@@ -527,7 +440,6 @@ func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Con
 
 		placeholders := make([]string, 0, len(chunk))
 		args := make([]interface{}, 0, len(chunk)*3)
-
 		for _, trID := range chunk {
 			placeholders = append(placeholders, "(?, ?, ?)")
 			args = append(args, uuid.New().String(), mpID, trID)
@@ -537,116 +449,295 @@ func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Con
 			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES %s ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
 			strings.Join(placeholders, ", "),
 		)
-
-		if err := r.db.WithContext(ctx).Exec(query, args...).Error; err == nil {
-			insertedCount += uint(len(chunk))
+		if err := tx.Exec(query, args...).Error; err != nil {
+			return insertedCount, err
 		}
+		insertedCount += uint(len(chunk))
+	}
+	return insertedCount, nil
+}
+
+func (r *MataProgramV2Repository) SaveMataProgramV2WithTemplates(ctx context.Context, tahunID uint, mataProgram string, templateRenstraIDs []uint) (string, uint, error) {
+	var mpUUID string
+	var insertedCount uint
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		validIDs, err := r.filterValidTemplateIDsForYear(tx, tahunID, templateRenstraIDs)
+		if err != nil {
+			return err
+		}
+		if len(validIDs) == 0 {
+			return domain.InvalidTemplates()
+		}
+
+		// Tolak duplikasi aktif untuk kombinasi (mata_program, id_master_tahun) yang sama
+		var activeCount int64
+		if err := tx.Table("mata_programv2").
+			Where("LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND id_master_tahun = ? AND deleted_at IS NULL", mataProgram, tahunID).
+			Count(&activeCount).Error; err != nil {
+			return err
+		}
+		if activeCount > 0 {
+			return domain.DuplicateMataProgram()
+		}
+
+		var mpID uint
+		var deletedRec domain.MataProgramV2Record
+		errFindDeleted := tx.Table("mata_programv2").
+			Select("id, uuid").
+			Where("LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND id_master_tahun = ? AND deleted_at IS NOT NULL", mataProgram, tahunID).
+			Order("id DESC").
+			Take(&deletedRec).Error
+
+		if errFindDeleted == nil && deletedRec.ID > 0 {
+			mpID = deletedRec.ID
+			mpUUID = deletedRec.UUID
+			if err := tx.Table("mata_programv2").
+				Where("id = ?", mpID).
+				Updates(map[string]interface{}{
+					"mata_program": mataProgram,
+					"deleted_at":   nil,
+				}).Error; err != nil {
+				return err
+			}
+		} else {
+			newUUID := uuid.New().String()
+			if err := tx.Exec(
+				"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
+				newUUID, tahunID, mataProgram,
+			).Error; err != nil {
+				return err
+			}
+			var created domain.MataProgramV2Record
+			if err := tx.Table("mata_programv2").
+				Select("id, uuid").
+				Where("uuid = ?", newUUID).
+				Take(&created).Error; err != nil {
+				return err
+			}
+			mpID = created.ID
+			mpUUID = created.UUID
+		}
+
+		cnt, err := insertTemplateRenstraMappings(tx, mpID, validIDs)
+		if err != nil {
+			return err
+		}
+		insertedCount = cnt
+		return nil
+	})
+	if err != nil {
+		return "", 0, err
 	}
 
 	return mpUUID, insertedCount, nil
 }
 
-func (r *MataProgramV2Repository) UpdateMataProgramV2WithTemplates(ctx context.Context, rawUuid string, tahunID uint, mataProgram string, templateRenstraIDs []uint) error {
-	var mp domain.MataProgramV2Record
-	if err := r.db.WithContext(ctx).Table("mata_programv2").
-		Select("id, uuid").
-		Where("uuid = ?", rawUuid).
-		Take(&mp).Error; err != nil {
-		return err
-	}
+func (r *MataProgramV2Repository) UpdateMataProgramV2WithTemplates(ctx context.Context, rawUuid string, tahunID uint, mataProgram string, templateRenstraIDs []uint, replaceTemplates bool) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var mp domain.MataProgramV2Record
+		if err := tx.Table("mata_programv2").
+			Select("id, uuid, mata_program, id_master_tahun").
+			Where("uuid = ? AND deleted_at IS NULL", rawUuid).
+			Take(&mp).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.NotFoundOrDeleted()
+			}
+			return err
+		}
 
-	updates := map[string]interface{}{}
-	if mataProgram != "" {
-		updates["mata_program"] = mataProgram
-	}
-	if tahunID > 0 {
-		updates["id_master_tahun"] = tahunID
-	}
-	if len(updates) > 0 {
-		if err := r.db.WithContext(ctx).Table("mata_programv2").
+		targetNama := mp.MataProgram
+		if mataProgram != "" {
+			targetNama = mataProgram
+		}
+		var targetTahunID uint
+		if mp.IdMasterTahun != nil {
+			targetTahunID = *mp.IdMasterTahun
+		}
+		if tahunID > 0 {
+			targetTahunID = tahunID
+		}
+
+		// Pastikan tidak bentrok dengan mata program aktif lain di tahun yang sama
+		var dupCount int64
+		dupQ := tx.Table("mata_programv2").
+			Where("id != ? AND LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND deleted_at IS NULL", mp.ID, targetNama)
+		if targetTahunID > 0 {
+			dupQ = dupQ.Where("id_master_tahun = ?", targetTahunID)
+		} else {
+			dupQ = dupQ.Where("id_master_tahun IS NULL")
+		}
+		if err := dupQ.Count(&dupCount).Error; err != nil {
+			return err
+		}
+		if dupCount > 0 {
+			return domain.DuplicateMataProgram()
+		}
+
+		var validIDs []uint
+		if replaceTemplates {
+			var err error
+			validIDs, err = r.filterValidTemplateIDsForYear(tx, targetTahunID, templateRenstraIDs)
+			if err != nil {
+				return err
+			}
+			if len(validIDs) == 0 {
+				return domain.InvalidTemplates()
+			}
+		}
+
+		updates := map[string]interface{}{
+			"mata_program": targetNama,
+		}
+		if targetTahunID > 0 {
+			updates["id_master_tahun"] = targetTahunID
+		}
+		if err := tx.Table("mata_programv2").
 			Where("id = ?", mp.ID).
 			Updates(updates).Error; err != nil {
 			return err
 		}
-	}
 
-	// Update relasi template renstra (batch per 250 rows)
-	_ = r.db.WithContext(ctx).Exec("DELETE FROM mata_programv2_template_renstra WHERE id_mata_programv2 = ?", mp.ID).Error
-
-	var validIDs []uint
-	for _, trID := range templateRenstraIDs {
-		if trID > 0 {
-			validIDs = append(validIDs, trID)
-		}
-	}
-
-	const chunkSize = 250
-	for i := 0; i < len(validIDs); i += chunkSize {
-		end := i + chunkSize
-		if end > len(validIDs) {
-			end = len(validIDs)
-		}
-		chunk := validIDs[i:end]
-
-		placeholders := make([]string, 0, len(chunk))
-		args := make([]interface{}, 0, len(chunk)*3)
-
-		for _, trID := range chunk {
-			placeholders = append(placeholders, "(?, ?, ?)")
-			args = append(args, uuid.New().String(), mp.ID, trID)
+		if replaceTemplates {
+			if _, err := insertTemplateRenstraMappings(tx, mp.ID, validIDs); err != nil {
+				return err
+			}
 		}
 
-		query := fmt.Sprintf(
-			"INSERT INTO mata_programv2_template_renstra (uuid, id_mata_programv2, id_template_renstra) VALUES %s ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP",
-			strings.Join(placeholders, ", "),
-		)
-
-		_ = r.db.WithContext(ctx).Exec(query, args...).Error
-	}
-
-	return nil
+		return nil
+	})
 }
 
-func (r *MataProgramV2Repository) GetTemplatesByMataProgramID(ctx context.Context, mpID uint) ([]domain.MataProgramV2TemplateItem, []uint, error) {
-	var items []domain.MataProgramV2TemplateItem
-	var ids []uint
+func (r *MataProgramV2Repository) SoftDeleteByUuid(ctx context.Context, rawUuid string, deletedAt time.Time) (int64, error) {
+	res := r.db.WithContext(ctx).Table("mata_programv2").
+		Where("uuid = ? AND deleted_at IS NULL", rawUuid).
+		Update("deleted_at", deletedAt)
+	return res.RowsAffected, res.Error
+}
 
+func (r *MataProgramV2Repository) RestoreByUuid(ctx context.Context, rawUuid string) (int64, error) {
+	var rec domain.MataProgramV2Record
+	if err := r.db.WithContext(ctx).Table("mata_programv2").
+		Select("id, mata_program, id_master_tahun").
+		Where("uuid = ?", rawUuid).
+		Take(&rec).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, domain.NotFound()
+		}
+		return 0, err
+	}
+
+	var dupCount int64
+	dupQ := r.db.WithContext(ctx).Table("mata_programv2").
+		Where("id != ? AND LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND deleted_at IS NULL", rec.ID, rec.MataProgram)
+	if rec.IdMasterTahun != nil {
+		dupQ = dupQ.Where("id_master_tahun = ?", *rec.IdMasterTahun)
+	} else {
+		dupQ = dupQ.Where("id_master_tahun IS NULL")
+	}
+	if err := dupQ.Count(&dupCount).Error; err != nil {
+		return 0, err
+	}
+	if dupCount > 0 {
+		return 0, domain.DuplicateMataProgram()
+	}
+
+	res := r.db.WithContext(ctx).Table("mata_programv2").
+		Where("id = ?", rec.ID).
+		Update("deleted_at", nil)
+	return res.RowsAffected, res.Error
+}
+
+func (r *MataProgramV2Repository) GetTargetUnitsByMataProgramIDs(ctx context.Context, mpIDs []uint) (map[uint][]domain.MataProgramV2UnitBadge, error) {
+	result := make(map[uint][]domain.MataProgramV2UnitBadge)
+	if len(mpIDs) == 0 {
+		return result, nil
+	}
+
+	type QueryRow struct {
+		IdMataProgramV2  uint   `gorm:"column:id_mata_programv2"`
+		FakultasUnitId   *uint  `gorm:"column:id_fakultas_unit"`
+		FakultasUnitUuid string `gorm:"column:fakultas_unit_uuid"`
+		FakultasUnit     string `gorm:"column:fakultas_unit_label"`
+		Jenjang          string `gorm:"column:jenjang"`
+		Type             string `gorm:"column:type"`
+		Fakultas         string `gorm:"column:fakultas"`
+		ProkerCount      int64  `gorm:"column:proker_count"`
+	}
+
+	var rows []QueryRow
 	sql := `
-		SELECT 
-			tr.id as id,
-			tr.uuid as uuid,
-			tr.id as id_template_renstra,
-			tr.indikator as indikator_id,
-			COALESCE(mir.indikator, '') as indikator,
-			COALESCE(msr.nama, '') as standar_renstra,
-			tr.fakultas_unit as fakultas_unit_id,
+		SELECT
+			mptr.id_mata_programv2 AS id_mata_programv2,
+			tr.fakultas_unit AS id_fakultas_unit,
+			COALESCE(vfu.uuid, '') AS fakultas_unit_uuid,
 			CASE
 				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != ''
 				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')')
 				ELSE COALESCE(vfu.nama_fak_prod_unit, '')
-			END as fakultas_unit,
-			COALESCE(vfu.jenjang, '') as jenjang,
-			COALESCE(vfu.type, '') as type,
-			COALESCE(tr.kategori, '') as kategori,
-			COALESCE(tr.target, '') as target,
-			COALESCE(tr.satuan, '') as satuan
+			END AS fakultas_unit_label,
+			COALESCE(vfu.jenjang, '') AS jenjang,
+			COALESCE(vfu.type, '') AS type,
+			COALESCE(vfu.fakultas, '') AS fakultas,
+			COALESCE((
+				SELECT COUNT(*) FROM matrix_proker mpk
+				WHERE mpk.id_mata_program = mptr.id_mata_programv2
+				  AND mpk.id_fakultas_unit = tr.fakultas_unit
+				  AND mpk.deleted_at IS NULL
+			), 0) AS proker_count
 		FROM mata_programv2_template_renstra mptr
-		JOIN template_renstra tr ON mptr.id_template_renstra = tr.id
-		LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id
-		LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id
+		JOIN mata_programv2 mp ON mp.id = mptr.id_mata_programv2
+		LEFT JOIN master_tahun mt ON mt.id = mp.id_master_tahun
+		JOIN template_renstra tr ON tr.id = mptr.id_template_renstra
 		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
-		WHERE mptr.id_mata_programv2 = ?
-		ORDER BY msr.nama ASC, mir.indikator ASC, fakultas_unit ASC
+		WHERE mptr.id_mata_programv2 IN (?)
+		  AND tr.fakultas_unit IS NOT NULL AND tr.fakultas_unit > 0
+		  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+		GROUP BY mptr.id_mata_programv2, tr.fakultas_unit, vfu.uuid, vfu.nama_fak_prod_unit, vfu.jenjang, vfu.type, vfu.fakultas
+		ORDER BY vfu.type ASC, fakultas_unit_label ASC
 	`
-	err := r.db.WithContext(ctx).Raw(sql, mpID).Scan(&items).Error
+	if err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error; err != nil {
+		return result, err
+	}
+
+	for _, rw := range rows {
+		var idVal uint
+		if rw.FakultasUnitId != nil {
+			idVal = *rw.FakultasUnitId
+		}
+		result[rw.IdMataProgramV2] = append(result[rw.IdMataProgramV2], domain.MataProgramV2UnitBadge{
+			Id:               idVal,
+			UUID:             rw.FakultasUnitUuid,
+			FakultasUnitId:   rw.FakultasUnitId,
+			FakultasUnitUuid: rw.FakultasUnitUuid,
+			FakultasUnit:     rw.FakultasUnit,
+			Jenjang:          rw.Jenjang,
+			Type:             rw.Type,
+			Fakultas:         rw.Fakultas,
+			ProkerCount:      rw.ProkerCount,
+		})
+	}
+	return result, nil
+}
+
+func (r *MataProgramV2Repository) GetTargetUnitsByMataProgramID(ctx context.Context, mpID uint) ([]domain.MataProgramV2UnitBadge, error) {
+	unitsMap, err := r.GetTargetUnitsByMataProgramIDs(ctx, []uint{mpID})
+	if err != nil {
+		return nil, err
+	}
+	return unitsMap[mpID], nil
+}
+
+func (r *MataProgramV2Repository) GetTemplatesByMataProgramID(ctx context.Context, mpID uint) ([]domain.MataProgramV2TemplateItem, []uint, error) {
+	tplMap, err := r.GetTemplatesByMataProgramIDs(ctx, []uint{mpID})
 	if err != nil {
 		return nil, nil, err
 	}
-
+	items := tplMap[mpID]
+	ids := make([]uint, 0, len(items))
 	for _, it := range items {
 		ids = append(ids, it.ID)
 	}
-
 	return items, ids, nil
 }
 
@@ -675,8 +766,8 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 
 	var rows []QueryRow
 	sql := `
-		SELECT 
-			COALESCE(mp_target.id, mptr.id_mata_programv2) as id_mata_programv2,
+		SELECT
+			mptr.id_mata_programv2 as id_mata_programv2,
 			tr.id as id,
 			tr.uuid as uuid,
 			tr.id as id_template_renstra,
@@ -695,24 +786,35 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 			COALESCE(tr.target, '') as target,
 			COALESCE(tr.satuan, '') as satuan
 		FROM mata_programv2_template_renstra mptr
+		JOIN mata_programv2 mp ON mp.id = mptr.id_mata_programv2
+		LEFT JOIN master_tahun mt ON mt.id = mp.id_master_tahun
 		JOIN template_renstra tr ON mptr.id_template_renstra = tr.id
-		JOIN mata_programv2 mp_src ON mptr.id_mata_programv2 = mp_src.id
-		JOIN mata_programv2 mp_target ON mp_src.mata_program = mp_target.mata_program 
-		  AND (mp_src.id_master_tahun = mp_target.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp_target.id_master_tahun IS NULL))
 		LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id
 		LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id
 		LEFT JOIN v_fakultas_unit vfu ON tr.fakultas_unit = vfu.id
-		WHERE mp_target.id IN (?)
-		GROUP BY mp_target.id, tr.id
-		ORDER BY msr.nama ASC, mir.indikator ASC, fakultas_unit ASC
+		WHERE mptr.id_mata_programv2 IN (?)
+		  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+		GROUP BY mptr.id_mata_programv2, tr.id
+		ORDER BY msr.nama ASC, mir.indikator ASC, fakultas_unit ASC, tr.id DESC
 	`
 	err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error
 	if err != nil {
 		return result, err
 	}
 
+	type dedupKey struct {
+		mpID      uint
+		indikator uint
+		unit      uint
+	}
+	seen := make(map[dedupKey]bool, len(rows))
 	for _, rw := range rows {
-		item := domain.MataProgramV2TemplateItem{
+		dk := dedupKey{mpID: rw.IdMataProgramV2, indikator: rw.IndikatorRenstraID, unit: rw.FakultasUnitID}
+		if seen[dk] {
+			continue
+		}
+		seen[dk] = true
+		result[rw.IdMataProgramV2] = append(result[rw.IdMataProgramV2], domain.MataProgramV2TemplateItem{
 			ID:                 rw.ID,
 			UUID:               rw.UUID,
 			IdTemplateRenstra:  rw.IdTemplateRenstra,
@@ -726,8 +828,7 @@ func (r *MataProgramV2Repository) GetTemplatesByMataProgramIDs(ctx context.Conte
 			Kategori:           rw.Kategori,
 			Target:             rw.Target,
 			Satuan:             rw.Satuan,
-		}
-		result[rw.IdMataProgramV2] = append(result[rw.IdMataProgramV2], item)
+		})
 	}
 
 	return result, nil
@@ -754,29 +855,26 @@ func (r *MataProgramV2Repository) GetProkerUnitsByMataProgramIDs(ctx context.Con
 
 	var rows []QueryRow
 	sql := `
-		SELECT 
-			COALESCE(mp_target.id, mpk.id_mata_program) as id_mata_program,
+		SELECT
+			mpk.id_mata_program as id_mata_program,
 			MIN(mpk.id) as id,
 			MIN(mpk.uuid) as uuid,
 			mpk.id_fakultas_unit as id_fakultas_unit,
 			COALESCE(vfu.uuid, '') as fakultas_unit_uuid,
 			COALESCE(vfu.nama_fak_prod_unit, '') as nama_fakultas_unit,
-			CASE 
-				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
-				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')') 
-				ELSE COALESCE(vfu.nama_fak_prod_unit, '') 
+			CASE
+				WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != ''
+				THEN CONCAT(vfu.nama_fak_prod_unit, ' (', UPPER(vfu.jenjang), ')')
+				ELSE COALESCE(vfu.nama_fak_prod_unit, '')
 			END as label,
 			COALESCE(vfu.jenjang, '') as jenjang,
 			COALESCE(vfu.type, '') as type,
 			COALESCE(MIN(mpk.status), 'draft') as status
 		FROM matrix_proker mpk
-		JOIN mata_programv2 mp_src ON mpk.id_mata_program = mp_src.id
-		JOIN mata_programv2 mp_target ON mp_src.mata_program = mp_target.mata_program 
-		  AND (mp_src.id_master_tahun = mp_target.id_master_tahun OR (mp_src.id_master_tahun IS NULL AND mp_target.id_master_tahun IS NULL))
 		JOIN v_fakultas_unit vfu ON mpk.id_fakultas_unit = vfu.id
-		WHERE mp_target.id IN (?)
+		WHERE mpk.id_mata_program IN (?)
 		  AND mpk.deleted_at IS NULL
-		GROUP BY mp_target.id, mpk.id_fakultas_unit, vfu.uuid, vfu.nama_fak_prod_unit, vfu.jenjang, vfu.type
+		GROUP BY mpk.id_mata_program, mpk.id_fakultas_unit, vfu.uuid, vfu.nama_fak_prod_unit, vfu.jenjang, vfu.type
 		ORDER BY label ASC
 	`
 	err := r.db.WithContext(ctx).Raw(sql, mpIDs).Scan(&rows).Error
@@ -785,7 +883,7 @@ func (r *MataProgramV2Repository) GetProkerUnitsByMataProgramIDs(ctx context.Con
 	}
 
 	for _, rw := range rows {
-		item := domain.MataProgramV2ProkerUnit{
+		result[rw.IdMataProgram] = append(result[rw.IdMataProgram], domain.MataProgramV2ProkerUnit{
 			Id:               rw.Id,
 			UUID:             rw.UUID,
 			IdMataProgram:    rw.IdMataProgram,
@@ -796,8 +894,7 @@ func (r *MataProgramV2Repository) GetProkerUnitsByMataProgramIDs(ctx context.Con
 			Jenjang:          rw.Jenjang,
 			Type:             rw.Type,
 			Status:           rw.Status,
-		}
-		result[rw.IdMataProgram] = append(result[rw.IdMataProgram], item)
+		})
 	}
 
 	return result, nil

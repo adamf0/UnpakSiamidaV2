@@ -1,8 +1,7 @@
 package DeleteMataProgramV2
 
 type DeleteMataProgramV2Command struct {
-	UUID  string
-	Scope string // "single" or "group" (default)
+	UUID string
 }
 
 type DeleteMataProgramV2Result struct {

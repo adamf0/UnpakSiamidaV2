@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	commondomain "UnpakSiamida/common/domain"
 	commoninfra "UnpakSiamida/common/infrastructure"
 	domain "UnpakSiamida/modules/aktivitasv2/domain"
 
@@ -186,13 +187,16 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
 			Where("mptr.id_mata_programv2 = ?", *mp.IdMataProgram)
 
+		if mp.Tahun != "" {
+			qTr = qTr.Where("CAST(tr.tahun AS CHAR) = ?", mp.Tahun)
+		}
 		if mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
 			qTr = qTr.Where("tr.fakultas_unit = ?", *mp.IdFakultasUnit)
 		}
 		_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
 
 		if len(rRows) == 0 && mp.IdFakultasUnit != nil && *mp.IdFakultasUnit > 0 {
-			_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+			qTrFallback := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
 				Select(`
 					tr.id as template_id,
 					tr.uuid as template_uuid,
@@ -219,9 +223,11 @@ func (r *AktivitasV2Repository) populateProkerSummary(ctx context.Context, where
 				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
 				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
 				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
-				Where("mptr.id_mata_programv2 = ?", *mp.IdMataProgram).
-				Order("tr.id ASC").
-				Scan(&rRows).Error
+				Where("mptr.id_mata_programv2 = ?", *mp.IdMataProgram)
+			if mp.Tahun != "" {
+				qTrFallback = qTrFallback.Where("CAST(tr.tahun AS CHAR) = ?", mp.Tahun)
+			}
+			_ = qTrFallback.Order("tr.id ASC").Scan(&rRows).Error
 		}
 	}
 
@@ -357,13 +363,16 @@ func (r *AktivitasV2Repository) GetMatrixProkerByUuid(ctx context.Context, uid u
 		Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
 		Where("mtr.id_mata_programv2 = ?", prog.ID)
 
+	if prog.Tahun != "" {
+		qTr = qTr.Where("CAST(tr.tahun AS CHAR) = ?", prog.Tahun)
+	}
 	if fuFilter != nil {
 		qTr = qTr.Where("tr.fakultas_unit = ?", *fuFilter)
 	}
 	_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
 
 	if len(rRows) == 0 && fuFilter != nil {
-		_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
+		qTrFallback := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mtr").
 			Select(`
 				tr.id as template_id,
 				tr.uuid as template_uuid,
@@ -396,9 +405,11 @@ func (r *AktivitasV2Repository) GetMatrixProkerByUuid(ctx context.Context, uid u
 			Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
 			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
 			Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
-			Where("mtr.id_mata_programv2 = ?", prog.ID).
-			Order("tr.id ASC").
-			Scan(&rRows).Error
+			Where("mtr.id_mata_programv2 = ?", prog.ID)
+		if prog.Tahun != "" {
+			qTrFallback = qTrFallback.Where("CAST(tr.tahun AS CHAR) = ?", prog.Tahun)
+		}
+		_ = qTrFallback.Order("tr.id ASC").Scan(&rRows).Error
 	}
 
 	if fuFilter == nil && len(rRows) > 0 && rRows[0].FakultasUnitID != nil {
@@ -1270,76 +1281,94 @@ func (r *AktivitasV2Repository) UpdateStatus(ctx context.Context, req domain.Upd
 				updates["status_verifikator"] = "draft"
 				updates["catatan_verifikator"] = ""
 			}
-		case "lpm":
-			updates["status_lpm"] = status
+		case "lpm", "admin", "upms", "upmf", "fakultas", "upml":
+			curEval := strings.ToLower(strings.TrimSpace(act.StatusEvaluator))
+			isEvaluatorApproved := curEval == "disetujui" || curEval == "diterima" || curEval == "terima_verifikator"
+			if !isEvaluatorApproved {
+				return nil, commondomain.FailureError(
+					"AktivitasV2.EvaluatorNotApproved",
+					"Verifikasi belum dapat dilakukan sebelum verifikasi Evaluator selesai diterima",
+				)
+			}
+			if act.TerimaAnggaranAt == nil {
+				return nil, commondomain.FailureError(
+					"AktivitasV2.AnggaranNotApproved",
+					"Verifikasi belum dapat dilakukan sebelum verifikasi Anggaran selesai diterima",
+				)
+			}
+
+			normStatus := status
 			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" {
-				updates["status_lpm"] = "disetujui"
-				updates["catatan_tolak_lpm"] = ""
+				normStatus = "disetujui"
 			} else if status == "ditolak" || status == "revisi" {
-				updates["status_lpm"] = "ditolak"
-				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
-			} else if status == "draft" {
-				updates["status_lpm"] = "draft"
-				updates["catatan_tolak_lpm"] = ""
+				normStatus = "ditolak"
 			}
-		case "admin":
-			updates["status_lpm"] = status
-			updates["status_evaluator"] = status
-			if status == "disetujui" || status == "diterima" || status == "terima_verifikator" {
-				updates["status_verifikator"] = "diterima"
-				updates["status_evaluator"] = "disetujui"
-				updates["status_lpm"] = "disetujui"
-				updates["catatan_evaluator"] = ""
-				updates["catatan_verifikator"] = ""
-				updates["catatan_tolak_lpm"] = ""
-				updates["catatan_penolakan"] = ""
-			} else if status == "ditolak" || status == "revisi" {
-				updates["status_evaluator"] = "ditolak"
-				updates["status_verifikator"] = "ditolak"
-				updates["status_lpm"] = "ditolak"
-				updates["catatan_evaluator"] = req.CatatanPenolakan
-				updates["catatan_verifikator"] = req.CatatanPenolakan
-				updates["catatan_tolak_lpm"] = req.CatatanPenolakan
-				updates["catatan_penolakan"] = req.CatatanPenolakan
-			} else if status == "draft" {
-				updates["status_evaluator"] = "draft"
-				updates["status_verifikator"] = "draft"
-				updates["status_lpm"] = "draft"
-				updates["catatan_evaluator"] = ""
-				updates["catatan_verifikator"] = ""
-				updates["catatan_penolakan"] = ""
-			}
-		case "upms":
-			updates["status_upms"] = status
-			if status == "ditolak" {
-				updates["catatan_tolak_upms"] = req.CatatanPenolakan
-				updates["status_verifikator"] = "ditolak"
-				updates["catatan_verifikator"] = req.CatatanPenolakan
-				updates["catatan_penolakan"] = req.CatatanPenolakan
-			} else if status == "disetujui" {
-				updates["catatan_tolak_upms"] = ""
-			}
-		case "upmf":
-			updates["status_upmf"] = status
-			if status == "ditolak" {
-				updates["catatan_tolak_upmf"] = req.CatatanPenolakan
-				updates["status_verifikator"] = "ditolak"
-				updates["catatan_verifikator"] = req.CatatanPenolakan
-				updates["catatan_penolakan"] = req.CatatanPenolakan
-			} else if status == "disetujui" {
-				updates["catatan_tolak_upmf"] = ""
-			}
-		case "upml":
-			updates["status_upml"] = status
-			if status == "ditolak" {
-				updates["catatan_tolak_upml"] = req.CatatanPenolakan
-				updates["status_verifikator"] = "ditolak"
-				updates["catatan_verifikator"] = req.CatatanPenolakan
-				updates["catatan_penolakan"] = req.CatatanPenolakan
-			} else if status == "disetujui" {
-				updates["catatan_tolak_upml"] = ""
-				updates["status_verifikator"] = "diterima"
-				updates["catatan_verifikator"] = ""
+
+			switch role {
+			case "upms":
+				updates["status_upms"] = normStatus
+				if normStatus == "ditolak" {
+					updates["catatan_tolak_upms"] = req.CatatanPenolakan
+				} else if normStatus == "disetujui" {
+					updates["catatan_tolak_upms"] = ""
+				}
+			case "upmf", "fakultas":
+				if strings.ToLower(strings.TrimSpace(act.StatusUpms)) != "disetujui" {
+					return nil, commondomain.FailureError(
+						"AktivitasV2.UpmsNotApproved",
+						"Verifikasi UPMF menunggu persetujuan UPMS terlebih dahulu",
+					)
+				}
+				updates["status_upmf"] = normStatus
+				if normStatus == "ditolak" {
+					updates["catatan_tolak_upmf"] = req.CatatanPenolakan
+				} else if normStatus == "disetujui" {
+					updates["catatan_tolak_upmf"] = ""
+				}
+			case "upml":
+				updates["status_upml"] = normStatus
+				if normStatus == "ditolak" {
+					updates["catatan_tolak_upml"] = req.CatatanPenolakan
+				} else if normStatus == "disetujui" {
+					updates["catatan_tolak_upml"] = ""
+				}
+			case "lpm", "admin":
+				isProdiUnit := false
+				if act.IdMatrikProker != nil && *act.IdMatrikProker > 0 {
+					var unitType string
+					_ = r.db.WithContext(ctx).Table("matrix_proker mp").
+						Select("LOWER(TRIM(COALESCE(fu.type, '')))").
+						Joins("LEFT JOIN v_fakultas_unit fu ON fu.id = mp.id_fakultas_unit").
+						Where("mp.id = ?", *act.IdMatrikProker).
+						Scan(&unitType).Error
+					isProdiUnit = unitType == "prodi"
+				}
+				if isProdiUnit {
+					if strings.ToLower(strings.TrimSpace(act.StatusUpms)) != "disetujui" {
+						return nil, commondomain.FailureError(
+							"AktivitasV2.UpmsNotApproved",
+							"Verifikasi LPM menunggu persetujuan UPMS terlebih dahulu",
+						)
+					}
+					if strings.ToLower(strings.TrimSpace(act.StatusUpmf)) != "disetujui" {
+						return nil, commondomain.FailureError(
+							"AktivitasV2.UpmfNotApproved",
+							"Verifikasi LPM menunggu persetujuan UPMF terlebih dahulu",
+						)
+					}
+				} else if strings.ToLower(strings.TrimSpace(act.StatusUpml)) != "disetujui" {
+					return nil, commondomain.FailureError(
+						"AktivitasV2.UpmlNotApproved",
+						"Verifikasi LPM menunggu persetujuan UPML terlebih dahulu",
+					)
+				}
+
+				updates["status_lpm"] = normStatus
+				if normStatus == "disetujui" {
+					updates["catatan_tolak_lpm"] = ""
+				} else if normStatus == "ditolak" {
+					updates["catatan_tolak_lpm"] = req.CatatanPenolakan
+				}
 			}
 		case "anggaran", "keuangan":
 			return nil, errors.New("Verifikasi anggaran dilakukan pada tingkat program kerja, bukan pada aktivitas")

@@ -34,17 +34,12 @@ type mataProgramV2RequestPayload struct {
 	Mataprogram        string `json:"mataprogram"`
 	Tahun              any    `json:"tahun"`
 	IdMasterTahun      any    `json:"id_master_tahun"`
-	Targets            []any  `json:"targets"`
-	FakultasUnits      []any  `json:"fakultas_units"`
-	IdFakultasUnit     any    `json:"id_fakultas_unit"`
-	FakultasUnit       any    `json:"fakultas_unit"`
-	Target             any    `json:"target"`
 	TemplateRenstras   []any  `json:"template_renstras"`
 	TemplateRenstraIDs []any  `json:"template_renstra_ids"`
 	Templates          []any  `json:"templates"`
 }
 
-func parseMataProgramV2Input(c *fiber.Ctx) (mataProgram string, tahun string, targets []string, templateIDs []uint, idFakultasUnit string) {
+func parseMataProgramV2Input(c *fiber.Ctx) (mataProgram string, tahun string, templateIDs []uint, hasTemplates bool) {
 	seenTemplates := make(map[uint]bool)
 
 	addTemplateID := func(raw any) {
@@ -101,27 +96,9 @@ func parseMataProgramV2Input(c *fiber.Ctx) (mataProgram string, tahun string, ta
 			tahun = strings.TrimSpace(fmt.Sprintf("%v", payload.IdMasterTahun))
 		}
 
-		if payload.IdFakultasUnit != nil {
-			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.IdFakultasUnit))
-		} else if payload.FakultasUnit != nil {
-			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.FakultasUnit))
-		} else if payload.Target != nil {
-			idFakultasUnit = strings.TrimSpace(fmt.Sprintf("%v", payload.Target))
+		if payload.TemplateRenstras != nil || payload.TemplateRenstraIDs != nil || payload.Templates != nil {
+			hasTemplates = true
 		}
-
-		for _, item := range payload.Targets {
-			tStr := strings.TrimSpace(fmt.Sprintf("%v", item))
-			if tStr != "" && tStr != "<nil>" {
-				targets = append(targets, tStr)
-			}
-		}
-		for _, item := range payload.FakultasUnits {
-			tStr := strings.TrimSpace(fmt.Sprintf("%v", item))
-			if tStr != "" && tStr != "<nil>" {
-				targets = append(targets, tStr)
-			}
-		}
-
 		for _, t := range payload.TemplateRenstras {
 			addTemplateID(t)
 		}
@@ -144,38 +121,28 @@ func parseMataProgramV2Input(c *fiber.Ctx) (mataProgram string, tahun string, ta
 	if tahun == "" {
 		tahun = firstNonEmpty(c.FormValue("tahun"), c.FormValue("id_master_tahun"))
 	}
-	if idFakultasUnit == "" {
-		idFakultasUnit = firstNonEmpty(c.FormValue("id_fakultas_unit"), c.FormValue("fakultas_unit"), c.FormValue("target"))
-	}
 
 	for _, key := range []string{"template_renstras", "template_renstra_ids", "template_renstra_id", "templates"} {
 		if v := c.FormValue(key); v != "" {
+			hasTemplates = true
 			addTemplateID(v)
 		}
 	}
 
 	// 3. Fallback jika dikirim via multipart/form-data
 	if form, err := c.MultipartForm(); err == nil && form != nil {
-		for _, key := range []string{"targets[]", "targets", "fakultas_units[]", "fakultas_units"} {
-			if vals, ok := form.Value[key]; ok {
-				targets = append(targets, vals...)
-			}
-		}
 		for _, key := range []string{
 			"template_renstras[]", "template_renstras",
 			"template_renstra_ids[]", "template_renstra_ids",
 			"templates[]", "templates",
 		} {
 			if vals, ok := form.Value[key]; ok {
+				hasTemplates = true
 				for _, v := range vals {
 					addTemplateID(v)
 				}
 			}
 		}
-	}
-
-	if idFakultasUnit != "" && len(targets) == 0 {
-		targets = append(targets, idFakultasUnit)
 	}
 
 	return
@@ -223,14 +190,13 @@ func GetMataProgramV2ByUuidHandler(c *fiber.Ctx) error {
 }
 
 func CreateMataProgramV2Handler(c *fiber.Ctx) error {
-	mataProgram, tahunStr, targets, templateIDs, _ := parseMataProgramV2Input(c)
+	mataProgram, tahunStr, templateIDs, _ := parseMataProgramV2Input(c)
 
 	res, err := mediatr.Send[createCmd.CreateMataProgramV2Command, *createCmd.CreateMataProgramV2Result](
 		c.Context(),
 		createCmd.CreateMataProgramV2Command{
 			MataProgram:        mataProgram,
 			Tahun:              tahunStr,
-			Targets:            targets,
 			TemplateRenstraIDs: templateIDs,
 		},
 	)
@@ -241,18 +207,16 @@ func CreateMataProgramV2Handler(c *fiber.Ctx) error {
 }
 
 func UpdateMataProgramV2Handler(c *fiber.Ctx) error {
-	mataProgram, tahunStr, targets, templateIDs, idFakultasUnit := parseMataProgramV2Input(c)
+	mataProgram, tahunStr, templateIDs, hasTemplates := parseMataProgramV2Input(c)
 
 	res, err := mediatr.Send[updateCmd.UpdateMataProgramV2Command, *updateCmd.UpdateMataProgramV2Result](
 		c.Context(),
 		updateCmd.UpdateMataProgramV2Command{
 			UUID:               strings.TrimSpace(c.Params("uuid")),
-			Scope:              strings.TrimSpace(c.Query("scope")),
 			MataProgram:        mataProgram,
 			Tahun:              tahunStr,
-			Targets:            targets,
 			TemplateRenstraIDs: templateIDs,
-			IdFakultasUnit:     idFakultasUnit,
+			HasTemplates:       hasTemplates,
 		},
 	)
 	if err != nil {
@@ -265,8 +229,7 @@ func DeleteMataProgramV2Handler(c *fiber.Ctx) error {
 	res, err := mediatr.Send[deleteCmd.DeleteMataProgramV2Command, *deleteCmd.DeleteMataProgramV2Result](
 		c.Context(),
 		deleteCmd.DeleteMataProgramV2Command{
-			UUID:  strings.TrimSpace(c.Params("uuid")),
-			Scope: strings.TrimSpace(c.Query("scope")),
+			UUID: strings.TrimSpace(c.Params("uuid")),
 		},
 	)
 	if err != nil {
@@ -279,8 +242,7 @@ func RestoreMataProgramV2Handler(c *fiber.Ctx) error {
 	res, err := mediatr.Send[restoreCmd.RestoreMataProgramV2Command, *restoreCmd.RestoreMataProgramV2Result](
 		c.Context(),
 		restoreCmd.RestoreMataProgramV2Command{
-			UUID:  strings.TrimSpace(c.Params("uuid")),
-			Scope: strings.TrimSpace(c.Query("scope")),
+			UUID: strings.TrimSpace(c.Params("uuid")),
 		},
 	)
 	if err != nil {

@@ -29,13 +29,7 @@ func (h *DeleteMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Dele
 		return nil, domain.NotFoundOrDeleted()
 	}
 
-	now := time.Now()
-	var rowsAffected int64
-	if strings.TrimSpace(cmd.Scope) == "single" {
-		rowsAffected, err = h.Repo.SoftDeleteSingleByUuid(ctx, rawUuid, now)
-	} else {
-		rowsAffected, err = h.Repo.SoftDeleteGroup(ctx, row.MataProgram, row.IdMasterTahun, now)
-	}
+	rowsAffected, err := h.Repo.SoftDeleteByUuid(ctx, rawUuid, time.Now())
 	if err != nil {
 		return nil, err
 	}

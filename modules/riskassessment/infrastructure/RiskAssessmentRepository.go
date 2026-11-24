@@ -328,25 +328,42 @@ func (r *RiskAssessmentRepository) GetStatuses(ctx context.Context) ([]domainRis
 
 func (r *RiskAssessmentRepository) GetPrograms(ctx context.Context, fu, thn, search string) ([]domainRisk.RiskMataProgramItem, error) {
 	var programs []domainRisk.RiskMataProgramItem
-	q := r.db.WithContext(ctx).Table("mata_programv2 mp").
+
+	const programUnitsSubquery = `(
+		SELECT DISTINCT mtr.id_mata_programv2 AS id_mata_program, tr.fakultas_unit AS id_fakultas_unit
+		FROM mata_programv2_template_renstra mtr
+		JOIN mata_programv2 mp_i ON mp_i.id = mtr.id_mata_programv2 AND mp_i.deleted_at IS NULL
+		LEFT JOIN master_tahun mt_i ON mt_i.id = mp_i.id_master_tahun
+		JOIN template_renstra tr ON tr.id = mtr.id_template_renstra
+		WHERE tr.fakultas_unit IS NOT NULL AND tr.fakultas_unit > 0
+		  AND (mt_i.tahun IS NULL OR mt_i.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt_i.tahun AS CHAR))
+		UNION
+		SELECT DISTINCT mpk.id_mata_program, mpk.id_fakultas_unit
+		FROM matrix_proker mpk
+		WHERE mpk.deleted_at IS NULL
+		  AND mpk.id_mata_program IS NOT NULL
+		  AND mpk.id_fakultas_unit IS NOT NULL AND mpk.id_fakultas_unit > 0
+	) pu`
+
+	q := r.db.WithContext(ctx).Table(programUnitsSubquery).
 		Select(`
 			mp.id,
 			mp.uuid,
 			mp.mata_program,
-			mp.id_fakultas_unit,
-			vfu.uuid as uuid_fakultas_unit,
-			vfu.nama_fak_prod_unit as nama_fakultas_unit,
+			pu.id_fakultas_unit,
+			COALESCE(vfu.uuid, '') as uuid_fakultas_unit,
+			COALESCE(vfu.nama_fak_prod_unit, '') as nama_fakultas_unit,
 			mp.id_master_tahun,
-			mt.tahun
+			COALESCE(mt.tahun, '') as tahun
 		`).
+		Joins("JOIN mata_programv2 mp ON mp.id = pu.id_mata_program AND mp.deleted_at IS NULL").
 		Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-		Joins("LEFT JOIN v_fakultas_unit vfu ON mp.id_fakultas_unit = vfu.id").
-		Where("mp.deleted_at IS NULL").
-		Order("mp.mata_program ASC")
+		Joins("LEFT JOIN v_fakultas_unit vfu ON pu.id_fakultas_unit = vfu.id").
+		Order("mp.mata_program ASC, pu.id_fakultas_unit ASC")
 
 	if fu != "" {
 		if id, err := strconv.Atoi(fu); err == nil && id > 0 {
-			q = q.Where("mp.id_fakultas_unit = ?", id)
+			q = q.Where("pu.id_fakultas_unit = ?", id)
 		} else {
 			q = q.Where("vfu.uuid = ?", fu)
 		}

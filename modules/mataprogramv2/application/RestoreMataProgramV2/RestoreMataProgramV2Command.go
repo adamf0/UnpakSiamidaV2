@@ -1,8 +1,7 @@
 package RestoreMataProgramV2
 
 type RestoreMataProgramV2Command struct {
-	UUID  string
-	Scope string // "single" (default) or "group"
+	UUID string
 }
 
 type RestoreMataProgramV2Result struct {

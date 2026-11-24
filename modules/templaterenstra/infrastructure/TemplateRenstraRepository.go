@@ -4,6 +4,7 @@ import (
 	commondomaintemplaterenstra "UnpakSiamida/common/domain"
 	domaintemplaterenstra "UnpakSiamida/modules/templaterenstra/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -316,10 +317,41 @@ func (r *TemplateRenstraRepository) GetAllByTahunFakUnitDefault(
 }
 
 // ------------------------
-// CREATE
+// CREATE (UPSERT by tahun + indikator + fakultas_unit)
 // ------------------------
 func (r *TemplateRenstraRepository) Create(ctx context.Context, templaterenstra *domaintemplaterenstra.TemplateRenstra) error {
-	// return r.db.WithContext(ctx).Create(templaterenstra).Error
+	var existing domaintemplaterenstra.TemplateRenstra
+	err := r.db.WithContext(ctx).
+		Where("tahun = ? AND indikator = ? AND fakultas_unit = ?",
+			templaterenstra.Tahun,
+			templaterenstra.IndikatorRenstraID,
+			templaterenstra.FakultasUnit,
+		).
+		Order("id DESC").
+		First(&existing).Error
+	if err == nil {
+		if existing.UUID == uuid.Nil {
+			existing.UUID = templaterenstra.UUID
+		}
+		existing.IsPertanyaan = templaterenstra.IsPertanyaan
+		existing.Kategori = templaterenstra.Kategori
+		existing.Klasifikasi = templaterenstra.Klasifikasi
+		existing.Satuan = templaterenstra.Satuan
+		existing.Target = templaterenstra.Target
+		existing.TargetMin = templaterenstra.TargetMin
+		existing.TargetMax = templaterenstra.TargetMax
+		existing.Tugas = templaterenstra.Tugas
+		if err := r.db.WithContext(ctx).Save(&existing).Error; err != nil {
+			return err
+		}
+		templaterenstra.ID = existing.ID
+		templaterenstra.UUID = existing.UUID
+		return nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
 	return r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{
@@ -346,6 +378,22 @@ func (r *TemplateRenstraRepository) Create(ctx context.Context, templaterenstra 
 // UPDATE
 // ------------------------
 func (r *TemplateRenstraRepository) Update(ctx context.Context, templaterenstra *domaintemplaterenstra.TemplateRenstra) error {
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Model(&domaintemplaterenstra.TemplateRenstra{}).
+		Where("tahun = ? AND indikator = ? AND fakultas_unit = ? AND id <> ?",
+			templaterenstra.Tahun,
+			templaterenstra.IndikatorRenstraID,
+			templaterenstra.FakultasUnit,
+			templaterenstra.ID,
+		).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return domaintemplaterenstra.DuplicateData()
+	}
+
 	return r.db.WithContext(ctx).Save(templaterenstra).Error
 }
 

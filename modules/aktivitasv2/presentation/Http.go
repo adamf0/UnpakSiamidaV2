@@ -753,7 +753,8 @@ func UpdateAktivitasStatusHandler(c *fiber.Ctx) error {
 		catatanPenolakan = strings.TrimSpace(c.FormValue("catatan"))
 	}
 
-	_, _ = commonpresentation.GetUserInfo(c)
+	level, _ := commonpresentation.GetUserInfo(c)
+	level = strings.ToLower(strings.TrimSpace(level))
 	userName := ""
 	if u, ok := c.Locals("user").(*commonpresentation.Account); ok && u != nil {
 		userName = u.Name
@@ -767,11 +768,18 @@ func UpdateAktivitasStatusHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid aktivitas UUID"})
 	}
 
+	reqRole := strings.ToLower(strings.TrimSpace(c.FormValue("role")))
+	if reqRole == "" {
+		reqRole = level
+	} else if level != "" && level != "admin" && !(level == "fakultas" && reqRole == "upmf") {
+		reqRole = level
+	}
+
 	req := domain.UpdateStatusRequest{
 		UUID:             parsedUuid,
 		EntityType:       "aktivitas",
 		Status:           c.FormValue("status"),
-		Role:             c.FormValue("role"),
+		Role:             reqRole,
 		CatatanPenolakan: catatanPenolakan,
 		UserName:         userName,
 	}

@@ -165,7 +165,7 @@ func (r *DokumenProkerRepository) GetAll(
 			Select(`
 				mpd.id as Id,
 				mpd.uuid as UUID,
-				COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit, 0) as FakultasUnitId,
+				COALESCE(mpr.id_fakultas_unit, 0) as FakultasUnitId,
 				vfu.uuid as FakultasUnitUuid,
 				CASE 
 					WHEN vfu.type = 'prodi' AND vfu.jenjang IS NOT NULL AND vfu.jenjang != '' 
@@ -194,7 +194,7 @@ func (r *DokumenProkerRepository) GetAll(
 			Joins("JOIN matrix_proker mpr ON mpd.id_matrik_proker = mpr.id AND mpr.deleted_at IS NULL").
 			Joins("LEFT JOIN mata_programv2 mp ON mpr.id_mata_program = mp.id").
 			Joins("LEFT JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
-			Joins("LEFT JOIN v_fakultas_unit vfu ON COALESCE(mpr.id_fakultas_unit, mp.id_fakultas_unit) = vfu.id").
+			Joins("LEFT JOIN v_fakultas_unit vfu ON mpr.id_fakultas_unit = vfu.id").
 			Where("mpd.deleted_at IS NULL")
 
 		allowedSearchColumnsV3 := map[string]string{

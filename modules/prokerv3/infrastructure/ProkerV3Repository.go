@@ -176,8 +176,8 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen,
-			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program), 0) as TotalRisiko,
-			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
+			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program AND (ra.id_fakultas_unit = mp_t.id_fakultas_unit OR mp_t.id_fakultas_unit IS NULL)), 0) as TotalRisiko,
+			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program AND (ra.id_fakultas_unit = mp_t.id_fakultas_unit OR mp_t.id_fakultas_unit IS NULL) ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
 			COALESCE((
 				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 				FROM indikator_renstra_iku iri
@@ -277,6 +277,9 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
 			Joins("LEFT JOIN v_fakultas_unit fu ON tr.fakultas_unit = fu.id").
 			Where("mtr.id_mata_programv2 = ?", prog.ID)
+		if prog.Tahun != "" {
+			qTr = qTr.Where("CAST(tr.tahun AS CHAR) = ?", prog.Tahun)
+		}
 		if fuFilter != nil {
 			qTr = qTr.Where("tr.fakultas_unit = ?", *fuFilter)
 		}
@@ -402,13 +405,16 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 			Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
 			Where("mptr.id_mata_programv2 = ?", *row.IdMataProgram)
 
+		if row.Tahun != "" {
+			qTr = qTr.Where("CAST(tr.tahun AS CHAR) = ?", row.Tahun)
+		}
 		if row.IdFakultasUnit != nil && *row.IdFakultasUnit > 0 {
 			qTr = qTr.Where("tr.fakultas_unit = ?", *row.IdFakultasUnit)
 		}
 		_ = qTr.Order("tr.id ASC").Scan(&rRows).Error
 
 		if len(rRows) == 0 && row.IdFakultasUnit != nil && *row.IdFakultasUnit > 0 {
-			_ = r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
+			qTrFallback := r.db.WithContext(ctx).Table("mata_programv2_template_renstra mptr").
 				Select(`
 					tr.id as template_id,
 					tr.uuid as template_uuid,
@@ -435,9 +441,11 @@ func (r *ProkerV3Repository) GetDefaultByUuid(ctx context.Context, uid uuid.UUID
 				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
 				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
 				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
-				Where("mptr.id_mata_programv2 = ?", *row.IdMataProgram).
-				Order("tr.id ASC").
-				Scan(&rRows).Error
+				Where("mptr.id_mata_programv2 = ?", *row.IdMataProgram)
+			if row.Tahun != "" {
+				qTrFallback = qTrFallback.Where("CAST(tr.tahun AS CHAR) = ?", row.Tahun)
+			}
+			_ = qTrFallback.Order("tr.id ASC").Scan(&rRows).Error
 		}
 
 		ikuMap := commoninfra.GetMasterIkuMap(r.dbIku)
@@ -593,9 +601,12 @@ func (r *ProkerV3Repository) GetAll(
 			prog.created_at as created_at,
 			prog.updated_at as updated_at
 		FROM mata_programv2 prog
+		LEFT JOIN master_tahun mt_p ON prog.id_master_tahun = mt_p.id
 		JOIN mata_programv2_template_renstra mtr ON mtr.id_mata_programv2 = prog.id
 		JOIN template_renstra tr ON mtr.id_template_renstra = tr.id
 		WHERE prog.deleted_at IS NULL
+		  AND tr.fakultas_unit IS NOT NULL AND tr.fakultas_unit > 0
+		  AND (mt_p.tahun IS NULL OR mt_p.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt_p.tahun AS CHAR))
 		  AND NOT EXISTS (
 			  SELECT 1 FROM matrix_proker mp2 
 			  WHERE mp2.id_mata_program = prog.id 
@@ -656,8 +667,8 @@ func (r *ProkerV3Repository) GetAll(
 			COALESCE((SELECT SUM(CASE WHEN a.realisasi IS NOT NULL THEN a.realisasi ELSE COALESCE((SELECT SUM(COALESCE(r2.total, r2.qty_satuan * r2.qty_paket * r2.sbu, 0)) FROM aktivitasv2_rab r2 WHERE r2.id_aktivitasv2 = a.id), 0) END) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND COALESCE(a.is_batal, 0) = 0), 0) as TotalRealisasi,
 			COALESCE((SELECT COUNT(*) FROM aktivitasv2 a WHERE a.id_matrik_proker = mp_t.id AND a.realisasi IS NOT NULL AND COALESCE(a.is_batal, 0) = 0), 0) > 0 as HasRealisasi,
 			COALESCE((SELECT COUNT(*) FROM matrix_proker_dokumen d WHERE d.id_matrik_proker = mp_t.id AND d.deleted_at IS NULL), 0) as TotalDokumen,
-			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program), 0) as TotalRisiko,
-			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
+			COALESCE((SELECT COUNT(*) FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program AND (ra.id_fakultas_unit = mp_t.id_fakultas_unit OR mp_t.id_fakultas_unit IS NULL)), 0) as TotalRisiko,
+			COALESCE((SELECT ra.tingkat_risiko_awal FROM risk_assessments ra WHERE ra.id_mata_program = mp_t.id_mata_program AND (ra.id_fakultas_unit = mp_t.id_fakultas_unit OR mp_t.id_fakultas_unit IS NULL) ORDER BY FIELD(ra.tingkat_risiko_awal, 'T', 'M', 'R') ASC LIMIT 1), '') as TingkatRisiko,
 			COALESCE((
 				SELECT GROUP_CONCAT(iri.id_iku ORDER BY iri.id_iku SEPARATOR ',')
 				FROM indikator_renstra_iku iri
@@ -726,7 +737,9 @@ func (r *ProkerV3Repository) GetAll(
 				}
 
 				if field == "filter_fakultas_unit" || field == "fakultas_unit" || field == "fakultasunituuid" || field == "id_fakultas_unit" || field == "nama_fakultas_unit" || field == "namafakultasunit" || field == "target_unit" || field == "target" {
-					isStrictScoped := activeRole == "upml" || activeRole == "upms"
+					// Role user/unit/auditee/upml/upms hanya boleh melihat fakultas_unit miliknya sendiri,
+					// tidak boleh diekspansi ke prodi bawahan seperti role fakultas/upmf.
+					isStrictScoped := activeRole == "upml" || activeRole == "upms" || activeRole == "user" || activeRole == "unit" || activeRole == "auditee"
 					if strings.Contains(val, ",") {
 						parts := strings.Split(val, ",")
 						var ids []int
@@ -891,7 +904,7 @@ func (r *ProkerV3Repository) GetAll(
 	if isBuangTab {
 		db = db.Order("mp_t.deleted_at DESC, mp_t.id DESC")
 	} else {
-		db = db.Order("mp_t.id DESC")
+		db = db.Order("mp_t.id DESC, mp_t.id_mata_program ASC, mp_t.id_fakultas_unit ASC")
 	}
 
 	// Pagination
@@ -908,9 +921,11 @@ func (r *ProkerV3Repository) GetAll(
 	}
 
 	if len(list) > 0 {
+		seenMP := make(map[int]bool, len(list))
 		var mpIDs []int
 		for _, item := range list {
-			if item.IdMataProgram != nil && *item.IdMataProgram > 0 {
+			if item.IdMataProgram != nil && *item.IdMataProgram > 0 && !seenMP[*item.IdMataProgram] {
+				seenMP[*item.IdMataProgram] = true
 				mpIDs = append(mpIDs, *item.IdMataProgram)
 			}
 		}
@@ -963,10 +978,13 @@ func (r *ProkerV3Repository) GetAll(
 						WHERE iri.id_indikator_renstra = mir.id
 					), '') as iku_list
 				`).
+				Joins("JOIN mata_programv2 prog_s ON mptr.id_mata_programv2 = prog_s.id").
+				Joins("LEFT JOIN master_tahun mt_s ON prog_s.id_master_tahun = mt_s.id").
 				Joins("JOIN template_renstra tr ON mptr.id_template_renstra = tr.id").
 				Joins("LEFT JOIN master_indikator_renstra mir ON tr.indikator = mir.id").
 				Joins("LEFT JOIN master_standar_renstra msr ON mir.id_master_standar = msr.id").
 				Where("mptr.id_mata_programv2 IN ?", mpIDs).
+				Where("(mt_s.tahun IS NULL OR mt_s.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt_s.tahun AS CHAR))").
 				Order("tr.id ASC").
 				Scan(&allRRows).Error
 		}
@@ -1992,26 +2010,58 @@ func (r *ProkerV3Repository) UpdateStatus(ctx context.Context, req domain.Update
 
 	var mp domain.ProkerV3
 	if errMp := r.db.WithContext(ctx).Where("uuid = ?", parsedUuid).First(&mp).Error; errMp != nil {
-		// Fallback: jika parsedUuid adalah UUID mata_programv2, cari matrix_proker terkait
+		// Fallback: jika parsedUuid adalah UUID mata_programv2, cari matrix_proker untuk unit terkait
 		var prog struct {
 			ID int `gorm:"column:id"`
 		}
-		if errProg := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("uuid = ?", parsedUuid).First(&prog).Error; errProg == nil && prog.ID > 0 {
-			q := r.db.WithContext(ctx).Where("id_mata_program = ?", prog.ID)
-			if fuID, errConv := strconv.Atoi(strings.TrimSpace(req.UserFU)); errConv == nil && fuID > 0 {
-				q = q.Where("id_fakultas_unit = ?", fuID)
+		if errProg := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("uuid = ? AND deleted_at IS NULL", parsedUuid).First(&prog).Error; errProg == nil && prog.ID > 0 {
+			fuRaw := strings.TrimSpace(req.UserFU)
+			if fuRaw == "" {
+				if activeUnitVal := ctx.Value("active_unit"); activeUnitVal != nil {
+					if fuStr, ok := activeUnitVal.(string); ok {
+						fuRaw = strings.TrimSpace(fuStr)
+					} else if fuInt, ok := activeUnitVal.(int); ok && fuInt > 0 {
+						fuRaw = strconv.Itoa(fuInt)
+					}
+				}
+			}
+
+			var resolvedFuID int
+			if fuRaw != "" {
+				if id, errConv := strconv.Atoi(fuRaw); errConv == nil && id > 0 {
+					resolvedFuID = id
+				} else {
+					_ = r.db.WithContext(ctx).Table("v_fakultas_unit").Select("id").Where("uuid = ?", fuRaw).Take(&resolvedFuID).Error
+				}
+			}
+
+			q := r.db.WithContext(ctx).Where("id_mata_program = ? AND deleted_at IS NULL", prog.ID)
+			if resolvedFuID > 0 {
+				q = q.Where("id_fakultas_unit = ?", resolvedFuID)
 			}
 			if errMp2 := q.Order("id DESC").First(&mp).Error; errMp2 != nil {
-				return nil, errors.New("Data program kerja tidak ditemukan")
+				if errors.Is(errMp2, gorm.ErrRecordNotFound) {
+					return nil, domain.AktivitasKosong()
+				}
+				return nil, errMp2
 			}
 		} else {
-			return nil, errors.New("Data program kerja tidak ditemukan")
+			return nil, domain.ProkerNotFound()
 		}
 	}
 
 	if !isVerifier && !isAnggaran && level != "admin" {
 		if newStatus != "draft" && newStatus != "diajukan" && newStatus != "revisi" {
 			return nil, errors.New("Sebagai auditee, status hanya boleh Draf, Diajukan, atau Revisi")
+		}
+	}
+
+	if newStatus == "diajukan" {
+		var actCount int64
+		if err := r.db.WithContext(ctx).Table("aktivitasv2").
+			Where("id_matrik_proker = ? AND COALESCE(is_batal, 0) = 0", mp.ID).
+			Count(&actCount).Error; err == nil && actCount == 0 {
+			return nil, domain.AktivitasKosong()
 		}
 	}
 
@@ -3929,7 +3979,7 @@ func (r *ProkerV3Repository) ResolveOrCreateMataProgram(ctx context.Context, nam
 	}
 	err := r.db.WithContext(ctx).Table("mata_programv2").
 		Select("id").
-		Where("mata_program = ? AND id_master_tahun = ?", namaProg, masterTahunID).
+		Where("LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND id_master_tahun = ? AND deleted_at IS NULL", namaProg, masterTahunID).
 		Take(&existingMp).Error
 
 	if err == nil && existingMp.ID > 0 {
@@ -3938,8 +3988,8 @@ func (r *ProkerV3Repository) ResolveOrCreateMataProgram(ctx context.Context, nam
 
 	newMpUUID := uuid.New().String()
 	res := r.db.WithContext(ctx).Exec(
-		"INSERT INTO mata_programv2 (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-		newMpUUID, masterTahunID, fuID, namaProg,
+		"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
+		newMpUUID, masterTahunID, namaProg,
 	)
 	if res.Error == nil {
 		var createdMp struct {
@@ -4011,20 +4061,22 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 				}
 			}
 
-			// Check if other prokers share this mata_program
+			// Check if other prokers or template renstra mappings share this mata_program
 			var otherUsageCount int64
 			r.db.WithContext(ctx).Table("matrix_proker").
-				Where("id_mata_program = ? AND id != ?", currentMp.ID, prokerID).
+				Where("id_mata_program = ? AND id != ? AND deleted_at IS NULL", currentMp.ID, prokerID).
 				Count(&otherUsageCount)
 
-			if otherUsageCount == 0 {
-				// Only this proker uses it, update in-place
+			var templateLinkCount int64
+			r.db.WithContext(ctx).Table("mata_programv2_template_renstra").
+				Where("id_mata_programv2 = ?", currentMp.ID).
+				Count(&templateLinkCount)
+
+			if otherUsageCount == 0 && templateLinkCount == 0 {
+				// Only this standalone proker uses it, update in-place
 				updateFields := map[string]interface{}{}
 				if namaProg != "" {
 					updateFields["mata_program"] = namaProg
-				}
-				if fuID != nil && *fuID > 0 {
-					updateFields["id_fakultas_unit"] = *fuID
 				}
 				if mt.ID > 0 {
 					updateFields["id_master_tahun"] = mt.ID
@@ -4035,7 +4087,7 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 						Updates(updateFields).Error
 				}
 				return currentMpID, nil
-			} else if (namaProg != "" && currentMp.MataProgram != namaProg) || (mt.ID > 0) {
+			} else if (namaProg != "" && !strings.EqualFold(strings.TrimSpace(currentMp.MataProgram), namaProg)) || (mt.ID > 0) {
 				if mt.ID == 0 {
 					mt.ID = 1
 				}
@@ -4048,7 +4100,7 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 				}
 				errFind := r.db.WithContext(ctx).Table("mata_programv2").
 					Select("id").
-					Where("mata_program = ? AND id_master_tahun = ?", targetNamaProg, mt.ID).
+					Where("LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND id_master_tahun = ? AND deleted_at IS NULL", targetNamaProg, mt.ID).
 					Take(&existingWithNewName).Error
 
 				if errFind == nil && existingWithNewName.ID > 0 {
@@ -4056,8 +4108,8 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 				}
 				newMpUUID := uuid.New().String()
 				_ = r.db.WithContext(ctx).Exec(
-					"INSERT INTO mata_programv2 (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-					newMpUUID, mt.ID, fuID, targetNamaProg,
+					"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
+					newMpUUID, mt.ID, targetNamaProg,
 				).Error
 				var createdMp struct {
 					ID int
@@ -4067,24 +4119,11 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 					return &createdMp.ID, nil
 				}
 				return currentMpID, nil
-			} else if fuID != nil && *fuID > 0 {
-				// Name identical, ensure id_fakultas_unit is synced if empty
-				_ = r.db.WithContext(ctx).Table("mata_programv2").
-					Where("id = ? AND (id_fakultas_unit IS NULL OR id_fakultas_unit = 0)", currentMp.ID).
-					Update("id_fakultas_unit", *fuID).Error
-				return currentMpID, nil
 			}
 			return currentMpID, nil
 		}
 	} else if namaProg != "" {
 		// No IdMataProgram on existing proker, find by name or create
-		var existingMp struct {
-			ID int
-		}
-		err := r.db.WithContext(ctx).Table("mata_programv2").Select("id").Where("mata_program = ?", namaProg).Take(&existingMp).Error
-		if err == nil && existingMp.ID > 0 {
-			return &existingMp.ID, nil
-		}
 		tahunStr = strings.TrimSpace(tahunStr)
 		if tahunStr == "" {
 			tahunStr = "2027"
@@ -4097,10 +4136,21 @@ func (r *ProkerV3Repository) SyncMataProgramForUpdate(ctx context.Context, proke
 			mt.ID = 1
 		}
 
+		var existingMp struct {
+			ID int
+		}
+		err := r.db.WithContext(ctx).Table("mata_programv2").
+			Select("id").
+			Where("LOWER(TRIM(mata_program)) = LOWER(TRIM(?)) AND id_master_tahun = ? AND deleted_at IS NULL", namaProg, mt.ID).
+			Take(&existingMp).Error
+		if err == nil && existingMp.ID > 0 {
+			return &existingMp.ID, nil
+		}
+
 		newMpUUID := uuid.New().String()
 		_ = r.db.WithContext(ctx).Exec(
-			"INSERT INTO mata_programv2 (uuid, id_master_tahun, id_fakultas_unit, mata_program) VALUES (?, ?, ?, ?)",
-			newMpUUID, mt.ID, fuID, namaProg,
+			"INSERT INTO mata_programv2 (uuid, id_master_tahun, mata_program) VALUES (?, ?, ?)",
+			newMpUUID, mt.ID, namaProg,
 		).Error
 		var createdMp struct {
 			ID int

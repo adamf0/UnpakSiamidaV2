@@ -28,7 +28,7 @@ func (h *GetMataProgramV2ByUuidQueryHandler) Handle(ctx context.Context, q GetMa
 		return nil, domain.NotFound()
 	}
 
-	units, _ := h.Repo.GetGroupUnits(ctx, row.MataProgram, row.TahunId, false)
+	units, _ := h.Repo.GetTargetUnitsByMataProgramID(ctx, row.ID)
 	tpls, tplIDs, _ := h.Repo.GetTemplatesByMataProgramID(ctx, row.ID)
 	pUnits, _ := h.Repo.GetProkerUnitsByMataProgramID(ctx, row.ID)
 

@@ -47,6 +47,13 @@ func AktivitasNotFound() commondomain.Error {
 	)
 }
 
+func AktivitasKosong() commondomain.Error {
+	return commondomain.FailureError(
+		"ProkerV3.AktivitasKosong",
+		"Program kerja belum memiliki aktivitas. Silakan tambahkan minimal 1 aktivitas sebelum mengajukan.",
+	)
+}
+
 func NegativeAnggaranTimeline() commondomain.Error {
 	return commondomain.FailureError(
 		"ProkerV3.NegativeAnggaranTimeline",

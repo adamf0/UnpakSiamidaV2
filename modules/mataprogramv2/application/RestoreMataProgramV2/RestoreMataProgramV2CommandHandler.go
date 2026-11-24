@@ -20,11 +20,6 @@ func (h *RestoreMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Res
 		return nil, domain.UuidRequired()
 	}
 
-	scope := strings.TrimSpace(cmd.Scope)
-	if scope == "" {
-		scope = "single"
-	}
-
 	row, err := h.Repo.GetRecordByUuid(ctx, rawUuid, true)
 	if err != nil {
 		return nil, err
@@ -33,12 +28,7 @@ func (h *RestoreMataProgramV2CommandHandler) Handle(ctx context.Context, cmd Res
 		return nil, domain.NotFound()
 	}
 
-	var rowsAffected int64
-	if scope == "single" {
-		rowsAffected, err = h.Repo.RestoreSingleByUuid(ctx, rawUuid)
-	} else {
-		rowsAffected, err = h.Repo.RestoreGroup(ctx, row.MataProgram, row.IdMasterTahun)
-	}
+	rowsAffected, err := h.Repo.RestoreByUuid(ctx, rawUuid)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,6 @@ package CreateMataProgramV2
 type CreateMataProgramV2Command struct {
 	MataProgram        string
 	Tahun              string
-	Targets            []string
 	TemplateRenstraIDs []uint
 }
 

@@ -315,7 +315,7 @@ func ModuleTemplateRenstra(app *fiber.App) {
 	app.Get("/templaterenstra/setupuuid", SetupUuidTemplateRenstrasHandlerfunc)
 
 	app.Post("/templaterenstra", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), CreateTemplateRenstraHandlerfunc)
-	// app.Put("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), UpdateTemplateRenstraHandlerfunc)
+	app.Put("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), UpdateTemplateRenstraHandlerfunc)
 	app.Delete("/templaterenstra/:uuid", commonpresentation.JWTMiddleware(), commonpresentation.RBACMiddleware(admin, whoamiURL), DeleteTemplateRenstraHandlerfunc)
 	app.Get("/templaterenstra/:uuid", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetTemplateRenstraHandlerfunc)
 	app.Get("/templaterenstras", commonpresentation.SmartCompress(), commonpresentation.JWTMiddleware(), GetAllTemplateRenstrasHandlerfunc)

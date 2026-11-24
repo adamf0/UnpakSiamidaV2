@@ -43,8 +43,21 @@ func (r *LaporanRepository) GetMonitoringByTargetTahun(
 
 	if isV3 {
 		// V3 (Tahun >= 2027): Mengambil data dokumen dari matrix_proker_dokumen
-		// berelasi dengan matrix_proker dan mata_program dengan tahun >= 2027
-		db := r.db.WithContext(ctx).Table("mata_program mp").
+		// berelasi dengan matrix_proker dan mata_programv2 (unit dari mata_programv2_template_renstra x template_renstra)
+		v3Where := `mt.uuid = ?
+			AND mp.deleted_at IS NULL
+			AND (
+				mpr.id IS NOT NULL
+				OR EXISTS (
+					SELECT 1 FROM mata_programv2_template_renstra mtr
+					JOIN template_renstra tr ON tr.id = mtr.id_template_renstra
+					WHERE mtr.id_mata_programv2 = mp.id
+					  AND tr.fakultas_unit = vfu.id
+					  AND (mt.tahun IS NULL OR mt.tahun = '' OR CAST(tr.tahun AS CHAR) = CAST(mt.tahun AS CHAR))
+				)
+			)`
+
+		db := r.db.WithContext(ctx).Table("mata_programv2 mp").
 			Select(`
 				vfu.id as FakultasUnitId,
 				vfu.uuid as FakultasUnitUuid,
@@ -95,17 +108,17 @@ func (r *LaporanRepository) GetMonitoringByTargetTahun(
 			Joins("JOIN v_fakultas_unit vfu ON vfu.uuid = ?", uuidFakultasUnit.String()).
 			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id AND mpr.deleted_at IS NULL").
 			Joins("LEFT JOIN matrix_proker_dokumen mpd ON mpd.id_matrik_proker = mpr.id AND mpd.deleted_at IS NULL").
-			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id AND other_mpr.deleted_at IS NULL)))", uuidTahun.String()).
+			Where(v3Where, uuidTahun.String()).
 			Group("vfu.id, mt.id, mp.id").
 			Order("mp.id ASC")
 
 		// Hitung total dengan subquery agar akurat pada query GROUP BY
-		countSubQuery := r.db.WithContext(ctx).Table("mata_program mp").
+		countSubQuery := r.db.WithContext(ctx).Table("mata_programv2 mp").
 			Select("mp.id").
 			Joins("JOIN master_tahun mt ON mp.id_master_tahun = mt.id").
 			Joins("JOIN v_fakultas_unit vfu ON vfu.uuid = ?", uuidFakultasUnit.String()).
 			Joins("LEFT JOIN matrix_proker mpr ON mpr.id_mata_program = mp.id AND mpr.id_fakultas_unit = vfu.id AND mpr.deleted_at IS NULL").
-			Where("mt.uuid = ? AND (mpr.id IS NOT NULL OR mp.id_fakultas_unit = vfu.id OR (mp.id_fakultas_unit IS NULL AND NOT EXISTS (SELECT 1 FROM matrix_proker other_mpr WHERE other_mpr.id_mata_program = mp.id AND other_mpr.id_fakultas_unit != vfu.id AND other_mpr.deleted_at IS NULL)))", uuidTahun.String()).
+			Where(v3Where, uuidTahun.String()).
 			Group("mp.id")
 
 		if err := r.db.WithContext(ctx).Table("(?) as sub", countSubQuery).Count(&total).Error; err != nil {
