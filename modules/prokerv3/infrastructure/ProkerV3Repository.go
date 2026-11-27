@@ -1822,20 +1822,6 @@ func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string
 			}
 		}
 
-		history = append(history, domain.HistoryState{
-			UUID:          uuid.New(),
-			EntityUUID:    rawUuid,
-			FromState:     "-",
-			ToState:       "draf",
-			Role:          "auditee",
-			Action:        "draf",
-			ActorName:     "Unit Pengusul",
-			ActorUsername: "pengusul",
-			UserName:      "Unit Pengusul",
-			Catatan:       "Pembuatan draf awal program kerja",
-			CreatedAt:     createdAt,
-		})
-
 		if currentStatus != "draft" && currentStatus != "" {
 			history = append(history, domain.HistoryState{
 				UUID:          uuid.New(),
@@ -1957,28 +1943,7 @@ func (r *ProkerV3Repository) GetHistoryState(ctx context.Context, rawUuid string
 			}
 		}
 		if !hasInitialDraft {
-			initCreatedAt := time.Now()
-			if mp.ID > 0 && !mp.CreatedAt.IsZero() {
-				initCreatedAt = mp.CreatedAt
-			} else if act.ID > 0 && !act.CreatedAt.IsZero() {
-				initCreatedAt = act.CreatedAt
-			} else if len(history) > 0 && !history[0].CreatedAt.IsZero() {
-				initCreatedAt = history[0].CreatedAt.Add(-30 * time.Minute)
-			}
-			initialDraft := domain.HistoryState{
-				UUID:          uuid.New(),
-				EntityUUID:    rawUuid,
-				FromState:     "-",
-				ToState:       "draf",
-				Role:          "auditee",
-				Action:        "draf",
-				ActorName:     "Unit Pengusul",
-				ActorUsername: "pengusul",
-				UserName:      "Unit Pengusul",
-				Catatan:       "Pembuatan draf awal program kerja",
-				CreatedAt:     initCreatedAt,
-			}
-			history = append([]domain.HistoryState{initialDraft}, history...)
+			history = append([]domain.HistoryState{}, history...)
 		}
 	}
 	return history, nil
